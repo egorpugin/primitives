@@ -1,3 +1,5 @@
+root_project: pvt.egorpugin.primitives
+
 projects:
     command:
         name: command
