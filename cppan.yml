@@ -11,6 +11,7 @@ projects:
     context:
         name: context
         type: library
+        static_only: true
         root_directory: context
 
     date_time:
@@ -59,10 +60,11 @@ projects:
 
     log:
         name: log
-
         type: library
-
+        static_only: true
         root_directory: log
+        dependencies:
+            - pvt.cppan.demo.boost.log: 1
 
     pack:
         name: pack

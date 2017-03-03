@@ -1,4 +1,8 @@
 *.bat
 *.lnk
+*.lib
+*.exe
+*.dll
+
 
 /bin
