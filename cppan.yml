@@ -8,9 +8,7 @@ projects:
 
     context:
         name: context
-
         type: library
-
         root_directory: context
 
     date_time:
@@ -29,10 +27,12 @@ projects:
 
     filesystem:
         name: filesystem
-
         type: library
-
+        static_only: true
         root_directory: filesystem
+        dependencies:
+            - string
+            - pvt.cppan.demo.boost.filesystem: 1
 
     hash:
         name: hash
@@ -47,11 +47,6 @@ projects:
         type: library
 
         root_directory: http
-
-        dependencies:
-            public:
-                pvt.cppan.demo.badger.curl.libcurl:
-                    version: 7
 
     lock:
         name: lock
@@ -83,8 +78,8 @@ projects:
 
     string:
         name: string
-
         type: library
-
+        static_only: true
         root_directory: string
-
+        dependencies:
+            - pvt.cppan.demo.boost.algorithm: 1

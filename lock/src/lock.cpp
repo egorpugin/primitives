@@ -1,2 +1,2 @@
-#include <lock/lock.h>
+#include <primitives/lock.h>
 

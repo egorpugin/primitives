@@ -1,2 +1,2 @@
-#include <hash/hash.h>
+#include <primitives/hash.h>
 
