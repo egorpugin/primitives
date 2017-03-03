@@ -53,6 +53,13 @@ projects:
                 pvt.cppan.demo.badger.curl.libcurl:
                     version: 7
 
+    lock:
+        name: lock
+
+        type: library
+
+        root_directory: lock
+
     log:
         name: log
 
