@@ -23,3 +23,6 @@ String normalize_string_copy(String s);
 #define normalize_string(s) (s)
 #define normalize_string_copy(s) (s)
 #endif
+
+std::wstring to_wstring(const std::string &s);
+std::string to_string(const std::wstring &s);

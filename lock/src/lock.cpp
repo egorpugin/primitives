@@ -13,11 +13,6 @@ std::string prepare_lock_file(const path &fn)
     return lock_file.string();
 }
 
-path get_lock(const path &fn)
-{
-    return directories.storage_dir_etc / "locks" / fn.filename();
-}
-
 ////////////////////////////////////////
 
 ScopedFileLock::ScopedFileLock(const path &fn)

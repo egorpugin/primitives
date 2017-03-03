@@ -2,8 +2,6 @@
 
 #include <primitives/filesystem.h>
 
-#include <boost/interprocess/sync/named_mutex.hpp>
-
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
@@ -13,18 +11,16 @@ namespace boost
     namespace interprocess
     {
         class file_lock;
+        class named_mutex;
     }
 }
 
 namespace Interprocess = boost::interprocess;
 using FileLock = Interprocess::file_lock;
 using FileLockPtr = std::unique_ptr<FileLock>;
-
 using InterprocessMutex = Interprocess::named_mutex;
 
 using shared_mutex = std::shared_timed_mutex;
-
-path get_lock(const path &fn);
 
 class ScopedFileLock
 {

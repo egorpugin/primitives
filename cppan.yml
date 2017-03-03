@@ -40,17 +40,29 @@ projects:
 
     hash:
         name: hash
-
         type: library
-
+        static_only: true
         root_directory: hash
+        dependencies:
+            - filesystem
+            - pvt.cppan.demo.openssl.crypto: 1
+            - pvt.cppan.demo.coruus.keccak_tiny_unrolled: singlefile
 
     http:
         name: http
-
         type: library
-
+        static_only: true
         root_directory: http
+        options:
+            any:
+                link_libraries:
+                    win32:
+                        public:
+                            - Winhttp
+        dependencies:
+            - filesystem
+            - templates
+            - pvt.cppan.demo.badger.curl.libcurl: 7
 
     lock:
         name: lock
@@ -92,3 +104,9 @@ projects:
         root_directory: string
         dependencies:
             - pvt.cppan.demo.boost.algorithm: 1
+
+    templates:
+        name: templates
+        type: library
+        root_directory: templates
+
