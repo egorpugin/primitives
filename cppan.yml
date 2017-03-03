@@ -1,0 +1,76 @@
+projects:
+    command:
+        name: command
+
+        type: library
+
+        root_directory: command
+
+    context:
+        name: context
+
+        type: library
+
+        root_directory: context
+
+    date_time:
+        name: date_time
+
+        type: library
+
+        root_directory: date_time
+
+    executor:
+        name: executor
+
+        type: library
+
+        root_directory: executor
+
+    filesystem:
+        name: filesystem
+
+        type: library
+
+        root_directory: filesystem
+
+    hash:
+        name: hash
+
+        type: library
+
+        root_directory: hash
+
+    http:
+        name: http
+
+        type: library
+
+        root_directory: http
+
+        dependencies:
+            public:
+                pvt.cppan.demo.badger.curl.libcurl:
+                    version: 7
+
+    log:
+        name: log
+
+        type: library
+
+        root_directory: log
+
+    pack:
+        name: pack
+
+        type: library
+
+        root_directory: pack
+
+    string:
+        name: string
+
+        type: library
+
+        root_directory: string
+
