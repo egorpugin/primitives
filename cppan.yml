@@ -16,16 +16,17 @@ projects:
 
     date_time:
         name: date_time
-
         type: library
-
+        static_only: true
         root_directory: date_time
+        dependencies:
+            - string
+            - pvt.cppan.demo.boost.date_time: 1
 
     executor:
         name: executor
-
         type: library
-
+        static_only: true
         root_directory: executor
 
     filesystem:
@@ -53,10 +54,12 @@ projects:
 
     lock:
         name: lock
-
         type: library
-
+        static_only: true
         root_directory: lock
+        dependencies:
+            - filesystem
+            - pvt.cppan.demo.boost.interprocess: 1
 
     log:
         name: log
@@ -68,10 +71,12 @@ projects:
 
     pack:
         name: pack
-
         type: library
-
+        static_only: true
         root_directory: pack
+        dependencies:
+            - filesystem
+            - pvt.cppan.demo.libarchive.libarchive: 3
 
     sqlite_db:
         name: sqlite_db
