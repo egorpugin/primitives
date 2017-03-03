@@ -74,6 +74,13 @@ projects:
 
         root_directory: pack
 
+    sqlite_db:
+        name: sqlite_db
+
+        type: library
+
+        root_directory: sqlite_db
+
     string:
         name: string
 
