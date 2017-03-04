@@ -13,9 +13,7 @@ static const char alnum[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO
 
 String generate_random_sequence(uint32_t len)
 {
-    uint32_t seed;
-    if (RAND_bytes((unsigned char *)&seed, sizeof(seed)) != 1)
-        throw std::runtime_error("Not enough entropy!");
+    auto seed = std::random_device()();
     std::mt19937 g(seed);
     std::uniform_int_distribution<> d(1, sizeof(alnum) - 1);
     String seq(len, 0);
@@ -24,18 +22,36 @@ String generate_random_sequence(uint32_t len)
     return seq;
 }
 
-String hash_to_string(const String &hash)
+String generate_strong_random_sequence(uint32_t len)
 {
-    return hash_to_string((uint8_t *)hash.c_str(), hash.size());
+    String seq(len, 0);
+    if (len == 0)
+        return seq;
+    String bytes(len / 2 + len % 2, 0);
+    if (RAND_bytes((unsigned char *)&bytes[0], bytes.size()) != 1)
+        throw std::runtime_error("Not enough entropy!");
+    for (size_t i = 0; i < bytes.size(); i++)
+    {
+        seq[i * 2 + 0] = alnum[(bytes[i] & 0xF0) >> 4];
+        seq[i * 2 + 1] = alnum[(bytes[i] & 0x0F) >> 0];
+    }
+    seq[seq.size()] = 0;
+    return seq;
 }
 
-String hash_to_string(const uint8_t *hash, size_t hash_size)
+String bytes_to_string(const String &bytes)
+{
+    return bytes_to_string((uint8_t *)bytes.c_str(), bytes.size());
+}
+
+String bytes_to_string(const uint8_t *bytes, size_t size)
 {
     String s;
-    for (uint32_t i = 0; i < hash_size; i++)
+    s.reserve(size * 2);
+    for (uint32_t i = 0; i < size; i++)
     {
-        s += alnum[(hash[i] & 0xF0) >> 4];
-        s += alnum[(hash[i] & 0x0F) >> 0];
+        s += alnum[(bytes[i] & 0xF0) >> 4];
+        s += alnum[(bytes[i] & 0x0F) >> 0];
     }
     return s;
 }
@@ -52,7 +68,7 @@ String sha1(const String &data)
     uint8_t hash[EVP_MAX_MD_SIZE];
     uint32_t hash_size;
     EVP_Digest(data.data(), data.size(), hash, &hash_size, EVP_sha1(), nullptr);
-    return hash_to_string(hash, hash_size);
+    return bytes_to_string(hash, hash_size);
 }
 
 String sha256(const String &data)
@@ -60,7 +76,7 @@ String sha256(const String &data)
     uint8_t hash[EVP_MAX_MD_SIZE];
     uint32_t hash_size;
     EVP_Digest(data.data(), data.size(), hash, &hash_size, EVP_sha256(), nullptr);
-    return hash_to_string(hash, hash_size);
+    return bytes_to_string(hash, hash_size);
 }
 
 String sha3_256(const String &data)
@@ -68,7 +84,7 @@ String sha3_256(const String &data)
     auto len = 256 / 8;
     std::string o(len, 0);
     sha3_256((uint8_t *)&o[0], len, (const uint8_t *)&data[0], data.size());
-    return hash_to_string(o);
+    return bytes_to_string(o);
 }
 
 String md5(const String &data)
@@ -76,7 +92,7 @@ String md5(const String &data)
     uint8_t hash[EVP_MAX_MD_SIZE];
     uint32_t hash_size;
     EVP_Digest(data.data(), data.size(), hash, &hash_size, EVP_md5(), nullptr);
-    return hash_to_string(hash, hash_size);
+    return bytes_to_string(hash, hash_size);
 }
 
 String md5(const path &fn)
