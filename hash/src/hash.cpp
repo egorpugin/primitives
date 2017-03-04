@@ -2,8 +2,8 @@
 
 #include <random>
 
-#include <boost/algorithm/string.hpp>
 #include <openssl/evp.h>
+#include <openssl/rand.h>
 extern "C" {
 #include <keccak-tiny.h>
 }
@@ -13,14 +13,16 @@ static const char alnum[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO
 
 String generate_random_sequence(uint32_t len)
 {
-    auto seed = std::random_device()();
+    uint32_t seed;
+    if (RAND_bytes((unsigned char *)&seed, sizeof(seed)) != 1)
+        throw std::runtime_error("Not enough entropy!");
     std::mt19937 g(seed);
     std::uniform_int_distribution<> d(1, sizeof(alnum) - 1);
     String seq(len, 0);
     while (len)
         seq[--len] = alnum[d(g) - 1];
     return seq;
-};
+}
 
 String hash_to_string(const String &hash)
 {

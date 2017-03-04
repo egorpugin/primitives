@@ -110,3 +110,7 @@ projects:
         type: library
         root_directory: templates
 
+    testxxx:
+        files: main.cpp
+        dependencies:
+            - hash
