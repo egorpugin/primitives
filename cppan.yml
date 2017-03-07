@@ -1,11 +1,12 @@
 root_project: pvt.egorpugin.primitives
 
+common_settings:
+    c++: 11
+
 projects:
     command:
         name: command
-
         type: library
-
         root_directory: command
 
     context:
@@ -92,9 +93,7 @@ projects:
 
     sqlite_db:
         name: sqlite_db
-
         type: library
-
         root_directory: sqlite_db
 
     string:
