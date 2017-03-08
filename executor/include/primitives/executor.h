@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <queue>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -102,7 +103,8 @@ public:
     bool throw_exceptions = false;
 
 public:
-    Executor(size_t nThreads = std::thread::hardware_concurrency());
+    Executor(size_t nThreads = std::thread::hardware_concurrency(), const std::string &name = "");
+    Executor(const std::string &name, size_t nThreads = std::thread::hardware_concurrency());
     ~Executor();
 
     size_t numberOfThreads() const { return nThreads; }
@@ -127,11 +129,12 @@ public:
 
 private:
     Threads thread_pool;
-    size_t nThreads;
+    size_t nThreads = std::thread::hardware_concurrency();
     std::atomic_size_t index{ 0 };
     bool done = false;
 
     void run(size_t i);
+    void set_thread_name(const std::string &name, size_t i) const;
 };
 
 size_t get_max_threads(size_t N = 4);

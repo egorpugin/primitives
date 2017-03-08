@@ -3,15 +3,36 @@
 #include <iostream>
 #include <string>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 //#include "log.h"
 //DECLARE_STATIC_LOGGER(logger, "executor");
 
-Executor::Executor(size_t nThreads)
+size_t get_max_threads(size_t N)
+{
+    return std::max<size_t>(N, std::thread::hardware_concurrency());
+}
+
+Executor::Executor(const std::string &name, size_t nThreads)
+    : Executor(nThreads, name)
+{
+}
+
+Executor::Executor(size_t nThreads, const std::string &name)
     : nThreads(nThreads)
 {
     thread_pool.resize(nThreads);
     for (size_t i = 0; i < nThreads; i++)
-        thread_pool[i].t = std::move(std::thread([this, i] { run(i); }));
+    {
+        thread_pool[i].t = std::move(std::thread([this, i, name = name]() mutable
+        {
+            name += " " + std::to_string(i);
+            set_thread_name(name, i);
+            run(i);
+        }));
+    }
 }
 
 Executor::~Executor()
@@ -89,7 +110,36 @@ void Executor::wait()
             std::rethrow_exception(t.eptr);
 }
 
-size_t get_max_threads(size_t N)
+void Executor::set_thread_name(const std::string &name, size_t i) const
 {
-    return std::max<size_t>(N, std::thread::hardware_concurrency());
+    if (name.empty())
+        return;
+
+#if defined(_MSC_VER)
+    constexpr DWORD MS_VC_EXCEPTION = 0x406D1388;
+
+#pragma pack(push, 8)
+    struct THREADNAME_INFO
+    {
+        DWORD dwType;     // Must be 0x1000.
+        LPCSTR szName;    // Pointer to thread name
+        DWORD dwThreadId; // Thread ID (-1 == current thread)
+        DWORD dwFlags;    // Reserved.  Do not use.
+    };
+#pragma pack(pop)
+
+    THREADNAME_INFO info;
+    info.dwType = 0x1000;
+    info.szName = name.c_str();
+    info.dwThreadId = *(DWORD *)&std::this_thread::get_id();
+    info.dwFlags = 0;
+
+    __try
+    {
+        ::RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR *)&info);
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+    }
+#endif
 }
