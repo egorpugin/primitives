@@ -1,3 +1,7 @@
+local_settings:
+    build:
+        generator: Visual Studio 15 2017
+
 root_project: pvt.egorpugin.primitives
 
 projects:
@@ -114,3 +118,4 @@ projects:
         files: main.cpp
         dependencies:
             - hash
+            - executor
