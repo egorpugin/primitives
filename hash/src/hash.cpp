@@ -11,10 +11,14 @@ extern "C" {
 // keep always digits,lowercase,uppercase
 static const char alnum[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-String generate_random_sequence(uint32_t len)
+auto get_seed()
 {
-    auto seed = std::random_device()();
-    std::mt19937 g(seed);
+    return std::random_device()();
+}
+
+String generate_random_alnum_sequence(uint32_t len)
+{
+    std::mt19937 g(get_seed());
     std::uniform_int_distribution<> d(1, sizeof(alnum) - 1);
     String seq(len, 0);
     while (len)
@@ -22,21 +26,22 @@ String generate_random_sequence(uint32_t len)
     return seq;
 }
 
-String generate_strong_random_sequence(uint32_t len)
+String generate_random_bytes(uint32_t len)
 {
+    std::mt19937 g(get_seed());
+    std::uniform_int_distribution<> d(0, 255);
     String seq(len, 0);
-    if (len == 0)
-        return seq;
-    String bytes(len / 2 + len % 2, 0);
-    if (RAND_bytes((unsigned char *)&bytes[0], bytes.size()) != 1)
-        throw std::runtime_error("Not enough entropy!");
-    for (size_t i = 0; i < bytes.size(); i++)
-    {
-        seq[i * 2 + 0] = alnum[(bytes[i] & 0xF0) >> 4];
-        seq[i * 2 + 1] = alnum[(bytes[i] & 0x0F) >> 0];
-    }
-    seq[seq.size()] = 0;
+    while (len)
+        seq[--len] = d(g);
     return seq;
+}
+
+String generate_strong_random_bytes(uint32_t len)
+{
+    String bytes(len, 0);
+    if (!RAND_bytes((unsigned char *)&bytes[0], bytes.size()))
+        throw std::runtime_error("Error during getting random bytes");
+    return bytes;
 }
 
 String bytes_to_string(const String &bytes)

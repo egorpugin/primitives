@@ -2,8 +2,9 @@
 
 #include <primitives/filesystem.h>
 
-String generate_random_sequence(uint32_t len);
-String generate_strong_random_sequence(uint32_t len);
+String generate_random_alnum_sequence(uint32_t len);
+String generate_random_bytes(uint32_t len);
+String generate_strong_random_bytes(uint32_t len);
 
 String bytes_to_string(const uint8_t *bytes, size_t size);
 String bytes_to_string(const String &bytes);
