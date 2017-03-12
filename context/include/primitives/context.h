@@ -47,8 +47,10 @@ public:
     void addText(const Text &s);
     void addText(const char* str, int n);
 
-    void decreaseIndent();
-    void increaseIndent();
+    void increaseIndent(int n = 1);
+    void decreaseIndent(int n = 1);
+    void increaseIndent(const Text &s, int n = 1);
+    void decreaseIndent(const Text &s, int n = 1);
 
     void beginBlock(const Text &s = "", bool indent = true);
     void endBlock(bool semicolon = false);

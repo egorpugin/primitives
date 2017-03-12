@@ -98,14 +98,26 @@ void Context::addLine(const Text &s)
         lines.push_back({ s, n_indents });
 }
 
-void Context::decreaseIndent()
+void Context::increaseIndent(int n)
 {
-    n_indents--;
+    n_indents += n;
 }
 
-void Context::increaseIndent()
+void Context::decreaseIndent(int n)
 {
-    n_indents++;
+    n_indents -= n;
+}
+
+void Context::increaseIndent(const Text &s, int n)
+{
+    addLine(s);
+    increaseIndent(n);
+}
+
+void Context::decreaseIndent(const Text &s, int n)
+{
+    decreaseIndent(n);
+    addLine(s);
 }
 
 void Context::beginBlock(const Text &s, bool indent)
