@@ -4,7 +4,12 @@ Context::eol_type Context::eol;
 
 Context::Lines &operator+=(Context::Lines &s1, const Context::Lines &s2)
 {
-    s1.insert(s1.end(), s2.begin(), s2.end());
+    int basic_indent = 0;
+    if (!s1.empty())
+        basic_indent = s1.back().n_indents;
+    auto i = s1.insert(s1.end(), s2.begin(), s2.end());
+    for (; i != s1.end(); i++)
+        i->n_indents += basic_indent;
     return s1;
 }
 
