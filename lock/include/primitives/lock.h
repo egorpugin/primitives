@@ -47,3 +47,18 @@ public:
 private:
     FileLockPtr lock;
 };
+
+template <typename F>
+void single_process_job(const path &fn, F && f)
+{
+    ScopedFileLock fl(fn, std::defer_lock);
+    if (fl.try_lock())
+    {
+        f();
+    }
+    else
+    {
+        // if we were not locked, we must wait until operation is completed
+        ScopedFileLock fl2(fn);
+    }
+}
