@@ -2,6 +2,7 @@
 
 #include <boost/algorithm/string.hpp>
 
+//#include <functional>
 #include <iostream>
 #include <regex>
 
@@ -160,36 +161,13 @@ bool is_under_root(path p, const path &root_dir)
 
 bool compare_files(const path &fn1, const path &fn2)
 {
-    // open files at the end
-    std::ifstream file1(fn1.string(), std::ifstream::ate | std::ifstream::binary);
-    std::ifstream file2(fn2.string(), std::ifstream::ate | std::ifstream::binary);
-
-    // different sizes
-    if (file1.tellg() != file2.tellg())
-        return false;
-
-    // rewind
-    file1.seekg(0);
-    file2.seekg(0);
-
-    const int N = 8192;
-    char buf1[N], buf2[N];
-
-    while (!file1.eof() && !file2.eof())
+    FileIterator fi({ fn1, fn2 });
+    return fi.iterate([](const auto &bufs, auto sz)
     {
-        file1.read(buf1, N);
-        file2.read(buf2, N);
-
-        auto sz1 = file1.gcount();
-        auto sz2 = file2.gcount();
-
-        if (sz1 != sz2)
+        if (memcmp(bufs[0].get().data(), bufs[1].get().data(), (size_t)sz) != 0)
             return false;
-
-        if (memcmp(buf1, buf2, (size_t)sz1) != 0)
-            return false;
-    }
-    return true;
+        return true;
+    });
 }
 
 bool compare_dirs(const path &dir1, const path &dir2)
@@ -224,5 +202,62 @@ bool compare_dirs(const path &dir1, const path &dir2)
             return false;
     }
 
+    return true;
+}
+
+FileIterator::FileIterator(const std::vector<path> &fns)
+{
+    if (fns.empty())
+        throw std::runtime_error("Provide at least one file");
+
+    for (auto &f : fns)
+    {
+        File d;
+        d.size = fs::file_size(f);
+        d.ifile = std::move(std::ifstream(f.string(), std::ifstream::binary));
+        files.push_back(std::move(d));
+    }
+}
+
+bool FileIterator::is_same_size() const
+{
+    auto sz = files.front().size;
+    return std::all_of(files.begin(), files.end(),
+        [sz](const auto &f) { return f.size == sz; });
+}
+
+bool FileIterator::is_same_read_size() const
+{
+    auto sz = files.front().read;
+    return std::all_of(files.begin(), files.end(),
+        [sz](const auto &f) { return f.read == sz; });
+}
+
+bool FileIterator::iterate(std::function<bool(const BuffersRef &, uint64_t)> f)
+{
+    if (!is_same_size())
+        return false;
+
+    BuffersRef buffers;
+    for (auto &f : files)
+    {
+        f.buf.resize(buffer_size);
+        buffers.emplace_back(f.buf);
+    }
+
+    while (std::none_of(files.begin(), files.end(),
+        [](const auto &f) { return f.ifile.eof(); }))
+    {
+        std::for_each(files.begin(), files.end(), [this](auto &f)
+        {
+            f.ifile.read((char *)&f.buf[0], buffer_size);
+            f.read = f.ifile.gcount();
+        });
+        if (!is_same_read_size())
+            return false;
+
+        if (!f(buffers, files.front().read))
+            return false;
+    }
     return true;
 }

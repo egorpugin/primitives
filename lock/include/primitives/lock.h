@@ -54,7 +54,7 @@ void single_process_job(const path &fn, F && f)
     ScopedFileLock fl(fn, std::defer_lock);
     if (fl.try_lock())
     {
-        f();
+        std::forward<F>(f)();
     }
     else
     {

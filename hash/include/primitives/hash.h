@@ -18,7 +18,9 @@ String sha256(const String &data);
 String sha256(const path &fn);
 
 String sha3_256(const String &data);
+String sha3_256(const path &fn);
 
+String strong_file_hash(const String &data);
 String strong_file_hash(const path &fn);
 
 String shorten_hash(const String &data, size_t size);

@@ -47,7 +47,7 @@ projects:
         dependencies:
             - filesystem
             - pvt.cppan.demo.openssl.crypto: 1
-            - pvt.cppan.demo.coruus.keccak_tiny_unrolled: singlefile
+            - pvt.cppan.demo.aleksey14.rhash: 1
 
     http:
         name: http
@@ -114,3 +114,4 @@ projects:
         dependencies:
             - hash
             - executor
+            - pvt.cppan.demo.philsquared.catch: 1
