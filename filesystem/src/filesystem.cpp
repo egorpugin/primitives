@@ -102,7 +102,8 @@ void write_file_if_different(const path &p, const String &s)
 
 void copy_dir(const path &src, const path &dst)
 {
-    fs::create_directories(dst);
+    boost::system::error_code ec;
+    fs::create_directories(dst, ec);
     for (auto &f : boost::make_iterator_range(fs::directory_iterator(src), {}))
     {
         if (fs::is_directory(f))
