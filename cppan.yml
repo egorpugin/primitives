@@ -10,8 +10,10 @@ projects:
         root_directory: command
         files: .*
         include_directories:
-            - include
-            - dep/process
+            public:
+                - include
+            private:
+                - dep/process
         dependencies:
             - filesystem
             - log
