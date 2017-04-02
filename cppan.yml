@@ -8,6 +8,13 @@ projects:
         name: command
         type: library
         root_directory: command
+        files: .*
+        include_directories:
+            - include
+            - dep/process
+        dependencies:
+            - filesystem
+            - log
 
     context:
         name: context
