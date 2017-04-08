@@ -1,19 +1,3 @@
-/*
- * Copyright (C) 2016-2017, Egor Pugin
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 #include <primitives/command.h>
 
 #include <boost/algorithm/string.hpp>
@@ -34,20 +18,24 @@ extern "C" { extern char ***_NSGetEnviron(void); }
 #endif
 #endif
 
-bool has_executable_in_path(std::string &prog, bool silent)
+optional<path> resolve_executable(const path &p)
+try
 {
-    bool ret = true;
-    try
+    return boost::process::find_executable_in_path(p.string());
+}
+catch (fs::filesystem_error &)
+{
+    return boost::none;
+}
+
+optional<path> resolve_executable(const std::vector<path> &paths)
+{
+    for (auto &p : paths)
     {
-        prog = boost::process::find_executable_in_path(prog);
+        if (auto e = resolve_executable(p))
+            return e;
     }
-    catch (fs::filesystem_error &e)
-    {
-        if (!silent)
-            LOG_WARN(logger, "'" << prog << "' is missing in your path environment variable. Error: " << e.what());
-        ret = false;
-    }
-    return ret;
+    return boost::none;
 }
 
 namespace command
@@ -105,8 +93,13 @@ Result execute(const Args &args, const Options &opts)
     if (args_fixed[0].rfind(".exe") != args_fixed[0].size() - 4)
         args_fixed[0] += ".exe";
 #endif
-    if (args_fixed[0].find_first_of("\\/") == std::string::npos && !has_executable_in_path(args_fixed[0]))
-        throw std::runtime_error("Program '" + args_fixed[0] + "' not found");
+    if (args_fixed[0].find_first_of("\\/") == std::string::npos)
+    {
+        auto e = resolve_executable(args_fixed[0]);
+        if (!e)
+            throw std::runtime_error("Program '" + args_fixed[0] + "' not found");
+        args_fixed[0] = e.get().string();
+    }
 
 #ifdef _WIN32
     boost::algorithm::replace_all(args_fixed[0], "/", "\\");
