@@ -1,130 +1,258 @@
 root_project: pvt.egorpugin.primitives
 
-common_settings:
-    c++: 14
-
 projects:
     command:
         name: command
+
         type: library
-        static_only: true
+
         root_directory: command
-        files: .*
+
+        c++: 14
+
+        static_only: true
+
+        files:
+            -   .*
+
         include_directories:
             public:
-                - include
+                -   include
             private:
-                - dep/process
+                -   dep/process
+
         dependencies:
-            - filesystem
-            - log
-            - templates
+            public:
+                filesystem:
+                    version: "*"
+                log:
+                    version: "*"
+                templates:
+                    version: "*"
 
     context:
         name: context
+
         type: library
-        static_only: true
+
         root_directory: context
+
+        c++: 14
+
+        static_only: true
 
     date_time:
         name: date_time
+
         type: library
-        static_only: true
+
         root_directory: date_time
+
+        c++: 14
+
+        static_only: true
+
         dependencies:
-            - string
-            - pvt.cppan.demo.boost.date_time: 1
+            public:
+                pvt.cppan.demo.boost.date_time:
+                    version: 1
+                string:
+                    version: "*"
 
     executor:
         name: executor
+
         type: library
-        static_only: true
+
         root_directory: executor
+
+        c++: 14
+
+        static_only: true
 
     filesystem:
         name: filesystem
+
         type: library
-        static_only: true
+
         root_directory: filesystem
+
+        c++: 14
+
+        static_only: true
+
         dependencies:
-            - string
-            - pvt.cppan.demo.boost.filesystem: 1
+            public:
+                pvt.cppan.demo.boost.filesystem:
+                    version: 1
+                string:
+                    version: "*"
 
     hash:
         name: hash
+
         type: library
-        static_only: true
+
         root_directory: hash
+
+        c++: 14
+
+        static_only: true
+
         dependencies:
-            - filesystem
-            - pvt.cppan.demo.openssl.crypto: 1
-            - pvt.cppan.demo.aleksey14.rhash: 1
+            public:
+                filesystem:
+                    version: "*"
+                pvt.cppan.demo.aleksey14.rhash:
+                    version: 1
+                pvt.cppan.demo.openssl.crypto:
+                    version: 1
 
     http:
         name: http
+
         type: library
-        static_only: true
+
         root_directory: http
+
+        c++: 14
+
+        static_only: true
+
         options:
             any:
                 link_libraries:
                     win32:
                         public:
-                            - Winhttp
+                            -   Winhttp
+
         dependencies:
-            - filesystem
-            - templates
-            - pvt.cppan.demo.badger.curl.libcurl: 7
+            public:
+                filesystem:
+                    version: "*"
+                pvt.cppan.demo.badger.curl.libcurl:
+                    version: 7
+                templates:
+                    version: "*"
 
     lock:
         name: lock
+
         type: library
-        static_only: true
+
         root_directory: lock
+
+        c++: 14
+
+        static_only: true
+
         dependencies:
-            - filesystem
-            - pvt.cppan.demo.boost.interprocess: 1
+            public:
+                filesystem:
+                    version: "*"
+                pvt.cppan.demo.boost.interprocess:
+                    version: 1
 
     log:
         name: log
+
         type: library
-        static_only: true
+
         root_directory: log
+
+        c++: 14
+
+        static_only: true
+
         dependencies:
-            - pvt.cppan.demo.boost.log: 1
+            public:
+                pvt.cppan.demo.boost.log:
+                    version: 1
 
     pack:
         name: pack
+
         type: library
-        static_only: true
+
         root_directory: pack
+
+        c++: 14
+
+        static_only: true
+
         dependencies:
-            - filesystem
-            - pvt.cppan.demo.libarchive.libarchive: 3
+            public:
+                filesystem:
+                    version: "*"
+                pvt.cppan.demo.libarchive.libarchive:
+                    version: 3
 
     sqlite_db:
         name: sqlite_db
+
         type: library
+
         root_directory: sqlite_db
+
+        c++: 14
 
     string:
         name: string
+
         type: library
-        static_only: true
+
         root_directory: string
+
+        c++: 14
+
+        static_only: true
+
         dependencies:
-            - pvt.cppan.demo.boost.algorithm: 1
+            public:
+                pvt.cppan.demo.boost.algorithm:
+                    version: 1
 
     templates:
         name: templates
+
         type: library
+
         root_directory: templates
+
+        c++: 14
+
         dependencies:
-            - pvt.cppan.demo.boost.optional: 1
+            public:
+                pvt.cppan.demo.boost.optional:
+                    version: 1
 
     testxxx:
-        files: main.cpp
+        c++: 14
+
+        files:
+            -   main.cpp
+
         dependencies:
-            - hash
-            - executor
-            - pvt.cppan.demo.philsquared.catch: 1
+            public:
+                executor:
+                    version: "*"
+                hash:
+                    version: "*"
+                pvt.cppan.demo.philsquared.catch:
+                    version: 1
+
+    yaml:
+        name: yaml
+        static_only: true
+
+        type: library
+
+        root_directory: yaml
+
+        dependencies:
+            public:
+                pvt.cppan.demo.jbeder.yaml_cpp:
+                    version: master
+                string:
+                    version: "*"
+
