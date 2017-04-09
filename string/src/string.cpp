@@ -57,7 +57,7 @@ String trim_double_quotes(String s)
     return s;
 }
 
-auto& get_string_converter()
+static auto& get_string_converter()
 {
     static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     return converter;
