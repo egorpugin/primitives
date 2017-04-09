@@ -81,6 +81,13 @@ auto get_sequence_set(const yaml &node)
 }
 
 template <class T1, class T2 = T1>
+auto get_sequence_set(const yaml &node, const String &key)
+{
+    auto vs = get_sequence<T2>(node, key);
+    return std::set<T1>(vs.begin(), vs.end());
+}
+
+template <class T1, class T2 = T1>
 auto get_sequence_unordered_set(const yaml &node, const String &key)
 {
     auto vs = get_sequence<T2>(node, key);
