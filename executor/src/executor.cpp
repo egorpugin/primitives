@@ -63,7 +63,6 @@ void Executor::run(size_t i)
 
             thread_pool[i].busy = true;
             t();
-            thread_pool[i].busy = false;
         }
         catch (const std::exception &e)
         {
@@ -75,12 +74,14 @@ void Executor::run(size_t i)
             error = "unknown exception";
             thread_pool[i].eptr = std::current_exception();
         }
+        thread_pool[i].busy = false;
+
         if (!error.empty())
         {
             if (throw_exceptions)
                 done = true;
             else
-                std::cerr << "executor: " << this << ", thread #" << i + 1 << ", error: " << error;
+                std::cerr << "executor: " << this << ", thread #" << i + 1 << ", error: " << error << "\n";
                 //LOG_ERROR(logger, "executor: " << this << ", thread #" << i + 1 << ", error: " << error);
         }
     }
