@@ -106,9 +106,10 @@ void Executor::wait()
         while (t.busy && !done)
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    for (auto &t : thread_pool)
-        if (t.eptr)
-            std::rethrow_exception(t.eptr);
+    if (throw_exceptions)
+        for (auto &t : thread_pool)
+            if (t.eptr)
+                std::rethrow_exception(t.eptr);
 }
 
 void Executor::set_thread_name(const std::string &name, size_t i) const
