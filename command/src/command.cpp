@@ -21,7 +21,7 @@ extern "C" { extern char ***_NSGetEnviron(void); }
 optional<path> resolve_executable(const path &p)
 try
 {
-    return boost::process::find_executable_in_path(p.string());
+    return path(boost::process::find_executable_in_path(p.string()));
 }
 catch (fs::filesystem_error &)
 {
