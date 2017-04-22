@@ -89,11 +89,7 @@ Result execute(const Args &args, const Options &opts)
 
     auto args_fixed = args;
 
-#ifdef _WIN32
-    if (args_fixed[0].rfind(".exe") != args_fixed[0].size() - 4)
-        args_fixed[0] += ".exe";
-#endif
-    if (args_fixed[0].find_first_of("\\/") == std::string::npos)
+    if (!fs::exists(args_fixed[0]) || args_fixed[0].find_first_of("\\/") == std::string::npos)
     {
         auto e = resolve_executable(args_fixed[0]);
         if (!e)
