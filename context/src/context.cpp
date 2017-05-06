@@ -189,8 +189,9 @@ Context::Text Context::getText() const
     for (auto &line : lines)
     {
         Text space;
-        for (int i = 0; i < line.n_indents; i++)
-            space += indent;
+        if (!line.text.empty())
+            for (int i = 0; i < line.n_indents; i++)
+                space += indent;
         s += space + line.text + newline;
     }
     return s;
@@ -350,10 +351,7 @@ void Context::addWithRelativeIndent(const Context &rhs)
     auto addWithRelativeIndent = [this](Lines &l1, Lines l2)
     {
         for (auto &l : l2)
-        {
-            if (!l.text.empty())
-                l.n_indents += n_indents;
-        }
+            l.n_indents += n_indents;
         l1 += l2;
     };
 
