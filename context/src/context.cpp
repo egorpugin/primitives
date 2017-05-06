@@ -350,7 +350,10 @@ void Context::addWithRelativeIndent(const Context &rhs)
     auto addWithRelativeIndent = [this](Lines &l1, Lines l2)
     {
         for (auto &l : l2)
-            l.n_indents += n_indents;
+        {
+            if (!l.text.empty())
+                l.n_indents += n_indents;
+        }
         l1 += l2;
     };
 
