@@ -89,13 +89,11 @@ Result execute(const Args &args, const Options &opts)
 
     auto args_fixed = args;
 
-    if (!fs::exists(args_fixed[0]) || args_fixed[0].find_first_of("\\/") == std::string::npos)
-    {
-        auto e = resolve_executable(args_fixed[0]);
-        if (!e)
-            throw std::runtime_error("Program '" + args_fixed[0] + "' not found");
-        args_fixed[0] = e.get().string();
-    }
+	// resolve always
+    auto e = resolve_executable(args_fixed[0]);
+    if (!e)
+        throw std::runtime_error("Program '" + args_fixed[0] + "' not found");
+    args_fixed[0] = e.get().string();
 
 #ifdef _WIN32
     boost::algorithm::replace_all(args_fixed[0], "/", "\\");
