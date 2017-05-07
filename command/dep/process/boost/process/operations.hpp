@@ -48,6 +48,7 @@
 #include <boost/throw_exception.hpp>
 #include <boost/scoped_array.hpp>
 #include <boost/assert.hpp>
+#include <boost/filesystem.hpp>
 #include <string>
 #include <vector>
 #include <stdexcept>
@@ -117,7 +118,7 @@ inline std::string find_executable_in_path(const std::string &file, std::string 
         char *dummy;
         DWORD size = ::SearchPathA(path.empty() ? NULL : path.c_str(), file.c_str(), *ext, MAX_PATH, buf, &dummy);
         BOOST_ASSERT(size < MAX_PATH);
-        if (size > 0)
+        if (size > 0 && boost::filesystem::is_regular_file(buf))
         {
             result = buf;
             break;
