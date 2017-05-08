@@ -246,6 +246,8 @@ projects:
         static_only: true
 
         type: library
+        
+        c++: 14
 
         root_directory: yaml
 
