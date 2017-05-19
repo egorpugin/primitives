@@ -82,6 +82,7 @@ public:
     }
 
     path get_cwd() const { return cwd; }
+    path get_old() const { return old; }
 
 private:
     path old;
