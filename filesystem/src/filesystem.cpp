@@ -124,21 +124,33 @@ void remove_files_like(const Files &files, const String &regex)
     }
 }
 
-void remove_files_like(const path &dir, const String &regex)
+void remove_files_like(const path &dir, const String &regex, bool recursive)
 {
-    remove_files_like(enumerate_files(dir), regex);
+    remove_files_like(enumerate_files(dir, recursive), regex);
 }
 
-Files enumerate_files(const path &dir)
+Files enumerate_files(const path &dir, bool recursive)
 {
     Files files;
     if (!fs::exists(dir))
         return files;
-    for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+    if (recursive)
     {
-        if (!fs::is_regular_file(f))
-            continue;
-        files.insert(f);
+        for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+        {
+            if (!fs::is_regular_file(f))
+                continue;
+            files.insert(f);
+        }
+    }
+    else
+    {
+        for (auto &f : boost::make_iterator_range(fs::directory_iterator(dir), {}))
+        {
+            if (!fs::is_regular_file(f))
+                continue;
+            files.insert(f);
+        }
     }
     return files;
 }
