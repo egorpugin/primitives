@@ -118,27 +118,22 @@ void Executor::set_thread_name(const std::string &name, size_t i) const
         return;
 
 #if defined(_MSC_VER)
-    constexpr DWORD MS_VC_EXCEPTION = 0x406D1388;
-
 #pragma pack(push, 8)
     struct THREADNAME_INFO
     {
-        DWORD dwType;     // Must be 0x1000.
-        LPCSTR szName;    // Pointer to thread name
-        DWORD dwThreadId; // Thread ID (-1 == current thread)
-        DWORD dwFlags;    // Reserved.  Do not use.
+        DWORD dwType = 0x1000;  // Must be 0x1000.
+        LPCSTR szName;          // Pointer to thread name
+        DWORD dwThreadId = -1;  // Thread ID (-1 == current thread)
+        DWORD dwFlags = 0;      // Reserved.  Do not use.
     };
 #pragma pack(pop)
 
     THREADNAME_INFO info;
-    info.dwType = 0x1000;
     info.szName = name.c_str();
-    info.dwThreadId = *(DWORD *)&std::this_thread::get_id();
-    info.dwFlags = 0;
 
     __try
     {
-        ::RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR *)&info);
+        ::RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR *)&info);
     }
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
