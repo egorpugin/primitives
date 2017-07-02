@@ -107,7 +107,7 @@ Result execute(const Args &args, const Options &opts)
         for (auto &a : args_fixed)
             s += a + " ";
         s.resize(s.size() - 1);
-        LOG_DEBUG(logger, "executing command: " << s);
+        LOG_TRACE(logger, "executing command: " << s);
     }
 
     context ctx;
