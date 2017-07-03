@@ -101,7 +101,7 @@ class Executor
     using Threads = std::vector<ThreadData>;
 
 public:
-    bool throw_exceptions = false;
+    bool throw_exceptions = true;
 
 public:
     Executor(size_t nThreads = std::thread::hardware_concurrency(), const std::string &name = "");
