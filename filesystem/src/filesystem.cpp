@@ -2,6 +2,7 @@
 
 #include <boost/algorithm/string.hpp>
 
+//#include <functional>
 #include <iostream>
 #include <regex>
 
@@ -226,7 +227,7 @@ FileIterator::FileIterator(const std::vector<path> &fns)
     {
         File d;
         d.size = fs::file_size(f);
-        d.ifile = std::make_unique<std::ifstream>(f.string(), std::ifstream::binary);
+        d.ifile = std::move(std::ifstream(f.string(), std::ifstream::binary));
         files.push_back(std::move(d));
     }
 }
@@ -258,12 +259,12 @@ bool FileIterator::iterate(std::function<bool(const BuffersRef &, uint64_t)> f)
     }
 
     while (std::none_of(files.begin(), files.end(),
-        [](const auto &f) { return f.ifile->eof(); }))
+        [](const auto &f) { return f.ifile.eof(); }))
     {
         std::for_each(files.begin(), files.end(), [this](auto &f)
         {
-            f.ifile->read((char *)&f.buf[0], buffer_size);
-            f.read = f.ifile->gcount();
+            f.ifile.read((char *)&f.buf[0], buffer_size);
+            f.read = f.ifile.gcount();
         });
         if (!is_same_read_size())
             return false;
