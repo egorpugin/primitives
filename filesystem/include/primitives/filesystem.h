@@ -6,8 +6,6 @@
 #include <boost/functional/hash.hpp>
 #include <boost/range.hpp>
 
-#include <fstream>
-#include <unordered_map>
 #include <unordered_set>
 
 namespace fs = boost::filesystem;
@@ -98,7 +96,7 @@ struct FileIterator
     struct File
     {
         path fn;
-        std::ifstream ifile;
+        std::unique_ptr<class std::ifstream> ifile;
         uint64_t size;
         Buffer buf;
         uint64_t read = 0;
