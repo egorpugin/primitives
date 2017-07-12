@@ -83,6 +83,9 @@ projects:
 
         dependencies:
             public:
+
+                pvt.cppan.demo.artyom_beilis.nowide:
+                    version: master
                 pvt.cppan.demo.boost.filesystem:
                     version: 1
                 string:
@@ -246,7 +249,7 @@ projects:
         static_only: true
 
         type: library
-        
+
         c++: 14
 
         root_directory: yaml

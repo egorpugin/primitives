@@ -1,10 +1,12 @@
 #include <primitives/hash.h>
 
-#include <random>
+#include <primitives/file_iterator.h>
 
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <rhash.h>
+
+#include <random>
 
 // keep always digits,lowercase,uppercase
 static const char alnum[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";

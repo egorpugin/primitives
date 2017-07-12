@@ -6,8 +6,6 @@
 #include <boost/functional/hash.hpp>
 #include <boost/range.hpp>
 
-#include <fstream>
-#include <unordered_map>
 #include <unordered_set>
 
 namespace fs = boost::filesystem;
@@ -37,6 +35,8 @@ Files enumerate_files(const path &dir, bool recursive = true);
 
 bool compare_files(const path &fn1, const path &fn2);
 bool compare_dirs(const path &dir1, const path &dir2);
+
+void setup_utf8_filesystem();
 
 namespace std
 {
@@ -88,28 +88,4 @@ private:
     path old;
     path cwd;
     bool active = true;
-};
-
-struct FileIterator
-{
-    using Buffer = std::vector<uint8_t>;
-    using BuffersRef = std::vector<std::reference_wrapper<Buffer>>;
-
-    struct File
-    {
-        path fn;
-        std::ifstream ifile;
-        uint64_t size;
-        Buffer buf;
-        uint64_t read = 0;
-    };
-
-    std::vector<File> files;
-    int buffer_size = 8192;
-
-    FileIterator(const std::vector<path> &fns);
-
-    bool iterate(std::function<bool(const BuffersRef &, uint64_t)> f);
-    bool is_same_size() const;
-    bool is_same_read_size() const;
 };

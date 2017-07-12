@@ -1,8 +1,11 @@
 #include <primitives/filesystem.h>
 
-#include <boost/algorithm/string.hpp>
+#include <primitives/file_iterator.h>
 
-//#include <functional>
+#include <boost/algorithm/string.hpp>
+#include <boost/nowide/fstream.hpp>
+#include <boost/nowide/integration/filesystem.hpp>
+
 #include <iostream>
 #include <regex>
 
@@ -51,7 +54,7 @@ String read_file(const path &p, bool no_size_check)
         throw std::runtime_error("File '" + p.string() + "' does not exist");
 
     auto fn = p.string();
-    std::ifstream ifile(fn, std::ios::in | std::ios::binary);
+    boost::nowide::ifstream ifile(fn, std::ios::in | std::ios::binary);
     if (!ifile)
         throw std::runtime_error("Cannot open file '" + fn + "' for reading");
 
@@ -77,7 +80,7 @@ void write_file(const path &p, const String &s)
     if (!pp.empty())
         fs::create_directories(pp);
 
-    std::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
+    boost::nowide::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
     if (!ofile)
         throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
     ofile << s;
@@ -94,7 +97,7 @@ void write_file_if_different(const path &p, const String &s)
 
     fs::create_directories(p.parent_path());
 
-    std::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
+    boost::nowide::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
     if (!ofile)
         throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
     ofile << s;
@@ -227,7 +230,7 @@ FileIterator::FileIterator(const std::vector<path> &fns)
     {
         File d;
         d.size = fs::file_size(f);
-        d.ifile = std::move(std::ifstream(f.string(), std::ifstream::binary));
+        d.ifile = std::make_unique<boost::nowide::ifstream>(f.string(), std::ifstream::binary);
         files.push_back(std::move(d));
     }
 }
@@ -259,12 +262,12 @@ bool FileIterator::iterate(std::function<bool(const BuffersRef &, uint64_t)> f)
     }
 
     while (std::none_of(files.begin(), files.end(),
-        [](const auto &f) { return f.ifile.eof(); }))
+        [](const auto &f) { return f.ifile->eof(); }))
     {
         std::for_each(files.begin(), files.end(), [this](auto &f)
         {
-            f.ifile.read((char *)&f.buf[0], buffer_size);
-            f.read = f.ifile.gcount();
+            f.ifile->read((char *)&f.buf[0], buffer_size);
+            f.read = f.ifile->gcount();
         });
         if (!is_same_read_size())
             return false;
@@ -273,4 +276,9 @@ bool FileIterator::iterate(std::function<bool(const BuffersRef &, uint64_t)> f)
             return false;
     }
     return true;
+}
+
+void setup_utf8_filesystem()
+{
+    boost::nowide::nowide_filesystem();
 }
