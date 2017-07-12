@@ -45,7 +45,7 @@ public:
     ~ScopedShareableFileLock();
 
 private:
-    FileLockPtr lock;
+    FileLockPtr lock_;
 };
 
 template <typename F>
