@@ -1,15 +1,14 @@
 #include <primitives/lock.h>
 
 #include <boost/interprocess/sync/file_lock.hpp>
-
-#include <iostream>
+#include <boost/nowide/fstream.hpp>
 
 std::string prepare_lock_file(const path &fn)
 {
     fs::create_directories(fn.parent_path());
     auto lock_file = fn.parent_path() / (fn.filename().string() + ".lock");
     if (!fs::exists(lock_file))
-        std::ofstream(lock_file.string());
+        boost::nowide::ofstream(lock_file.string());
     return lock_file.string();
 }
 

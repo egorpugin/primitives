@@ -2,7 +2,7 @@
 
 #include <curl/curl.h>
 
-#include <fstream>
+#include <boost/nowide/fstream.hpp>
 
 #ifdef WIN32
 #include <windows.h>
@@ -29,7 +29,7 @@ String getAutoProxy()
 
 size_t curl_write_file(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
-    auto ofile = (std::ofstream *)userdata;
+    auto ofile = (boost::nowide::ofstream *)userdata;
     auto read = size * nmemb;
     ofile->write(ptr, read);
     return read;
@@ -56,7 +56,7 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
     auto parent = fn.parent_path();
     if (!parent.empty() && !fs::exists(parent))
         fs::create_directories(parent);
-    std::ofstream ofile(fn.string(), std::ios::out | std::ios::binary);
+    boost::nowide::ofstream ofile(fn.string(), std::ios::out | std::ios::binary);
     if (!ofile)
         throw std::runtime_error("Cannot open file: " + fn.string());
 

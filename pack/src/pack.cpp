@@ -1,5 +1,6 @@
 #include <primitives/pack.h>
 
+#include <boost/nowide/fstream.hpp>
 #include <libarchive/archive.h>
 #include <libarchive/archive_entry.h>
 
@@ -83,9 +84,7 @@ Files unpack_file(const path &fn, const path &dst)
             continue;
 
         auto fn = fs::absolute(f).string();
-        // do not use fopen() because MSVC's file streams support UTF-16 characters
-        // and we won't be able to unpack files under some tricky dir names
-        std::ofstream o(fn, std::ios::out | std::ios::binary);
+        boost::nowide::ofstream o(fn, std::ios::out | std::ios::binary);
         if (!o)
         {
             // TODO: probably remove this and linux/limit.h header when server will be using hash paths
