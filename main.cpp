@@ -54,8 +54,12 @@ TEST_CASE("Checking hashes", "[hash]")
 
 TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
 {
+    using namespace primitives;
+
     path dir = fs::temp_directory_path() / "cppąń-storage-寿星天文历的";
     REQUIRE_NOTHROW(fs::create_directories(dir));
+
+    std::error_code ec;
 
 #ifdef _WIN32
     auto p = dir / "1.bat";
@@ -63,18 +67,27 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
 
     Command c;
     c.program = p;
-    REQUIRE(c.execute());
+    REQUIRE_NOTHROW(c.execute());
 
     auto pbad = dir / "2";
     c.program = pbad;
     REQUIRE_THROWS(c.execute());
-    std::error_code ec;
-    REQUIRE(!c.execute(ec));
+    ec.clear();
+    REQUIRE_NOTHROW(c.execute(ec));
+    REQUIRE(ec);
 
-    REQUIRE(Command::execute(p));
+    REQUIRE_NOTHROW(Command::execute(p));
     REQUIRE_THROWS(Command::execute(pbad));
+    ec.clear();
     REQUIRE_NOTHROW(Command::execute(pbad, ec));
+    REQUIRE(ec);
 #endif
+
+    REQUIRE_NOTHROW(Command::execute({ "cmake", "--version" }));
+    REQUIRE_THROWS(Command::execute({ "cmake", "--versionx" }));
+    ec.clear();
+    REQUIRE_NOTHROW(Command::execute({ "cmake", "--versionx" }, ec));
+    REQUIRE(ec);
 }
 
 int main(int argc, char **argv)

@@ -1,3 +1,16 @@
+local_settings:
+    use_shared_libs: false
+    rc_enabled: false
+    builds:
+        vs_release:
+            generator: Visual Studio 15 2017
+
+        vs_preview:
+            c_compiler:   c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
+            cxx_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
+            cxx_flags: /std:c++17
+
+
 root_project: pvt.egorpugin.primitives
 
 projects:

@@ -4,6 +4,9 @@
 #include <boost/asio.hpp>
 #include <boost/process.hpp>
 
+namespace primitives
+{
+
 namespace bp = boost::process;
 
 path resolve_executable(const path &p)
@@ -22,16 +25,28 @@ path resolve_executable(const std::vector<path> &paths)
     return path();
 }
 
-bool Command::execute1(std::error_code *ec)
+void Command::execute1(std::error_code *ec_in)
 {
     // setup
+
+    // try to use first arg as a program
+    if (program.empty())
+    {
+        if (args.empty())
+            throw std::runtime_error("No program was set");
+        program = args[0];
+        auto t = std::move(args);
+        args.assign(t.begin() + 1, t.end());
+    }
+
+    // resolve exe
     auto p = resolve_executable(program);
     if (p.empty())
     {
-        if (!ec)
+        if (!ec_in)
             throw std::runtime_error("Cannot resolve executable: " + program.string());
-        // set error code
-        return false;
+        *ec_in = std::make_error_code(std::errc::no_such_file_or_directory);
+        return;
     }
     program = p;
 
@@ -44,52 +59,46 @@ bool Command::execute1(std::error_code *ec)
         env = boost::this_process::environment();
 #endif
 
-    boost::asio::io_service io_service;
-    bp::async_pipe p1(io_service);
-    bp::async_pipe p2(io_service);
+    std::unique_ptr<boost::asio::io_service> ios;
+    boost::asio::io_service *ios_ptr;
+    if (io_service)
+        ios_ptr = io_service;
+    else
+    {
+        ios = std::make_unique<boost::asio::io_service>();
+        ios_ptr = ios.get();
+    }
 
-    std::function<void(int, const std::error_code &)> on_exit = [&p1, &p2, this](int exit, const std::error_code &ec)
+    bp::async_pipe p1(*ios_ptr);
+    bp::async_pipe p2(*ios_ptr);
+
+    std::function<void(int, const std::error_code &)> on_exit = [&p1, &p2, this, ec_in](int exit, const std::error_code &ec)
     {
         exit_code = exit;
         p1.async_close();
         p2.async_close();
+
+        // return if ok
+        if (exit_code == 0)
+            return;
+
+        // set ec, if passed
+        if (ec_in)
+        {
+            ec_in->assign(1, std::generic_category());
+            return;
+        }
+
+        // throw now
+        String s;
+        s += "\"" + program.string() + "\" ";
+        for (auto &a : args)
+            s += "\"" + a + "\" ";
+        s.resize(s.size() - 1);
+        throw std::runtime_error("Last command failed: " + s + ", exit code = " + std::to_string(exit_code));
     };
 
-    std::unique_ptr<bp::child> c;
-    if (ec)
-    {
-        c = std::make_unique<bp::child>(
-            program
-            , bp::args = args
-            , bp::start_dir = working_directory
-#ifndef _WIN32
-            , bp::env = env
-#endif
-            , io_service
-            , bp::std_in < stdin
-            , bp::std_out > p1
-            , bp::std_err > p2
-            , bp::on_exit(on_exit)
-            , *ec
-        );
-    }
-    else
-    {
-        c = std::make_unique<bp::child>(
-            program
-            , bp::args = args
-            , bp::start_dir = working_directory
-#ifndef _WIN32
-            , bp::env = env
-#endif
-            , io_service
-            , bp::std_in < stdin
-            , bp::std_out > p1
-            , bp::std_err > p2
-            , bp::on_exit(on_exit)
-            );
-    }
-
+    // setup buffers also before child creation
     std::function<void(const boost::system::error_code &, std::size_t)> out_cb, err_cb;
     Buffer out_buf(8192), err_buf(8192);
     out_cb = [this, &out_buf, &p1, &out_cb](const boost::system::error_code &ec, std::size_t s)
@@ -109,9 +118,45 @@ bool Command::execute1(std::error_code *ec)
     boost::asio::async_read(p1, boost::asio::buffer(out_buf), out_cb);
     boost::asio::async_read(p2, boost::asio::buffer(err_buf), err_cb);
 
-    io_service.run();
+    // run
+    std::unique_ptr<bp::child> c;
+    if (ec_in)
+    {
+        c = std::make_unique<bp::child>(
+            program
+            , bp::args = args
+            , bp::start_dir = working_directory
+#ifndef _WIN32
+            , bp::env = env
+#endif
+            , *ios_ptr
+            , bp::std_in < stdin
+            , bp::std_out > p1
+            , bp::std_err > p2
+            , bp::on_exit(on_exit)
+            , *ec_in
+            );
+    }
+    else
+    {
+        c = std::make_unique<bp::child>(
+            program
+            , bp::args = args
+            , bp::start_dir = working_directory
+#ifndef _WIN32
+            , bp::env = env
+#endif
+            , *ios_ptr
+            , bp::std_in < stdin
+            , bp::std_out > p1
+            , bp::std_err > p2
+            , bp::on_exit(on_exit)
+            );
+    }
 
-    return (ec && !*ec || !ec) && exit_code == 0;
+    // perform io only in case we didn't get external io_service
+    if (ios)
+        ios_ptr->run();
 }
 
 void Command::write(path p) const
@@ -122,44 +167,56 @@ void Command::write(path p) const
     write_file(p / (fn + "_err.txt"), err.text);
 }
 
-bool Command::execute1(const path &p, const Strings &args, std::error_code *ec)
+void Command::execute1(const path &p, const Strings &args, std::error_code *ec)
 {
     Command c;
     c.program = p;
     c.args = args;
-    return c.execute1(ec);
+    c.execute1(ec);
 }
 
-bool Command::execute(const path &p)
+void Command::execute(const path &p)
 {
-    return execute1(p);
+    execute1(p);
 }
 
-bool Command::execute(const path &p, std::error_code &ec)
+void Command::execute(const path &p, std::error_code &ec)
 {
-    return execute1(p, Strings(), &ec);
+    execute1(p, Strings(), &ec);
 }
 
-bool Command::execute(const path &p, const Strings &args)
+void Command::execute(const path &p, const Strings &args)
 {
-    return execute1(p, args);
+    execute1(p, args);
 }
 
-bool Command::execute(const path &p, const Strings &args, std::error_code &ec)
+void Command::execute(const path &p, const Strings &args, std::error_code &ec)
 {
-    return execute1(p, args, &ec);
+    execute1(p, args, &ec);
 }
 
-bool Command::execute(const Strings &args)
+void Command::execute(const Strings &args)
 {
-    if (args.empty())
-        throw std::runtime_error("Empty program");
-    return execute1(args[0], Strings(args.begin() + 1, args.end()));
+    Command c;
+    c.args = args;
+    c.execute();
 }
 
-bool Command::execute(const Strings &args, std::error_code &ec)
+void Command::execute(const Strings &args, std::error_code &ec)
 {
-    if (args.empty())
-        throw std::runtime_error("Empty program");
-    return execute1(args[0], Strings(args.begin() + 1, args.end()), &ec);
+    Command c;
+    c.args = args;
+    c.execute(ec);
+}
+
+void Command::execute(const std::initializer_list<String> &args)
+{
+    execute(Strings(args.begin(), args.end()));
+}
+
+void Command::execute(const std::initializer_list<String> &args, std::error_code &ec)
+{
+    execute(Strings(args.begin(), args.end()), ec);
+}
+
 }
