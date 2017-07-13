@@ -28,7 +28,7 @@ struct Command
         String text;
         //bool capture = true;
         //bool inherit = false;
-        //std::function<void(const Buffer &)> action;
+        std::function<void(const String &)> action;
     };
 
     // input

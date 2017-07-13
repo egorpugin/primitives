@@ -75,8 +75,6 @@ void Command::execute1(std::error_code *ec_in)
     std::function<void(int, const std::error_code &)> on_exit = [&p1, &p2, this, ec_in](int exit, const std::error_code &ec)
     {
         exit_code = exit;
-        p1.async_close();
-        p2.async_close();
 
         // return if ok
         if (exit_code == 0)
@@ -98,22 +96,32 @@ void Command::execute1(std::error_code *ec_in)
         throw std::runtime_error("Last command failed: " + s + ", exit code = " + std::to_string(exit_code));
     };
 
+    auto async_read = [](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_line)
+    {
+        if (s)
+        {
+            String str(out_buf.begin(), out_buf.begin() + s);
+            out.text += str;
+            if (out.action)
+                out.action(str);
+        }
+        else
+            p.async_close();
+        if (!ec)
+            boost::asio::async_read(p, boost::asio::buffer(out_buf), out_cb);
+    };
+
     // setup buffers also before child creation
     std::function<void(const boost::system::error_code &, std::size_t)> out_cb, err_cb;
     Buffer out_buf(8192), err_buf(8192);
-    out_cb = [this, &out_buf, &p1, &out_cb](const boost::system::error_code &ec, std::size_t s)
+    String out_line, err_line;
+    out_cb = [this, &out_buf, &p1, &out_cb, &async_read, &out_line](const boost::system::error_code &ec, std::size_t s)
     {
-        if (s)
-            out.text.insert(out.text.end(), out_buf.begin(), out_buf.begin() + s);
-        if (!ec)
-            boost::asio::async_read(p1, boost::asio::buffer(out_buf), out_cb);
+        async_read(ec, s, out, p1, out_buf, out_cb, out_line);
     };
-    err_cb = [this, &err_buf, &p2, &err_cb](const boost::system::error_code &ec, std::size_t s)
+    err_cb = [this, &err_buf, &p2, &err_cb, &async_read, &err_line](const boost::system::error_code &ec, std::size_t s)
     {
-        if (s)
-            err.text.insert(err.text.end(), err_buf.begin(), err_buf.begin() + s);
-        if (!ec)
-            boost::asio::async_read(p2, boost::asio::buffer(err_buf), err_cb);
+        async_read(ec, s, err, p2, err_buf, err_cb, err_line);
     };
     boost::asio::async_read(p1, boost::asio::buffer(out_buf), out_cb);
     boost::asio::async_read(p2, boost::asio::buffer(err_buf), err_cb);
