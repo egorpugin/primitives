@@ -1,7 +1,6 @@
 #pragma once
 
 #include <primitives/filesystem.h>
-#include <primitives/optional.h>
 
 struct Command;
 using Commands = std::unordered_set<Command*>;
