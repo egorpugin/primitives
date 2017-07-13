@@ -83,7 +83,10 @@ void Command::execute1(std::error_code *ec_in)
         // set ec, if passed
         if (ec_in)
         {
-            ec_in->assign(1, std::generic_category());
+            if (ec)
+                *ec_in = ec;
+            else
+                ec_in->assign(1, std::generic_category());
             return;
         }
 
@@ -103,12 +106,12 @@ void Command::execute1(std::error_code *ec_in)
             String str(out_buf.begin(), out_buf.begin() + s);
             out.text += str;
             if (out.action)
-                out.action(str);
+                out.action(str, ec);
         }
-        else
-            p.async_close();
         if (!ec)
             boost::asio::async_read(p, boost::asio::buffer(out_buf), out_cb);
+        else
+            p.async_close();
     };
 
     // setup buffers also before child creation
