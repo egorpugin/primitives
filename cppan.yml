@@ -29,6 +29,27 @@ projects:
                     version: "*"
                 templates:
                     version: "*"
+    command2:
+        name: command2
+
+        type: library
+
+        root_directory: command2
+
+        c++: 14
+
+        static_only: true
+
+        dependencies:
+            public:
+                filesystem:
+                    version: "*"
+                log:
+                    version: "*"
+                templates:
+                    version: "*"
+                pvt.cppan.demo.klemens_morgenstern.boost.process:
+                    version: develop
 
     context:
         name: context
@@ -237,6 +258,8 @@ projects:
 
         dependencies:
             public:
+                command2:
+                    version: "*"
                 executor:
                     version: "*"
                 hash:

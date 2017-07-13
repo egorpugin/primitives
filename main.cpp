@@ -3,13 +3,14 @@ name: main
 
 */
 
+#include <primitives/command.h>
 #include <primitives/filesystem.h>
 #include <primitives/hash.h>
 
 #define CATCH_CONFIG_RUNNER
 #include <catch.hpp>
 
-TEST_CASE( "Checking hashes", "[hash]" )
+TEST_CASE("Checking hashes", "[hash]")
 {
     path empty_file;
     path fox_file;
@@ -51,13 +52,32 @@ TEST_CASE( "Checking hashes", "[hash]" )
     fs::remove(fox_point_file);
 }
 
+TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
+{
+    path dir = fs::temp_directory_path() / "cppąń-storage-寿星天文历的";
+    REQUIRE_NOTHROW(fs::create_directories(dir));
+
+#ifdef _WIN32
+    auto p = dir / "1.bat";
+    write_file(p, "echo hello world");
+
+    Command c;
+    c.program = p;
+    REQUIRE(c.execute());
+
+    auto pbad = dir / "2";
+    c.program = pbad;
+    REQUIRE_THROWS(c.execute());
+    std::error_code ec;
+    REQUIRE(!c.execute(ec));
+#endif
+}
+
 int main(int argc, char **argv)
 {
-    Catch::Session().run(argc, argv);
+    setup_utf8_filesystem();
 
-    String h;
-    h = sha3_256(""s);
-    h = strong_file_hash(path("g:/dev/primitives/1.txt"));
+    Catch::Session().run(argc, argv);
 
     return 0;
 }
