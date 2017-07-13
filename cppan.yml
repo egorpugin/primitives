@@ -12,34 +12,6 @@ projects:
 
         static_only: true
 
-        files:
-            -   .*
-
-        include_directories:
-            public:
-                -   include
-            private:
-                -   dep/process
-
-        dependencies:
-            public:
-                filesystem:
-                    version: "*"
-                log:
-                    version: "*"
-                templates:
-                    version: "*"
-    command2:
-        name: command2
-
-        type: library
-
-        root_directory: command2
-
-        c++: 14
-
-        static_only: true
-
         dependencies:
             public:
                 filesystem:
@@ -246,23 +218,6 @@ projects:
                 pvt.cppan.demo.boost.optional:
                     version: 1
 
-    testxxx:
-        c++: 14
-
-        files:
-            -   main.cpp
-
-        dependencies:
-            public:
-                command2:
-                    version: "*"
-                executor:
-                    version: "*"
-                hash:
-                    version: "*"
-                pvt.cppan.demo.philsquared.catch:
-                    version: 1
-
     yaml:
         name: yaml
         static_only: true
@@ -279,4 +234,21 @@ projects:
                     version: master
                 string:
                     version: "*"
+
+    testxxx:
+        c++: 14
+
+        files:
+            -   main.cpp
+
+        dependencies:
+            public:
+                command:
+                    version: "*"
+                executor:
+                    version: "*"
+                hash:
+                    version: "*"
+                pvt.cppan.demo.philsquared.catch:
+                    version: 1
 

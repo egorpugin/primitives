@@ -1,40 +1,55 @@
 #pragma once
 
 #include <primitives/filesystem.h>
-#include <primitives/optional.h>
 
-namespace command
+struct Command;
+using Commands = std::unordered_set<Command*>;
+
+struct Command
 {
+    using Buffer = std::vector<char>;
 
-using Args = Strings;
-
-struct Options
-{
     struct Stream
     {
-        bool capture = false;
+        String text;
+        bool capture = true;
         bool inherit = false;
-        std::function<void(const String &)> action;
+        //std::function<void(const Buffer &)> action;
     };
 
+    // input
+    path program;
+    Strings args;
+    StringMap environment;
+    path working_directory;
+
+    // output
+    int exit_code = -1;
+    //Stream input
     Stream out;
     Stream err;
-};
+    // more streams
 
-struct Result
-{
-    int rc;
-    String out;
-    String err;
+    // properties
+    //int32_t pid = -1;
+    bool use_parent_environment = true;
 
+    bool execute() { return execute1(); }
+    bool execute(std::error_code &ec) { return execute1(&ec); }
     void write(path p) const;
+
+    static bool execute(const path &p);
+    static bool execute(const path &p, std::error_code &ec);
+    static bool execute(const path &p, const Strings &args);
+    static bool execute(const path &p, const Strings &args, std::error_code &ec);
+    static bool execute(const Strings &args);
+    static bool execute(const Strings &args, std::error_code &ec);
+
+private:
+    bool execute1(std::error_code *ec = nullptr);
+
+    static bool execute1(const path &p, const Strings &args = Strings(), std::error_code *ec = nullptr);
 };
 
-Result execute(const Args &args, const Options &options = Options());
-Result execute_with_output(const Args &args, const Options &options = Options());
-Result execute_and_capture(const Args &args, const Options &options = Options());
-
-} // namespace command
-
-optional<path> resolve_executable(const path &p);
-optional<path> resolve_executable(const std::vector<path> &paths);
+path resolve_executable(const path &p);
+path resolve_executable(const std::vector<path> &paths);

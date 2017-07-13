@@ -70,6 +70,10 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
     REQUIRE_THROWS(c.execute());
     std::error_code ec;
     REQUIRE(!c.execute(ec));
+
+    REQUIRE(Command::execute(p));
+    REQUIRE_THROWS(Command::execute(pbad));
+    REQUIRE_NOTHROW(Command::execute(pbad, ec));
 #endif
 }
 
