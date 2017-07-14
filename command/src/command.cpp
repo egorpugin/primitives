@@ -56,12 +56,6 @@ void Command::execute1(std::error_code *ec_in)
     if (working_directory.empty())
         working_directory = fs::current_path();
 
-#ifndef _WIN32
-    bp::environment env;
-    if (use_parent_environment)
-        env = boost::this_process::environment();
-#endif
-
     std::unique_ptr<boost::asio::io_service> ios;
     boost::asio::io_service *ios_ptr;
     if (io_service)
@@ -151,14 +145,11 @@ void Command::execute1(std::error_code *ec_in)
             program
             , bp::args = wargs
             , bp::start_dir = working_directory
-#ifndef _WIN32
-            , bp::env = env
-#endif
-            , *ios_ptr
             , bp::std_in < stdin
             , bp::std_out > p1
             , bp::std_err > p2
             , bp::on_exit(on_exit)
+            , *ios_ptr
             , *ec_in
             );
     }
@@ -168,14 +159,11 @@ void Command::execute1(std::error_code *ec_in)
             program
             , bp::args = wargs
             , bp::start_dir = working_directory
-#ifndef _WIN32
-            , bp::env = env
-#endif
-            , *ios_ptr
             , bp::std_in < stdin
             , bp::std_out > p1
             , bp::std_err > p2
             , bp::on_exit(on_exit)
+            , *ios_ptr
             );
     }
 

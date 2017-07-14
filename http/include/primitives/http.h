@@ -38,19 +38,18 @@ extern HttpSettings httpSettings;
 
 struct HttpRequest : public HttpSettings
 {
-#undef DELETE
     enum Type
     {
-        GET,
-        POST,
-        DELETE
+        Get,
+        Post,
+        Delete
     };
 
     String url;
     String agent;
     String username;
     String password;
-    int type = GET;
+    int type = Get;
     String data;
     int timeout = -1;
     int connect_timeout = -1;

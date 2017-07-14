@@ -154,11 +154,10 @@ HttpResponse url_request(const HttpRequest &request)
 
     switch (request.type)
     {
-    case HttpRequest::POST:
+    case HttpRequest::Post:
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.data.c_str());
         break;
-#undef DELETE
-    case HttpRequest::DELETE:
+    case HttpRequest::Delete:
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
         break;
     }
