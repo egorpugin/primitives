@@ -5,6 +5,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/nowide/fstream.hpp>
 #include <boost/nowide/integration/filesystem.hpp>
+#include <boost/nowide/convert.hpp>
 
 #include <iostream>
 #include <regex>
@@ -94,13 +95,7 @@ void write_file_if_different(const path &p, const String &s)
         if (s == s2)
             return;
     }
-
-    fs::create_directories(p.parent_path());
-
-    boost::nowide::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
-    if (!ofile)
-        throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
-    ofile << s;
+    write_file(p, s);
 }
 
 void copy_dir(const path &src, const path &dst)

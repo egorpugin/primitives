@@ -2,7 +2,10 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
+#include <boost/nowide/convert.hpp>
 #include <boost/process.hpp>
+
+#include <iostream>
 
 namespace primitives
 {
@@ -99,12 +102,14 @@ void Command::execute1(std::error_code *ec_in)
         throw std::runtime_error("Last command failed: " + s + ", exit code = " + std::to_string(exit_code));
     };
 
-    auto async_read = [](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_line)
+    auto async_read = [this](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_line, auto &stream)
     {
         if (s)
         {
             String str(out_buf.begin(), out_buf.begin() + s);
             out.text += str;
+            if (inherit || out.inherit)
+                stream << str;
             if (out.action)
                 out.action(str, ec);
         }
@@ -120,14 +125,23 @@ void Command::execute1(std::error_code *ec_in)
     String out_line, err_line;
     out_cb = [this, &out_buf, &p1, &out_cb, &async_read, &out_line](const boost::system::error_code &ec, std::size_t s)
     {
-        async_read(ec, s, out, p1, out_buf, out_cb, out_line);
+        async_read(ec, s, out, p1, out_buf, out_cb, out_line, std::cout);
     };
     err_cb = [this, &err_buf, &p2, &err_cb, &async_read, &err_line](const boost::system::error_code &ec, std::size_t s)
     {
-        async_read(ec, s, err, p2, err_buf, err_cb, err_line);
+        async_read(ec, s, err, p2, err_buf, err_cb, err_line, std::cerr);
     };
     boost::asio::async_read(p1, boost::asio::buffer(out_buf), out_cb);
     boost::asio::async_read(p2, boost::asio::buffer(err_buf), err_cb);
+
+#ifdef _WIN32
+    // widen args
+    std::vector<std::wstring> wargs;
+    for (auto &a : args)
+        wargs.push_back(boost::nowide::widen(a));
+#else
+    const Strings &wargs = args;
+#endif
 
     // run
     std::unique_ptr<bp::child> c;
@@ -135,7 +149,7 @@ void Command::execute1(std::error_code *ec_in)
     {
         c = std::make_unique<bp::child>(
             program
-            , bp::args = args
+            , bp::args = wargs
             , bp::start_dir = working_directory
 #ifndef _WIN32
             , bp::env = env
@@ -152,7 +166,7 @@ void Command::execute1(std::error_code *ec_in)
     {
         c = std::make_unique<bp::child>(
             program
-            , bp::args = args
+            , bp::args = wargs
             , bp::start_dir = working_directory
 #ifndef _WIN32
             , bp::env = env

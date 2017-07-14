@@ -27,7 +27,7 @@ struct Command
     {
         String text;
         //bool capture = true;
-        //bool inherit = false;
+        bool inherit = false;
         std::function<void(const String &, bool)> action;
     };
 
@@ -47,6 +47,8 @@ struct Command
     // properties
     //int32_t pid = -1;
     bool use_parent_environment = true;
+    //bool capture = true;
+    bool inherit = false;
     // to use parent's io service
     boost::asio::io_service *io_service = nullptr;
 

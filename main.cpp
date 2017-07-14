@@ -72,20 +72,17 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
     auto pbad = dir / "2";
     c.program = pbad;
     REQUIRE_THROWS(c.execute());
-    ec.clear();
     REQUIRE_NOTHROW(c.execute(ec));
     REQUIRE(ec);
 
     REQUIRE_NOTHROW(Command::execute(p));
     REQUIRE_THROWS(Command::execute(pbad));
-    ec.clear();
     REQUIRE_NOTHROW(Command::execute(pbad, ec));
     REQUIRE(ec);
 #endif
 
     REQUIRE_NOTHROW(Command::execute({ "cmake", "--version" }));
     REQUIRE_THROWS(Command::execute({ "cmake", "--versionx" }));
-    ec.clear();
     REQUIRE_NOTHROW(Command::execute({ "cmake", "--versionx" }, ec));
     REQUIRE(ec);
 }
@@ -95,6 +92,24 @@ int main(int argc, char **argv)
     setup_utf8_filesystem();
 
     Catch::Session().run(argc, argv);
+
+    /*primitives::Command c;
+    c.args = {
+        "d:/dev/path/links/cmake.exe",
+        "-Hd:/temp/17/cppąń-storage-寿星天文历的/tmp/build/0d6e4079/0824cd06",
+        "-Bd:/temp/17/cppąń-storage-寿星天文历的/tmp/build/0d6e4079/0824cd06/build",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DCPPAN_COMMAND=D:/dev/cppan_client/win32/bin/RelWithDebInfo/cppan.exe",
+        "-DCPPAN_CMAKE_VERBOSE=0",
+        "-DCPPAN_BUILD_VERBOSE=1",
+        "-DCPPAN_BUILD_WARNING_LEVEL=0"
+    };
+    c.execute();*/
+
+    auto f = "d:/temp/17/cppąń-storage-寿星天文历的/1.txt";
+    write_file(f, "cppąń-storage-寿星天文历的");
+    auto s = read_file(f);
+    write_file_if_different(f, s);
 
     return 0;
 }
