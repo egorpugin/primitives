@@ -93,23 +93,5 @@ int main(int argc, char **argv)
 
     Catch::Session().run(argc, argv);
 
-    /*primitives::Command c;
-    c.args = {
-        "d:/dev/path/links/cmake.exe",
-        "-Hd:/temp/17/cppąń-storage-寿星天文历的/tmp/build/0d6e4079/0824cd06",
-        "-Bd:/temp/17/cppąń-storage-寿星天文历的/tmp/build/0d6e4079/0824cd06/build",
-        "-DCMAKE_BUILD_TYPE=Release",
-        "-DCPPAN_COMMAND=D:/dev/cppan_client/win32/bin/RelWithDebInfo/cppan.exe",
-        "-DCPPAN_CMAKE_VERBOSE=0",
-        "-DCPPAN_BUILD_VERBOSE=1",
-        "-DCPPAN_BUILD_WARNING_LEVEL=0"
-    };
-    c.execute();*/
-
-    auto f = "d:/temp/17/cppąń-storage-寿星天文历的/1.txt";
-    write_file(f, "cppąń-storage-寿星天文历的");
-    auto s = read_file(f);
-    write_file_if_different(f, s);
-
     return 0;
 }

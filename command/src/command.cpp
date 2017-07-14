@@ -121,7 +121,7 @@ void Command::execute1(std::error_code *ec_in)
 
     // setup buffers also before child creation
     std::function<void(const boost::system::error_code &, std::size_t)> out_cb, err_cb;
-    Buffer out_buf(8192), err_buf(8192);
+    Buffer out_buf(buf_size), err_buf(buf_size);
     String out_line, err_line;
     out_cb = [this, &out_buf, &p1, &out_cb, &async_read, &out_line](const boost::system::error_code &ec, std::size_t s)
     {

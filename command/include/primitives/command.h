@@ -46,6 +46,7 @@ struct Command
 
     // properties
     //int32_t pid = -1;
+    size_t buf_size = 8192;
     bool use_parent_environment = true;
     //bool capture = true;
     bool inherit = false;
