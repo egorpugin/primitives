@@ -102,6 +102,7 @@ class Executor
 
 public:
     bool throw_exceptions = true;
+    bool throw_immediately = true;
 
 public:
     Executor(size_t nThreads = std::thread::hardware_concurrency(), const std::string &name = "");

@@ -111,15 +111,15 @@ void copy_dir(const path &src, const path &dst)
     }
 }
 
+void remove_files(const Files &files)
+{
+    for (auto &f : files)
+        fs::remove(f);
+}
+
 void remove_files_like(const Files &files, const String &regex)
 {
-    std::regex r(regex);
-    for (auto &f : files)
-    {
-        if (!std::regex_match(f.filename().string(), r))
-            continue;
-        fs::remove(f);
-    }
+    remove_files(filter_files_like(files, regex));
 }
 
 void remove_files_like(const path &dir, const String &regex, bool recursive)
@@ -151,6 +151,29 @@ Files enumerate_files(const path &dir, bool recursive)
         }
     }
     return files;
+}
+
+Files enumerate_files_like(const path &dir, const String &regex, bool recursive)
+{
+    return filter_files_like(enumerate_files(dir, recursive), regex);
+}
+
+Files enumerate_files_like(const Files &files, const String &regex)
+{
+    return filter_files_like(files, regex);
+}
+
+Files filter_files_like(const Files &files, const String &regex)
+{
+    Files fls;
+    std::regex r(regex);
+    for (auto &f : files)
+    {
+        if (!std::regex_match(f.filename().string(), r))
+            continue;
+        fls.insert(f);
+    }
+    return fls;
 }
 
 bool is_under_root(path p, const path &root_dir)

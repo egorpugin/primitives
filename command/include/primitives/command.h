@@ -22,13 +22,14 @@ using Commands = std::unordered_set<Command*>;
 struct Command
 {
     using Buffer = std::vector<char>;
+    using ActionType = void(const String &, bool);
 
     struct Stream
     {
         String text;
         //bool capture = true;
         bool inherit = false;
-        std::function<void(const String &, bool)> action;
+        std::function<ActionType> action;
     };
 
     // input

@@ -28,10 +28,15 @@ String normalize_path(const path &p);
 bool is_under_root(path p, const path &root_dir);
 
 void copy_dir(const path &source, const path &destination);
+void remove_files(const Files &files);
 void remove_files_like(const path &dir, const String &regex, bool recursive = true);
 void remove_files_like(const Files &files, const String &regex);
 
 Files enumerate_files(const path &dir, bool recursive = true);
+Files enumerate_files_like(const path &dir, const String &regex, bool recursive = true);
+Files enumerate_files_like(const Files &files, const String &regex);
+
+Files filter_files_like(const Files &files, const String &regex);
 
 bool compare_files(const path &fn1, const path &fn2);
 bool compare_dirs(const path &dir1, const path &dir2);
