@@ -12,7 +12,7 @@ namespace primitives
 
 namespace bp = boost::process;
 
-struct Command::CommandData
+struct CommandData
 {
     std::unique_ptr<boost::asio::io_service> ios;
     std::unique_ptr<boost::process::async_pipe> pout, perr;
@@ -20,8 +20,8 @@ struct Command::CommandData
     using cb_func = std::function<void(const boost::system::error_code &, std::size_t)>;
     cb_func out_cb, err_cb;
     std::function<void(int, const std::error_code &)> on_exit;
-    std::function<void(const boost::system::error_code &ec, std::size_t s, Stream &out, boost::process::async_pipe &p, Buffer &out_buf, cb_func &out_cb, std::ostream &stream)> async_read;
-    Buffer out_buf, err_buf;
+    std::function<void(const boost::system::error_code &ec, std::size_t s, Command::Stream &out, boost::process::async_pipe &p, Command::Buffer &out_buf, cb_func &out_cb, std::ostream &stream)> async_read;
+    Command::Buffer out_buf, err_buf;
 };
 
 path resolve_executable(const path &p)
@@ -38,6 +38,14 @@ path resolve_executable(const std::vector<path> &paths)
             return e;
     }
     return path();
+}
+
+Command::Command()
+{
+}
+
+Command::~Command()
+{
 }
 
 void Command::execute1(std::error_code *ec_in)

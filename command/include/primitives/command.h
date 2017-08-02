@@ -14,6 +14,7 @@ namespace primitives
 {
 
 struct Command;
+struct CommandData;
 using Commands = std::unordered_set<Command*>;
 
 // return value:
@@ -23,7 +24,6 @@ struct Command
 {
     using Buffer = std::vector<char>;
     using ActionType = void(const String &, bool);
-    struct CommandData;
 
     struct Stream
     {
@@ -55,7 +55,8 @@ struct Command
     // to use parent's io service
     boost::asio::io_service *io_service = nullptr;
 
-    virtual ~Command() = default;
+    Command();
+    virtual ~Command();
 
     virtual void execute() { execute1(); }
     virtual void execute(std::error_code &ec) { execute1(&ec); }
