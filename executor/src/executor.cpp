@@ -79,11 +79,7 @@ void Executor::run(size_t i)
         if (!error.empty())
         {
             if (throw_exceptions)
-            {
                 done = true;
-                if (throw_immediately)
-                    std::rethrow_exception(thread_pool[i].eptr);
-            }
             else
                 std::cerr << "executor: " << this << ", thread #" << i + 1 << ", error: " << error << "\n";
                 //LOG_ERROR(logger, "executor: " << this << ", thread #" << i + 1 << ", error: " << error);

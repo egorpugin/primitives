@@ -12,6 +12,7 @@ namespace fs = boost::filesystem;
 using path = fs::path;
 
 using FilesSorted = std::set<path>;
+using FilesOrdered = std::vector<path>;
 using Files = std::unordered_set<path>;
 
 path get_home_directory();

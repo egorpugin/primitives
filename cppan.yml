@@ -93,7 +93,6 @@ projects:
 
         dependencies:
             public:
-
                 pvt.cppan.demo.artyom_beilis.nowide:
                     version: master
                 pvt.cppan.demo.boost.filesystem:
