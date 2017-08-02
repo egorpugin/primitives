@@ -3,7 +3,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/nowide/convert.hpp>
-#include <boost/process.hpp>
 
 #include <iostream>
 
@@ -43,20 +42,21 @@ void Command::execute1(std::error_code *ec_in)
     }
 
     // resolve exe
-    auto p = resolve_executable(program);
-    if (p.empty())
     {
-        if (!ec_in)
-            throw std::runtime_error("Cannot resolve executable: " + program.string());
-        *ec_in = std::make_error_code(std::errc::no_such_file_or_directory);
-        return;
+        auto p = resolve_executable(program);
+        if (p.empty())
+        {
+            if (!ec_in)
+                throw std::runtime_error("Cannot resolve executable: " + program.string());
+            *ec_in = std::make_error_code(std::errc::no_such_file_or_directory);
+            return;
+        }
+        program = p;
     }
-    program = p;
 
     if (working_directory.empty())
         working_directory = fs::current_path();
 
-    std::unique_ptr<boost::asio::io_service> ios;
     boost::asio::io_service *ios_ptr;
     if (io_service)
         ios_ptr = io_service;
@@ -66,10 +66,10 @@ void Command::execute1(std::error_code *ec_in)
         ios_ptr = ios.get();
     }
 
-    bp::async_pipe p1(*ios_ptr);
-    bp::async_pipe p2(*ios_ptr);
+    pout = std::make_unique<bp::async_pipe>(*ios_ptr);
+    perr = std::make_unique<bp::async_pipe>(*ios_ptr);
 
-    std::function<void(int, const std::error_code &)> on_exit = [&p1, &p2, this, ec_in](int exit, const std::error_code &ec)
+    on_exit = [this, ec_in](int exit, const std::error_code &ec)
     {
         exit_code = exit;
 
@@ -96,7 +96,7 @@ void Command::execute1(std::error_code *ec_in)
         throw std::runtime_error("Last command failed: " + s + ", exit code = " + std::to_string(exit_code));
     };
 
-    auto async_read = [this](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_line, auto &stream)
+    async_read = [this](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &stream)
     {
         if (s)
         {
@@ -114,19 +114,18 @@ void Command::execute1(std::error_code *ec_in)
     };
 
     // setup buffers also before child creation
-    std::function<void(const boost::system::error_code &, std::size_t)> out_cb, err_cb;
-    Buffer out_buf(buf_size), err_buf(buf_size);
-    String out_line, err_line;
-    out_cb = [this, &out_buf, &p1, &out_cb, &async_read, &out_line](const boost::system::error_code &ec, std::size_t s)
+    out_buf.resize(buf_size);
+    err_buf.resize(buf_size);
+    out_cb = [this](const boost::system::error_code &ec, std::size_t s)
     {
-        async_read(ec, s, out, p1, out_buf, out_cb, out_line, std::cout);
+        async_read(ec, s, out, *pout.get(), out_buf, out_cb, std::cout);
     };
-    err_cb = [this, &err_buf, &p2, &err_cb, &async_read, &err_line](const boost::system::error_code &ec, std::size_t s)
+    err_cb = [this](const boost::system::error_code &ec, std::size_t s)
     {
-        async_read(ec, s, err, p2, err_buf, err_cb, err_line, std::cerr);
+        async_read(ec, s, err, *perr.get(), err_buf, err_cb, std::cerr);
     };
-    boost::asio::async_read(p1, boost::asio::buffer(out_buf), out_cb);
-    boost::asio::async_read(p2, boost::asio::buffer(err_buf), err_cb);
+    boost::asio::async_read(*pout.get(), boost::asio::buffer(out_buf), out_cb);
+    boost::asio::async_read(*perr.get(), boost::asio::buffer(err_buf), err_cb);
 
 #ifdef _WIN32
     // widen args
@@ -138,7 +137,6 @@ void Command::execute1(std::error_code *ec_in)
 #endif
 
     // run
-    std::unique_ptr<bp::child> c;
     if (ec_in)
     {
         c = std::make_unique<bp::child>(
@@ -146,8 +144,8 @@ void Command::execute1(std::error_code *ec_in)
             , bp::args = wargs
             , bp::start_dir = working_directory
             , bp::std_in < stdin
-            , bp::std_out > p1
-            , bp::std_err > p2
+            , bp::std_out > *pout.get()
+            , bp::std_err > *perr.get()
             , bp::on_exit(on_exit)
             , *ios_ptr
             , *ec_in
@@ -160,8 +158,8 @@ void Command::execute1(std::error_code *ec_in)
             , bp::args = wargs
             , bp::start_dir = working_directory
             , bp::std_in < stdin
-            , bp::std_out > p1
-            , bp::std_err > p2
+            , bp::std_out > *pout.get()
+            , bp::std_err > *perr.get()
             , bp::on_exit(on_exit)
             , *ios_ptr
             );

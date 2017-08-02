@@ -33,6 +33,13 @@ projects:
 
         static_only: true
 
+        options:
+            any:
+                definitions:
+                    win32:
+                        public:
+                            - _WIN32_WINNT=0x0601
+
         dependencies:
             public:
                 filesystem:
