@@ -3,6 +3,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/nowide/convert.hpp>
+#include <boost/process.hpp>
 
 #include <iostream>
 
@@ -10,6 +11,18 @@ namespace primitives
 {
 
 namespace bp = boost::process;
+
+struct Command::CommandData
+{
+    std::unique_ptr<boost::asio::io_service> ios;
+    std::unique_ptr<boost::process::async_pipe> pout, perr;
+    std::unique_ptr<boost::process::child> c;
+    using cb_func = std::function<void(const boost::system::error_code &, std::size_t)>;
+    cb_func out_cb, err_cb;
+    std::function<void(int, const std::error_code &)> on_exit;
+    std::function<void(const boost::system::error_code &ec, std::size_t s, Stream &out, boost::process::async_pipe &p, Buffer &out_buf, cb_func &out_cb, std::ostream &stream)> async_read;
+    Buffer out_buf, err_buf;
+};
 
 path resolve_executable(const path &p)
 {
@@ -57,19 +70,21 @@ void Command::execute1(std::error_code *ec_in)
     if (working_directory.empty())
         working_directory = fs::current_path();
 
+    d = std::make_unique<CommandData>();
+
     boost::asio::io_service *ios_ptr;
     if (io_service)
         ios_ptr = io_service;
     else
     {
-        ios = std::make_unique<boost::asio::io_service>();
-        ios_ptr = ios.get();
+        d->ios = std::make_unique<boost::asio::io_service>();
+        ios_ptr = d->ios.get();
     }
 
-    pout = std::make_unique<bp::async_pipe>(*ios_ptr);
-    perr = std::make_unique<bp::async_pipe>(*ios_ptr);
+    d->pout = std::make_unique<bp::async_pipe>(*ios_ptr);
+    d->perr = std::make_unique<bp::async_pipe>(*ios_ptr);
 
-    on_exit = [this, ec_in](int exit, const std::error_code &ec)
+    d->on_exit = [this, ec_in](int exit, const std::error_code &ec)
     {
         exit_code = exit;
 
@@ -96,7 +111,7 @@ void Command::execute1(std::error_code *ec_in)
         throw std::runtime_error("Last command failed: " + s + ", exit code = " + std::to_string(exit_code));
     };
 
-    async_read = [this](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &stream)
+    d->async_read = [this](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &stream)
     {
         if (s)
         {
@@ -114,18 +129,18 @@ void Command::execute1(std::error_code *ec_in)
     };
 
     // setup buffers also before child creation
-    out_buf.resize(buf_size);
-    err_buf.resize(buf_size);
-    out_cb = [this](const boost::system::error_code &ec, std::size_t s)
+    d->out_buf.resize(buf_size);
+    d->err_buf.resize(buf_size);
+    d->out_cb = [this](const boost::system::error_code &ec, std::size_t s)
     {
-        async_read(ec, s, out, *pout.get(), out_buf, out_cb, std::cout);
+        d->async_read(ec, s, out, *d->pout.get(), d->out_buf, d->out_cb, std::cout);
     };
-    err_cb = [this](const boost::system::error_code &ec, std::size_t s)
+    d->err_cb = [this](const boost::system::error_code &ec, std::size_t s)
     {
-        async_read(ec, s, err, *perr.get(), err_buf, err_cb, std::cerr);
+        d->async_read(ec, s, err, *d->perr.get(), d->err_buf, d->err_cb, std::cerr);
     };
-    boost::asio::async_read(*pout.get(), boost::asio::buffer(out_buf), out_cb);
-    boost::asio::async_read(*perr.get(), boost::asio::buffer(err_buf), err_cb);
+    boost::asio::async_read(*d->pout.get(), boost::asio::buffer(d->out_buf), d->out_cb);
+    boost::asio::async_read(*d->perr.get(), boost::asio::buffer(d->err_buf), d->err_cb);
 
 #ifdef _WIN32
     // widen args
@@ -139,34 +154,34 @@ void Command::execute1(std::error_code *ec_in)
     // run
     if (ec_in)
     {
-        c = std::make_unique<bp::child>(
+        d->c = std::make_unique<bp::child>(
             program
             , bp::args = wargs
             , bp::start_dir = working_directory
             , bp::std_in < stdin
-            , bp::std_out > *pout.get()
-            , bp::std_err > *perr.get()
-            , bp::on_exit(on_exit)
+            , bp::std_out > *d->pout.get()
+            , bp::std_err > *d->perr.get()
+            , bp::on_exit(d->on_exit)
             , *ios_ptr
             , *ec_in
             );
     }
     else
     {
-        c = std::make_unique<bp::child>(
+        d->c = std::make_unique<bp::child>(
             program
             , bp::args = wargs
             , bp::start_dir = working_directory
             , bp::std_in < stdin
-            , bp::std_out > *pout.get()
-            , bp::std_err > *perr.get()
-            , bp::on_exit(on_exit)
+            , bp::std_out > *d->pout.get()
+            , bp::std_err > *d->perr.get()
+            , bp::on_exit(d->on_exit)
             , *ios_ptr
             );
     }
 
     // perform io only in case we didn't get external io_service
-    if (ios)
+    if (d->ios)
         ios_ptr->run();
 }
 

@@ -1,7 +1,14 @@
 #pragma once
 
 #include <primitives/filesystem.h>
-#include <boost/process.hpp>
+
+namespace boost
+{
+namespace asio
+{
+class io_service;
+}
+}
 
 namespace primitives
 {
@@ -16,6 +23,7 @@ struct Command
 {
     using Buffer = std::vector<char>;
     using ActionType = void(const String &, bool);
+    struct CommandData;
 
     struct Stream
     {
@@ -63,14 +71,7 @@ struct Command
     static void execute(const std::initializer_list<String> &args, std::error_code &ec);
 
 private:
-    std::unique_ptr<boost::asio::io_service> ios;
-    std::unique_ptr<boost::process::async_pipe> pout, perr;
-    std::unique_ptr<boost::process::child> c;
-    using cb_func = std::function<void(const boost::system::error_code &, std::size_t)>;
-    cb_func out_cb, err_cb;
-    std::function<void(int, const std::error_code &)> on_exit;
-    std::function<void(const boost::system::error_code &ec, std::size_t s, Stream &out, boost::process::async_pipe &p, Buffer &out_buf, cb_func &out_cb, std::ostream &stream)> async_read;
-    Buffer out_buf, err_buf;
+    std::unique_ptr<CommandData> d;
 
     void execute1(std::error_code *ec = nullptr);
 
