@@ -111,7 +111,7 @@ void Command::execute1(std::error_code *ec_in)
         throw std::runtime_error("Last command failed: " + s + ", exit code = " + std::to_string(exit_code));
     };
 
-    d->on_exit = [this, ec_in](int exit, const std::error_code &ec)
+    d->on_exit = [this, ec_in, &ios_ptr](int exit, const std::error_code &ec)
     {
         exit_code = exit;
 
@@ -129,7 +129,7 @@ void Command::execute1(std::error_code *ec_in)
             return;
         }
 
-        d->on_error();
+        ios_ptr->post([this] {d->on_error(); });
     };
 
     d->async_read = [this](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &stream)
