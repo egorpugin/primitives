@@ -20,7 +20,9 @@ struct CommandData
     using cb_func = std::function<void(const boost::system::error_code &, std::size_t)>;
     cb_func out_cb, err_cb;
     std::function<void(int, const std::error_code &)> on_exit;
+    std::function<void(void)> on_error;
     std::function<void(const boost::system::error_code &ec, std::size_t s, Command::Stream &out, boost::process::async_pipe &p, Command::Buffer &out_buf, cb_func &out_cb, std::ostream &stream)> async_read;
+    std::atomic_int pipes_closed{ 0 };
     Command::Buffer out_buf, err_buf;
 };
 
@@ -92,6 +94,23 @@ void Command::execute1(std::error_code *ec_in)
     d->pout = std::make_unique<bp::async_pipe>(*ios_ptr);
     d->perr = std::make_unique<bp::async_pipe>(*ios_ptr);
 
+    d->on_error = [this, &ios_ptr]()
+    {
+        if (d->pipes_closed != 2)
+        {
+            ios_ptr->post([this] {d->on_error(); });
+            return;
+        }
+
+        // throw now
+        String s;
+        s += "\"" + program.string() + "\" ";
+        for (auto &a : args)
+            s += "\"" + a + "\" ";
+        s.resize(s.size() - 1);
+        throw std::runtime_error("Last command failed: " + s + ", exit code = " + std::to_string(exit_code));
+    };
+
     d->on_exit = [this, ec_in](int exit, const std::error_code &ec)
     {
         exit_code = exit;
@@ -110,13 +129,7 @@ void Command::execute1(std::error_code *ec_in)
             return;
         }
 
-        // throw now
-        String s;
-        s += "\"" + program.string() + "\" ";
-        for (auto &a : args)
-            s += "\"" + a + "\" ";
-        s.resize(s.size() - 1);
-        throw std::runtime_error("Last command failed: " + s + ", exit code = " + std::to_string(exit_code));
+        d->on_error();
     };
 
     d->async_read = [this](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &stream)
@@ -133,7 +146,10 @@ void Command::execute1(std::error_code *ec_in)
         if (!ec)
             boost::asio::async_read(p, boost::asio::buffer(out_buf), out_cb);
         else
+        {
             p.async_close();
+            d->pipes_closed++;
+        }
     };
 
     // setup buffers also before child creation
@@ -190,7 +206,9 @@ void Command::execute1(std::error_code *ec_in)
 
     // perform io only in case we didn't get external io_service
     if (d->ios)
+    {
         ios_ptr->run();
+    }
 }
 
 void Command::write(path p) const
