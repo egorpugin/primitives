@@ -44,7 +44,9 @@ String normalize_path(const path &p)
 {
     if (p.empty())
         return "";
-    String s = p.string();
+    // double path to resolve .. elements
+    path p2 = p.string();
+    String s = p2.string();
     normalize_string(s);
     return s;
 }
