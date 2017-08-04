@@ -2,6 +2,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
+#include <boost/asio/use_future.hpp>
 #include <boost/nowide/convert.hpp>
 #include <boost/process.hpp>
 
@@ -98,7 +99,7 @@ void Command::execute1(std::error_code *ec_in)
     {
         if (d->pipes_closed != 2)
         {
-            ios_ptr->post([this] {d->on_error(); });
+            ios_ptr->post([this] { d->on_error(); });
             return;
         }
 
@@ -108,7 +109,7 @@ void Command::execute1(std::error_code *ec_in)
         for (auto &a : args)
             s += "\"" + a + "\" ";
         s.resize(s.size() - 1);
-        throw std::runtime_error("Last command failed: " + s + ", exit code = " + std::to_string(exit_code));
+        throw std::runtime_error("Last command failed: " + s + ", exit code = " + std::to_string(exit_code.get()));
     };
 
     d->on_exit = [this, ec_in, &ios_ptr](int exit, const std::error_code &ec)
@@ -166,43 +167,46 @@ void Command::execute1(std::error_code *ec_in)
     boost::asio::async_read(*d->pout.get(), boost::asio::buffer(d->out_buf), d->out_cb);
     boost::asio::async_read(*d->perr.get(), boost::asio::buffer(d->err_buf), d->err_cb);
 
+    // run
+    ios_ptr->post([this, ec_in, ios_ptr]
+    {
 #ifdef _WIN32
-    // widen args
-    std::vector<std::wstring> wargs;
-    for (auto &a : args)
-        wargs.push_back(boost::nowide::widen(a));
+        // widen args
+        std::vector<std::wstring> wargs;
+        for (auto &a : args)
+            wargs.push_back(boost::nowide::widen(a));
 #else
-    const Strings &wargs = args;
+        const Strings &wargs = args;
 #endif
 
-    // run
-    if (ec_in)
-    {
-        d->c = std::make_unique<bp::child>(
-            program
-            , bp::args = wargs
-            , bp::start_dir = working_directory
-            , bp::std_in < stdin
-            , bp::std_out > *d->pout.get()
-            , bp::std_err > *d->perr.get()
-            , bp::on_exit(d->on_exit)
-            , *ios_ptr
-            , *ec_in
-            );
-    }
-    else
-    {
-        d->c = std::make_unique<bp::child>(
-            program
-            , bp::args = wargs
-            , bp::start_dir = working_directory
-            , bp::std_in < stdin
-            , bp::std_out > *d->pout.get()
-            , bp::std_err > *d->perr.get()
-            , bp::on_exit(d->on_exit)
-            , *ios_ptr
-            );
-    }
+        if (ec_in)
+        {
+            d->c = std::make_unique<bp::child>(
+                program
+                , bp::args = wargs
+                , bp::start_dir = working_directory
+                , bp::std_in < stdin
+                , bp::std_out > *d->pout.get()
+                , bp::std_err > *d->perr.get()
+                , bp::on_exit(d->on_exit)
+                , *ios_ptr
+                , *ec_in
+                );
+        }
+        else
+        {
+            d->c = std::make_unique<bp::child>(
+                program
+                , bp::args = wargs
+                , bp::start_dir = working_directory
+                , bp::std_in < stdin
+                , bp::std_out > *d->pout.get()
+                , bp::std_err > *d->perr.get()
+                , bp::on_exit(d->on_exit)
+                , *ios_ptr
+                );
+        }
+    });
 
     // perform io only in case we didn't get external io_service
     if (d->ios)

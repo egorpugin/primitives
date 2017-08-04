@@ -1,6 +1,7 @@
 #pragma once
 
 #include <primitives/filesystem.h>
+#include <primitives/optional.h>
 
 namespace boost
 {
@@ -40,7 +41,7 @@ struct Command
     path working_directory;
 
     // output
-    int exit_code = -1;
+    optional<int> exit_code;
     //Stream input
     Stream out;
     Stream err;

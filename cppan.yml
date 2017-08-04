@@ -44,6 +44,8 @@ projects:
             public:
                 filesystem:
                     version: "*"
+                templates:
+                    version: "*"
                 pvt.cppan.demo.klemens_morgenstern.boost.process:
                     version: develop
 
