@@ -21,6 +21,9 @@ local_settings:
 
 root_project: pvt.egorpugin.primitives
 
+common_settings:
+    c++: 17
+
 projects:
     command:
         name: command
@@ -29,7 +32,7 @@ projects:
 
         root_directory: command
 
-        c++: 14
+
 
         static_only: true
 
@@ -56,7 +59,7 @@ projects:
 
         root_directory: context
 
-        c++: 14
+
 
         static_only: true
 
@@ -67,7 +70,7 @@ projects:
 
         root_directory: date_time
 
-        c++: 14
+
 
         static_only: true
 
@@ -85,7 +88,7 @@ projects:
 
         root_directory: executor
 
-        c++: 14
+
 
         static_only: true
 
@@ -96,7 +99,7 @@ projects:
 
         root_directory: filesystem
 
-        c++: 14
+
 
         static_only: true
 
@@ -116,7 +119,7 @@ projects:
 
         root_directory: hash
 
-        c++: 14
+
 
         static_only: true
 
@@ -136,7 +139,7 @@ projects:
 
         root_directory: http
 
-        c++: 14
+
 
         static_only: true
 
@@ -163,7 +166,7 @@ projects:
 
         root_directory: lock
 
-        c++: 14
+
 
         static_only: true
 
@@ -181,7 +184,7 @@ projects:
 
         root_directory: log
 
-        c++: 14
+
 
         static_only: true
 
@@ -197,7 +200,7 @@ projects:
 
         root_directory: pack
 
-        c++: 14
+
 
         static_only: true
 
@@ -215,7 +218,7 @@ projects:
 
         root_directory: sqlite_db
 
-        c++: 14
+
 
     string:
         name: string
@@ -224,7 +227,7 @@ projects:
 
         root_directory: string
 
-        c++: 14
+
 
         static_only: true
 
@@ -240,7 +243,7 @@ projects:
 
         root_directory: templates
 
-        c++: 14
+
 
         dependencies:
             public:
@@ -253,7 +256,7 @@ projects:
 
         type: library
 
-        c++: 14
+
 
         root_directory: yaml
 
@@ -265,7 +268,7 @@ projects:
                     version: "*"
 
     testxxx:
-        c++: 14
+
 
         files:
             -   main.cpp
@@ -277,6 +280,8 @@ projects:
                 executor:
                     version: "*"
                 hash:
+                    version: "*"
+                yaml:
                     version: "*"
                 pvt.cppan.demo.philsquared.catch:
                     version: 1

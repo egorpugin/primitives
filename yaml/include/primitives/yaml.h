@@ -22,8 +22,7 @@ using yaml = YAML::Node;
 template <class T>
 auto get_scalar(const yaml &node, const String &key, const T &default_ = T())
 {
-    const auto &n = node[key];
-    if (n.IsDefined())
+    if (const auto &n = node[key]; n.IsDefined())
     {
         if (!n.IsScalar())
             throw std::runtime_error("'" + key + "' must be a scalar");
@@ -35,8 +34,7 @@ auto get_scalar(const yaml &node, const String &key, const T &default_ = T())
 template <class F>
 void get_scalar_f(const yaml &node, const String &key, F &&f)
 {
-    const auto &n = node[key];
-    if (n.IsDefined())
+    if (const auto &n = node[key]; n.IsDefined())
     {
         if (!n.IsScalar())
             throw std::runtime_error("'" + key + "' must be a scalar");
@@ -97,8 +95,7 @@ auto get_sequence_unordered_set(const yaml &node, const String &key)
 template <class F>
 void get_sequence_and_iterate(const yaml &node, const String &key, F &&f)
 {
-    const auto &n = node[key];
-    if (n.IsDefined())
+    if (const auto &n = node[key]; n.IsDefined())
     {
         if (n.IsScalar())
         {
@@ -117,8 +114,7 @@ void get_sequence_and_iterate(const yaml &node, const String &key, F &&f)
 template <class F>
 void get_map(const yaml &node, const String &key, F &&f)
 {
-    const auto &n = node[key];
-    if (n.IsDefined())
+    if (const auto &n = node[key]; n.IsDefined())
     {
         if (!n.IsMap())
             throw std::runtime_error("'" + key + "' must be a map");
@@ -129,8 +125,7 @@ void get_map(const yaml &node, const String &key, F &&f)
 template <class F>
 void get_map_and_iterate(const yaml &node, const String &key, F &&f)
 {
-    const auto &n = node[key];
-    if (n.IsDefined())
+    if (const auto &n = node[key]; n.IsDefined())
     {
         if (!n.IsMap())
             throw std::runtime_error("'" + key + "' must be a map");
@@ -142,8 +137,7 @@ void get_map_and_iterate(const yaml &node, const String &key, F &&f)
 template <class T>
 void get_string_map(const yaml &node, const String &key, T &data)
 {
-    const auto &n = node[key];
-    if (n.IsDefined())
+    if (const auto &n = node[key]; n.IsDefined())
     {
         if (!n.IsMap())
             throw std::runtime_error("'" + key + "' must be a map");
@@ -155,10 +149,7 @@ void get_string_map(const yaml &node, const String &key, T &data)
 template <class F1, class F2, class F3>
 void get_variety(const yaml &node, const String &key, F1 &&f_scalar, F2 &&f_seq, F3 &&f_map)
 {
-    const auto &n = node[key];
-    if (!n.IsDefined())
-        return;
-    switch (n.Type())
+    switch (const auto &n = node[key]; n.Type())
     {
     case YAML::NodeType::Scalar:
         f_scalar(n);
@@ -175,10 +166,7 @@ void get_variety(const yaml &node, const String &key, F1 &&f_scalar, F2 &&f_seq,
 template <class F1, class F3>
 void get_variety_and_iterate(const yaml &node, F1 &&f_scalar, F3 &&f_map)
 {
-    const auto &n = node;
-    if (!n.IsDefined())
-        return;
-    switch (n.Type())
+    switch (const auto &n = node; n.Type())
     {
     case YAML::NodeType::Scalar:
         f_scalar(n);

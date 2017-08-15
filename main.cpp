@@ -87,11 +87,21 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
     REQUIRE(ec);
 }
 
+#include <primitives/yaml.h>
+
 int main(int argc, char **argv)
 {
     setup_utf8_filesystem();
 
     Catch::Session().run(argc, argv);
+
+    std::istringstream ss("x: a\nx2:\n\ta: b\n\tc: d");
+    auto n = YAML::Load(ss);
+    get_variety_and_iterate(n, [](auto &v) {}, [](auto &v) {});
+    get_variety_and_iterate(yaml(), [](auto &v) {}, [](auto &v) {});
+
+    std::map<String, String> m;
+    get_string_map(n, "x2", m);
 
     return 0;
 }
