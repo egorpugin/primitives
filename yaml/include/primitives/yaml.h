@@ -149,7 +149,8 @@ void get_string_map(const yaml &node, const String &key, T &data)
 template <class F1, class F2, class F3>
 void get_variety(const yaml &node, const String &key, F1 &&f_scalar, F2 &&f_seq, F3 &&f_map)
 {
-    switch (const auto &n = node[key]; n.Type())
+    if (const auto &n = node[key]; n.IsDefined())
+    switch (n.Type())
     {
     case YAML::NodeType::Scalar:
         f_scalar(n);
@@ -166,7 +167,8 @@ void get_variety(const yaml &node, const String &key, F1 &&f_scalar, F2 &&f_seq,
 template <class F1, class F3>
 void get_variety_and_iterate(const yaml &node, F1 &&f_scalar, F3 &&f_map)
 {
-    switch (const auto &n = node; n.Type())
+    if (const auto &n = node[key]; n.IsDefined())
+    switch (n.Type())
     {
     case YAML::NodeType::Scalar:
         f_scalar(n);
