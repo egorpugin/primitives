@@ -168,7 +168,7 @@ template <class F1, class F3>
 void get_variety_and_iterate(const yaml &node, F1 &&f_scalar, F3 &&f_map)
 {
     if (const auto &n = node; n.IsDefined())
-    switch ( n.Type())
+    switch (n.Type())
     {
     case YAML::NodeType::Scalar:
         f_scalar(n);

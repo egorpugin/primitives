@@ -29,6 +29,8 @@ struct CommandData
 
 path resolve_executable(const path &p)
 {
+    if (fs::exists(p))
+        return p;
     return bp::search_path(p);
 }
 
