@@ -244,12 +244,6 @@ projects:
         root_directory: templates
 
 
-
-        dependencies:
-            public:
-                pvt.cppan.demo.boost.optional:
-                    version: 1
-
     yaml:
         name: yaml
         static_only: true
