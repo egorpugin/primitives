@@ -116,7 +116,7 @@ void initLogger(LoggerSettings &s)
 
             if (level == boost::log::trivial::severity_level::trace || s.print_trace)
             {
-                auto add_logger = [&s](auto severity, const auto &name, auto &g_backend)
+                auto add_logger = [&s, &app_mode](auto severity, const auto &name, auto &g_backend)
                 {
                     auto backend = boost::make_shared<tfb>
                         (
