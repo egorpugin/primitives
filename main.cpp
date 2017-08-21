@@ -7,6 +7,9 @@ name: main
 #include <primitives/filesystem.h>
 #include <primitives/hash.h>
 
+#undef min
+#undef max
+
 #define CATCH_CONFIG_RUNNER
 #include <catch.hpp>
 

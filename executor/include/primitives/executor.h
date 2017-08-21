@@ -117,7 +117,7 @@ public:
 
         Task task([t = std::move(t)]{ t(); });
         auto i = index++;
-        for (auto n = 0; n != nThreads; ++n)
+        for (size_t n = 0; n != nThreads; ++n)
         {
             if (thread_pool[(i + n) % nThreads].q.try_push(task))
                 return;

@@ -81,9 +81,17 @@ void initLogger(LoggerSettings &s)
 
         if (s.log_file != "")
         {
-            auto open_mode = std::ios_base::out;
+#ifdef _WIN32
+            auto out_mode = 0x02;
+            auto app_mode = 0x08;
+#else
+            auto out_mode = std::ios_base::out;
+            auto app_mode = std::ios_base::app;
+#endif
+
+            auto open_mode = out_mode;
             if (s.append)
-                open_mode = std::ios_base::app;
+                open_mode = app_mode;
 
             // input
             if (level > boost::log::trivial::severity_level::trace)
@@ -115,7 +123,7 @@ void initLogger(LoggerSettings &s)
                             boost::log::keywords::file_name = s.log_file + ".log." + name,
                             boost::log::keywords::rotation_size = 10 * 1024 * 1024,
                             // always append to trace, do not recreate
-                            boost::log::keywords::open_mode = std::ios_base::app//,
+                            boost::log::keywords::open_mode = app_mode//,
                                                                                 //boost::log::keywords::auto_flush = true
                             );
                     g_backend = backend;
