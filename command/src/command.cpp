@@ -1,7 +1,8 @@
+#include <boost/asio/io_service.hpp>
+
 #include <primitives/command.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/asio.hpp>
 #include <boost/asio/use_future.hpp>
 #include <boost/nowide/convert.hpp>
 #include <boost/process.hpp>
@@ -51,6 +52,16 @@ Command::Command()
 
 Command::~Command()
 {
+}
+
+String Command::print() const
+{
+    String s;
+    s += "\"" + program.string() + "\" ";
+    for (auto &a : args)
+        s += "\"" + a + "\" ";
+    s.resize(s.size() - 1);
+    return s;
 }
 
 void Command::execute1(std::error_code *ec_in)
@@ -106,12 +117,7 @@ void Command::execute1(std::error_code *ec_in)
         }
 
         // throw now
-        String s;
-        s += "\"" + program.string() + "\" ";
-        for (auto &a : args)
-            s += "\"" + a + "\" ";
-        s.resize(s.size() - 1);
-        throw std::runtime_error("Last command failed: " + s + ", exit code = " + std::to_string(exit_code.get()));
+        throw std::runtime_error("Last command failed: " + print() + ", exit code = " + std::to_string(exit_code.value()));
     };
 
     d->on_exit = [this, ec_in, &ios_ptr](int exit, const std::error_code &ec)

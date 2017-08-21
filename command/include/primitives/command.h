@@ -1,7 +1,8 @@
 #pragma once
 
 #include <primitives/filesystem.h>
-#include <primitives/optional.h>
+
+#include <optional>
 
 namespace boost
 {
@@ -41,7 +42,7 @@ struct Command
     path working_directory;
 
     // output
-    optional<int> exit_code;
+    std::optional<int> exit_code;
     //Stream input
     Stream out;
     Stream err;
@@ -62,6 +63,7 @@ struct Command
     virtual void execute() { execute1(); }
     virtual void execute(std::error_code &ec) { execute1(&ec); }
     void write(path p) const;
+    String print() const;
 
     static void execute(const path &p);
     static void execute(const path &p, std::error_code &ec);
