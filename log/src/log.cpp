@@ -27,6 +27,18 @@ boost::shared_ptr<
     boost::log::sinks::text_ostream_backend
     >> c_log;
 
+#ifdef _WIN32
+auto in_mode = 0x01;
+auto out_mode = 0x02;
+auto app_mode = 0x08;
+auto binary_mode = 0x20;
+#else
+auto in_mode = std::ios::in;
+auto out_mode = std::ios::out;
+auto app_mode = std::ios::app;
+auto binary_mode = std::ios::binary;
+#endif
+
 void logFormatter(boost::log::record_view const& rec, boost::log::formatting_ostream& strm)
 {
     static boost::thread_specific_ptr<boost::posix_time::time_facet> tss(0);
@@ -81,14 +93,6 @@ void initLogger(LoggerSettings &s)
 
         if (s.log_file != "")
         {
-#ifdef _WIN32
-            auto out_mode = 0x02;
-            auto app_mode = 0x08;
-#else
-            auto out_mode = std::ios_base::out;
-            auto app_mode = std::ios_base::app;
-#endif
-
             auto open_mode = out_mode;
             if (s.append)
                 open_mode = app_mode;
@@ -116,7 +120,7 @@ void initLogger(LoggerSettings &s)
 
             if (level == boost::log::trivial::severity_level::trace || s.print_trace)
             {
-                auto add_logger = [&s, &app_mode](auto severity, const auto &name, auto &g_backend)
+                auto add_logger = [&s](auto severity, const auto &name, auto &g_backend)
                 {
                     auto backend = boost::make_shared<tfb>
                         (

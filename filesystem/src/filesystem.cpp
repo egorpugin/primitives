@@ -10,6 +10,18 @@
 #include <iostream>
 #include <regex>
 
+#ifdef _WIN32
+auto in_mode = 0x01;
+auto out_mode = 0x02;
+auto app_mode = 0x08;
+auto binary_mode = 0x20;
+#else
+auto in_mode = std::ios::in;
+auto out_mode = std::ios::out;
+auto app_mode = std::ios::app;
+auto binary_mode = std::ios::binary;
+#endif
+
 path get_home_directory()
 {
 #ifdef WIN32
@@ -55,13 +67,7 @@ String read_file(const path &p, bool no_size_check)
         throw std::runtime_error("File '" + p.string() + "' does not exist");
 
     auto fn = p.string();
-    boost::nowide::ifstream ifile(fn,
-#ifndef _MSC_VER
-        std::ios::in | std::ios::binary
-#else
-        0x01 | 0x20
-#endif
-    );
+    boost::nowide::ifstream ifile(fn, in_mode | binary_mode);
     if (!ifile)
         throw std::runtime_error("Cannot open file '" + fn + "' for reading");
 
@@ -87,13 +93,7 @@ void write_file(const path &p, const String &s)
     if (!pp.empty())
         fs::create_directories(pp);
 
-    boost::nowide::ofstream ofile(p.string(),
-#ifndef _MSC_VER
-        std::ios::out | std::ios::binary
-#else
-        0x02 | 0x20
-#endif
-    );
+    boost::nowide::ofstream ofile(p.string(), out_mode | binary_mode);
     if (!ofile)
         throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
     ofile << s;

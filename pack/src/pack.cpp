@@ -10,6 +10,18 @@
 
 #define BLOCK_SIZE 8192
 
+#ifdef _WIN32
+auto in_mode = 0x01;
+auto out_mode = 0x02;
+auto app_mode = 0x08;
+auto binary_mode = 0x20;
+#else
+auto in_mode = std::ios::in;
+auto out_mode = std::ios::out;
+auto app_mode = std::ios::app;
+auto binary_mode = std::ios::binary;
+#endif
+
 bool pack_files(const path &fn, const Files &files, const path &root_dir)
 {
     bool result = true;
@@ -84,7 +96,7 @@ Files unpack_file(const path &fn, const path &dst)
             continue;
 
         auto fn = fs::absolute(f).string();
-        boost::nowide::ofstream o(fn, std::ios::out | std::ios::binary);
+        boost::nowide::ofstream o(fn, out_mode | binary_mode);
         if (!o)
         {
             // TODO: probably remove this and linux/limit.h header when server will be using hash paths

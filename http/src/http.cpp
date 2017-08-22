@@ -9,6 +9,18 @@
 #include <Winhttp.h>
 #endif
 
+#ifdef _WIN32
+auto in_mode = 0x01;
+auto out_mode = 0x02;
+auto app_mode = 0x08;
+auto binary_mode = 0x20;
+#else
+auto in_mode = std::ios::in;
+auto out_mode = std::ios::out;
+auto app_mode = std::ios::app;
+auto binary_mode = std::ios::binary;
+#endif
+
 HttpSettings httpSettings;
 
 String getAutoProxy()
@@ -56,7 +68,7 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
     auto parent = fn.parent_path();
     if (!parent.empty() && !fs::exists(parent))
         fs::create_directories(parent);
-    boost::nowide::ofstream ofile(fn.string(), std::ios::out | std::ios::binary);
+    boost::nowide::ofstream ofile(fn.string(), out_mode | binary_mode);
     if (!ofile)
         throw std::runtime_error("Cannot open file: " + fn.string());
 
