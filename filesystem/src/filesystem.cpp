@@ -11,15 +11,15 @@
 #include <regex>
 
 #ifdef _WIN32
-auto in_mode = 0x01;
-auto out_mode = 0x02;
-auto app_mode = 0x08;
-auto binary_mode = 0x20;
+static auto in_mode = 0x01;
+static auto out_mode = 0x02;
+static auto app_mode = 0x08;
+static auto binary_mode = 0x20;
 #else
-auto in_mode = std::ios::in;
-auto out_mode = std::ios::out;
-auto app_mode = std::ios::app;
-auto binary_mode = std::ios::binary;
+static auto in_mode = std::ios::in;
+static auto out_mode = std::ios::out;
+static auto app_mode = std::ios::app;
+static auto binary_mode = std::ios::binary;
 #endif
 
 path get_home_directory()
