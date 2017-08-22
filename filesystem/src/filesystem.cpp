@@ -260,7 +260,7 @@ FileIterator::FileIterator(const std::vector<path> &fns)
     {
         File d;
         d.size = fs::file_size(f);
-        d.ifile = std::make_unique<boost::nowide::ifstream>(f.string(), std::ifstream::binary);
+        d.ifile = std::make_unique<boost::nowide::ifstream>(f.string(), in_mode | binary_mode);
         files.push_back(std::move(d));
     }
 }
