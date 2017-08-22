@@ -55,7 +55,13 @@ String read_file(const path &p, bool no_size_check)
         throw std::runtime_error("File '" + p.string() + "' does not exist");
 
     auto fn = p.string();
-    boost::nowide::ifstream ifile(fn, std::ios::in | std::ios::binary);
+    boost::nowide::ifstream ifile(fn,
+#ifndef _MSC_VER
+        std::ios::in | std::ios::binary
+#else
+        0x01 | 0x20
+#endif
+    );
     if (!ifile)
         throw std::runtime_error("Cannot open file '" + fn + "' for reading");
 
@@ -81,7 +87,13 @@ void write_file(const path &p, const String &s)
     if (!pp.empty())
         fs::create_directories(pp);
 
-    boost::nowide::ofstream ofile(p.string(), std::ios::out | std::ios::binary);
+    boost::nowide::ofstream ofile(p.string(),
+#ifndef _MSC_VER
+        std::ios::out | std::ios::binary
+#else
+        0x02 | 0x20
+#endif
+    );
     if (!ofile)
         throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
     ofile << s;
