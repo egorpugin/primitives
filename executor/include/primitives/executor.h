@@ -125,6 +125,7 @@ public:
         thread_pool[i % nThreads].q.push(task);
     }
 
+    void join();
     void stop();
     void wait();
 
@@ -132,7 +133,7 @@ private:
     Threads thread_pool;
     size_t nThreads = std::thread::hardware_concurrency();
     std::atomic_size_t index{ 0 };
-    bool done = false;
+    std::atomic_bool done{ false };
 
     void run(size_t i);
     void set_thread_name(const std::string &name, size_t i) const;

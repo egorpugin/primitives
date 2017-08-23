@@ -37,9 +37,7 @@ Executor::Executor(size_t nThreads, const std::string &name)
 
 Executor::~Executor()
 {
-    stop();
-    for (auto &t : thread_pool)
-        t.t.join();
+    join();
 }
 
 void Executor::run(size_t i)
@@ -62,7 +60,8 @@ void Executor::run(size_t i)
                 break;
 
             thread_pool[i].busy = true;
-            t();
+            if (!done) // double check
+                t();
         }
         catch (const std::exception &e)
         {
@@ -85,6 +84,13 @@ void Executor::run(size_t i)
                 //LOG_ERROR(logger, "executor: " << this << ", thread #" << i + 1 << ", error: " << error);
         }
     }
+}
+
+void Executor::join()
+{
+    stop();
+    for (auto &t : thread_pool)
+        t.t.join();
 }
 
 void Executor::stop()
