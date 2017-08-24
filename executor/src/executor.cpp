@@ -90,7 +90,8 @@ void Executor::join()
 {
     stop();
     for (auto &t : thread_pool)
-        t.t.join();
+        if (t.t.joinable())
+            t.t.join();
 }
 
 void Executor::stop()
