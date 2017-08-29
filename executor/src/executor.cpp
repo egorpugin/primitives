@@ -79,7 +79,7 @@ void Executor::run(size_t i)
         {
             if (throw_exceptions)
                 done = true;
-            else
+            else if (!silent)
                 std::cerr << "executor: " << this << ", thread #" << i + 1 << ", error: " << error << "\n";
                 //LOG_ERROR(logger, "executor: " << this << ", thread #" << i + 1 << ", error: " << error);
         }
