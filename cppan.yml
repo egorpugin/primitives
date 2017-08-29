@@ -59,8 +59,8 @@ projects:
                     version: "*"
                 templates:
                     version: "*"
-                pvt.cppan.demo.boost.process:
-                    version: 1
+                pvt.cppan.demo.klemens_morgenstern.boost.process:
+                    version: develop
 
     context:
         name: context
