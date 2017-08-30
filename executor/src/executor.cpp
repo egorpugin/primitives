@@ -79,9 +79,14 @@ void Executor::run(size_t i)
         {
             if (throw_exceptions)
                 done = true;
-            else if (!silent)
-                std::cerr << "executor: " << this << ", thread #" << i + 1 << ", error: " << error << "\n";
+            else
+            {
+                // clear
+                thread_pool[i].eptr = std::current_exception();
+                if (!silent)
+                    std::cerr << "executor: " << this << ", thread #" << i + 1 << ", error: " << error << "\n";
                 //LOG_ERROR(logger, "executor: " << this << ", thread #" << i + 1 << ", error: " << error);
+            }
         }
     }
 }
@@ -90,8 +95,10 @@ void Executor::join()
 {
     stop();
     for (auto &t : thread_pool)
+    {
         if (t.t.joinable())
             t.t.join();
+    }
 }
 
 void Executor::stop()
@@ -105,18 +112,26 @@ void Executor::wait()
 {
     // wait for empty queues
     for (auto &t : thread_pool)
+    {
         while (!t.q.empty() && !done)
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 
     // wait for end of execution
     for (auto &t : thread_pool)
+    {
         while (t.busy && !done)
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 
     if (throw_exceptions)
+    {
         for (auto &t : thread_pool)
+        {
             if (t.eptr)
                 std::rethrow_exception(t.eptr);
+        }
+    }
 }
 
 void Executor::set_thread_name(const std::string &name, size_t i) const
