@@ -88,6 +88,14 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
     REQUIRE_THROWS(Command::execute({ "cmake", "--versionx" }));
     REQUIRE_NOTHROW(Command::execute({ "cmake", "--versionx" }, ec));
     REQUIRE(ec);
+    {
+        Command c;
+        c.program = "cmake";
+        c.args.push_back("--version");
+        c.out.file = "1.txt";
+        REQUIRE_NOTHROW(c.execute());
+        REQUIRE(fs::exists("1.txt"));
+    }
 }
 
 #include <primitives/yaml.h>
@@ -98,13 +106,13 @@ int main(int argc, char **argv)
 
     Catch::Session().run(argc, argv);
 
-    std::istringstream ss("x: a\nx2:\n\ta: b\n\tc: d");
+    /*std::istringstream ss("x: a\nx2:\n\ta: b\n\tc: d");
     auto n = YAML::Load(ss);
     get_variety_and_iterate(n, [](auto &v) {}, [](auto &v) {});
     get_variety_and_iterate(yaml(), [](auto &v) {}, [](auto &v) {});
 
     std::map<String, String> m;
-    get_string_map(n, "x2", m);
+    get_string_map(n, "x2", m);*/
 
     return 0;
 }

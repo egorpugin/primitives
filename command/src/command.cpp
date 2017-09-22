@@ -5,9 +5,22 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/asio/use_future.hpp>
 #include <boost/nowide/convert.hpp>
+#include <boost/nowide/fstream.hpp>
 #include <boost/process.hpp>
 
 #include <iostream>
+
+#ifdef _WIN32
+static auto in_mode = 0x01;
+static auto out_mode = 0x02;
+static auto app_mode = 0x08;
+static auto binary_mode = 0x20;
+#else
+static auto in_mode = std::ios::in;
+static auto out_mode = std::ios::out;
+static auto app_mode = std::ios::app;
+static auto binary_mode = std::ios::binary;
+#endif
 
 namespace primitives
 {
@@ -23,9 +36,17 @@ struct CommandData
     cb_func out_cb, err_cb;
     std::function<void(int, const std::error_code &)> on_exit;
     std::function<void(void)> on_error;
-    std::function<void(const boost::system::error_code &ec, std::size_t s, Command::Stream &out, boost::process::async_pipe &p, Command::Buffer &out_buf, cb_func &out_cb, std::ostream &stream)> async_read;
+    std::function<void(
+        const boost::system::error_code &ec,
+        std::size_t s, Command::Stream &out,
+        boost::process::async_pipe &p,
+        Command::Buffer &out_buf,
+        cb_func &out_cb,
+        boost::nowide::ofstream &out_fs,
+        std::ostream &stream)> async_read;
     std::atomic_int pipes_closed{ 0 };
     Command::Buffer out_buf, err_buf;
+    boost::nowide::ofstream out_fs, err_fs;
 };
 
 path resolve_executable(const path &p)
@@ -108,6 +129,11 @@ void Command::execute1(std::error_code *ec_in)
     d->pout = std::make_unique<bp::async_pipe>(*ios_ptr);
     d->perr = std::make_unique<bp::async_pipe>(*ios_ptr);
 
+    if (!out.file.empty())
+        d->out_fs.open(out.file.string(), out_mode | binary_mode);
+    if (!err.file.empty() && out.file != err.file)
+        d->err_fs.open(err.file.string(), out_mode | binary_mode);
+
     d->on_error = [this, &ios_ptr]()
     {
         if (d->pipes_closed != 2)
@@ -141,7 +167,7 @@ void Command::execute1(std::error_code *ec_in)
         ios_ptr->post([this] {d->on_error(); });
     };
 
-    d->async_read = [this](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &stream)
+    d->async_read = [this](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
     {
         if (s)
         {
@@ -151,6 +177,8 @@ void Command::execute1(std::error_code *ec_in)
                 stream << str;
             if (out.action)
                 out.action(str, ec);
+            if (!out.file.empty())
+                out_fs << str;
         }
         if (!ec)
             boost::asio::async_read(p, boost::asio::buffer(out_buf), out_cb);
@@ -166,11 +194,13 @@ void Command::execute1(std::error_code *ec_in)
     d->err_buf.resize(buf_size);
     d->out_cb = [this](const boost::system::error_code &ec, std::size_t s)
     {
-        d->async_read(ec, s, out, *d->pout.get(), d->out_buf, d->out_cb, std::cout);
+        d->async_read(ec, s, out, *d->pout.get(), d->out_buf, d->out_cb, d->out_fs, std::cout);
     };
     d->err_cb = [this](const boost::system::error_code &ec, std::size_t s)
     {
-        d->async_read(ec, s, err, *d->perr.get(), d->err_buf, d->err_cb, std::cerr);
+        d->async_read(ec, s, err, *d->perr.get(), d->err_buf, d->err_cb,
+            out.file != err.file ? d->err_fs : d->out_fs,
+            std::cerr);
     };
     boost::asio::async_read(*d->pout.get(), boost::asio::buffer(d->out_buf), d->out_cb);
     boost::asio::async_read(*d->perr.get(), boost::asio::buffer(d->err_buf), d->err_cb);

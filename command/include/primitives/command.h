@@ -33,6 +33,7 @@ struct Command
         //bool capture = true;
         bool inherit = false;
         std::function<ActionType> action;
+        path file;
     };
 
     // input
