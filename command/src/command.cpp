@@ -186,6 +186,7 @@ void Command::execute1(std::error_code *ec_in)
         {
             p.async_close();
             d->pipes_closed++;
+            out_fs.close();
         }
     };
 
