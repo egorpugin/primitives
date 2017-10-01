@@ -102,6 +102,17 @@ projects:
 
         static_only: true
 
+        options:
+            any:
+                definitions:
+                    win32:
+                        private:
+                            - _WIN32_WINNT=0x0601
+
+        dependencies:
+            pvt.cppan.demo.boost.asio: 1
+            pvt.cppan.demo.boost.system: 1
+
     filesystem:
         name: filesystem
 

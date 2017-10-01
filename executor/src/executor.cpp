@@ -1,7 +1,7 @@
 #include <primitives/executor.h>
 
+#include <algorithm>
 #include <iostream>
-#include <string>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -23,14 +23,27 @@ Executor::Executor(const std::string &name, size_t nThreads)
 Executor::Executor(size_t nThreads, const std::string &name)
     : nThreads(nThreads)
 {
+    work = std::make_unique<boost::asio::io_service::work>(io_service);
     thread_pool.resize(nThreads);
     for (size_t i = 0; i < nThreads; i++)
     {
+        thread_pool[i].io_service = &io_service;
         thread_pool[i].t = std::move(std::thread([this, i, name = name]() mutable
         {
             name += " " + std::to_string(i);
             set_thread_name(name, i);
-            run(i);
+
+            while (1)
+            {
+                run(i);
+                if (wait_)
+                {
+                    std::unique_lock<std::mutex> lk(m);
+                    cv.wait(lk, [this]() { return !wait_; });
+                    continue;
+                }
+                break;
+            }
         }));
     }
 }
@@ -42,26 +55,12 @@ Executor::~Executor()
 
 void Executor::run(size_t i)
 {
-    while (!done)
+    while (!thread_pool[i].io_service->stopped())
     {
         std::string error;
         try
         {
-            Task t;
-            const size_t spin_count = nThreads * 4;
-            for (auto n = 0; n != spin_count; ++n)
-            {
-                if (thread_pool[(i + n) % nThreads].q.try_pop(t))
-                    break;
-            }
-
-            // no task popped, probably shutdown command was issues
-            if (!t && !thread_pool[i].q.pop(t))
-                break;
-
-            thread_pool[i].busy = true;
-            if (!done) // double check
-                t();
+            thread_pool[i].io_service->run();
         }
         catch (const std::exception &e)
         {
@@ -73,12 +72,11 @@ void Executor::run(size_t i)
             error = "unknown exception";
             thread_pool[i].eptr = std::current_exception();
         }
-        thread_pool[i].busy = false;
 
         if (!error.empty())
         {
             if (throw_exceptions)
-                done = true;
+                io_service.stop();
             else
             {
                 // clear
@@ -103,34 +101,54 @@ void Executor::join()
 
 void Executor::stop()
 {
-    done = true;
-    for (auto &t : thread_pool)
-        t.q.done();
+    wait_ = false;
+    work.reset();
+    io_service.stop();
+    wait_stop();
+    try_throw();
 }
 
 void Executor::wait()
 {
-    // wait for empty queues
-    for (auto &t : thread_pool)
+    if (io_service.stopped())
     {
-        while (!t.q.empty() && !done)
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        try_throw();
+        return;
     }
 
-    // wait for end of execution
+    wait_ = true;
+    work.reset();
+
+    wait_stop();
+    try_throw();
+
+    wait_ = false;
+    io_service.reset();
+    work = std::make_unique<boost::asio::io_service::work>(io_service);
+    cv.notify_all();
+}
+
+void Executor::wait_stop()
+{
+    while (!io_service.stopped())
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+void Executor::try_throw()
+{
+    if (!throw_exceptions)
+        return;
+
     for (auto &t : thread_pool)
     {
-        while (t.busy && !done)
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+        if (!t.eptr)
+            continue;
+        wait_ = false;
+        cv.notify_all();
 
-    if (throw_exceptions)
-    {
-        for (auto &t : thread_pool)
-        {
-            if (t.eptr)
-                std::rethrow_exception(t.eptr);
-        }
+        decltype(t.eptr) e;
+        std::swap(t.eptr, e);
+        std::rethrow_exception(e);
     }
 }
 

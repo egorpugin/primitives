@@ -1,100 +1,23 @@
 #pragma once
 
+#include <boost/asio/io_service.hpp>
+
 #include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
-#include <queue>
 #include <string>
 #include <thread>
 #include <vector>
 
 using Task = std::function<void()>;
 
-class TaskQueue
-{
-    using Tasks = std::deque<Task>;
-    using Lock = std::unique_lock<std::mutex>;
-
-public:
-    TaskQueue() {}
-    TaskQueue(TaskQueue &&rhs)
-    {
-        Lock lock(rhs.m);
-        q = std::move(rhs.q);
-    }
-
-    bool try_push(Task &t)
-    {
-        {
-            Lock lock(m, std::try_to_lock);
-            if (!lock)
-                return false;
-            q.emplace_back(std::move(t));
-        }
-        cv.notify_one();
-        return true;
-    }
-
-    bool try_pop(Task &t)
-    {
-        Lock lock(m, std::try_to_lock);
-        if (!lock || q.empty() || done_)
-            return false;
-        t = std::move(q.front());
-        q.pop_front();
-        return true;
-    }
-
-    void push(Task &t)
-    {
-        {
-            Lock lock(m);
-            q.emplace_back(std::move(t));
-        }
-        cv.notify_one();
-    }
-
-    bool pop(Task &t)
-    {
-        Lock lock(m);
-        while (q.empty() && !done_)
-            cv.wait(lock);
-        if (q.empty() || done_)
-            return false;
-        t = std::move(q.front());
-        q.pop_front();
-        return true;
-    }
-
-    void done()
-    {
-        {
-            Lock lock(m);
-            done_ = true;
-        }
-        cv.notify_all();
-    }
-
-    bool empty() const
-    {
-        return q.empty();
-    }
-
-private:
-    Tasks q;
-    std::mutex m;
-    std::condition_variable cv;
-    bool done_ = false;
-};
-
 class Executor
 {
     struct ThreadData
     {
         std::thread t;
-        TaskQueue q;
-        volatile bool busy = false;
+        boost::asio::io_service *io_service = nullptr;
         std::exception_ptr eptr;
     };
 
@@ -117,13 +40,7 @@ public:
         static_assert(!std::is_lvalue_reference<T>::value, "Argument cannot be an lvalue");
 
         Task task([t = std::move(t)]{ t(); });
-        auto i = index++;
-        for (size_t n = 0; n != nThreads; ++n)
-        {
-            if (thread_pool[(i + n) % nThreads].q.try_push(task))
-                return;
-        }
-        thread_pool[i % nThreads].q.push(task);
+        io_service.post(std::move(task));
     }
 
     void join();
@@ -131,12 +48,17 @@ public:
     void wait();
 
 private:
-    Threads thread_pool;
     size_t nThreads = std::thread::hardware_concurrency();
-    std::atomic_size_t index{ 0 };
-    std::atomic_bool done{ false };
+    Threads thread_pool;
+    boost::asio::io_service io_service;
+    std::unique_ptr<boost::asio::io_service::work> work;
+    std::atomic_bool wait_ = false;
+    std::mutex m;
+    std::condition_variable cv;
 
     void run(size_t i);
+    void try_throw();
+    void wait_stop();
     void set_thread_name(const std::string &name, size_t i) const;
 };
 

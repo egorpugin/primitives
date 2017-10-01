@@ -4,8 +4,11 @@ name: main
 */
 
 #include <primitives/command.h>
+#include <primitives/executor.h>
 #include <primitives/filesystem.h>
 #include <primitives/hash.h>
+
+#include <chrono>
 
 #undef min
 #undef max
@@ -95,6 +98,81 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
         c.out.file = "1.txt";
         REQUIRE_NOTHROW(c.execute());
         REQUIRE(fs::exists("1.txt"));
+    }
+}
+
+TEST_CASE("Checking executor", "[executor]")
+{
+    using namespace std::literals::chrono_literals;
+
+    {
+        std::atomic_int v = 0;
+
+        Executor e;
+        for (int i = 0; i < 100; i++)
+            e.push([&v] { std::this_thread::sleep_for(10ms); v++; });
+        REQUIRE(v < 100);
+        std::this_thread::sleep_for(1s);
+        REQUIRE(v == 100);
+        for (int i = 0; i < 100; i++)
+            e.push([&v] { std::this_thread::sleep_for(1ms); v++; });
+        e.wait();
+        REQUIRE(v == 200);
+        for (int i = 0; i < 100; i++)
+            e.push([&v] { std::this_thread::sleep_for(1ms); v++; });
+        e.wait();
+        REQUIRE(v == 300);
+        for (int i = 0; i < 100; i++)
+            e.push([&v] { std::this_thread::sleep_for(1ms); v++; });
+        e.wait();
+        REQUIRE(v == 400);
+
+        e.stop();
+        for (int i = 0; i < 100; i++)
+            e.push([&v] { std::this_thread::sleep_for(1ms); v++; });
+        REQUIRE(v == 400);
+    }
+
+    {
+        Executor e;
+        e.push([] {throw std::runtime_error("123"); });
+        std::this_thread::sleep_for(100ms);
+        REQUIRE_THROWS(e.wait());
+        REQUIRE_NOTHROW(e.stop());
+    }
+
+    {
+        Executor e;
+        e.throw_exceptions = false;
+        e.push([] {throw std::runtime_error("123"); });
+        std::this_thread::sleep_for(100ms);
+        REQUIRE_NOTHROW(e.wait());
+        REQUIRE_NOTHROW(e.stop());
+    }
+
+    {
+        Executor e;
+        for (int i = 0; i < 100; i++)
+            e.push([] { std::this_thread::sleep_for(10ms); });
+        e.push([] {throw std::runtime_error("123"); });
+        for (int i = 0; i < 100; i++)
+            e.push([] { std::this_thread::sleep_for(10ms); });
+        REQUIRE_THROWS(e.wait());
+        REQUIRE_NOTHROW(e.stop());
+    }
+
+    {
+        Executor e;
+        e.throw_exceptions = false;
+        for (int i = 0; i < 100; i++)
+            e.push([] { std::this_thread::sleep_for(10ms); });
+        e.push([] {throw std::runtime_error("123"); });
+        for (int i = 0; i < 100; i++)
+            e.push([] { std::this_thread::sleep_for(10ms); });
+        REQUIRE_NOTHROW(e.wait());
+        REQUIRE_NOTHROW(e.stop());
+        REQUIRE_NOTHROW(e.join());
+        REQUIRE_NOTHROW(e.join());
     }
 }
 
