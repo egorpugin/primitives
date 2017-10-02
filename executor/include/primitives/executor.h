@@ -18,7 +18,6 @@ class Executor
     {
         std::thread t;
         boost::asio::io_service *io_service = nullptr;
-        std::exception_ptr eptr;
     };
 
     using Threads = std::vector<ThreadData>;
@@ -53,6 +52,7 @@ private:
     Threads thread_pool;
     boost::asio::io_service io_service;
     std::unique_ptr<boost::asio::io_service::work> work;
+    std::exception_ptr eptr;
     std::atomic_bool wait_ = false;
     std::mutex m;
     std::condition_variable cv;

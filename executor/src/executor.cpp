@@ -65,12 +65,14 @@ void Executor::run(size_t i)
         catch (const std::exception &e)
         {
             error = e.what();
-            thread_pool[i].eptr = std::current_exception();
+            if (!eptr)
+                eptr = std::current_exception();
         }
         catch (...)
         {
             error = "unknown exception";
-            thread_pool[i].eptr = std::current_exception();
+            if (!eptr)
+                eptr = std::current_exception();
         }
 
         if (!error.empty())
@@ -80,7 +82,7 @@ void Executor::run(size_t i)
             else
             {
                 // clear
-                thread_pool[i].eptr = std::current_exception();
+                eptr = std::current_exception();
                 if (!silent)
                     std::cerr << "executor: " << this << ", thread #" << i + 1 << ", error: " << error << "\n";
                 //LOG_ERROR(logger, "executor: " << this << ", thread #" << i + 1 << ", error: " << error);
@@ -136,20 +138,15 @@ void Executor::wait_stop()
 
 void Executor::try_throw()
 {
-    if (!throw_exceptions)
+    if (!throw_exceptions || !eptr)
         return;
 
-    for (auto &t : thread_pool)
-    {
-        if (!t.eptr)
-            continue;
-        wait_ = false;
-        cv.notify_all();
+    wait_ = false;
+    cv.notify_all();
 
-        decltype(t.eptr) e;
-        std::swap(t.eptr, e);
-        std::rethrow_exception(e);
-    }
+    decltype(eptr) e;
+    std::swap(eptr, e);
+    std::rethrow_exception(e);
 }
 
 void Executor::set_thread_name(const std::string &name, size_t i) const
