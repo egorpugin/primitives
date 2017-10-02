@@ -46,6 +46,7 @@ public:
     void join();
     void stop();
     void wait();
+    bool stopped() const { return io_service.stopped(); }
 
 private:
     size_t nThreads = std::thread::hardware_concurrency();
