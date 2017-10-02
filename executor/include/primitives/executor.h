@@ -48,6 +48,7 @@ private:
     std::atomic_bool wait_ = false;
     std::mutex m;
     std::condition_variable cv;
+    std::atomic_bool had_exception = false;
 
     void run(size_t i);
     void try_throw();

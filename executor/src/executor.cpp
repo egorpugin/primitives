@@ -63,7 +63,7 @@ void Executor::run(size_t i)
         }
         catch (const std::exception &e)
         {
-            if (!io_service.stopped())
+            if (!io_service.stopped() || !had_exception)
             {
                 error = e.what();
                 eptr = std::current_exception();
@@ -71,7 +71,7 @@ void Executor::run(size_t i)
         }
         catch (...)
         {
-            if (!io_service.stopped())
+            if (!io_service.stopped() || !had_exception)
             {
                 error = "unknown exception";
                 eptr = std::current_exception();
@@ -80,6 +80,7 @@ void Executor::run(size_t i)
 
         if (!error.empty())
         {
+            had_exception = true;
             if (throw_exceptions)
                 io_service.stop();
             else
@@ -102,6 +103,7 @@ void Executor::join()
         if (t.joinable())
             t.join();
     }
+    try_throw();
 }
 
 void Executor::stop()
