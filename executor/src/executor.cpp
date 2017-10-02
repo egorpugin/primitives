@@ -27,8 +27,7 @@ Executor::Executor(size_t nThreads, const std::string &name)
     thread_pool.resize(nThreads);
     for (size_t i = 0; i < nThreads; i++)
     {
-        thread_pool[i].io_service = &io_service;
-        thread_pool[i].t = std::move(std::thread([this, i, name = name]() mutable
+        thread_pool.emplace_back([this, i, name = name]() mutable
         {
             name += " " + std::to_string(i);
             set_thread_name(name, i);
@@ -44,7 +43,7 @@ Executor::Executor(size_t nThreads, const std::string &name)
                 }
                 break;
             }
-        }));
+        });
     }
 }
 
@@ -55,24 +54,28 @@ Executor::~Executor()
 
 void Executor::run(size_t i)
 {
-    while (!thread_pool[i].io_service->stopped())
+    while (!io_service.stopped())
     {
         std::string error;
         try
         {
-            thread_pool[i].io_service->run();
+            io_service.run();
         }
         catch (const std::exception &e)
         {
-            error = e.what();
-            if (!eptr)
+            if (!io_service.stopped())
+            {
+                error = e.what();
                 eptr = std::current_exception();
+            }
         }
         catch (...)
         {
-            error = "unknown exception";
-            if (!eptr)
+            if (!io_service.stopped())
+            {
+                error = "unknown exception";
                 eptr = std::current_exception();
+            }
         }
 
         if (!error.empty())
@@ -96,8 +99,8 @@ void Executor::join()
     stop();
     for (auto &t : thread_pool)
     {
-        if (t.t.joinable())
-            t.t.join();
+        if (t.joinable())
+            t.join();
     }
 }
 

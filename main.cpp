@@ -174,6 +174,14 @@ TEST_CASE("Checking executor", "[executor]")
         REQUIRE_NOTHROW(e.join());
         REQUIRE_NOTHROW(e.join());
     }
+
+    {
+        Executor e;
+        e.push([] { std::this_thread::sleep_for(1000ms); throw std::runtime_error("1"); });
+        e.push([] { std::this_thread::sleep_for(2000ms); throw std::runtime_error("2"); });
+        REQUIRE_THROWS(e.wait());
+        REQUIRE_NOTHROW(e.join());
+    }
 }
 
 #include <primitives/yaml.h>

@@ -14,14 +14,6 @@ using Task = std::function<void()>;
 
 class Executor
 {
-    struct ThreadData
-    {
-        std::thread t;
-        boost::asio::io_service *io_service = nullptr;
-    };
-
-    using Threads = std::vector<ThreadData>;
-
 public:
     bool throw_exceptions = true;
     bool silent = false;
@@ -49,7 +41,7 @@ public:
 
 private:
     size_t nThreads = std::thread::hardware_concurrency();
-    Threads thread_pool;
+    std::vector<std::thread> thread_pool;
     boost::asio::io_service io_service;
     std::unique_ptr<boost::asio::io_service::work> work;
     std::exception_ptr eptr;
