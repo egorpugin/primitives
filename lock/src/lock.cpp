@@ -71,7 +71,7 @@ static std::STRING_MODE prepare_lock_file(const path &fn)
     fs::create_directories(fn.parent_path());
     auto lock_file = fn.parent_path() / (fn.filename().string() + ".lock");
     if (!fs::exists(lock_file))
-        boost::nowide::ofstream(lock_file.string());
+        primitives::filesystem::create(lock_file);
     return lock_file.STRING_MODE();
 }
 

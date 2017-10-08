@@ -9,6 +9,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <unordered_set>
 
 using Task = std::function<void()>;
 
@@ -49,6 +50,7 @@ private:
     std::mutex m;
     std::condition_variable cv;
     std::atomic_bool had_exception = false;
+    std::unordered_set<std::thread::id> thread_ids;
 
     void run(size_t i);
     void try_throw();

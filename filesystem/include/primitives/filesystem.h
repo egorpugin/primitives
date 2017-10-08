@@ -95,3 +95,11 @@ private:
     path cwd;
     bool active = true;
 };
+
+namespace primitives::filesystem
+{
+
+FILE *fopen(const path &p, const char *mode);
+void create(const path &p);
+
+}

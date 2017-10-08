@@ -93,18 +93,11 @@ void write_file(const path &p, const String &s)
     if (!pp.empty())
         fs::create_directories(pp);
 
-#ifdef _MSC_VER
-    auto f = _wfopen(p.wstring().c_str(), L"wb");
+    auto f = primitives::filesystem::fopen(p, "wb");
     if (!f)
         throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
     fwrite(s.c_str(), s.size(), 1, f);
     fclose(f);
-#else
-    boost::nowide::ofstream ofile(p.string(), out_mode | binary_mode);
-    if (!ofile)
-        throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
-    ofile << s;
-#endif
 }
 
 void write_file_if_different(const path &p, const String &s)
@@ -319,4 +312,23 @@ bool FileIterator::iterate(std::function<bool(const BuffersRef &, uint64_t)> f)
 void setup_utf8_filesystem()
 {
     boost::nowide::nowide_filesystem();
+}
+
+namespace primitives::filesystem
+{
+
+FILE *fopen(const path &p, const char *mode)
+{
+#ifdef _WIN32
+    return _wfopen(p.wstring().c_str(), path(mode).wstring().c_str());
+#else
+    return fopen(p.string().c_str(), mode);
+#endif
+}
+
+void create(const path &p)
+{
+    fclose(fopen(p, "wb"));
+}
+
 }

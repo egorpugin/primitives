@@ -54,6 +54,8 @@ Executor::~Executor()
 
 void Executor::run(size_t i)
 {
+    thread_ids.insert(std::this_thread::get_id());
+
     while (!io_service.stopped())
     {
         std::string error;
@@ -121,6 +123,11 @@ void Executor::wait()
     {
         try_throw();
         return;
+    }
+
+    if (thread_ids.find(std::this_thread::get_id()) != thread_ids.end())
+    {
+        run(-1);
     }
 
     wait_ = true;
