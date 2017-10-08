@@ -129,6 +129,7 @@ public:
 
     void join();
     void stop();
+    bool stopped() const { return done; }
     void wait();
 
 private:
