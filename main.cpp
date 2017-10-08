@@ -106,6 +106,11 @@ TEST_CASE("Checking executor", "[executor]")
     using namespace std::literals::chrono_literals;
 
     {
+        Executor e(1);
+        e.wait();
+    }
+
+    {
         std::atomic_int v = 0;
 
         Executor e;
@@ -184,22 +189,104 @@ TEST_CASE("Checking executor", "[executor]")
     }
 
     {
+        // FIXME: not working for executor_io
+        Executor e(1);
+        e.push([&e] { e.stop(); });
+        e.push([] { std::this_thread::sleep_for(100ms); throw std::runtime_error("2"); });
+        REQUIRE_NOTHROW(e.join());
+    }
+
+    {
+        // FIXME: not working for executor_io
         Executor e;
         e.push([&e] { e.stop(); });
         e.push([] { std::this_thread::sleep_for(100ms); throw std::runtime_error("2"); });
+        REQUIRE_NOTHROW(e.join());
+    }
+
+    {
+        // FIXME: not working for executor_io
+        Executor e;
+        e.push([&e] { std::this_thread::sleep_for(500ms); e.stop(); });
+        e.push([] { throw std::runtime_error("2"); });
         REQUIRE_THROWS(e.join());
     }
 
     {
         Executor e(1);
+        e.push([&e] { e.wait(); });
         e.wait();
     }
 
-    /*{
+    {
         Executor e(1);
+        e.push([&e] { std::this_thread::sleep_for(500ms); e.wait(); });
+        e.wait();
+    }
+
+    {
+        Executor e(1);
+        e.push([&e] { std::this_thread::sleep_for(500ms); });
+        e.push([&e] { e.wait(); });
         e.push([&e] { e.wait(); });
         e.wait();
-    }*/
+    }
+
+    {
+        Executor e(2);
+        e.push([&e] { std::this_thread::sleep_for(500ms); });
+        e.push([&e] { e.wait(); });
+        e.push([&e] { e.wait(); });
+        e.wait();
+    }
+
+    {
+        Executor e(2);
+        e.push([&e] { std::this_thread::sleep_for(500ms); });
+        e.push([&e] { std::this_thread::sleep_for(500ms); });
+        e.push([&e] { e.wait(); });
+        e.push([&e] { e.wait(); });
+        e.wait();
+    }
+
+    {
+        Executor e(2);
+        e.push([&e] { std::this_thread::sleep_for(500ms); });
+        e.push([&e] { std::this_thread::sleep_for(500ms); });
+        e.push([&e] { e.wait(); });
+        e.push([&e] { e.wait(); });
+    }
+
+    {
+        Executor e(1);
+        e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); });
+        e.wait();
+    }
+
+    {
+        Executor e(1);
+        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
+        e.wait();
+    }
+
+    {
+        Executor e(2);
+        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
+        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
+        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
+        e.wait();
+    }
+
+    {
+        Executor e(2);
+        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
+        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
+        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
+        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
+        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
+        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
+        e.wait();
+    }
 }
 
 #include <primitives/yaml.h>

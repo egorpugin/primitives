@@ -113,6 +113,29 @@ projects:
             pvt.cppan.demo.boost.asio: 1
             pvt.cppan.demo.boost.system: 1
 
+
+    executor_io:
+        name: executor_io
+
+        type: library
+
+        root_directory: executor_io
+
+
+
+        static_only: true
+
+        options:
+            any:
+                definitions:
+                    win32:
+                        private:
+                            - _WIN32_WINNT=0x0601
+
+        dependencies:
+            pvt.cppan.demo.boost.asio: 1
+            pvt.cppan.demo.boost.system: 1
+
     filesystem:
         name: filesystem
 
@@ -293,6 +316,7 @@ projects:
                 command:
                     version: "*"
                 executor:
+                #executor_io:
                     version: "*"
                 hash:
                     version: "*"
@@ -300,4 +324,5 @@ projects:
                     version: "*"
                 pvt.cppan.demo.philsquared.catch:
                     version: 1
+
 

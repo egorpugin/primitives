@@ -1,7 +1,7 @@
 #include <primitives/executor.h>
 
-#include <algorithm>
 #include <iostream>
+#include <string>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -23,145 +23,202 @@ Executor::Executor(const std::string &name, size_t nThreads)
 Executor::Executor(size_t nThreads, const std::string &name)
     : nThreads(nThreads)
 {
-    work = std::make_unique<boost::asio::io_service::work>(io_service);
     thread_pool.resize(nThreads);
     for (size_t i = 0; i < nThreads; i++)
     {
-        thread_pool.emplace_back([this, i, name = name]() mutable
+        thread_pool[i].t = std::move(std::thread([this, i, name = name]() mutable
         {
             name += " " + std::to_string(i);
-            set_thread_name(name, i);
-
-            while (1)
+            set_thread_name(name);
             {
-                run(i);
-                if (wait_)
-                {
-                    std::unique_lock<std::mutex> lk(m);
-                    cv.wait(lk, [this]() { return !wait_; });
-                    continue;
-                }
-                break;
+                std::unique_lock<std::mutex> lk(m);
+                thread_ids[std::this_thread::get_id()] = i;
             }
-        });
+            run();
+        }));
     }
 }
 
 Executor::~Executor()
 {
+    // do not throw from destructor
+    throw_exceptions = false;
     join();
 }
 
-void Executor::run(size_t i)
+size_t Executor::get_n() const
 {
-    thread_ids.insert(std::this_thread::get_id());
+    return thread_ids.find(std::this_thread::get_id())->second;
+}
 
-    while (!io_service.stopped())
+void Executor::run()
+{
+    while (!done)
+        if (!run_task())
+            break;
+}
+
+bool Executor::run_task()
+{
+    return run_task(get_n());
+}
+
+bool Executor::run_task(size_t i)
+{
+    auto t = get_task(i);
+
+    // double check
+    if (done)
+        return false;
+
+    return run_task(i, t);
+}
+
+bool Executor::run_task(size_t i, Task t)
+{
+    auto &thr = thread_pool[i];
+
+    std::string error;
+    try
     {
-        std::string error;
-        try
-        {
-            io_service.run();
-        }
-        catch (const std::exception &e)
-        {
-            if (!io_service.stopped() || !had_exception)
-            {
-                error = e.what();
-                eptr = std::current_exception();
-            }
-        }
-        catch (...)
-        {
-            if (!io_service.stopped() || !had_exception)
-            {
-                error = "unknown exception";
-                eptr = std::current_exception();
-            }
-        }
+        thr.busy = true;
+        t();
+    }
+    catch (const std::exception &e)
+    {
+        error = e.what();
+        thr.eptr = std::current_exception();
+    }
+    catch (...)
+    {
+        error = "unknown exception";
+        thr.eptr = std::current_exception();
+    }
+    thr.busy = false;
 
-        if (!error.empty())
+    if (!error.empty())
+    {
+        if (throw_exceptions)
+            done = true;
+        else
         {
-            had_exception = true;
-            if (throw_exceptions)
-                io_service.stop();
-            else
-            {
-                // clear
-                eptr = std::current_exception();
-                if (!silent)
-                    std::cerr << "executor: " << this << ", thread #" << i + 1 << ", error: " << error << "\n";
-                //LOG_ERROR(logger, "executor: " << this << ", thread #" << i + 1 << ", error: " << error);
-            }
+            // clear
+            thr.eptr = std::current_exception();
+            if (!silent)
+                std::cerr << "executor: " << this << ", thread #" << i + 1 << ", error: " << error << "\n";
+            //LOG_ERROR(logger, "executor: " << this << ", thread #" << i + 1 << ", error: " << error);
         }
     }
+
+    return true;
+}
+
+Task Executor::get_task()
+{
+    return get_task(get_n());
+}
+
+Task Executor::get_task(size_t i)
+{
+    auto &thr = thread_pool[i];
+
+    Task t;
+    const size_t spin_count = nThreads * 4;
+    for (auto n = 0; n != spin_count; ++n)
+    {
+        if (thread_pool[(i + n) % nThreads].q.try_pop(t))
+            break;
+    }
+
+    // no task popped, probably shutdown command was issues
+    if (!t && !thr.q.pop(t))
+        return Task();
+
+    return t;
+}
+
+Task Executor::get_task_non_stealing()
+{
+    return get_task_non_stealing(get_n());
+}
+
+Task Executor::get_task_non_stealing(size_t i)
+{
+    auto &thr = thread_pool[i];
+    Task t;
+    if (thr.q.pop(t))
+        return t;
+    return Task();
 }
 
 void Executor::join()
 {
+    wait();
     stop();
     for (auto &t : thread_pool)
     {
-        if (t.joinable())
-            t.join();
+        if (t.t.joinable())
+            t.t.join();
     }
-    try_throw();
 }
 
 void Executor::stop()
 {
-    wait_ = false;
-    work.reset();
-    io_service.stop();
-    wait_stop();
-    try_throw();
+    done = true;
+    for (auto &t : thread_pool)
+        t.q.done();
 }
 
 void Executor::wait()
 {
-    if (io_service.stopped())
+    bool run_again = thread_ids.find(std::this_thread::get_id()) != thread_ids.end();
+
+    // wait for empty queues
+    for (auto &t : thread_pool)
     {
-        try_throw();
-        return;
+        while (!t.q.empty() && !done)
+        {
+            if (run_again)
+            {
+                // finish everything
+                for (auto &t : thread_pool)
+                {
+                    Task ta;
+                    if (t.q.try_pop(ta))
+                        run_task(get_n(), ta);
+                }
+            }
+            else
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
     }
 
-    if (thread_ids.find(std::this_thread::get_id()) != thread_ids.end())
+    // free self
+    if (run_again)
+        thread_pool[get_n()].busy = false;
+
+    // wait for end of execution
+    for (auto &t : thread_pool)
     {
-        run(-1);
+        while (t.busy && !done)
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    wait_ = true;
-    work.reset();
-
-    wait_stop();
-    try_throw();
-
-    wait_ = false;
-    io_service.reset();
-    work = std::make_unique<boost::asio::io_service::work>(io_service);
-    cv.notify_all();
+    if (throw_exceptions)
+    {
+        for (auto &t : thread_pool)
+        {
+            if (t.eptr)
+            {
+                decltype(t.eptr) e;
+                std::swap(t.eptr, e);
+                std::rethrow_exception(e);
+            }
+        }
+    }
 }
 
-void Executor::wait_stop()
-{
-    while (!io_service.stopped())
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-}
-
-void Executor::try_throw()
-{
-    if (!throw_exceptions || !eptr)
-        return;
-
-    wait_ = false;
-    cv.notify_all();
-
-    decltype(eptr) e;
-    std::swap(eptr, e);
-    std::rethrow_exception(e);
-}
-
-void Executor::set_thread_name(const std::string &name, size_t i) const
+void Executor::set_thread_name(const std::string &name) const
 {
     if (name.empty())
         return;
