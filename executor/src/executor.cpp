@@ -41,14 +41,25 @@ Executor::Executor(size_t nThreads, const std::string &name)
 
 Executor::~Executor()
 {
-    // do not throw from destructor
-    throw_exceptions = false;
     join();
 }
 
 size_t Executor::get_n() const
 {
     return thread_ids.find(std::this_thread::get_id())->second;
+}
+
+bool Executor::is_in_executor() const
+{
+    return thread_ids.find(std::this_thread::get_id()) != thread_ids.end();
+}
+
+bool Executor::try_run_one()
+{
+    auto t = try_pop();
+    if (t)
+        run_task(t);
+    return !!t;
 }
 
 void Executor::run()
@@ -63,6 +74,12 @@ bool Executor::run_task()
     return run_task(get_n());
 }
 
+bool Executor::run_task(Task t)
+{
+    run_task(get_n(), t);
+    return true;
+}
+
 bool Executor::run_task(size_t i)
 {
     auto t = get_task(i);
@@ -71,46 +88,16 @@ bool Executor::run_task(size_t i)
     if (done)
         return false;
 
-    return run_task(i, t);
+    run_task(i, t);
+    return true;
 }
 
-bool Executor::run_task(size_t i, Task t)
+void Executor::run_task(size_t i, Task t) noexcept
 {
     auto &thr = thread_pool[i];
-
-    std::string error;
-    try
-    {
-        thr.busy = true;
-        t();
-    }
-    catch (const std::exception &e)
-    {
-        error = e.what();
-        thr.eptr = std::current_exception();
-    }
-    catch (...)
-    {
-        error = "unknown exception";
-        thr.eptr = std::current_exception();
-    }
+    thr.busy = true;
+    t();
     thr.busy = false;
-
-    if (!error.empty())
-    {
-        if (throw_exceptions)
-            done = true;
-        else
-        {
-            // clear
-            thr.eptr = std::current_exception();
-            if (!silent)
-                std::cerr << "executor: " << this << ", thread #" << i + 1 << ", error: " << error << "\n";
-            //LOG_ERROR(logger, "executor: " << this << ", thread #" << i + 1 << ", error: " << error);
-        }
-    }
-
-    return true;
 }
 
 Task Executor::get_task()
@@ -121,15 +108,7 @@ Task Executor::get_task()
 Task Executor::get_task(size_t i)
 {
     auto &thr = thread_pool[i];
-
-    Task t;
-    const size_t spin_count = nThreads * 4;
-    for (auto n = 0; n != spin_count; ++n)
-    {
-        if (thread_pool[(i + n) % nThreads].q.try_pop(t))
-            break;
-    }
-
+    Task t = try_pop(i);
     // no task popped, probably shutdown command was issues
     if (!t && !thr.q.pop(t))
         return Task();
@@ -171,7 +150,7 @@ void Executor::stop()
 
 void Executor::wait()
 {
-    bool run_again = thread_ids.find(std::this_thread::get_id()) != thread_ids.end();
+    bool run_again = is_in_executor();
 
     // wait for empty queues
     for (auto &t : thread_pool)
@@ -203,19 +182,34 @@ void Executor::wait()
         while (t.busy && !done)
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+}
 
-    if (throw_exceptions)
+void Executor::push(Task &&t)
+{
+    auto i = index++;
+    for (size_t n = 0; n != nThreads; ++n)
     {
-        for (auto &t : thread_pool)
-        {
-            if (t.eptr)
-            {
-                decltype(t.eptr) e;
-                std::swap(t.eptr, e);
-                std::rethrow_exception(e);
-            }
-        }
+        if (thread_pool[(i + n) % nThreads].q.try_push(std::move(t)))
+            return;
     }
+    thread_pool[i % nThreads].q.push(std::move(t));
+}
+
+Task Executor::try_pop()
+{
+    return try_pop(get_n());
+}
+
+Task Executor::try_pop(size_t i)
+{
+    Task t;
+    const size_t spin_count = nThreads * 4;
+    for (auto n = 0; n != spin_count; ++n)
+    {
+        if (thread_pool[(i + n) % nThreads].q.try_pop(t))
+            break;
+    }
+    return t;
 }
 
 void Executor::set_thread_name(const std::string &name) const

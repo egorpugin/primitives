@@ -4,27 +4,17 @@ name: main
 */
 
 #include <primitives/command.h>
-#include <primitives/date_time.h>
 #include <primitives/executor.h>
 #include <primitives/filesystem.h>
 #include <primitives/hash.h>
 
 #include <chrono>
-#include <iostream>
 
 #undef min
 #undef max
 
 #define CATCH_CONFIG_RUNNER
 #include <catch.hpp>
-
-#define REQUIRE_TIME(e, t)                 \
-    if (get_time([&] { REQUIRE(e); }) > t) \
-        REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " ## #e))
-
-#define REQUIRE_NOTHROW_TIME(e, t)                 \
-    if (get_time([&] { (e); }) > t) \
-        REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " ## #e))
 
 TEST_CASE("Checking hashes", "[hash]")
 {
@@ -115,7 +105,7 @@ TEST_CASE("Checking executor", "[executor]")
 {
     using namespace std::literals::chrono_literals;
 
-    {
+    /*{
         Executor e(1);
         e.wait();
     }
@@ -152,15 +142,16 @@ TEST_CASE("Checking executor", "[executor]")
         Executor e;
         e.push([] {throw std::runtime_error("123"); });
         std::this_thread::sleep_for(100ms);
-        REQUIRE_NOTHROW(e.wait());
+        REQUIRE_THROWS(e.wait());
         REQUIRE_NOTHROW(e.stop());
     }
 
     {
         Executor e;
-        auto f = e.push([] {throw std::runtime_error("123"); });
+        e.throw_exceptions = false;
+        e.push([] {throw std::runtime_error("123"); });
         std::this_thread::sleep_for(100ms);
-        REQUIRE_THROWS(f.get());
+        REQUIRE_NOTHROW(e.wait());
         REQUIRE_NOTHROW(e.stop());
     }
 
@@ -171,27 +162,29 @@ TEST_CASE("Checking executor", "[executor]")
         e.push([] {throw std::runtime_error("123"); });
         for (int i = 0; i < 100; i++)
             e.push([] { std::this_thread::sleep_for(10ms); });
+        REQUIRE_THROWS(e.wait());
+        REQUIRE_NOTHROW(e.stop());
+    }
+
+    {
+        Executor e;
+        e.throw_exceptions = false;
+        for (int i = 0; i < 100; i++)
+            e.push([] { std::this_thread::sleep_for(10ms); });
+        e.push([] {throw std::runtime_error("123"); });
+        for (int i = 0; i < 100; i++)
+            e.push([] { std::this_thread::sleep_for(10ms); });
         REQUIRE_NOTHROW(e.wait());
         REQUIRE_NOTHROW(e.stop());
+        REQUIRE_NOTHROW(e.join());
+        REQUIRE_NOTHROW(e.join());
     }
 
     {
         Executor e;
-        for (int i = 0; i < 100; i++)
-            e.push([] { std::this_thread::sleep_for(10ms); });
-        auto f = e.push([] {throw std::runtime_error("123"); });
-        for (int i = 0; i < 100; i++)
-            e.push([] { std::this_thread::sleep_for(10ms); });
-        REQUIRE_THROWS(f.get());
-        REQUIRE_NOTHROW(e.stop());
-    }
-
-    {
-        Executor e;
-        auto f1 = e.push([] { std::this_thread::sleep_for(1000ms); throw std::runtime_error("1"); });
-        auto f2 = e.push([] { std::this_thread::sleep_for(2000ms); throw std::runtime_error("2"); });
-        REQUIRE_THROWS(f1.get());
-        REQUIRE_THROWS(f2.get());
+        e.push([] { std::this_thread::sleep_for(1000ms); throw std::runtime_error("1"); });
+        e.push([] { std::this_thread::sleep_for(2000ms); throw std::runtime_error("2"); });
+        REQUIRE_THROWS(e.wait());
         REQUIRE_NOTHROW(e.join());
     }
 
@@ -216,47 +209,13 @@ TEST_CASE("Checking executor", "[executor]")
         Executor e;
         e.push([&e] { std::this_thread::sleep_for(500ms); e.stop(); });
         e.push([] { throw std::runtime_error("2"); });
-        REQUIRE_NOTHROW(e.join());
+        REQUIRE_THROWS(e.join());
     }
 
     {
-        Executor e(2);
-        auto f1 = e.push([] { std::this_thread::sleep_for(3s); });
-        e.push([&f1] { f1.get(); });
-        std::this_thread::sleep_for(1s);
-        auto f3 = e.push([]
-        {
-            std::this_thread::sleep_for(500ms);
-            return 5;
-        });
-        REQUIRE_TIME(f3.get() == 5, 1s);
+        Executor e(1);
+        e.push([&e] { e.wait(); });
         e.wait();
-    }
-
-    {
-        Executor e;
-        auto f1 = e.push([] { std::this_thread::sleep_for(100ms); });
-        auto f2 = e.push([] { std::this_thread::sleep_for(200ms); });
-        auto f3 = e.push([] { std::this_thread::sleep_for(300ms); });
-        auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
-        REQUIRE_NOTHROW_TIME(f1.get(), 200ms);
-        REQUIRE_NOTHROW_TIME(f2.get(), 300ms);
-        REQUIRE_NOTHROW_TIME(f3.get(), 400ms);
-        REQUIRE_NOTHROW_TIME(f4.get(), 500ms);
-        REQUIRE_NOTHROW_TIME(whenAll(f1, f2, f3, f4), 50ms);
-    }
-
-    {
-        Executor e;
-        auto f1 = e.push([] { std::this_thread::sleep_for(100ms); });
-        auto f2 = e.push([] { std::this_thread::sleep_for(200ms); });
-        auto f3 = e.push([] { std::this_thread::sleep_for(300ms); });
-        auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
-        whenAll(f1, f2, f3, f4);
-        REQUIRE_NOTHROW_TIME(f1.get(), 50ms);
-        REQUIRE_NOTHROW_TIME(f2.get(), 50ms);
-        REQUIRE_NOTHROW_TIME(f3.get(), 50ms);
-        REQUIRE_NOTHROW_TIME(f4.get(), 50ms);
     }
 
     {
@@ -327,7 +286,7 @@ TEST_CASE("Checking executor", "[executor]")
         e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
         e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
         e.wait();
-    }
+    }*/
 }
 
 #include <primitives/yaml.h>
