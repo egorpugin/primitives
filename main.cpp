@@ -18,12 +18,23 @@ name: main
 #define CATCH_CONFIG_RUNNER
 #include <catch.hpp>
 
-#define REQUIRE_TIME(e, t)                 \
-    if (get_time([&] { REQUIRE(e); }) > t) \
-        REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " ## #e))
+#define REQUIRE_TIME(e, t)                                                                         \
+    do                                                                                             \
+    {                                                                                              \
+        auto t1 = get_time([&] { REQUIRE(e); });                                                   \
+        if (t1 > t)                                                                                \
+        {                                                                                          \
+            auto d = std::chrono::duration_cast<std::chrono::duration<float>>(t1 - t).count();     \
+            REQUIRE_NOTHROW(throw std::runtime_error("time exceed on "## #e + std::to_string(d))); \
+        }                                                                                          \
+    } while (0)
 
 #define REQUIRE_NOTHROW_TIME(e, t)                 \
     if (get_time([&] { (e); }) > t) \
+        REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " ## #e))
+
+#define REQUIRE_NOTHROW_TIME_MORE(e, t)                 \
+    if (get_time([&] { (e); }) <= t) \
         REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " ## #e))
 
 TEST_CASE("Checking hashes", "[hash]")
@@ -235,15 +246,104 @@ TEST_CASE("Checking executor", "[executor]")
 
     {
         Executor e;
-        auto f1 = e.push([] { std::this_thread::sleep_for(100ms); });
-        auto f2 = e.push([] { std::this_thread::sleep_for(200ms); });
-        auto f3 = e.push([] { std::this_thread::sleep_for(300ms); });
+        auto f1 = e.push([] { std::this_thread::sleep_for(100ms); return 1; });
+        auto f2 = e.push([] { std::this_thread::sleep_for(200ms); return 2.0; });
+        auto f3 = e.push([] { std::this_thread::sleep_for(300ms); return 'c'; });
         auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
         REQUIRE_NOTHROW_TIME(f1.get(), 200ms);
         REQUIRE_NOTHROW_TIME(f2.get(), 300ms);
         REQUIRE_NOTHROW_TIME(f3.get(), 400ms);
         REQUIRE_NOTHROW_TIME(f4.get(), 500ms);
-        REQUIRE_NOTHROW_TIME(whenAll(f1, f2, f3, f4), 50ms);
+        REQUIRE_NOTHROW_TIME(waitAll(f1, f2, f3, f4), 50ms);
+    }
+
+    {
+        Executor e;
+        auto f1 = e.push([] { std::this_thread::sleep_for(100ms); return 1; });
+        auto f2 = e.push([] { std::this_thread::sleep_for(200ms); return 2.0; });
+        auto f3 = e.push([] { std::this_thread::sleep_for(300ms); return 'c'; });
+        auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
+        waitAll(f1, f2, f3, f4);
+        REQUIRE_NOTHROW_TIME(f1.get(), 50ms);
+        REQUIRE_NOTHROW_TIME(f2.get(), 50ms);
+        REQUIRE_NOTHROW_TIME(f3.get(), 50ms);
+        REQUIRE_NOTHROW_TIME(f4.get(), 50ms);
+    }
+
+    {
+        Executor e;
+        std::vector<Future<void>> fs;
+        fs.push_back(e.push([] { std::this_thread::sleep_for(100ms); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(200ms); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(300ms); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(400ms); }));
+        REQUIRE_NOTHROW_TIME(fs[0].get(), 200ms);
+        REQUIRE_NOTHROW_TIME(fs[1].get(), 300ms);
+        REQUIRE_NOTHROW_TIME(fs[2].get(), 400ms);
+        REQUIRE_NOTHROW_TIME(fs[3].get(), 500ms);
+        REQUIRE_NOTHROW_TIME(waitAll(fs), 50ms);
+    }
+
+    {
+        Executor e;
+        std::vector<Future<void>> fs;
+        fs.push_back(e.push([] { std::this_thread::sleep_for(100ms); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(200ms); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(300ms); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(400ms); }));
+        waitAll(fs);
+        REQUIRE_NOTHROW_TIME(fs[0].get(), 50ms);
+        REQUIRE_NOTHROW_TIME(fs[1].get(), 50ms);
+        REQUIRE_NOTHROW_TIME(fs[2].get(), 50ms);
+        REQUIRE_NOTHROW_TIME(fs[3].get(), 50ms);
+    }
+
+    {
+        Executor e;
+        std::vector<Future<void>> fs;
+        fs.push_back(e.push([] { std::this_thread::sleep_for(400ms); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(200ms); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(300ms); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(100ms); }));
+        REQUIRE_NOTHROW_TIME(waitAny(fs), 200ms);
+    }
+
+    {
+        Executor e;
+        std::vector<Future<void>> fs;
+        fs.push_back(e.push([] { std::this_thread::sleep_for(400ms); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(250ms); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(300ms); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(100ms); }));
+        auto f = whenAny(fs);
+        REQUIRE(f.get() == 3);
+    }
+
+    {
+        Executor e;
+        auto f3 = e.push([] { std::this_thread::sleep_for(300ms); });
+        auto f2 = e.push([] { std::this_thread::sleep_for(200ms); });
+        auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
+        auto f1 = e.push([] { std::this_thread::sleep_for(100ms); });
+        REQUIRE_NOTHROW_TIME_MORE(waitAll(f1, f2, f3, f4), 200ms);
+    }
+
+    {
+        Executor e;
+        auto f3 = e.push([] { std::this_thread::sleep_for(300ms); });
+        auto f2 = e.push([] { std::this_thread::sleep_for(200ms); });
+        auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
+        auto f1 = e.push([] { std::this_thread::sleep_for(100ms); });
+        REQUIRE_NOTHROW_TIME(waitAll(f1, f2, f3, f4), 500ms);
+    }
+
+    {
+        Executor e;
+        auto f3 = e.push([] { std::this_thread::sleep_for(300ms); });
+        auto f2 = e.push([] { std::this_thread::sleep_for(200ms); });
+        auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
+        auto f1 = e.push([] { std::this_thread::sleep_for(100ms); });
+        REQUIRE_NOTHROW_TIME(waitAny(f1, f2, f3, f4), 250ms);
     }
 
     {
@@ -252,81 +352,60 @@ TEST_CASE("Checking executor", "[executor]")
         auto f2 = e.push([] { std::this_thread::sleep_for(200ms); });
         auto f3 = e.push([] { std::this_thread::sleep_for(300ms); });
         auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
-        whenAll(f1, f2, f3, f4);
-        REQUIRE_NOTHROW_TIME(f1.get(), 50ms);
-        REQUIRE_NOTHROW_TIME(f2.get(), 50ms);
-        REQUIRE_NOTHROW_TIME(f3.get(), 50ms);
-        REQUIRE_NOTHROW_TIME(f4.get(), 50ms);
+        auto f = whenAny(f2, f1, f3, f4);
+        REQUIRE(f.get() == 1);
     }
 
     {
+        volatile int i = 2;
+
         Executor e(1);
-        e.push([&e] { std::this_thread::sleep_for(500ms); e.wait(); });
-        e.wait();
+        e.push(
+            [&] { i += 2; })
+            .then([&] { i *= 2; })
+            .get()
+            ;
+        REQUIRE(i == 8);
     }
 
     {
-        Executor e(1);
-        e.push([&e] { std::this_thread::sleep_for(500ms); });
-        e.push([&e] { e.wait(); });
-        e.push([&e] { e.wait(); });
-        e.wait();
-    }
+        volatile int i = 2;
 
-    {
-        Executor e(2);
-        e.push([&e] { std::this_thread::sleep_for(500ms); });
-        e.push([&e] { e.wait(); });
-        e.push([&e] { e.wait(); });
-        e.wait();
-    }
+        Executor e;
+        e.push(
+            [&] { i += 2; })
+            .then([&] { i *= 2; })
+            .get()
+            ;
+        REQUIRE(i == 8);
 
-    {
-        Executor e(2);
-        e.push([&e] { std::this_thread::sleep_for(500ms); });
-        e.push([&e] { std::this_thread::sleep_for(500ms); });
-        e.push([&e] { e.wait(); });
-        e.push([&e] { e.wait(); });
-        e.wait();
-    }
+        e.push(
+            [&] { i += 2; })
+            .then([&] { i *= 2; })
+            .then([&] { i *= 2; })
+            .then([&] { i *= 2; })
+            .then([&] { i *= 2; })
+            .get()
+            ;
+        REQUIRE(i == 160);
 
-    {
-        Executor e(2);
-        e.push([&e] { std::this_thread::sleep_for(500ms); });
-        e.push([&e] { std::this_thread::sleep_for(500ms); });
-        e.push([&e] { e.wait(); });
-        e.push([&e] { e.wait(); });
-    }
+        auto f = e.push(
+            [&] { i += 2; })
+            .then([&] { i += 2; })
+            ;
+        auto f2 = f.then([&] { i += 2; });
+        f.get();
+        f2.get();
+        REQUIRE(i == 166);
 
-    {
-        Executor e(1);
-        e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); });
-        e.wait();
-    }
-
-    {
-        Executor e(1);
-        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
-        e.wait();
-    }
-
-    {
-        Executor e(2);
-        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
-        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
-        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
-        e.wait();
-    }
-
-    {
-        Executor e(2);
-        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
-        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
-        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
-        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
-        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
-        e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.push([&e] { e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); }); e.wait(); });
-        e.wait();
+        auto f3 = e.push(
+            [&] { i += 2; })
+            .then([&] { i += 2; })
+            ;
+        auto f4 = f.then([&] { i += 2; });
+        f4.get();
+        f3.get();
+        REQUIRE(i == 172);
     }
 }
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <primitives/templates.h>
+
 #include <atomic>
 #include <condition_variable>
 #include <functional>
@@ -13,7 +15,17 @@
 #include <unordered_set>
 
 using Task = std::function<void()>;
+
 class Executor;
+
+template <class Ret>
+struct Future;
+
+template <class T>
+struct SharedState;
+
+size_t get_max_threads(size_t N = 4);
+Executor &getExecutor(size_t N = 0);
 
 class TaskQueue
 {
@@ -93,20 +105,36 @@ private:
 };
 
 template <class T>
+using SharedStatePtr = std::shared_ptr<SharedState<T>>;
+
+template <class T>
 struct SharedState
 {
+    using FutureType = Future<T>;
+    using VoidDataType = int;
+    using DataType = std::conditional_t<std::is_same_v<T, void>, VoidDataType, T>;
+
     Executor &ex;
     std::condition_variable cv;
+    std::vector<std::condition_variable*> cv_notifiers;
+    std::vector<Task> callbacks;
     std::mutex m;
+    typename SharedStatePtr<T>::weak_type w;
 
     std::atomic_bool set{ false };
-    std::conditional_t<std::is_same_v<T, void>, int, T> data;
+    DataType data;
     std::exception_ptr e;
 
     SharedState(Executor &ex) : ex(ex) {}
     SharedState(const SharedState &rhs)
         : ex(rhs.ex), set(rhs.set), data(rhs.data), e(rhs.e)
     {
+    }
+
+    FutureType getFuture()
+    {
+        FutureType f(ex, w.lock());
+        return f;
     }
 
     void wait()
@@ -138,52 +166,104 @@ struct SharedState
                 delay = 100ms;
         }
     }
+
+    bool setExecuted()
+    {
+        bool n = false;
+        if (!set.compare_exchange_strong(n, true))
+            return false;
+        notice();
+        return true;
+    }
+
+    void notice()
+    {
+        cv.notify_all();
+        // lock after not locked own notify
+        {
+            std::unique_lock<std::mutex> lk(m);
+            for (auto &cv : cv_notifiers)
+                cv->notify_all();
+            for (auto &cb : callbacks)
+            {
+                if (cb)
+                    cb();
+            }
+        }
+        cv_notifiers.clear();
+        callbacks.clear();
+    }
 };
 
-template <class T>
-using SharedStatePtr = std::shared_ptr<SharedState<T>>;
+template <class T, class ... Args>
+auto makeSharedState(Args && ... args)
+{
+    auto s = std::make_shared<SharedState<T>>(std::forward<Args>(args)...);
+    s->w = s;
+    return s;
+}
+
+struct FutureBase
+{
+    Executor &e;
+
+    FutureBase(Executor &e)
+        : e(e)
+    {
+    }
+    FutureBase(const FutureBase &rhs)
+        : FutureBase(rhs.e)
+    {
+    }
+    FutureBase(FutureBase &&rhs) = default;
+};
 
 template <class Ret>
-struct Future
+struct Future : FutureBase
 {
+    using return_type = Ret;
+
+    SharedStatePtr<Ret> state;
+
     Future(Executor &e, const SharedStatePtr<Ret> &s)
-        : e(e), s(s)
+        : FutureBase(e), state(s)
     {
     }
 
-    Future(const Future &rhs)
-        : e(rhs.e), s(rhs.s)
-    {
-    }
-    Future(Future &&rhs) = default;
+    Future(const Future &f) = default;
+    Future &operator=(const Future &f) = default;
 
     std::conditional_t<std::is_same_v<Ret, void>, void, Ret> get() const
     {
-        s->wait();
-        if (s->e)
-            std::rethrow_exception(s->e);
+        state->wait();
+        if (state->e)
+            std::rethrow_exception(state->e);
 
         if constexpr (std::is_same_v<Ret, void>)
             return;
         else
-            return std::move(s->data);
+            return std::move(state->data);
     }
 
     void wait() const
     {
-        s->wait();
+        state->wait();
     }
 
     template <class F2, class ... ArgTypes2>
     Future<std::invoke_result_t<F2, ArgTypes2...>>
         then(F2 &&f, ArgTypes2 && ... args)
     {
-        return e.push(f, std::forward<ArgTypes>(args)...);
-    }
+        if (state->set)
+            return e.push(std::forward<F2>(f), std::forward<ArgTypes2>(args)...);
 
-private:
-    Executor &e;
-    SharedStatePtr<Ret> s;
+        std::unique_lock<std::mutex> lk(state->m);
+        if (state->set)
+            return e.push(std::forward<F2>(f), std::forward<ArgTypes2>(args)...);
+        PackagedTask<F2, ArgTypes2...> pt(e, f, std::forward<ArgTypes2>(args)...);
+        state->callbacks.push_back([this, pt]() { e.push(pt); });
+        return pt.getFuture();
+    }
 };
 
 template <class F, class ... ArgTypes>
@@ -196,7 +276,7 @@ struct PackagedTask
     PackagedTask(Executor &e, F f, ArgTypes && ... args)
         : e(e), t(f)
     {
-        s = std::make_shared<SharedState<Ret>>(e);
+        s = makeSharedState<Ret>(e);
     }
 
     PackagedTask(const PackagedTask &rhs)
@@ -207,8 +287,7 @@ struct PackagedTask
 
     FutureType getFuture()
     {
-        FutureType f(e, s);
-        return f;
+        return s->getFuture();
     }
 
     void operator()(ArgTypes && ... args) const noexcept
@@ -224,8 +303,7 @@ struct PackagedTask
         {
             s->e = std::current_exception();
         }
-        s->set = true;
-        s->cv.notify_all();
+        s->setExecuted();
     }
 
 private:
@@ -257,16 +335,24 @@ public:
     {
         static_assert(!std::is_lvalue_reference<F>::value, "Argument cannot be an lvalue");
 
-        PackagedTask<F, ArgTypes...> pt2(*this, f, std::forward<ArgTypes>(args)...);
-        auto fut = pt2.getFuture();
-        Task task2([pt2]() mutable { pt2(); });
-        push(std::move(task2));
+        PackagedTask<F, ArgTypes...> pt(*this, f, std::forward<ArgTypes>(args)...);
+        return push(pt);
+    }
+
+    template <class F, class ... ArgTypes>
+    auto push(PackagedTask<F, ArgTypes...> pt)
+    {
+        static_assert(!std::is_lvalue_reference<F>::value, "Argument cannot be an lvalue");
+
+        auto fut = pt.getFuture();
+        Task task([pt]() { pt(); });
+        push(std::move(task));
         return fut;
     }
 
     void join();
     void stop();
-    bool stopped() const { return done; }
+    bool stopped() const { return stopped_; }
     void wait();
 
     bool is_in_executor() const;
@@ -276,7 +362,7 @@ private:
     Threads thread_pool;
     size_t nThreads = std::thread::hardware_concurrency();
     std::atomic_size_t index{ 0 };
-    std::atomic_bool done{ false };
+    std::atomic_bool stopped_{ false };
     std::unordered_map<std::thread::id, size_t> thread_ids;
     std::mutex m;
 
@@ -298,19 +384,306 @@ private:
     // add Task pop();
 };
 
-size_t get_max_threads(size_t N = 4);
-
-template <class Future>
-void whenAll(const std::vector<Future> &futures)
+// vector versions
+template <typename F>
+Future<void> whenAll(const std::vector<F> &futures)
 {
+    using Ret = void;
+
+    SharedStatePtr<Ret> s;
+    if (futures.empty())
+    {
+        s = makeSharedState<Ret>(getExecutor());
+        s->set = true;
+    }
+    else
+        s = makeSharedState<Ret>(futures.begin()->e);
+
+    // initial check
+    if (std::all_of(futures.begin(), futures.end(),
+        [](const auto &f) { return f.state->set.load(); }))
+    {
+        s->set = true;
+        return s->getFuture();
+    }
+
+    // lock
     for (auto &f : futures)
-        f.wait();
+        f.state->m.lock();
+
+    auto unlock = [&futures]()
+    {
+        for (auto &f : futures)
+            f.state->m.unlock();
+    };
+
+    // second check
+    if (std::all_of(futures.begin(), futures.end(),
+        [](auto &f) { return f.state->set.load(); }))
+    {
+        s->set = true;
+        unlock();
+        return s->getFuture();
+    }
+
+    // set cb
+    auto ac = std::make_shared<std::atomic_size_t>();
+    for (auto &f : futures)
+    {
+        f.state->callbacks.push_back([s, max = futures.size() - 1, ac]
+        {
+            if ((*ac)++ == max)
+            s->setExecuted();
+        });
+    }
+
+    unlock();
+
+    return s->getFuture();
 }
 
-template <class F1, class ... Rest>
-void whenAll(const F1 &f1, const Rest & ... futures)
+template <class F>
+Future<size_t> whenAny(const std::vector<F> &futures)
 {
-    f1.wait();
-    if constexpr (sizeof...(futures) > 0)
-        whenAll(futures...);
+    using Ret = size_t;
+
+    SharedStatePtr<Ret> s;
+    if (futures.empty())
+    {
+        s = makeSharedState<Ret>(getExecutor());
+        s->set = true;
+    }
+    else
+        s = makeSharedState<Ret>(futures.begin()->e);
+
+    // initial check
+    size_t i = 0;
+    for (auto &f : futures)
+    {
+        if (f.state->set)
+        {
+            s->data = i;
+            s->set = true;
+            return s->getFuture();
+        }
+        i++;
+    }
+
+    // lock
+    for (auto &f : futures)
+        f.state->m.lock();
+
+    auto unlock = [&futures]()
+    {
+        for (auto &f : futures)
+            f.state->m.unlock();
+    };
+
+    // second check
+    i = 0;
+    for (auto &f : futures)
+    {
+        if (f.state->set)
+        {
+            s->data = i;
+            s->set = true;
+            unlock();
+            return s->getFuture();
+        }
+        i++;
+    }
+
+    // set cb
+    i = 0;
+    for (auto &f : futures)
+        f.state->callbacks.push_back([s, i = i++]{ if (s->setExecuted()) s->data = i; });
+
+    unlock();
+
+    return s->getFuture();
+}
+
+template <class F>
+void waitAll(const std::vector<F> &futures)
+{
+    whenAll(futures).get();
+}
+
+template <class F>
+void waitAny(const std::vector<F> &futures)
+{
+    whenAny(futures).get();
+}
+
+// variadic versions
+template < bool... > struct all;
+template < > struct all<> : std::true_type {};
+template < bool B, bool... Rest > struct all<B, Rest...>
+{
+    constexpr static bool value = B && all<Rest...>::value;
+};
+
+template<class T> struct is_future : public std::false_type {};
+
+template<class T>
+struct is_future<Future<T>> : public std::true_type {};
+
+template <
+    class ... Futures,
+    typename = std::enable_if_t<
+        all< is_future< std::decay_t<Futures> >::value... >::value
+    >
+>
+Future<void> whenAll(Futures && ... futures)
+{
+    using Ret = void;
+
+    auto t = std::make_tuple(std::forward<Futures>(futures)...);
+    constexpr auto sz = sizeof...(futures);
+
+    SharedStatePtr<Ret> s;
+    if (sizeof...(futures) == 0)
+    {
+        s = makeSharedState<Ret>(getExecutor());
+        s->set = true;
+    }
+    else
+        s = makeSharedState<Ret>(std::get<0>(t).e);
+
+    // initial check
+    bool set = true;
+    for_each(t, [&set](const auto &f) { set &= f.state->set.load(); });
+    if (set)
+    {
+        s->set = true;
+        return s->getFuture();
+    }
+
+    // lock
+    for_each(t, [](auto &f) { f.state->m.lock(); });
+
+    auto unlock = [&t]()
+    {
+        for_each(t, [](auto &f) { f.state->m.unlock(); });
+    };
+
+    // second check
+    set = true;
+    for_each(t, [&set](const auto &f) { set &= f.state->set.load(); });
+    if (set)
+    {
+        s->set = true;
+        unlock();
+        return s->getFuture();
+    }
+
+    // set cb
+    auto ac = std::make_shared<std::atomic_size_t>();
+    for_each(t, [&sz, &s, &ac](auto &f)
+    {
+        f.state->callbacks.push_back([s, max = sz - 1, ac]
+        {
+            if ((*ac)++ == max)
+                s->setExecuted();
+        });
+    });
+
+    unlock();
+
+    return s->getFuture();
+}
+
+template <
+    class ... Futures,
+    typename = std::enable_if_t<
+    all< is_future< std::decay_t<Futures> >::value... >::value
+    >
+>
+Future<size_t> whenAny(Futures && ... futures)
+{
+    using Ret = size_t;
+
+    auto t = std::make_tuple(std::forward<Futures>(futures)...);
+    constexpr auto sz = sizeof...(futures);
+
+    SharedStatePtr<Ret> s;
+    if (sizeof...(futures) == 0)
+    {
+        s = makeSharedState<Ret>(getExecutor());
+        s->set = true;
+    }
+    else
+        s = makeSharedState<Ret>(std::get<0>(t).e);
+
+    // initial check
+    size_t i = 0;
+    size_t n = -1;
+    bool set = false;
+    for_each(t, [&set, &i, &n](const auto &f)
+    {
+        set |= f.state->set.load();
+        if (set && n == -1)
+            n = i;
+        i++;
+    });
+    if (set)
+    {
+        s->data = n;
+        s->set = true;
+        return s->getFuture();
+    }
+
+    // lock
+    for_each(t, [](auto &f) { f.state->m.lock(); });
+
+    auto unlock = [&t]()
+    {
+        for_each(t, [](auto &f) { f.state->m.unlock(); });
+    };
+
+    // second check
+    i = 0;
+    n = -1;
+    set = false;
+    for_each(t, [&set, &i, &n](const auto &f)
+    {
+        set |= f.state->set.load();
+        if (set && n == -1)
+            n = i;
+        i++;
+    });
+    if (set)
+    {
+        s->data = n;
+        s->set = true;
+        unlock();
+        return s->getFuture();
+    }
+
+    // set cb
+    i = 0;
+    for_each(t, [&s, &i](auto &f)
+    {
+        f.state->callbacks.push_back([s, i = i++]
+        {
+            if (s->setExecuted())
+                s->data = i;
+        });
+    });
+
+    unlock();
+
+    return s->getFuture();
+}
+
+template <class ... Futures>
+void waitAll(Futures && ... futures)
+{
+    whenAll(std::forward<Futures>(futures)...).get();
+}
+
+template <class ... Futures>
+void waitAny(Futures && ... futures)
+{
+    whenAny(std::forward<Futures>(futures)...).get();
 }

@@ -110,8 +110,14 @@ projects:
                             - _WIN32_WINNT=0x0601
 
         dependencies:
-            pvt.cppan.demo.boost.asio: 1
-            pvt.cppan.demo.boost.system: 1
+            public:
+                pvt.cppan.demo.boost.asio:
+                    version: 1
+                pvt.cppan.demo.boost.system:
+                    version: 1
+                templates:
+                    version: "*"
+
 
 
     executor_io:

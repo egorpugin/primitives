@@ -15,6 +15,27 @@ size_t get_max_threads(size_t N)
     return std::max<size_t>(N, std::thread::hardware_concurrency());
 }
 
+Executor &getExecutor(size_t N)
+{
+    static int threads = [&N]()
+    {
+        if (N > 0)
+            return N;
+        N = std::thread::hardware_concurrency();
+        if (N == 1)
+            N = 2;
+        else if (N <= 8)
+            N += 2;
+        else if (N <= 64)
+            N += 4;
+        else
+            N += 8;
+        return N;
+    }();
+    static Executor e(N);
+    return e;
+}
+
 Executor::Executor(const std::string &name, size_t nThreads)
     : Executor(nThreads, name)
 {
@@ -64,7 +85,7 @@ bool Executor::try_run_one()
 
 void Executor::run()
 {
-    while (!done)
+    while (!stopped_)
         if (!run_task())
             break;
 }
@@ -85,7 +106,7 @@ bool Executor::run_task(size_t i)
     auto t = get_task(i);
 
     // double check
-    if (done)
+    if (stopped_)
         return false;
 
     run_task(i, t);
@@ -143,7 +164,7 @@ void Executor::join()
 
 void Executor::stop()
 {
-    done = true;
+    stopped_ = true;
     for (auto &t : thread_pool)
         t.q.done();
 }
@@ -155,7 +176,7 @@ void Executor::wait()
     // wait for empty queues
     for (auto &t : thread_pool)
     {
-        while (!t.q.empty() && !done)
+        while (!t.q.empty() && !stopped_)
         {
             if (run_again)
             {
@@ -179,7 +200,7 @@ void Executor::wait()
     // wait for end of execution
     for (auto &t : thread_pool)
     {
-        while (t.busy && !done)
+        while (t.busy && !stopped_)
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
