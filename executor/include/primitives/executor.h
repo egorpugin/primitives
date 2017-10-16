@@ -137,35 +137,7 @@ struct SharedState
         return f;
     }
 
-    void wait()
-    {
-        using namespace std::literals::chrono_literals;
-
-        if (set)
-            return;
-
-        if (!ex.is_in_executor())
-        {
-            std::unique_lock<std::mutex> lk(m);
-            cv.wait(lk, [this] { return set.load(); });
-            return;
-        }
-
-        // continue executor business
-        const auto max_delay = 1s;
-        auto delay = 100ms;
-        while (!set)
-        {
-            if (!ex.try_run_one())
-            {
-                std::unique_lock<std::mutex> lk(m);
-                cv.wait_for(lk, delay, [this] { return set.load(); });
-                delay = delay > max_delay ? max_delay : (delay + 100ms);
-            }
-            else
-                delay = 100ms;
-        }
-    }
+    void wait();
 
     bool setExecuted()
     {
@@ -252,18 +224,7 @@ struct Future : FutureBase
 
     template <class F2, class ... ArgTypes2>
     Future<std::invoke_result_t<F2, ArgTypes2...>>
-        then(F2 &&f, ArgTypes2 && ... args)
-    {
-        if (state->set)
-            return e.push(std::forward<F2>(f), std::forward<ArgTypes2>(args)...);
-
-        std::unique_lock<std::mutex> lk(state->m);
-        if (state->set)
-            return e.push(std::forward<F2>(f), std::forward<ArgTypes2>(args)...);
-        PackagedTask<F2, ArgTypes2...> pt(e, f, std::forward<ArgTypes2>(args)...);
-        state->callbacks.push_back([this, pt]() { e.push(pt); });
-        return pt.getFuture();
-    }
+        then(F2 &&f, ArgTypes2 && ... args);
 };
 
 template <class F, class ... ArgTypes>
@@ -383,6 +344,53 @@ private:
     Task try_pop(size_t i);
     // add Task pop();
 };
+
+template <class T>
+void SharedState<T>::wait()
+{
+    using namespace std::literals::chrono_literals;
+
+    if (set)
+        return;
+
+    if (!ex.is_in_executor())
+    {
+        std::unique_lock<std::mutex> lk(m);
+        cv.wait(lk, [this] { return set.load(); });
+        return;
+    }
+
+    // continue executor business
+    const auto max_delay = 1s;
+    auto delay = 100ms;
+    while (!set)
+    {
+        if (!ex.try_run_one())
+        {
+            std::unique_lock<std::mutex> lk(m);
+            cv.wait_for(lk, delay, [this] { return set.load(); });
+            delay = delay > max_delay ? max_delay : (delay + 100ms);
+        }
+        else
+            delay = 100ms;
+    }
+}
+
+template <class Ret>
+template <class F2, class ... ArgTypes2>
+Future<std::invoke_result_t<F2, ArgTypes2...>>
+    Future<Ret>::then(F2 &&f, ArgTypes2 && ... args)
+{
+    if (state->set)
+        return e.push(std::forward<F2>(f), std::forward<ArgTypes2>(args)...);
+
+    std::unique_lock<std::mutex> lk(state->m);
+    if (state->set)
+        return e.push(std::forward<F2>(f), std::forward<ArgTypes2>(args)...);
+    PackagedTask<F2, ArgTypes2...> pt(e, f, std::forward<ArgTypes2>(args)...);
+    state->callbacks.push_back([this, pt]() { e.push(pt); });
+    return pt.getFuture();
+}
 
 // vector versions
 template <typename F>
@@ -531,7 +539,7 @@ struct is_future<Future<T>> : public std::true_type {};
 template <
     class ... Futures,
     typename = std::enable_if_t<
-        all< is_future< std::decay_t<Futures> >::value... >::value
+    all< is_future< std::decay_t<Futures> >::value... >::value
     >
 >
 Future<void> whenAll(Futures && ... futures)
@@ -584,7 +592,7 @@ Future<void> whenAll(Futures && ... futures)
         f.state->callbacks.push_back([s, max = sz - 1, ac]
         {
             if ((*ac)++ == max)
-                s->setExecuted();
+            s->setExecuted();
         });
     });
 
@@ -667,7 +675,7 @@ Future<size_t> whenAny(Futures && ... futures)
         f.state->callbacks.push_back([s, i = i++]
         {
             if (s->setExecuted())
-                s->data = i;
+            s->data = i;
         });
     });
 
