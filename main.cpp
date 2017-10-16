@@ -120,6 +120,71 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
         REQUIRE_NOTHROW(c.execute());
         REQUIRE(fs::exists("1.txt"));
     }
+
+#ifdef _WIN32
+    {
+        path x;
+        boost::system::error_code ec;
+
+        // match
+        write_file("x.exe", "");
+        x = resolve_executable("x");
+        REQUIRE(x == "x.exe");
+        fs::remove("x.exe", ec);
+
+        // register match
+        write_file("x.ExE", "");
+        x = resolve_executable("x");
+        REQUIRE(x == "x.exe");
+        fs::remove("x.exe", ec);
+
+        // dir mismatch
+        fs::create_directories("x.exe");
+        x = resolve_executable("x");
+        REQUIRE(x == "");
+        fs::remove("x.exe", ec);
+
+        // register dir mismatch
+        fs::create_directories("x.eXe");
+        x = resolve_executable("x");
+        REQUIRE(x == "");
+        fs::remove("x.exe", ec);
+
+        // missing file
+        x = resolve_executable("x123");
+        REQUIRE(x == "");
+
+        // missing file with ext
+        x = resolve_executable("x123.exe");
+        REQUIRE(x == "");
+
+        // bad ext, non existing
+        x = resolve_executable("x.txt");
+        REQUIRE(x == "");
+
+        // allow resolving of custom existing files
+        write_file("x.txt", "");
+        x = resolve_executable("x.txt");
+        REQUIRE(x == "x.txt");
+        fs::remove("x.txt", ec);
+
+        // dir mismatch
+        write_file("x.exe.bat", "");
+        fs::create_directories("x.exe");
+        x = resolve_executable("x.exe");
+        REQUIRE(x == "x.exe.bat");
+        fs::remove("x.exe.bat", ec);
+        fs::remove("x.exe", ec);
+
+        // other
+        x = resolve_executable("x");
+        REQUIRE(x == "");
+        fs::create_directories("x");
+        x = resolve_executable("x");
+        REQUIRE(x == "");
+        fs::remove("x", ec);
+    }
+#endif
 }
 
 TEST_CASE("Checking executor", "[executor]")

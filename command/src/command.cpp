@@ -51,8 +51,36 @@ struct CommandData
 
 path resolve_executable(const path &p)
 {
-    if (fs::exists(p))
+#ifdef _WIN32
+    static const std::vector<String> exts = []
+    {
+        String s = getenv("PATHEXT");
+        boost::to_lower(s);
+        std::vector<String> exts;
+        boost::split(exts, s, boost::is_any_of(";"));
+        return exts;
+    }();
+    if (p.has_extension() &&
+        std::find(exts.begin(), exts.end(), boost::to_lower_copy(p.extension().string())) != exts.end() &&
+        fs::exists(p) &&
+        fs::is_regular_file(p)
+        )
         return p;
+    // not test direct file
+    if (fs::exists(p) && fs::is_regular_file(p))
+        return p;
+    // failed, test new exts
+    for (auto &e : exts)
+    {
+        auto p2 = p;
+        p2 += e;
+        if (fs::exists(p2) && fs::is_regular_file(p2))
+            return p2;
+    }
+#else
+    if (fs::exists(p) && fs::is_regular_file(p))
+        return p;
+#endif
     return bp::search_path(p);
 }
 
