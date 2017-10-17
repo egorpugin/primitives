@@ -22,6 +22,12 @@ static auto app_mode = std::ios::app;
 static auto binary_mode = std::ios::binary;
 #endif
 
+auto &get_io_service()
+{
+    static boost::asio::io_service ios;
+    return ios;
+}
+
 namespace primitives
 {
 
@@ -29,11 +35,13 @@ namespace bp = boost::process;
 
 struct CommandData
 {
-    std::unique_ptr<boost::asio::io_service> ios;
-    std::unique_ptr<boost::process::async_pipe> pout, perr;
-    std::unique_ptr<boost::process::child> c;
     using cb_func = std::function<void(const boost::system::error_code &, std::size_t)>;
+
+    boost::process::async_pipe pout, perr;
+    boost::process::child c;
+
     cb_func out_cb, err_cb;
+
     std::function<void(int, const std::error_code &)> on_exit;
     std::function<void(void)> on_error;
     std::function<void(
@@ -44,9 +52,17 @@ struct CommandData
         cb_func &out_cb,
         boost::nowide::ofstream &out_fs,
         std::ostream &stream)> async_read;
+
     std::atomic_int pipes_closed{ 0 };
     Command::Buffer out_buf, err_buf;
     boost::nowide::ofstream out_fs, err_fs;
+
+    volatile bool done = false;
+
+    CommandData(boost::asio::io_service &ios)
+        : pout(ios), perr(ios)
+    {
+    }
 };
 
 path resolve_executable(const path &p)
@@ -143,30 +159,21 @@ void Command::execute1(std::error_code *ec_in)
     if (working_directory.empty())
         working_directory = fs::current_path();
 
-    d = std::make_unique<CommandData>();
+    // local scope, so we automatically close and destroy everything on exit
+    CommandData d(get_io_service());
 
-    boost::asio::io_service *ios_ptr;
-    if (io_service)
-        ios_ptr = io_service;
-    else
-    {
-        d->ios = std::make_unique<boost::asio::io_service>();
-        ios_ptr = d->ios.get();
-    }
-
-    d->pout = std::make_unique<bp::async_pipe>(*ios_ptr);
-    d->perr = std::make_unique<bp::async_pipe>(*ios_ptr);
+    auto &ios = get_io_service();
 
     if (!out.file.empty())
-        d->out_fs.open(out.file.string(), out_mode | binary_mode);
+        d.out_fs.open(out.file.string(), out_mode | binary_mode);
     if (!err.file.empty() && out.file != err.file)
-        d->err_fs.open(err.file.string(), out_mode | binary_mode);
+        d.err_fs.open(err.file.string(), out_mode | binary_mode);
 
-    d->on_error = [this, &ios_ptr]()
+    d.on_error = [this, &d, &ios]()
     {
-        if (d->pipes_closed != 2)
+        if (d.pipes_closed != 2)
         {
-            ios_ptr->post([this] { d->on_error(); });
+            ios.post([this, &d] { d.on_error(); });
             return;
         }
 
@@ -174,13 +181,16 @@ void Command::execute1(std::error_code *ec_in)
         throw std::runtime_error("Last command failed: " + print() + ", exit code = " + std::to_string(exit_code.value()));
     };
 
-    d->on_exit = [this, ec_in, &ios_ptr](int exit, const std::error_code &ec)
+    d.on_exit = [this, &d, ec_in, &ios](int exit, const std::error_code &ec)
     {
         exit_code = exit;
 
         // return if ok
-        if (exit_code == 0)
+        if (exit == 0)
+        {
+            d.done = true;
             return;
+        }
 
         // set ec, if passed
         if (ec_in)
@@ -189,13 +199,14 @@ void Command::execute1(std::error_code *ec_in)
                 *ec_in = ec;
             else
                 ec_in->assign(1, std::generic_category());
+            d.done = true;
             return;
         }
 
-        ios_ptr->post([this] {d->on_error(); });
+        ios.post([this, &d] {d.on_error(); });
     };
 
-    d->async_read = [this](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
+    d.async_read = [this, &d](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
     {
         if (s)
         {
@@ -209,33 +220,53 @@ void Command::execute1(std::error_code *ec_in)
                 out_fs << str;
         }
         if (!ec)
-            boost::asio::async_read(p, boost::asio::buffer(out_buf), out_cb);
+        {
+            //boost::asio::async_read(p, boost::asio::buffer(out_buf), out_cb);
+            p.async_read_some(boost::asio::buffer(d.out_buf), out_cb);
+        }
         else
         {
-            p.async_close();
-            d->pipes_closed++;
+            // win32: ec = 109, pipe is ended
+            if (p.is_open())
+            {
+                if (s)
+                {
+                    //p.async_close();
+                    p.close();
+                    throw std::runtime_error("primitives.command (" + std::to_string(__LINE__) + "): non zero message with closed pipe");
+                }
+                else
+                    p.close();
+            }
+            d.pipes_closed++;
             out_fs.close();
         }
     };
 
     // setup buffers also before child creation
-    d->out_buf.resize(buf_size);
-    d->err_buf.resize(buf_size);
-    d->out_cb = [this](const boost::system::error_code &ec, std::size_t s)
+    d.out_buf.resize(buf_size);
+    d.err_buf.resize(buf_size);
+
+    d.out_cb = [this, &d](const boost::system::error_code &ec, std::size_t s)
     {
-        d->async_read(ec, s, out, *d->pout.get(), d->out_buf, d->out_cb, d->out_fs, std::cout);
+        d.async_read(ec, s, out, d.pout, d.out_buf, d.out_cb,
+            d.out_fs,
+            std::cout);
     };
-    d->err_cb = [this](const boost::system::error_code &ec, std::size_t s)
+    d.err_cb = [this, &d](const boost::system::error_code &ec, std::size_t s)
     {
-        d->async_read(ec, s, err, *d->perr.get(), d->err_buf, d->err_cb,
-            out.file != err.file ? d->err_fs : d->out_fs,
+        d.async_read(ec, s, err, d.perr, d.err_buf, d.err_cb,
+            out.file != err.file ? d.err_fs : d.out_fs,
             std::cerr);
     };
-    boost::asio::async_read(*d->pout.get(), boost::asio::buffer(d->out_buf), d->out_cb);
-    boost::asio::async_read(*d->perr.get(), boost::asio::buffer(d->err_buf), d->err_cb);
+    /*boost::asio::async_read(*d.pout.get(), boost::asio::buffer(d.out_buf), d.out_cb);
+    boost::asio::async_read(*d.perr.get(), boost::asio::buffer(d.err_buf), d.err_cb);*/
+
+    d.pout.async_read_some(boost::asio::buffer(d.out_buf), d.out_cb);
+    d.perr.async_read_some(boost::asio::buffer(d.err_buf), d.err_cb);
 
     // run
-    ios_ptr->post([this, ec_in, ios_ptr]
+    ios.post([this, &d, ec_in, &ios]
     {
 #ifdef _WIN32
         // widen args
@@ -248,37 +279,43 @@ void Command::execute1(std::error_code *ec_in)
 
         if (ec_in)
         {
-            d->c = std::make_unique<bp::child>(
+            d.c = bp::child(
                 program
                 , bp::args = wargs
                 , bp::start_dir = working_directory
+
                 , bp::std_in < stdin
-                , bp::std_out > *d->pout.get()
-                , bp::std_err > *d->perr.get()
-                , bp::on_exit(d->on_exit)
-                , *ios_ptr
+                , bp::std_out > d.pout
+                , bp::std_err > d.perr
+
+                , ios
+                , bp::on_exit(d.on_exit)
+
                 , *ec_in
                 );
         }
         else
         {
-            d->c = std::make_unique<bp::child>(
+            d.c = bp::child(
                 program
                 , bp::args = wargs
                 , bp::start_dir = working_directory
+
                 , bp::std_in < stdin
-                , bp::std_out > *d->pout.get()
-                , bp::std_err > *d->perr.get()
-                , bp::on_exit(d->on_exit)
-                , *ios_ptr
+                , bp::std_out > d.pout
+                , bp::std_err > d.perr
+
+                , ios
+                , bp::on_exit(d.on_exit)
                 );
         }
     });
 
-    // perform io only in case we didn't get external io_service
-    if (d->ios)
+    while (!d.done)
     {
-        ios_ptr->run();
+        if (ios.poll_one())
+            continue;
+        // no jobs available, do small sleep
     }
 }
 

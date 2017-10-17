@@ -4,14 +4,6 @@
 
 #include <optional>
 
-namespace boost
-{
-namespace asio
-{
-class io_service;
-}
-}
-
 namespace primitives
 {
 
@@ -55,8 +47,6 @@ struct Command
     bool use_parent_environment = true;
     //bool capture = true;
     bool inherit = false;
-    // to use parent's io service
-    boost::asio::io_service *io_service = nullptr;
 
     Command();
     virtual ~Command();
@@ -76,7 +66,7 @@ struct Command
     static void execute(const std::initializer_list<String> &args, std::error_code &ec);
 
 private:
-    std::unique_ptr<CommandData> d;
+    //std::unique_ptr<CommandData> d;
 
     void execute1(std::error_code *ec = nullptr);
 
