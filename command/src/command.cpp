@@ -8,7 +8,10 @@
 #include <boost/nowide/fstream.hpp>
 #include <boost/process.hpp>
 
+#include <chrono>
+#include <condition_variable>
 #include <iostream>
+#include <mutex>
 
 #ifdef _WIN32
 static auto in_mode = 0x01;
@@ -37,30 +40,22 @@ struct CommandData
 {
     using cb_func = std::function<void(const boost::system::error_code &, std::size_t)>;
 
+    boost::asio::io_service &ios;
     boost::process::async_pipe pout, perr;
     boost::process::child c;
 
     cb_func out_cb, err_cb;
 
-    std::function<void(int, const std::error_code &)> on_exit;
-    std::function<void(void)> on_error;
-    std::function<void(
-        const boost::system::error_code &ec,
-        std::size_t s, Command::Stream &out,
-        boost::process::async_pipe &p,
-        Command::Buffer &out_buf,
-        cb_func &out_cb,
-        boost::nowide::ofstream &out_fs,
-        std::ostream &stream)> async_read;
-
     std::atomic_int pipes_closed{ 0 };
-    Command::Buffer out_buf, err_buf;
+    std::vector<char> out_buf, err_buf;
     boost::nowide::ofstream out_fs, err_fs;
 
+    std::mutex m;
+    std::condition_variable cv;
     volatile bool done = false;
 
     CommandData(boost::asio::io_service &ios)
-        : pout(ios), perr(ios)
+        : ios(ios), pout(ios), perr(ios)
     {
     }
 };
@@ -162,18 +157,21 @@ void Command::execute1(std::error_code *ec_in)
     // local scope, so we automatically close and destroy everything on exit
     CommandData d(get_io_service());
 
-    auto &ios = get_io_service();
+    // setup buffers
+    d.out_buf.resize(buf_size);
+    d.err_buf.resize(buf_size);
 
     if (!out.file.empty())
         d.out_fs.open(out.file.string(), out_mode | binary_mode);
     if (!err.file.empty() && out.file != err.file)
         d.err_fs.open(err.file.string(), out_mode | binary_mode);
 
-    d.on_error = [this, &d, &ios]()
+    std::function<void(void)> on_error;
+    on_error = [this, &d, &on_error]()
     {
         if (d.pipes_closed != 2)
         {
-            ios.post([this, &d] { d.on_error(); });
+            d.ios.post([this, &on_error] { on_error(); });
             return;
         }
 
@@ -181,7 +179,7 @@ void Command::execute1(std::error_code *ec_in)
         throw std::runtime_error("Last command failed: " + print() + ", exit code = " + std::to_string(exit_code.value()));
     };
 
-    d.on_exit = [this, &d, ec_in, &ios](int exit, const std::error_code &ec)
+    auto on_exit = [this, &d, ec_in, &on_error](int exit, const std::error_code &ec)
     {
         exit_code = exit;
 
@@ -189,6 +187,7 @@ void Command::execute1(std::error_code *ec_in)
         if (exit == 0)
         {
             d.done = true;
+            d.cv.notify_all();
             return;
         }
 
@@ -200,13 +199,14 @@ void Command::execute1(std::error_code *ec_in)
             else
                 ec_in->assign(1, std::generic_category());
             d.done = true;
+            d.cv.notify_all();
             return;
         }
 
-        ios.post([this, &d] {d.on_error(); });
+        d.ios.post([this, &on_error] {on_error(); });
     };
 
-    d.async_read = [this, &d](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
+    auto async_read = [this, &d](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
     {
         if (s)
         {
@@ -220,10 +220,7 @@ void Command::execute1(std::error_code *ec_in)
                 out_fs << str;
         }
         if (!ec)
-        {
-            //boost::asio::async_read(p, boost::asio::buffer(out_buf), out_cb);
             p.async_read_some(boost::asio::buffer(d.out_buf), out_cb);
-        }
         else
         {
             // win32: ec = 109, pipe is ended
@@ -243,30 +240,26 @@ void Command::execute1(std::error_code *ec_in)
         }
     };
 
-    // setup buffers also before child creation
-    d.out_buf.resize(buf_size);
-    d.err_buf.resize(buf_size);
-
-    d.out_cb = [this, &d](const boost::system::error_code &ec, std::size_t s)
+    d.out_cb = [this, &d, &async_read](const boost::system::error_code &ec, std::size_t s)
     {
-        d.async_read(ec, s, out, d.pout, d.out_buf, d.out_cb,
+        async_read(ec, s, out, d.pout, d.out_buf, d.out_cb,
             d.out_fs,
             std::cout);
     };
-    d.err_cb = [this, &d](const boost::system::error_code &ec, std::size_t s)
+    d.err_cb = [this, &d, &async_read](const boost::system::error_code &ec, std::size_t s)
     {
-        d.async_read(ec, s, err, d.perr, d.err_buf, d.err_cb,
+        async_read(ec, s, err, d.perr, d.err_buf, d.err_cb,
             out.file != err.file ? d.err_fs : d.out_fs,
             std::cerr);
     };
-    /*boost::asio::async_read(*d.pout.get(), boost::asio::buffer(d.out_buf), d.out_cb);
-    boost::asio::async_read(*d.perr.get(), boost::asio::buffer(d.err_buf), d.err_cb);*/
 
-    d.pout.async_read_some(boost::asio::buffer(d.out_buf), d.out_cb);
-    d.perr.async_read_some(boost::asio::buffer(d.err_buf), d.err_cb);
+    auto ob = boost::asio::buffer(d.out_buf);
+    auto eb = boost::asio::buffer(d.err_buf);
+    d.pout.async_read_some(ob, d.out_cb);
+    d.perr.async_read_some(eb, d.err_cb);
 
     // run
-    ios.post([this, &d, ec_in, &ios]
+    d.ios.post([this, &d, ec_in, &on_exit]
     {
 #ifdef _WIN32
         // widen args
@@ -288,8 +281,8 @@ void Command::execute1(std::error_code *ec_in)
                 , bp::std_out > d.pout
                 , bp::std_err > d.perr
 
-                , ios
-                , bp::on_exit(d.on_exit)
+                , d.ios
+                , bp::on_exit(on_exit)
 
                 , *ec_in
                 );
@@ -305,17 +298,28 @@ void Command::execute1(std::error_code *ec_in)
                 , bp::std_out > d.pout
                 , bp::std_err > d.perr
 
-                , ios
-                , bp::on_exit(d.on_exit)
+                , d.ios
+                , bp::on_exit(on_exit)
                 );
         }
     });
 
-    while (!d.done)
+    using namespace std::literals::chrono_literals;
+
+    auto delay = 100ms;
+    const auto max = 1s;
+    while (!d.done || d.pipes_closed != 2)
     {
-        if (ios.poll_one())
+        if (d.ios.poll_one())
+        {
+            delay = 100ms;
             continue;
-        // no jobs available, do small sleep
+        }
+        // no jobs available, do a small sleep
+        std::unique_lock<std::mutex> lk(d.m);
+        delay = delay > 1s ? 1s : delay;
+        d.cv.wait_for(lk, delay, [&d] {return d.done; });
+        delay += 100ms;
     }
 }
 

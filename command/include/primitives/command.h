@@ -8,7 +8,6 @@ namespace primitives
 {
 
 struct Command;
-struct CommandData;
 using Commands = std::unordered_set<Command*>;
 
 // return value:
@@ -16,7 +15,6 @@ using Commands = std::unordered_set<Command*>;
 //   2. no throw when ec is provided
 struct Command
 {
-    using Buffer = std::vector<char>;
     using ActionType = void(const String &, bool);
 
     struct Stream
@@ -66,8 +64,6 @@ struct Command
     static void execute(const std::initializer_list<String> &args, std::error_code &ec);
 
 private:
-    //std::unique_ptr<CommandData> d;
-
     void execute1(std::error_code *ec = nullptr);
 
     static void execute1(const path &p, const Strings &args = Strings(), std::error_code *ec = nullptr);
