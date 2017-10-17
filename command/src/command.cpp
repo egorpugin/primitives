@@ -234,9 +234,9 @@ void Command::execute1(std::error_code *ec_in)
                 }
                 else
                     p.close();
+                d.pipes_closed++;
+                d.cv.notify_all();
             }
-            d.pipes_closed++;
-            out_fs.close();
         }
     };
 
@@ -310,7 +310,8 @@ void Command::execute1(std::error_code *ec_in)
     const auto max = 1s;
     while (!d.done || d.pipes_closed != 2)
     {
-        if (d.ios.poll_one())
+        // in case we're done or two pipes were closed, we do not wait in cv anymore
+        if (d.ios.poll_one() || d.done || d.pipes_closed == 2)
         {
             delay = 100ms;
             continue;
