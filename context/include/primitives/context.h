@@ -11,8 +11,6 @@ class Context
 public:
     using Text = std::string;
 
-    static struct eol_type {} eol;
-
 public:
     struct Line
     {
@@ -107,19 +105,6 @@ public:
 
     void printToFile(FILE* out) const;
 
-    template <typename T>
-    Context& operator<<(const T &v)
-    {
-        ss_line << v;
-        return *this;
-    }
-    Context& operator<<(const eol_type &)
-    {
-        addLine(ss_line.str());
-        ss_line = decltype(ss_line)();
-        return *this;
-    }
-
     void clear()
     {
         lines.clear();
@@ -127,7 +112,6 @@ public:
         after_.reset();
         while (!namespaces.empty())
             namespaces.pop();
-        ss_line.clear();
     }
 
 private:
@@ -139,7 +123,6 @@ private:
     Text indent;
     Text newline;
     std::stack<Text> namespaces;
-    std::ostringstream ss_line;
 
     void copy_from(const Context &ctx);
 };
