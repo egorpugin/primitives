@@ -42,7 +42,6 @@ struct CommandData
 
     boost::asio::io_service &ios;
     boost::process::async_pipe pout, perr;
-    boost::process::child c;
 
     cb_func out_cb, err_cb;
 
@@ -52,7 +51,6 @@ struct CommandData
 
     std::mutex m;
     std::condition_variable cv;
-    std::atomic_bool done = false;
 
     CommandData(boost::asio::io_service &ios)
         : ios(ios), pout(ios), perr(ios)
@@ -166,50 +164,6 @@ void Command::execute1(std::error_code *ec_in)
     if (!err.file.empty() && out.file != err.file)
         d.err_fs.open(err.file.string(), out_mode | binary_mode);
 
-    std::exception_ptr eptr;
-
-    std::function<void(void)> on_error;
-    on_error = [this, &d, &on_error, &eptr]()
-    {
-        if (d.pipes_closed != 2)
-        {
-            d.ios.post([this, &on_error] { on_error(); });
-            return;
-        }
-
-        // throw now
-        eptr = std::make_exception_ptr(std::runtime_error("Last command failed: " + print() + ", exit code = " + std::to_string(exit_code.value())));
-        d.done = true;
-        d.cv.notify_all();
-    };
-
-    auto on_exit = [this, &d, ec_in, &on_error](int exit, const std::error_code &ec)
-    {
-        exit_code = exit;
-
-        // return if ok
-        if (exit == 0)
-        {
-            d.done = true;
-            d.cv.notify_all();
-            return;
-        }
-
-        // set ec, if passed
-        if (ec_in)
-        {
-            if (ec)
-                *ec_in = ec;
-            else
-                ec_in->assign(1, std::generic_category());
-            d.done = true;
-            d.cv.notify_all();
-            return;
-        }
-
-        d.ios.post([this, &on_error] {on_error(); });
-    };
-
     auto async_read = [this, &d](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
     {
         if (s)
@@ -234,6 +188,7 @@ void Command::execute1(std::error_code *ec_in)
                 {
                     //p.async_close();
                     p.close();
+                    assert(false && "non zero message with closed pipe");
                     throw std::runtime_error("primitives.command (" + std::to_string(__LINE__) + "): non zero message with closed pipe");
                 }
                 else
@@ -257,65 +212,51 @@ void Command::execute1(std::error_code *ec_in)
             std::cerr);
     };
 
-    auto ob = boost::asio::buffer(d.out_buf);
-    auto eb = boost::asio::buffer(d.err_buf);
-    d.pout.async_read_some(ob, d.out_cb);
-    d.perr.async_read_some(eb, d.err_cb);
+    d.pout.async_read_some(boost::asio::buffer(d.out_buf), d.out_cb);
+    d.perr.async_read_some(boost::asio::buffer(d.err_buf), d.err_cb);
 
     // run
-    d.ios.post([this, &d, ec_in, &on_exit]
-    {
 #ifdef _WIN32
-        // widen args
-        std::vector<std::wstring> wargs;
-        for (auto &a : args)
-            wargs.push_back(boost::nowide::widen(a));
+    // widen args
+    std::vector<std::wstring> wargs;
+    for (auto &a : args)
+        wargs.push_back(boost::nowide::widen(a));
 #else
-        const Strings &wargs = args;
+    const Strings &wargs = args;
 #endif
 
+    std::error_code ec;
+    bp::child c(
+        program
+        , bp::args = wargs
+        , bp::start_dir = working_directory
+
+        , bp::std_in < stdin
+        , bp::std_out > d.pout
+        , bp::std_err > d.perr
+
+        , ec
+    );
+
+    // set ec, if passed
+    if (ec)
+    {
         if (ec_in)
         {
-            d.c = bp::child(
-                program
-                , bp::args = wargs
-                , bp::start_dir = working_directory
-
-                , bp::std_in < stdin
-                , bp::std_out > d.pout
-                , bp::std_err > d.perr
-
-                , d.ios
-                , bp::on_exit(on_exit)
-
-                , *ec_in
-                );
+            *ec_in = ec;
+            return;
         }
-        else
-        {
-            d.c = bp::child(
-                program
-                , bp::args = wargs
-                , bp::start_dir = working_directory
-
-                , bp::std_in < stdin
-                , bp::std_out > d.pout
-                , bp::std_err > d.perr
-
-                , d.ios
-                , bp::on_exit(on_exit)
-                );
-        }
-    });
+        throw std::runtime_error("Last command failed: " + print() + ", ec = " + ec.message());
+    }
 
     using namespace std::literals::chrono_literals;
 
     auto delay = 100ms;
     const auto max = 1s;
-    while (!d.done || d.pipes_closed != 2)
+    while (d.pipes_closed != 2 || c.running())
     {
         // in case we're done or two pipes were closed, we do not wait in cv anymore
-        if (d.ios.poll_one() || d.done || d.pipes_closed == 2)
+        if (d.ios.poll_one() || d.pipes_closed == 2 || !c.running())
         {
             delay = 100ms;
             continue;
@@ -323,12 +264,22 @@ void Command::execute1(std::error_code *ec_in)
         // no jobs available, do a small sleep
         std::unique_lock<std::mutex> lk(d.m);
         delay = delay > 1s ? 1s : delay;
-        d.cv.wait_for(lk, delay, [&d] {return d.done.load(); });
+        d.cv.wait_for(lk, delay, [&d] {return d.pipes_closed == 2; });
         delay += 100ms;
     }
 
-    if (eptr)
-        std::rethrow_exception(eptr);
+    exit_code = c.exit_code();
+
+    // return if ok
+    if (exit_code.value() == 0)
+        return;
+    else if (ec_in)
+    {
+        ec_in->assign(exit_code.value(), std::generic_category());
+        return;
+    }
+
+    throw std::runtime_error("Last command failed: " + print() + ", exit code = " + std::to_string(exit_code.value()));
 }
 
 void Command::write(path p) const
