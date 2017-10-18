@@ -52,7 +52,7 @@ struct CommandData
 
     std::mutex m;
     std::condition_variable cv;
-    volatile bool done = false;
+    std::atomic_bool done = false;
 
     CommandData(boost::asio::io_service &ios)
         : ios(ios), pout(ios), perr(ios)
@@ -180,6 +180,7 @@ void Command::execute1(std::error_code *ec_in)
         // throw now
         eptr = std::make_exception_ptr(std::runtime_error("Last command failed: " + print() + ", exit code = " + std::to_string(exit_code.value())));
         d.done = true;
+        d.cv.notify_all();
     };
 
     auto on_exit = [this, &d, ec_in, &on_error](int exit, const std::error_code &ec)
@@ -322,7 +323,7 @@ void Command::execute1(std::error_code *ec_in)
         // no jobs available, do a small sleep
         std::unique_lock<std::mutex> lk(d.m);
         delay = delay > 1s ? 1s : delay;
-        d.cv.wait_for(lk, delay, [&d] {return d.done; });
+        d.cv.wait_for(lk, delay, [&d] {return d.done.load(); });
         delay += 100ms;
     }
 
