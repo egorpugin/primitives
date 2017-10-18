@@ -166,8 +166,10 @@ void Command::execute1(std::error_code *ec_in)
     if (!err.file.empty() && out.file != err.file)
         d.err_fs.open(err.file.string(), out_mode | binary_mode);
 
+    std::exception_ptr eptr;
+
     std::function<void(void)> on_error;
-    on_error = [this, &d, &on_error]()
+    on_error = [this, &d, &on_error, &eptr]()
     {
         if (d.pipes_closed != 2)
         {
@@ -176,7 +178,8 @@ void Command::execute1(std::error_code *ec_in)
         }
 
         // throw now
-        throw std::runtime_error("Last command failed: " + print() + ", exit code = " + std::to_string(exit_code.value()));
+        eptr = std::make_exception_ptr(std::runtime_error("Last command failed: " + print() + ", exit code = " + std::to_string(exit_code.value())));
+        d.done = true;
     };
 
     auto on_exit = [this, &d, ec_in, &on_error](int exit, const std::error_code &ec)
@@ -322,6 +325,9 @@ void Command::execute1(std::error_code *ec_in)
         d.cv.wait_for(lk, delay, [&d] {return d.done; });
         delay += 100ms;
     }
+
+    if (eptr)
+        std::rethrow_exception(eptr);
 }
 
 void Command::write(path p) const
