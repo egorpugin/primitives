@@ -280,7 +280,7 @@ void Command::execute1(std::error_code *ec_in)
         delay += 100ms;
     }
 
-    int repeats = 5;
+    //int repeats = 5;
     while (d.pout.is_open() || d.perr.is_open())
     {
         // in case we're done or two pipes were closed, we do not wait in cv anymore
@@ -295,7 +295,7 @@ void Command::execute1(std::error_code *ec_in)
         d.cv.wait_for(lk, delay, [&d] {return !d.pout.is_open() && !d.perr.is_open(); });
         delay += 100ms;
 
-        if (repeats-- == 0)
+        /*if (repeats-- == 0)
         {
             std::cerr << "looks like a deadlock in primitives.command (boost::process)" << std::endl;
             if (d.pout.is_open())
@@ -310,7 +310,7 @@ void Command::execute1(std::error_code *ec_in)
                 int a = 5;
                 a++;
             }
-        }
+        }*/
     }
 
     exit_code = c.exit_code();
