@@ -4,7 +4,6 @@
 
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 
 namespace boost
 {
@@ -19,8 +18,6 @@ namespace Interprocess = boost::interprocess;
 using FileLock = Interprocess::file_lock;
 using FileLockPtr = std::unique_ptr<FileLock>;
 using InterprocessMutex = Interprocess::named_mutex;
-
-using shared_mutex = std::shared_timed_mutex;
 
 class ScopedFileLock
 {

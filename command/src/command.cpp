@@ -46,7 +46,8 @@ struct CommandData
     cb_func out_cb, err_cb;
 
     std::vector<char> out_buf, err_buf;
-    boost::nowide::ofstream out_fs, err_fs;
+    FILE *out_fs = nullptr;
+    FILE *err_fs = nullptr;
 
     std::mutex m;
     std::condition_variable cv;
@@ -54,6 +55,14 @@ struct CommandData
     CommandData(boost::asio::io_service &ios)
         : ios(ios), pout(ios), perr(ios)
     {
+    }
+
+    ~CommandData()
+    {
+        if (out_fs)
+            fclose(out_fs);
+        if (err_fs)
+            fclose(err_fs);
     }
 };
 
@@ -159,9 +168,9 @@ void Command::execute1(std::error_code *ec_in)
     d.err_buf.resize(buf_size);
 
     if (!out.file.empty())
-        d.out_fs.open(out.file.string(), out_mode | binary_mode);
+        d.out_fs = primitives::filesystem::fopen(out.file, "wb");
     if (!err.file.empty() && out.file != err.file)
-        d.err_fs.open(err.file.string(), out_mode | binary_mode);
+        d.err_fs = primitives::filesystem::fopen(err.file, "wb");
 
     auto async_read = [this, &d](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
     {
@@ -174,7 +183,7 @@ void Command::execute1(std::error_code *ec_in)
             if (out.action)
                 out.action(str, ec);
             if (!out.file.empty())
-                out_fs << str;
+                fwrite(&str[0], str.size(), 1, out_fs);
         }
         if (!ec)
             p.async_read_some(boost::asio::buffer(d.out_buf), out_cb);

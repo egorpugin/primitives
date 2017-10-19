@@ -3,7 +3,6 @@
 #define private protected // WOW!!!
 #include <boost/interprocess/sync/file_lock.hpp>
 #undef private
-#include <boost/nowide/fstream.hpp>
 
 #ifdef BOOST_INTERPROCESS_WINDOWS
 #include <windows.h>
