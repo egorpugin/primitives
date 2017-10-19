@@ -45,7 +45,6 @@ struct CommandData
 
     cb_func out_cb, err_cb;
 
-    std::atomic_int pipes_closed{ 0 };
     std::vector<char> out_buf, err_buf;
     boost::nowide::ofstream out_fs, err_fs;
 
@@ -193,9 +192,10 @@ void Command::execute1(std::error_code *ec_in)
                 }
                 else
                     p.close();
-                d.pipes_closed++;
-                d.cv.notify_all();
             }
+            // if we somehow hit this w/o p.is_open(),
+            // we still consider pipe as closed and notice users
+            d.cv.notify_all();
         }
     };
 
@@ -225,6 +225,13 @@ void Command::execute1(std::error_code *ec_in)
     const Strings &wargs = args;
 #endif
 
+    auto on_exit = [this, &d](int exit, const std::error_code& ec_in)
+    {
+        // must be empty, pipes are closed in async_read_some() funcs
+        //d.pout.async_close();
+        //d.perr.async_close();
+    };
+
     std::error_code ec;
     bp::child c(
         program
@@ -235,11 +242,17 @@ void Command::execute1(std::error_code *ec_in)
         , bp::std_out > d.pout
         , bp::std_err > d.perr
 
-        , ec
+        , ec // always use ec
+
+        , d.ios
+        // Without this line boost::process does not work well on linux
+        // in current setup.
+        // It cannot detect empty pipes.
+        , bp::on_exit(on_exit)
     );
 
-    // set ec, if passed
-    if (ec)
+    // some critical error during process creation
+    if (!c || ec)
     {
         if (ec_in)
         {
@@ -253,19 +266,51 @@ void Command::execute1(std::error_code *ec_in)
 
     auto delay = 100ms;
     const auto max = 1s;
-    while (d.pipes_closed != 2 || c.running())
+    while (c.running())
     {
         // in case we're done or two pipes were closed, we do not wait in cv anymore
-        if (d.ios.poll_one() || d.pipes_closed == 2 || !c.running())
+        if (d.ios.poll_one())
         {
             delay = 100ms;
             continue;
         }
-        // no jobs available, do a small sleep
+        // no jobs available, do a small sleep waiting for process
+        delay = delay > 1s ? 1s : delay;
+        c.wait_for(delay);
+        delay += 100ms;
+    }
+
+    int repeats = 5;
+    while (d.pout.is_open() || d.perr.is_open())
+    {
+        // in case we're done or two pipes were closed, we do not wait in cv anymore
+        if (d.ios.poll_one())
+        {
+            delay = 100ms;
+            continue;
+        }
+        // no jobs available, do a small sleep waiting for pipes closed
         std::unique_lock<std::mutex> lk(d.m);
         delay = delay > 1s ? 1s : delay;
-        d.cv.wait_for(lk, delay, [&d] {return d.pipes_closed == 2; });
+        d.cv.wait_for(lk, delay, [&d] {return !d.pout.is_open() && !d.perr.is_open(); });
         delay += 100ms;
+
+        if (repeats-- == 0)
+        {
+            std::cerr << "looks like a deadlock in primitives.command (boost::process)" << std::endl;
+            if (d.pout.is_open())
+            {
+                auto sz = d.pout.read_some(boost::asio::buffer(d.out_buf));
+                int a = 5;
+                a++;
+            }
+            if (d.perr.is_open())
+            {
+                auto sz = d.perr.read_some(boost::asio::buffer(d.err_buf));
+                int a = 5;
+                a++;
+            }
+        }
     }
 
     exit_code = c.exit_code();
