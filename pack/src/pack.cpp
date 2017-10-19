@@ -1,6 +1,5 @@
 #include <primitives/pack.h>
 
-#include <boost/nowide/fstream.hpp>
 #include <libarchive/archive.h>
 #include <libarchive/archive_entry.h>
 
@@ -95,8 +94,8 @@ Files unpack_file(const path &fn, const path &dst)
         if (filename == "." || filename == "..")
             continue;
 
-        auto fn = fs::absolute(f).string();
-        boost::nowide::ofstream o(fn, out_mode | binary_mode);
+        f = fs::absolute(f);
+        auto o = primitives::filesystem::fopen(f, "wb");
         if (!o)
         {
             // TODO: probably remove this and linux/limit.h header when server will be using hash paths
@@ -120,8 +119,9 @@ Files unpack_file(const path &fn, const path &dst)
                 break;
             if (r < ARCHIVE_OK)
                 throw std::runtime_error(archive_error_string(a));
-            o.write((const char *)buff, size);
+            fwrite(buff, size, 1, o);
         }
+        fclose(o);
         files.insert(f);
     }
     archive_read_close(a);
