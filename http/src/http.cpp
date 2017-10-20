@@ -65,9 +65,8 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
     auto parent = fn.parent_path();
     if (!parent.empty() && !fs::exists(parent))
         fs::create_directories(parent);
-    auto ofile = primitives::filesystem::fopen(fn, "wb");
-    if (!ofile)
-        throw std::runtime_error("Cannot open file: " + fn.string());
+
+    ScopedFile ofile(fn, "wb");
 
     // set up curl request
     auto curl = curl_easy_init();
@@ -94,7 +93,7 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
     }
 
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_file);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, ofile);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, ofile.getHandle());
     curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, curl_transfer_info);
     curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &file_size_limit);
     if (url.find("https") == 0)
@@ -112,7 +111,6 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
     long http_code = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
     curl_easy_cleanup(curl);
-    fclose(ofile);
 
     if (res == CURLE_ABORTED_BY_CALLBACK)
     {

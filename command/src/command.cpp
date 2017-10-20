@@ -179,7 +179,11 @@ void Command::execute1(std::error_code *ec_in)
             String str(out_buf.begin(), out_buf.begin() + s);
             out.text += str;
             if (inherit || out.inherit)
+            {
+                if (!stream)
+                    stream.clear();
                 stream << str;
+            }
             if (out.action)
                 out.action(str, ec);
             if (!out.file.empty())

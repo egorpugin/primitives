@@ -332,3 +332,16 @@ void create(const path &p)
 }
 
 }
+
+ScopedFile::ScopedFile(const path &p, const char *mode)
+{
+    f = primitives::filesystem::fopen(p, mode);
+    if (!f)
+        throw std::runtime_error("Cannot open file: " + p.string());
+}
+
+ScopedFile::~ScopedFile()
+{
+    if (f)
+        fclose(f);
+}

@@ -103,3 +103,16 @@ FILE *fopen(const path &p, const char *mode);
 void create(const path &p);
 
 }
+
+class ScopedFile
+{
+public:
+    ScopedFile(const path &p, const char *mode);
+    ~ScopedFile();
+
+    FILE *getHandle() const { return f; }
+    operator bool() const { return f; }
+
+private:
+    FILE *f = nullptr;
+};
