@@ -114,7 +114,7 @@ struct SharedState
     using VoidDataType = int;
     using DataType = std::conditional_t<std::is_same_v<T, void>, VoidDataType, T>;
 
-    Executor &ex;
+    Executor &e;
     std::condition_variable cv;
     std::vector<std::condition_variable*> cv_notifiers;
     std::vector<Task> callbacks;
@@ -123,17 +123,17 @@ struct SharedState
 
     std::atomic_bool set{ false };
     DataType data;
-    std::exception_ptr e;
+    std::exception_ptr eptr;
 
-    SharedState(Executor &ex) : ex(ex) {}
+    SharedState(Executor &e) : e(e) {}
     SharedState(const SharedState &rhs)
-        : ex(rhs.ex), set(rhs.set), data(rhs.data), e(rhs.e)
+        : e(rhs.e), set(rhs.set), data(rhs.data), eptr(rhs.eptr)
     {
     }
 
     FutureType getFuture()
     {
-        FutureType f(ex, w.lock());
+        FutureType f(w.lock());
         return f;
     }
 
@@ -175,41 +175,27 @@ auto makeSharedState(Args && ... args)
     return s;
 }
 
-struct FutureBase
-{
-    Executor &e;
-
-    FutureBase(Executor &e)
-        : e(e)
-    {
-    }
-    FutureBase(const FutureBase &rhs)
-        : FutureBase(rhs.e)
-    {
-    }
-    FutureBase(FutureBase &&rhs) = default;
-};
-
 template <class Ret>
-struct Future : FutureBase
+struct Future
 {
     using return_type = Ret;
 
     SharedStatePtr<Ret> state;
 
-    Future(Executor &e, const SharedStatePtr<Ret> &s)
-        : FutureBase(e), state(s)
+    Future(const SharedStatePtr<Ret> &s)
+        : state(s)
     {
     }
 
     Future(const Future &f) = default;
     Future &operator=(const Future &f) = default;
+    Future(Future &&rhs) = default;
 
     std::conditional_t<std::is_same_v<Ret, void>, void, Ret> get() const
     {
         state->wait();
-        if (state->e)
-            std::rethrow_exception(state->e);
+        if (state->eptr)
+            std::rethrow_exception(state->eptr);
 
         if constexpr (std::is_same_v<Ret, void>)
             return;
@@ -235,13 +221,13 @@ struct PackagedTask
     using FutureType = Future<Ret>;
 
     PackagedTask(Executor &e, F f, ArgTypes && ... args)
-        : e(e), t(f)
+        : t(f)
     {
         s = makeSharedState<Ret>(e);
     }
 
     PackagedTask(const PackagedTask &rhs)
-        : e(rhs.e), t(rhs.t), s(rhs.s)
+        : t(rhs.t), s(rhs.s)
     {
     }
     PackagedTask(PackagedTask &&rhs) = default;
@@ -262,13 +248,12 @@ struct PackagedTask
         }
         catch (...)
         {
-            s->e = std::current_exception();
+            s->eptr = std::current_exception();
         }
         s->setExecuted();
     }
 
 private:
-    Executor &e;
     Task t;
     mutable SharedStatePtr<Ret> s;
 };
@@ -353,7 +338,7 @@ void SharedState<T>::wait()
     if (set)
         return;
 
-    if (!ex.is_in_executor())
+    if (!e.is_in_executor())
     {
         std::unique_lock<std::mutex> lk(m);
         cv.wait(lk, [this] { return set.load(); });
@@ -365,7 +350,7 @@ void SharedState<T>::wait()
     auto delay = 100ms;
     while (!set)
     {
-        if (!ex.try_run_one())
+        if (!e.try_run_one())
         {
             std::unique_lock<std::mutex> lk(m);
             cv.wait_for(lk, delay, [this] { return set.load(); });
@@ -379,16 +364,16 @@ void SharedState<T>::wait()
 template <class Ret>
 template <class F2, class ... ArgTypes2>
 Future<std::invoke_result_t<F2, ArgTypes2...>>
-    Future<Ret>::then(F2 &&f, ArgTypes2 && ... args)
+Future<Ret>::then(F2 &&f, ArgTypes2 && ... args)
 {
     if (state->set)
-        return e.push(std::forward<F2>(f), std::forward<ArgTypes2>(args)...);
+        return state->e.push(std::forward<F2>(f), std::forward<ArgTypes2>(args)...);
 
     std::unique_lock<std::mutex> lk(state->m);
     if (state->set)
-        return e.push(std::forward<F2>(f), std::forward<ArgTypes2>(args)...);
-    PackagedTask<F2, ArgTypes2...> pt(e, f, std::forward<ArgTypes2>(args)...);
-    state->callbacks.push_back([this, pt]() { e.push(pt); });
+        return state->e.push(std::forward<F2>(f), std::forward<ArgTypes2>(args)...);
+    PackagedTask<F2, ArgTypes2...> pt(state->e, f, std::forward<ArgTypes2>(args)...);
+    state->callbacks.push_back([this, pt]() { state->e.push(pt); });
     return pt.getFuture();
 }
 
@@ -405,7 +390,7 @@ Future<void> whenAll(const std::vector<F> &futures)
         s->set = true;
     }
     else
-        s = makeSharedState<Ret>(futures.begin()->e);
+        s = makeSharedState<Ret>(futures.begin()->state->e);
 
     // initial check
     if (std::all_of(futures.begin(), futures.end(),
@@ -462,7 +447,7 @@ Future<size_t> whenAny(const std::vector<F> &futures)
         s->set = true;
     }
     else
-        s = makeSharedState<Ret>(futures.begin()->e);
+        s = makeSharedState<Ret>(futures.begin()->state->e);
 
     // initial check
     size_t i = 0;
@@ -556,7 +541,7 @@ Future<void> whenAll(Futures && ... futures)
         s->set = true;
     }
     else
-        s = makeSharedState<Ret>(std::get<0>(t).e);
+        s = makeSharedState<Ret>(std::get<0>(t).state->e);
 
     // initial check
     bool set = true;
@@ -621,7 +606,7 @@ Future<size_t> whenAny(Futures && ... futures)
         s->set = true;
     }
     else
-        s = makeSharedState<Ret>(std::get<0>(t).e);
+        s = makeSharedState<Ret>(std::get<0>(t).state->e);
 
     // initial check
     size_t i = 0;
@@ -694,4 +679,13 @@ template <class ... Futures>
 void waitAny(Futures && ... futures)
 {
     whenAny(std::forward<Futures>(futures)...).get();
+}
+
+template <class F>
+void waitAndGet(const std::vector<F> &futures)
+{
+    for (auto &f : futures)
+        f.wait();
+    for (auto &f : futures)
+        f.get();
 }
