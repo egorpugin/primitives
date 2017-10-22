@@ -27,7 +27,6 @@ Strings split_lines(const String &s)
 void normalize_string(String &s)
 {
     std::replace(s.begin(), s.end(), '\\', '/');
-    boost::to_lower(s);
 }
 
 String normalize_string_copy(String s)
