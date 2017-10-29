@@ -16,6 +16,7 @@ using FilesOrdered = std::vector<path>;
 using Files = std::unordered_set<path>;
 
 path get_home_directory();
+path current_path(const path &p = path()); // thread working directory
 
 String read_file(const path &p, bool no_size_check = false);
 void write_file(const path &p, const String &s);
@@ -60,7 +61,7 @@ class ScopedCurrentPath
 public:
     ScopedCurrentPath()
     {
-        old = fs::current_path();
+        old = ::current_path();
         cwd = old;
     }
     ScopedCurrentPath(const path &p)
@@ -68,9 +69,9 @@ public:
     {
         if (!p.empty())
         {
-            fs::current_path(p);
+            ::current_path(p);
             // abs path, not possibly relative p
-            cwd = fs::current_path();
+            cwd = ::current_path();
         }
     }
     ~ScopedCurrentPath()
@@ -82,7 +83,7 @@ public:
     {
         if (!active)
             return;
-        fs::current_path(old);
+        ::current_path(old);
         cwd = old;
         active = false;
     }

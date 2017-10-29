@@ -180,6 +180,7 @@ void Command::execute1(std::error_code *ec_in)
             out.text += str;
             if (inherit || out.inherit)
             {
+                // ???
                 if (!stream)
                     stream.clear();
                 stream << str;

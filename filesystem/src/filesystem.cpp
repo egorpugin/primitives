@@ -38,6 +38,14 @@ path get_home_directory()
     return home;
 }
 
+path current_path(const path &p)
+{
+    thread_local path thread_working_dir = p.empty() ? fs::current_path() : p;
+    if (p.empty())
+        return thread_working_dir;
+    return thread_working_dir = p;
+}
+
 void remove_file(const path &p)
 {
     boost::system::error_code ec;
@@ -328,6 +336,7 @@ FILE *fopen(const path &p, const char *mode)
 
 void create(const path &p)
 {
+    fs::create_directories(p.parent_path());
     fclose(fopen(p, "wb"));
 }
 
