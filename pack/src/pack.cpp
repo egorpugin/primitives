@@ -21,14 +21,44 @@ static auto app_mode = std::ios::app;
 static auto binary_mode = std::ios::binary;
 #endif
 
-bool pack_files(const path &fn, const Files &files, const path &root_dir)
+namespace primitives::pack
+{
+
+std::unordered_map<path, path> prepare_files(const Files &files, const path &root_dir, const path &dir_prefix, const path &file_prefix)
+{
+    std::unordered_map<path, path> files2;
+    for (auto &f : files)
+    {
+        if (!fs::exists(f))
+        {
+            files2[f]; // still add to return false later
+            continue;
+        }
+
+        // skip symlinks too
+        if (!fs::is_regular_file(f))
+            continue;
+
+        auto r = fs::relative(f, root_dir);
+        if (!file_prefix.empty())
+            r = file_prefix.string() + r.string();
+        if (!dir_prefix.empty())
+            r = dir_prefix / r;
+        files2[f] = r;
+    }
+    return files2;
+}
+
+}
+
+bool pack_files(const path &fn, std::unordered_map<path, path> &files)
 {
     bool result = true;
     auto a = archive_write_new();
     archive_write_add_filter_gzip(a);
     archive_write_set_format_pax_restricted(a);
     archive_write_open_filename(a, fn.string().c_str());
-    for (auto &f : files)
+    for (auto &[f, n] : files)
     {
         if (!fs::exists(f))
         {
@@ -42,12 +72,12 @@ bool pack_files(const path &fn, const Files &files, const path &root_dir)
 
         auto sz = fs::file_size(f);
         auto e = archive_entry_new();
-        archive_entry_set_pathname(e, fs::relative(f, root_dir).string().c_str());
+        archive_entry_set_pathname(e, n.string().c_str());
         archive_entry_set_size(e, sz);
         archive_entry_set_filetype(e, AE_IFREG);
         archive_entry_set_perm(e, 0644);
         archive_write_header(a, e);
-        auto fp = fopen(f.string().c_str(), "rb");
+        auto fp = primitives::filesystem::fopen(f.string().c_str(), "rb");
         if (!fp)
         {
             archive_entry_free(e);
@@ -63,6 +93,11 @@ bool pack_files(const path &fn, const Files &files, const path &root_dir)
     archive_write_close(a);
     archive_write_free(a);
     return result;
+}
+
+bool pack_files(const path &fn, const Files &files, const path &root_dir)
+{
+    return pack_files(fn, primitives::pack::prepare_files(files, root_dir));
 }
 
 Files unpack_file(const path &fn, const path &dst)
