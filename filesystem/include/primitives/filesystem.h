@@ -14,6 +14,7 @@ using path = fs::path;
 using FilesSorted = std::set<path>;
 using FilesOrdered = std::vector<path>;
 using Files = std::unordered_set<path>;
+using FilesMap = std::unordered_map<path, path>;
 
 path get_home_directory();
 path current_path(const path &p = path()); // thread working directory

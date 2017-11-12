@@ -48,3 +48,31 @@ auto get_time_custom(F &&f, Args && ... args)
     auto t = get_time(std::forward<F>(f), std::forward<Args>(args)...);
     return std::chrono::duration_cast<std::chrono::duration<T>>(t).count();
 }
+
+struct ScopedTime
+{
+	using clock = std::chrono::high_resolution_clock;
+
+	clock::time_point t0;
+
+	ScopedTime()
+	{
+		t0 = clock::now();
+	}
+
+	auto getTime() const
+	{
+		return clock::now() - t0;
+	}
+
+	template <typename T>
+	auto getTimeCustom() const
+	{
+		return std::chrono::duration_cast<std::chrono::duration<T>>(getTime()).count();
+	}
+
+	auto getTimeFloat() const
+	{
+		return getTimeCustom<float>();
+	}
+};

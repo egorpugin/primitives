@@ -158,7 +158,7 @@ void Command::execute1(std::error_code *ec_in)
     }
 
     if (working_directory.empty())
-        working_directory = fs::current_path();
+        working_directory = ::current_path();
 
     // local scope, so we automatically close and destroy everything on exit
     CommandData d(get_io_service());
