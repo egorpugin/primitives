@@ -1,5 +1,7 @@
 #include <primitives/pack.h>
 
+#include <primitives/templates.h>
+
 #include <libarchive/archive.h>
 #include <libarchive/archive_entry.h>
 
@@ -108,6 +110,13 @@ Files unpack_file(const path &fn, const path &dst)
     Files files;
 
     auto a = archive_read_new();
+
+    SCOPE_EXIT
+    {
+        archive_read_close(a);
+        archive_read_free(a);
+    };
+
     archive_read_support_filter_all(a);
     archive_read_support_format_all(a);
     auto r = archive_read_open_filename(a, fn.string().c_str(), BLOCK_SIZE);
@@ -133,7 +142,6 @@ Files unpack_file(const path &fn, const path &dst)
         auto o = primitives::filesystem::fopen(f, "wb");
         if (!o)
         {
-            // TODO: probably remove this and linux/limit.h header when server will be using hash paths
 #ifdef _WIN32
             if (fn.size() >= MAX_PATH)
                 continue;
@@ -159,8 +167,6 @@ Files unpack_file(const path &fn, const path &dst)
         fclose(o);
         files.insert(f);
     }
-    archive_read_close(a);
-    archive_read_free(a);
 
     return files;
 }

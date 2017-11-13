@@ -282,6 +282,8 @@ projects:
             public:
                 filesystem:
                     version: "*"
+                templates:
+                    version: "*"
                 pvt.cppan.demo.libarchive.libarchive:
                     version: 3
 

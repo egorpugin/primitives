@@ -328,7 +328,10 @@ namespace primitives::filesystem
 FILE *fopen(const path &p, const char *mode)
 {
 #ifdef _WIN32
-    return _wfopen(p.wstring().c_str(), path(mode).wstring().c_str());
+    auto s = p.wstring();
+    if (s.size() >= 255)
+        s = L"\\\\?\\" + s;
+    return _wfopen(s.c_str(), path(mode).wstring().c_str());
 #else
     return fopen(p.string().c_str(), mode);
 #endif
@@ -336,7 +339,12 @@ FILE *fopen(const path &p, const char *mode)
 
 void create(const path &p)
 {
-    fs::create_directories(p.parent_path());
+    auto s = p.parent_path().string();
+#ifdef _WIN32
+    if (s.size() >= 255)
+        s = "\\\\?\\" + s;
+#endif
+    fs::create_directories(s);
     fclose(fopen(p, "wb"));
 }
 
