@@ -330,7 +330,10 @@ FILE *fopen(const path &p, const char *mode)
 #ifdef _WIN32
     auto s = p.wstring();
     if (s.size() >= 255)
+    {
         s = L"\\\\?\\" + s;
+        boost::replace_all(s, L"/", L"\\");
+    }
     return _wfopen(s.c_str(), path(mode).wstring().c_str());
 #else
     return fopen(p.string().c_str(), mode);
@@ -342,7 +345,10 @@ void create(const path &p)
     auto s = p.parent_path().string();
 #ifdef _WIN32
     if (s.size() >= 255)
+    {
         s = "\\\\?\\" + s;
+        boost::replace_all(s, "/", "\\");
+    }
 #endif
     fs::create_directories(s);
     fclose(fopen(p, "wb"));
