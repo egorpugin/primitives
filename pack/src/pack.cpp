@@ -113,7 +113,6 @@ Files unpack_file(const path &fn, const path &dst)
 
     SCOPE_EXIT
     {
-        archive_read_close(a);
         archive_read_free(a);
     };
 
@@ -144,24 +143,33 @@ Files unpack_file(const path &fn, const path &dst)
         {
 #ifdef _WIN32
             if (fn.size() >= MAX_PATH)
+            {
+                fclose(o);
                 continue;
+            }
 #elif defined(__APPLE__)
 #else
             if (fn.size() >= PATH_MAX)
+            {
+                fclose(o);
                 continue;
+            }
 #endif
-            throw std::runtime_error("Cannot open file: " + f.string());
+            throw std::runtime_error("Cannot open file: " + f.string() + ", errno = " + std::to_string(errno));
         }
         while (1)
         {
             const void *buff;
             size_t size;
             int64_t offset;
-            auto r = archive_read_data_block(a, &buff, &size, &offset);
+            r = archive_read_data_block(a, &buff, &size, &offset);
             if (r == ARCHIVE_EOF)
                 break;
             if (r < ARCHIVE_OK)
+            {
+                fclose(o);
                 throw std::runtime_error(archive_error_string(a));
+            }
             fwrite(buff, size, 1, o);
         }
         fclose(o);
