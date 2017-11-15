@@ -692,12 +692,17 @@ void waitAndGet(const std::vector<F> &futures)
 }
 
 template <class F>
-void waitAndGetAllExceptions(const std::vector<F> &futures)
+std::vector<std::exception_ptr> waitAndGetAllExceptions(const std::vector<F> &futures)
 {
     for (auto &f : futures)
         f.wait();
+    std::vector<std::exception_ptr> eptrs;
     for (auto &f : futures)
-        f.get();
+    {
+        if (f.state->eptr)
+            eptrs.push_back(f.state->eptr);
+    }
+    return eptrs;
 }
 
 #ifdef _WIN32

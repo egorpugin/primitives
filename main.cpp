@@ -386,6 +386,17 @@ TEST_CASE("Checking executor", "[executor]")
 
     {
         Executor e;
+        std::vector<Future<void>> fs;
+        fs.push_back(e.push([] { throw std::runtime_error("1"); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(250ms); }));
+        fs.push_back(e.push([] { throw std::runtime_error("2"); }));
+        fs.push_back(e.push([] { throw std::runtime_error("3"); }));
+        auto ex = waitAndGetAllExceptions(fs);
+        REQUIRE(ex.size() == 3);
+    }
+
+    {
+        Executor e;
         auto f3 = e.push([] { std::this_thread::sleep_for(300ms); });
         auto f2 = e.push([] { std::this_thread::sleep_for(200ms); });
         auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
