@@ -70,7 +70,9 @@ int GenerateDump(_EXCEPTION_POINTERS* pExceptionPointers)
 
     CloseHandle(hDumpFile);
 
-    return EXCEPTION_EXECUTE_HANDLER;
+    //std::exit(1);
+    //return EXCEPTION_EXECUTE_HANDLER;
+    return EXCEPTION_CONTINUE_SEARCH;
 }
 
 }
