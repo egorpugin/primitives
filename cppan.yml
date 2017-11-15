@@ -117,6 +117,8 @@ projects:
                     version: 1
                 templates:
                     version: "*"
+                minidump:
+                    version: "*"
 
 
 
@@ -266,6 +268,20 @@ projects:
             public:
                 pvt.cppan.demo.boost.log:
                     version: 1
+
+
+    minidump:
+        name: minidump
+        type: library
+        root_directory: minidump
+        static_only: true
+
+        options:
+            any:
+                link_libraries:
+                    win32:
+                        public:
+                            - dbghelp
 
     pack:
         name: pack

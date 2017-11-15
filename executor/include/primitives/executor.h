@@ -312,7 +312,8 @@ private:
     std::unordered_map<std::thread::id, size_t> thread_ids;
     std::mutex m;
 
-    void run();
+    void run(size_t i, const std::string &name);
+    void run2(size_t i, const std::string &name);
     bool run_task();
     bool run_task(Task t);
     bool run_task(size_t i);
@@ -689,3 +690,21 @@ void waitAndGet(const std::vector<F> &futures)
     for (auto &f : futures)
         f.get();
 }
+
+template <class F>
+void waitAndGetAllExceptions(const std::vector<F> &futures)
+{
+    for (auto &f : futures)
+        f.wait();
+    for (auto &f : futures)
+        f.get();
+}
+
+#ifdef _WIN32
+namespace primitives::executor
+{
+
+extern bool bExecutorUseSEH;
+
+}
+#endif
