@@ -268,6 +268,11 @@ void Command::execute1(std::error_code *ec_in)
     // some critical error during process creation
     if (!c || ec)
     {
+        while (c.running())
+            d.ios.poll_one();
+        while (d.pout.is_open() || d.perr.is_open())
+            d.ios.poll_one();
+
         if (ec_in)
         {
             *ec_in = ec;

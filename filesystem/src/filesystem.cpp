@@ -24,7 +24,7 @@ static auto binary_mode = std::ios::binary;
 
 path get_home_directory()
 {
-#ifdef WIN32
+#ifdef _WIN32
     auto home = getenv("USERPROFILE");
     if (!home)
         std::cerr << "Cannot get user's home directory (%USERPROFILE%)\n";
