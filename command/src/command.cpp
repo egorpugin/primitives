@@ -83,7 +83,7 @@ path resolve_executable(const path &p)
         fs::is_regular_file(p)
         )
         return p;
-    // not test direct file
+    // do not test direct file
     if (fs::exists(p) && fs::is_regular_file(p))
         return p;
     // failed, test new exts
@@ -160,17 +160,17 @@ void Command::execute1(std::error_code *ec_in)
     if (working_directory.empty())
         working_directory = ::current_path();
 
+#ifdef _WIN32
+    // widen args
+    std::vector<std::wstring> wargs;
+    for (auto &a : args)
+        wargs.push_back(boost::nowide::widen(a));
+#else
+    const Strings &wargs = args;
+#endif
+
     // local scope, so we automatically close and destroy everything on exit
     CommandData d(get_io_service());
-
-    // setup buffers
-    d.out_buf.resize(buf_size);
-    d.err_buf.resize(buf_size);
-
-    if (!out.file.empty())
-        d.out_fs = primitives::filesystem::fopen(out.file, "wb");
-    if (!err.file.empty() && out.file != err.file)
-        d.err_fs = primitives::filesystem::fopen(err.file, "wb");
 
     auto async_read = [this, &d](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
     {
@@ -226,19 +226,14 @@ void Command::execute1(std::error_code *ec_in)
             std::cerr);
     };
 
+    // setup buffers
+    d.out_buf.resize(buf_size);
+    d.err_buf.resize(buf_size);
+
     d.pout.async_read_some(boost::asio::buffer(d.out_buf), d.out_cb);
     d.perr.async_read_some(boost::asio::buffer(d.err_buf), d.err_cb);
 
     // run
-#ifdef _WIN32
-    // widen args
-    std::vector<std::wstring> wargs;
-    for (auto &a : args)
-        wargs.push_back(boost::nowide::widen(a));
-#else
-    const Strings &wargs = args;
-#endif
-
     auto on_exit = [this, &d](int exit, const std::error_code& ec_in)
     {
         // must be empty, pipes are closed in async_read_some() funcs
@@ -247,38 +242,110 @@ void Command::execute1(std::error_code *ec_in)
     };
 
     std::error_code ec;
-    bp::child c(
-        program
-        , bp::args = wargs
-        , bp::start_dir = working_directory
-
-        , bp::std_in < stdin
-        , bp::std_out > d.pout
-        , bp::std_err > d.perr
-
-        , ec // always use ec
-
-        , d.ios
-        // Without this line boost::process does not work well on linux
-        // in current setup.
-        // It cannot detect empty pipes.
-        , bp::on_exit(on_exit)
-    );
-
-    // some critical error during process creation
-    if (!c || ec)
+    auto error = [this, &ec_in, &ec]()
     {
-        while (c.running())
-            d.ios.poll_one();
-        while (d.pout.is_open() || d.perr.is_open())
-            d.ios.poll_one();
-
         if (ec_in)
         {
             *ec_in = ec;
             return;
         }
         throw std::runtime_error("Last command failed: " + print() + ", ec = " + ec.message());
+    };
+
+    bp::child c;
+    if (!out.file.empty() || !err.file.empty())
+    {
+        if (!out.file.empty() && !err.file.empty())
+        {
+            c = bp::child(
+                program
+                , bp::args = wargs
+                , bp::start_dir = working_directory
+
+                , bp::std_in < stdin
+                , bp::std_out > out.file
+                , bp::std_err > err.file
+
+                , ec // always use ec
+            );
+            if (ec)
+                error();
+            c.wait();
+            return;
+        }
+        else if (!out.file.empty())
+        {
+            c = bp::child(
+                program
+                , bp::args = wargs
+                , bp::start_dir = working_directory
+
+                , bp::std_in < stdin
+                , bp::std_out > out.file
+                , bp::std_err > d.perr
+
+                , ec // always use ec
+
+                , d.ios
+                // Without this line boost::process does not work well on linux
+                // in current setup.
+                // It cannot detect empty pipes.
+                , bp::on_exit(on_exit)
+            );
+            d.pout.close();
+        }
+        else if (!err.file.empty())
+        {
+            c = bp::child(
+                program
+                , bp::args = wargs
+                , bp::start_dir = working_directory
+
+                , bp::std_in < stdin
+                , bp::std_out > d.pout
+                , bp::std_err > err.file
+
+                , ec // always use ec
+
+                , d.ios
+                // Without this line boost::process does not work well on linux
+                // in current setup.
+                // It cannot detect empty pipes.
+                , bp::on_exit(on_exit)
+            );
+            d.perr.close();
+        }
+    }
+    else
+    {
+        c = bp::child(
+            program
+            , bp::args = wargs
+            , bp::start_dir = working_directory
+
+            , bp::std_in < stdin
+            , bp::std_out > d.pout
+            , bp::std_err > d.perr
+
+            , ec // always use ec
+
+            , d.ios
+            // Without this line boost::process does not work well on linux
+            // in current setup.
+            // It cannot detect empty pipes.
+            , bp::on_exit(on_exit)
+        );
+    }
+
+    // some critical error during process creation
+    if (/*!c || */ec)
+    {
+        while (c.running())
+            d.ios.poll_one();
+        while (d.pout.is_open() || d.perr.is_open())
+            d.ios.poll_one();
+
+        error();
     }
 
     using namespace std::literals::chrono_literals;
