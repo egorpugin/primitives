@@ -159,7 +159,7 @@ void Command::execute1(std::error_code *ec_in)
     // local scope, so we automatically close and destroy everything on exit
     CommandData d(get_io_service());
 
-    auto async_read = [this, &d](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
+    auto async_read = [this, &cv = d.cv](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
     {
         if (s)
         {
@@ -178,7 +178,7 @@ void Command::execute1(std::error_code *ec_in)
                 fwrite(&str[0], str.size(), 1, out_fs);
         }
         if (!ec)
-            p.async_read_some(boost::asio::buffer(d.out_buf), out_cb);
+            p.async_read_some(boost::asio::buffer(out_buf), out_cb);
         else
         {
             // win32: ec = 109, pipe is ended
@@ -196,7 +196,7 @@ void Command::execute1(std::error_code *ec_in)
             }
             // if we somehow hit this w/o p.is_open(),
             // we still consider pipe as closed and notice users
-            d.cv.notify_all();
+            cv.notify_all();
         }
     };
 
