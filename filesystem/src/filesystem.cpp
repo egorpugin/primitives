@@ -354,5 +354,5 @@ ScopedFile::~ScopedFile()
 
 size_t ScopedFile::read(void *buf, size_t sz)
 {
-    return fread(buf, sz, 1, f);
+    return fread(buf, 1, sz, f);
 }
