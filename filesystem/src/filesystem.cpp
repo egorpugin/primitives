@@ -3,24 +3,10 @@
 #include <primitives/file_iterator.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/nowide/fstream.hpp>
 #include <boost/nowide/integration/filesystem.hpp>
-#include <boost/nowide/convert.hpp>
 
 #include <iostream>
 #include <regex>
-
-#ifdef _WIN32
-static auto in_mode = 0x01;
-static auto out_mode = 0x02;
-static auto app_mode = 0x08;
-static auto binary_mode = 0x20;
-#else
-static auto in_mode = std::ios::in;
-static auto out_mode = std::ios::out;
-static auto app_mode = std::ios::app;
-static auto binary_mode = std::ios::binary;
-#endif
 
 path get_home_directory()
 {
@@ -75,9 +61,7 @@ String read_file(const path &p, bool no_size_check)
         throw std::runtime_error("File '" + p.string() + "' does not exist");
 
     auto fn = p.string();
-    boost::nowide::ifstream ifile(fn, in_mode | binary_mode);
-    if (!ifile)
-        throw std::runtime_error("Cannot open file '" + fn + "' for reading");
+    ScopedFile ifile(fn, "rb");
 
     size_t sz = (size_t)fs::file_size(p);
     if (!no_size_check && sz > 10'000'000)
@@ -269,7 +253,7 @@ FileIterator::FileIterator(const std::vector<path> &fns)
     {
         File d;
         d.size = fs::file_size(f);
-        d.ifile = std::make_unique<boost::nowide::ifstream>(f.string(), in_mode | binary_mode);
+        d.ifile = std::make_unique<ScopedFile>(f, "rb");
         files.push_back(std::move(d));
     }
 }
@@ -301,12 +285,11 @@ bool FileIterator::iterate(std::function<bool(const BuffersRef &, uint64_t)> f)
     }
 
     while (std::none_of(files.begin(), files.end(),
-        [](const auto &f) { return f.ifile->eof(); }))
+        [](const auto &f) { return feof(f.ifile->getHandle()); }))
     {
         std::for_each(files.begin(), files.end(), [this](auto &f)
         {
-            f.ifile->read((char *)&f.buf[0], buffer_size);
-            f.read = f.ifile->gcount();
+            f.read = f.ifile->read((char *)&f.buf[0], buffer_size);
         });
         if (!is_same_read_size())
             return false;
@@ -367,4 +350,9 @@ ScopedFile::~ScopedFile()
 {
     if (f)
         fclose(f);
+}
+
+size_t ScopedFile::read(void *buf, size_t sz)
+{
+    return fread(buf, sz, 1, f);
 }

@@ -7,18 +7,6 @@
 #include <Winhttp.h>
 #endif
 
-#ifdef _WIN32
-static auto in_mode = 0x01;
-static auto out_mode = 0x02;
-static auto app_mode = 0x08;
-static auto binary_mode = 0x20;
-#else
-static auto in_mode = std::ios::in;
-static auto out_mode = std::ios::out;
-static auto app_mode = std::ios::app;
-static auto binary_mode = std::ios::binary;
-#endif
-
 HttpSettings httpSettings;
 
 String getAutoProxy()

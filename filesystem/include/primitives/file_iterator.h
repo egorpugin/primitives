@@ -1,8 +1,6 @@
 #pragma once
 
-#include <primitives/filesystem.h>
-
-#include <boost/nowide/fstream.hpp>
+#include "filesystem.h"
 
 #include <vector>
 
@@ -14,7 +12,7 @@ struct FileIterator
     struct File
     {
         path fn;
-        std::unique_ptr<boost::nowide::ifstream> ifile;
+        std::unique_ptr<ScopedFile> ifile;
         uint64_t size;
         FileIterator::Buffer buf;
         uint64_t read = 0;

@@ -115,6 +115,8 @@ public:
     FILE *getHandle() const { return f; }
     operator bool() const { return f; }
 
+    size_t read(void *buf, size_t sz);
+
 private:
     FILE *f = nullptr;
 };
