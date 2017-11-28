@@ -24,3 +24,10 @@ String strong_file_hash(const String &data);
 String strong_file_hash(const path &fn);
 
 String shorten_hash(const String &data, size_t size);
+
+template <class T>
+inline size_t hash_combine(size_t &hash, const T &v)
+{
+    boost::hash_combine(hash, v);
+    return hash;
+}
