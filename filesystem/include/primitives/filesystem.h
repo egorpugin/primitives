@@ -6,6 +6,7 @@
 #include <boost/functional/hash.hpp>
 #include <boost/range.hpp>
 
+#include <unordered_map>
 #include <unordered_set>
 
 namespace fs = boost::filesystem;
