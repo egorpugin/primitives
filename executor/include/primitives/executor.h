@@ -11,9 +11,33 @@
 #include <queue>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <vector>
+#include <unordered_map>
 #include <unordered_set>
 
+// invoke_result_t is missing in libc++
+namespace detail
+{
+    
+template <typename AlwaysVoid, typename, typename...>
+struct invoke_result { };
+template <typename F, typename...Args>
+struct invoke_result<decltype(void(std::invoke(std::declval<F>(), std::declval<Args>()...))),
+F, Args...>
+{
+    using type = decltype(std::invoke(std::declval<F>(), std::declval<Args>()...));
+};
+    
+} // namespace detail
+    
+template <class F, class... ArgTypes>
+struct invoke_result : detail::invoke_result<void, F, ArgTypes...> {};
+
+template <class F, class... ArgTypes>
+using invoke_result_t = typename invoke_result<F, ArgTypes...>::type;
+
+//
 using Task = std::function<void()>;
 
 class Executor;
@@ -209,14 +233,14 @@ struct Future
     }
 
     template <class F2, class ... ArgTypes2>
-    Future<std::invoke_result_t<F2, ArgTypes2...>>
+    Future<invoke_result_t<F2, ArgTypes2...>>
         then(F2 &&f, ArgTypes2 && ... args);
 };
 
 template <class F, class ... ArgTypes>
 struct PackagedTask
 {
-    using Ret = std::invoke_result_t<F, ArgTypes...>;
+    using Ret = invoke_result_t<F, ArgTypes...>;
     using Task = std::function<Ret(ArgTypes...)>;
     using FutureType = Future<Ret>;
 
@@ -364,7 +388,7 @@ void SharedState<T>::wait()
 
 template <class Ret>
 template <class F2, class ... ArgTypes2>
-Future<std::invoke_result_t<F2, ArgTypes2...>>
+Future<invoke_result_t<F2, ArgTypes2...>>
 Future<Ret>::then(F2 &&f, ArgTypes2 && ... args)
 {
     if (state->set)
