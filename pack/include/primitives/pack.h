@@ -2,7 +2,7 @@
 
 #include <primitives/filesystem.h>
 
-bool pack_files(const path &archive, std::unordered_map<path, path> &files);
+bool pack_files(const path &archive, const std::unordered_map<path, path> &files);
 bool pack_files(const path &archive, const Files &files, const path &root_dir);
 Files unpack_file(const path &archive, const path &dest_dir);
 
