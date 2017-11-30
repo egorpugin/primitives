@@ -41,7 +41,7 @@ std::unordered_map<path, path> prepare_files(const Files &files, const path &roo
 
 }
 
-bool pack_files(const path &fn, std::unordered_map<path, path> &files)
+bool pack_files(const path &fn, const std::unordered_map<path, path> &files)
 {
     bool result = true;
     auto a = archive_write_new();
