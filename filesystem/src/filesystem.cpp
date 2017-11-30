@@ -319,7 +319,7 @@ FILE *fopen(const path &p, const char *mode)
     }
     return _wfopen(s.c_str(), path(mode).wstring().c_str());
 #else
-    return fopen(p.string().c_str(), mode);
+    return ::fopen(p.string().c_str(), mode);
 #endif
 }
 
