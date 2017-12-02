@@ -19,18 +19,18 @@
 // invoke_result_t is missing in libc++
 namespace detail
 {
-    
+
 template <typename AlwaysVoid, typename, typename...>
-struct invoke_result { };
+struct invoke_result {};
+
 template <typename F, typename...Args>
-struct invoke_result<decltype(void(std::invoke(std::declval<F>(), std::declval<Args>()...))),
-F, Args...>
+struct invoke_result<decltype(void(std::invoke(std::declval<F>(), std::declval<Args>()...))), F, Args...>
 {
     using type = decltype(std::invoke(std::declval<F>(), std::declval<Args>()...));
 };
-    
+
 } // namespace detail
-    
+
 template <class F, class... ArgTypes>
 struct invoke_result : detail::invoke_result<void, F, ArgTypes...> {};
 
