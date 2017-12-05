@@ -59,8 +59,8 @@ projects:
                     version: "*"
                 templates:
                     version: "*"
-                pvt.cppan.demo.klemens_morgenstern.boost.process:
-                    version: develop
+                pvt.cppan.demo.boost.process:
+                    version: master
 
     context:
         name: context
@@ -87,7 +87,7 @@ projects:
         dependencies:
             public:
                 pvt.cppan.demo.boost.date_time:
-                    version: 1
+                    version: master
                 string:
                     version: "*"
 
@@ -112,9 +112,9 @@ projects:
         dependencies:
             public:
                 pvt.cppan.demo.boost.asio:
-                    version: 1
+                    version: master
                 pvt.cppan.demo.boost.system:
-                    version: 1
+                    version: master
                 templates:
                     version: "*"
                 minidump:
@@ -141,8 +141,8 @@ projects:
                             - _WIN32_WINNT=0x0601
 
         dependencies:
-            pvt.cppan.demo.boost.asio: 1
-            pvt.cppan.demo.boost.system: 1
+            pvt.cppan.demo.boost.asio: master
+            pvt.cppan.demo.boost.system: master
 
 
     executor_bt:
@@ -164,9 +164,9 @@ projects:
                             - _WIN32_WINNT=0x0601
 
         dependencies:
-            pvt.cppan.demo.boost.asio: 1
-            pvt.cppan.demo.boost.thread: 1
-            pvt.cppan.demo.boost.system: 1
+            pvt.cppan.demo.boost.asio: master
+            pvt.cppan.demo.boost.thread: master
+            pvt.cppan.demo.boost.system: master
 
     filesystem:
         name: filesystem
@@ -184,7 +184,7 @@ projects:
                 pvt.cppan.demo.artyom_beilis.nowide:
                     version: master
                 pvt.cppan.demo.boost.filesystem:
-                    version: 1
+                    version: master
                 string:
                     version: "*"
 
@@ -251,7 +251,7 @@ projects:
                 filesystem:
                     version: "*"
                 pvt.cppan.demo.boost.interprocess:
-                    version: 1
+                    version: master
 
     log:
         name: log
@@ -267,7 +267,7 @@ projects:
         dependencies:
             public:
                 pvt.cppan.demo.boost.log:
-                    version: 1
+                    version: master
 
 
     minidump:
@@ -326,7 +326,7 @@ projects:
         dependencies:
             public:
                 pvt.cppan.demo.boost.algorithm:
-                    version: 1
+                    version: master
 
     templates:
         name: templates
