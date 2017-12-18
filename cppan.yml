@@ -60,7 +60,7 @@ projects:
                 templates:
                     version: "*"
                 pvt.cppan.demo.boost.process:
-                    version: master
+                    version: 1
 
     context:
         name: context
@@ -87,7 +87,7 @@ projects:
         dependencies:
             public:
                 pvt.cppan.demo.boost.date_time:
-                    version: master
+                    version: 1
                 string:
                     version: "*"
 
@@ -112,9 +112,9 @@ projects:
         dependencies:
             public:
                 pvt.cppan.demo.boost.asio:
-                    version: master
+                    version: 1
                 pvt.cppan.demo.boost.system:
-                    version: master
+                    version: 1
                 templates:
                     version: "*"
                 minidump:
@@ -184,7 +184,7 @@ projects:
                 pvt.cppan.demo.artyom_beilis.nowide:
                     version: master
                 pvt.cppan.demo.boost.filesystem:
-                    version: master
+                    version: 1
                 string:
                     version: "*"
 
@@ -251,7 +251,7 @@ projects:
                 filesystem:
                     version: "*"
                 pvt.cppan.demo.boost.interprocess:
-                    version: master
+                    version: 1
 
     log:
         name: log
@@ -267,7 +267,7 @@ projects:
         dependencies:
             public:
                 pvt.cppan.demo.boost.log:
-                    version: master
+                    version: 1
 
 
     minidump:
@@ -326,7 +326,7 @@ projects:
         dependencies:
             public:
                 pvt.cppan.demo.boost.algorithm:
-                    version: master
+                    version: 1
 
     templates:
         name: templates
