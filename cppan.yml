@@ -11,8 +11,8 @@ local_settings:
             cxx_flags: /std:c++17
 
         gcc5:
-            c_compiler:   gcc-5
-            cxx_compiler: g++-5
+            c_compiler:   gcc-7
+            cxx_compiler: g++-7
 
         macos:
             c_compiler:   clang
