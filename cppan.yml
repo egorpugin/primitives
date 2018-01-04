@@ -10,7 +10,7 @@ local_settings:
             cxx_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
             cxx_flags: /std:c++17
 
-        gcc5:
+        gcc7:
             c_compiler:   gcc-7
             cxx_compiler: g++-7
 
