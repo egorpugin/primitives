@@ -47,7 +47,7 @@ install:
   - if [[ $OSX ]]; then sudo mv cppan /usr/local/bin/cppan; fi
 
 script:
-  - if [[ $LINUX ]]; then cppan --build . --config gcc5 -s; fi
+  - if [[ $LINUX ]]; then cppan --build . --config gcc7 -s; fi
   - if [[ $OSX ]];   then cppan --build . -s; fi
   - ./bin/testxxx
 
