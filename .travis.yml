@@ -50,4 +50,3 @@ script:
   - if [[ $LINUX ]]; then cppan --build . --config gcc5 -s; fi
   - if [[ $OSX ]];   then cppan --build . -s; fi
   - ./bin/testxxx
-

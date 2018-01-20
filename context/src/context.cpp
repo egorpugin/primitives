@@ -1,5 +1,7 @@
 #include <primitives/context.h>
 
+#include <algorithm>
+
 Context::Lines &operator+=(Context::Lines &s1, const Context::Lines &s2)
 {
     s1.insert(s1.end(), s2.begin(), s2.end());
@@ -88,6 +90,17 @@ void Context::addLine(const Text &s)
         lines.push_back(Line{});
     else
         lines.push_back({ s, n_indents });
+}
+
+void Context::removeLine()
+{
+    removeLines(1);
+}
+
+void Context::removeLines(int n)
+{
+    n = std::max(0, (int)lines.size() - n);
+    lines.resize(n);
 }
 
 void Context::increaseIndent(int n)

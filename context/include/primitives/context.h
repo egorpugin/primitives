@@ -41,6 +41,8 @@ public:
     void addLine(const Text &s = Text());
     void addNoNewLine(const Text &s);
     void addLineNoSpace(const Text &s);
+    void removeLine();
+    void removeLines(int n);
 
     void addText(const Text &s);
     void addText(const char* str, int n);

@@ -23,6 +23,8 @@ path current_path(const path &p = path()); // thread working directory
 String read_file(const path &p, bool no_size_check = false);
 void write_file(const path &p, const String &s);
 void write_file_if_different(const path &p, const String &s);
+void prepend_file(const path &p, const String &s);
+void append_file(const path &p, const String &s);
 Strings read_lines(const path &p);
 
 void remove_file(const path &p);

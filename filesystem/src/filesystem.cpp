@@ -79,17 +79,22 @@ Strings read_lines(const path &p)
     return split_lines(s);
 }
 
-void write_file(const path &p, const String &s)
+static void write_file1(const path &p, const String &s, const char *mode)
 {
     auto pp = p.parent_path();
     if (!pp.empty())
         fs::create_directories(pp);
 
-    auto f = primitives::filesystem::fopen(p, "wb");
+    auto f = primitives::filesystem::fopen(p, mode);
     if (!f)
         throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
     fwrite(s.c_str(), s.size(), 1, f);
     fclose(f);
+}
+
+void write_file(const path &p, const String &s)
+{
+    write_file1(p, s, "wb");
 }
 
 void write_file_if_different(const path &p, const String &s)
@@ -101,6 +106,17 @@ void write_file_if_different(const path &p, const String &s)
             return;
     }
     write_file(p, s);
+}
+
+void prepend_file(const path &p, const String &s)
+{
+    auto s2 = read_file(p);
+    write_file(p, s + s2);
+}
+
+void append_file(const path &p, const String &s)
+{
+    write_file1(p, s, "ab");
 }
 
 void copy_dir(const path &src, const path &dst)
