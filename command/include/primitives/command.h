@@ -32,7 +32,7 @@ struct Command
     path working_directory;
 
     // output
-    std::optional<int> exit_code;
+    optional<int> exit_code;
     //Stream input
     Stream out;
     Stream err;
