@@ -184,6 +184,9 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
         REQUIRE(x == "");
         fs::remove("x", ec);
     }
+
+    REQUIRE("c:/Program Files/LLVM/bin/clang++.exe" == normalize_path("c:/Program Files/LLVM/bin\\clang++.exe"));
+    REQUIRE(L"c:/Program Files/LLVM/bin/clang++.exe" == wnormalize_path(L"c:/Program Files/LLVM/bin\\clang++.exe"));
 #endif
 }
 

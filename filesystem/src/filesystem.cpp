@@ -50,7 +50,16 @@ String normalize_path(const path &p)
 {
     if (p.empty())
         return "";
-    String s = p.string();
+    auto s = p.string();
+    normalize_string(s);
+    return s;
+}
+
+std::wstring wnormalize_path(const path &p)
+{
+    if (p.empty())
+        return L"";
+    auto s = p.wstring();
     normalize_string(s);
     return s;
 }

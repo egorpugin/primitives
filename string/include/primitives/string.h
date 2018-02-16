@@ -18,7 +18,9 @@ String trim_double_quotes(String s);
 
 #ifdef _WIN32
 void normalize_string(String &s);
+void normalize_string(std::wstring &s);
 String normalize_string_copy(String s);
+std::wstring normalize_string_copy(std::wstring s);
 #else
 #define normalize_string(s) (s)
 #define normalize_string_copy(s) (s)

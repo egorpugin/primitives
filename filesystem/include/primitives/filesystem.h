@@ -31,6 +31,8 @@ void remove_file(const path &p);
 void remove_all_from_dir(const path &dir);
 
 String normalize_path(const path &p);
+std::wstring wnormalize_path(const path &p);
+
 bool is_under_root(path p, const path &root_dir);
 
 void copy_dir(const path &source, const path &destination);

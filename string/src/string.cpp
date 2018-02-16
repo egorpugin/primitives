@@ -29,7 +29,18 @@ void normalize_string(String &s)
     std::replace(s.begin(), s.end(), '\\', '/');
 }
 
+void normalize_string(std::wstring &s)
+{
+    std::replace(s.begin(), s.end(), L'\\', L'/');
+}
+
 String normalize_string_copy(String s)
+{
+    normalize_string(s);
+    return s;
+}
+
+std::wstring normalize_string_copy(std::wstring s)
 {
     normalize_string(s);
     return s;
