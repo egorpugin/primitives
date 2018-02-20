@@ -24,7 +24,7 @@ path get_home_directory()
     return home;
 }
 
-path current_path(const path &p)
+path current_thread_path(const path &p)
 {
     thread_local path thread_working_dir = p.empty() ? fs::current_path() : fs::absolute(p);
     if (p.empty())

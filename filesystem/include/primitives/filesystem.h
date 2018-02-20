@@ -18,7 +18,7 @@ using Files = std::unordered_set<path>;
 using FilesMap = std::unordered_map<path, path>;
 
 path get_home_directory();
-path current_path(const path &p = path()); // thread working directory
+path current_thread_path(const path &p = path());
 
 String read_file(const path &p, bool no_size_check = false);
 void write_file(const path &p, const String &s);
@@ -67,7 +67,7 @@ class ScopedCurrentPath
 public:
     ScopedCurrentPath()
     {
-        old = ::current_path();
+        old = current_thread_path();
         cwd = old;
     }
     ScopedCurrentPath(const path &p)
@@ -75,9 +75,9 @@ public:
     {
         if (!p.empty())
         {
-            ::current_path(p);
+            current_thread_path(p);
             // abs path, not possibly relative p
-            cwd = ::current_path();
+            cwd = current_thread_path();
         }
     }
     ~ScopedCurrentPath()
@@ -89,7 +89,7 @@ public:
     {
         if (!active)
             return;
-        ::current_path(old);
+        current_thread_path(old);
         cwd = old;
         active = false;
     }
