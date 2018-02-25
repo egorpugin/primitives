@@ -5,6 +5,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/range.hpp>
+#include <flags/flags.hpp>
 
 #include <unordered_map>
 #include <unordered_set>
@@ -62,22 +63,40 @@ namespace std
     };
 }
 
+enum class CurrentPathScope
+{
+    Process     = 0x1,
+    Thread      = 0x2,
+
+    Max,
+    All = Process | Thread,
+};
+ALLOW_FLAGS_FOR_ENUM(CurrentPathScope);
+
 class ScopedCurrentPath
 {
 public:
-    ScopedCurrentPath()
+    ScopedCurrentPath(CurrentPathScope scope = CurrentPathScope::Process)
+        : ctp(scope)
     {
-        old = current_thread_path();
-        cwd = old;
+        if (ctp & CurrentPathScope::Thread)
+            old[(int)CurrentPathScope::Thread] = current_thread_path();
+        if (ctp & CurrentPathScope::Process)
+            old[(int)CurrentPathScope::Process] = fs::current_path();
+
+        set_cwd();
     }
-    ScopedCurrentPath(const path &p)
-        : ScopedCurrentPath()
+    ScopedCurrentPath(const path &p, CurrentPathScope scope = CurrentPathScope::Process)
+        : ScopedCurrentPath(scope)
     {
         if (!p.empty())
         {
-            current_thread_path(p);
-            // abs path, not possibly relative p
-            cwd = current_thread_path();
+            if (ctp & CurrentPathScope::Thread)
+                current_thread_path(p);
+            if (ctp & CurrentPathScope::Process)
+                fs::current_path(p);
+
+            set_cwd();
         }
     }
     ~ScopedCurrentPath()
@@ -89,18 +108,32 @@ public:
     {
         if (!active)
             return;
-        current_thread_path(old);
-        cwd = old;
+
+        if (ctp & CurrentPathScope::Thread)
+            current_thread_path(cwd = old[(int)CurrentPathScope::Thread]);
+        if (ctp & CurrentPathScope::Process)
+            fs::current_path(cwd = old[(int)CurrentPathScope::Process]);
+
         active = false;
     }
 
     path get_cwd() const { return cwd; }
-    path get_old() const { return old; }
+    path get_old(CurrentPathScope scope = CurrentPathScope::Process) const { return old[(int)scope]; }
 
 private:
-    path old;
+    path old[(int)CurrentPathScope::Max];
     path cwd;
     bool active = true;
+    CurrentPathScope ctp = CurrentPathScope::Process;
+
+    void set_cwd()
+    {
+        // abs path, not possibly relative p
+        if (ctp & CurrentPathScope::Thread)
+            cwd = current_thread_path();
+        if (ctp & CurrentPathScope::Process)
+            cwd = fs::current_path();
+    }
 };
 
 namespace primitives::filesystem

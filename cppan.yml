@@ -187,6 +187,8 @@ projects:
                     version: 1
                 string:
                     version: "*"
+                pvt.cppan.demo.grisumbras.enum_flags:
+                    version: master
 
     hash:
         name: hash
