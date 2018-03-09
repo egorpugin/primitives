@@ -29,7 +29,7 @@ local_settings:
             use_cache: false
 
 
-root_project: pvt.egorpugin.primitives
+#root_project: pvt.egorpugin.primitives
 
 common_settings:
     c++: 17
