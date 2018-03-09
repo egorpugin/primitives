@@ -26,10 +26,10 @@ path get_home_directory()
 
 path current_thread_path(const path &p)
 {
-    thread_local path thread_working_dir = p.empty() ? fs::current_path() : fs::absolute(p);
+    thread_local path thread_working_dir = p.empty() ? fs::current_path() : fs::canonical(fs::absolute(p));
     if (p.empty())
         return thread_working_dir;
-    return thread_working_dir = fs::absolute(p);
+    return thread_working_dir = fs::canonical(fs::absolute(p));
 }
 
 void remove_file(const path &p)
