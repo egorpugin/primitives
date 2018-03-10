@@ -43,7 +43,7 @@ Executor &getExecutor(size_t N)
             N += 8;
         return N;
     }();
-    static Executor e(N);
+    static Executor e(threads);
     return e;
 }
 
@@ -58,10 +58,10 @@ Executor::Executor(size_t nThreads, const std::string &name)
     thread_pool.resize(nThreads);
     for (size_t i = 0; i < nThreads; i++)
     {
-        thread_pool[i].t = std::move(std::thread([this, i, name = name]() mutable
+        thread_pool[i].t = std::thread([this, i, name = name]() mutable
         {
             run(i, name);
-        }));
+        });
     }
 }
 

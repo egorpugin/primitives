@@ -64,7 +64,7 @@ int GenerateDump(_EXCEPTION_POINTERS* pExceptionPointers)
         hDumpFile, MiniDumpWithDataSegs, &ExpParam, NULL, NULL);
 
     if (!bMiniDumpSuccessful)
-        _tprintf(_T("MiniDumpWriteDump failed. Error: %u \n"), GetLastError());
+        _tprintf(_T("MiniDumpWriteDump failed. Error: %lu \n"), GetLastError());
     else
         _tprintf(_T("Minidump created: %ws\n"), szFileName);
 

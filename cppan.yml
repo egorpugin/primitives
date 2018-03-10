@@ -1,4 +1,5 @@
 local_settings:
+    build_dir_type: local
     use_shared_libs: false
     rc_enabled: false
     builds:
@@ -33,6 +34,16 @@ root_project: pvt.egorpugin.primitives
 
 common_settings:
     c++: 17
+
+    options:
+        any:
+            compile_options:
+                clang:
+                    private:
+                        - -Wno-assume
+                        - -Wno-potentially-evaluated-expression
+                        - -Wno-delete-non-virtual-dtor
+
 
 projects:
     command:
@@ -141,8 +152,8 @@ projects:
                             - _WIN32_WINNT=0x0601
 
         dependencies:
-            pvt.cppan.demo.boost.asio: master
-            pvt.cppan.demo.boost.system: master
+            pvt.cppan.demo.boost.asio: 1
+            pvt.cppan.demo.boost.system: 1
 
 
     executor_bt:
@@ -164,9 +175,9 @@ projects:
                             - _WIN32_WINNT=0x0601
 
         dependencies:
-            pvt.cppan.demo.boost.asio: master
-            pvt.cppan.demo.boost.thread: master
-            pvt.cppan.demo.boost.system: master
+            pvt.cppan.demo.boost.asio: 1
+            pvt.cppan.demo.boost.thread: 1
+            pvt.cppan.demo.boost.system: 1
 
     filesystem:
         name: filesystem

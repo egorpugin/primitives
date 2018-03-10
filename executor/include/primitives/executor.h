@@ -560,7 +560,7 @@ Future<void> whenAll(Futures && ... futures)
     constexpr auto sz = sizeof...(futures);
 
     SharedStatePtr<Ret> s;
-    if (sizeof...(futures) == 0)
+    if (sz == 0)
     {
         s = makeSharedState<Ret>(getExecutor());
         s->set = true;
@@ -597,7 +597,11 @@ Future<void> whenAll(Futures && ... futures)
 
     // set cb
     auto ac = std::make_shared<std::atomic_size_t>();
-    for_each(t, [&sz, &s, &ac](auto &f)
+    for_each(t, [&s, &ac
+#if defined(_MSC_VER) && !defined(__clang__)
+        , &sz
+#endif
+    ](auto &f)
     {
         f.state->callbacks.push_back([s, max = sz - 1, ac]
         {
@@ -622,7 +626,7 @@ Future<size_t> whenAny(Futures && ... futures)
     using Ret = size_t;
 
     auto t = std::make_tuple(std::forward<Futures>(futures)...);
-    constexpr auto sz = sizeof...(futures);
+    //constexpr auto sz = sizeof...(futures);
 
     SharedStatePtr<Ret> s;
     if (sizeof...(futures) == 0)

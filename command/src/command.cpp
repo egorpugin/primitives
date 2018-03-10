@@ -221,7 +221,7 @@ void Command::execute1(std::error_code *ec_in)
     d.perr.async_read_some(boost::asio::buffer(d.err_buf), d.err_cb);
 
     // run
-    auto on_exit = [this, &d](int exit, const std::error_code& ec_in)
+    auto on_exit = [](int exit, const std::error_code& ec_in)
     {
         // must be empty, pipes are closed in async_read_some() funcs
         //d.pout.async_close();
@@ -348,7 +348,7 @@ void Command::execute1(std::error_code *ec_in)
             continue;
         }
         // no jobs available, do a small sleep waiting for process
-        delay = delay > 1s ? 1s : delay;
+        delay = delay > max ? max : delay;
         c.wait_for(delay);
         delay += 100ms;
     }
@@ -364,7 +364,7 @@ void Command::execute1(std::error_code *ec_in)
         }
         // no jobs available, do a small sleep waiting for pipes closed
         std::unique_lock<std::mutex> lk(d.m);
-        delay = delay > 1s ? 1s : delay;
+        delay = delay > max ? max : delay;
         d.cv.wait_for(lk, delay, [&d] {return !d.pout.is_open() && !d.perr.is_open(); });
         delay += 100ms;
 

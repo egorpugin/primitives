@@ -9,7 +9,7 @@
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 
-DECLARE_STATIC_LOGGER(logger, "logger");
+//DECLARE_STATIC_LOGGER(logger, "logger");
 
 BOOST_LOG_ATTRIBUTE_KEYWORD(timestamp, "TimeStamp", boost::posix_time::ptime)
 BOOST_LOG_ATTRIBUTE_KEYWORD(thread_id, "ThreadID", boost::log::attributes::current_thread_id::value_type)
@@ -28,15 +28,15 @@ boost::shared_ptr<
     >> c_log;
 
 #ifdef _WIN32
-static auto in_mode = 0x01;
+//static auto in_mode = 0x01;
 static auto out_mode = 0x02;
 static auto app_mode = 0x08;
-static auto binary_mode = 0x20;
+//static auto binary_mode = 0x20;
 #else
-static auto in_mode = std::ios::in;
+//static auto in_mode = std::ios::in;
 static auto out_mode = std::ios::out;
 static auto app_mode = std::ios::app;
-static auto binary_mode = std::ios::binary;
+//static auto binary_mode = std::ios::binary;
 #endif
 
 void logFormatter(boost::log::record_view const& rec, boost::log::formatting_ostream& strm)
