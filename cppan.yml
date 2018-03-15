@@ -1,48 +1,32 @@
 local_settings:
-    build_dir_type: local
+    #build_dir_type: local
     use_shared_libs: false
     rc_enabled: false
     builds:
         vs_release:
             generator: Visual Studio 15 2017
-
         vs_preview:
-            c_compiler:   c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
+            c_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
             cxx_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
             cxx_flags: /std:c++17
-
         gcc7:
-            c_compiler:   gcc-7
+            c_compiler: gcc-7
             cxx_compiler: g++-7
-
         macos:
-            c_compiler:   clang
+            c_compiler: clang
             cxx_compiler: clang++
-
         vs_llvm:
             toolset: LLVM-vs2014
-
-        # run vcvars64 before this config
         win_clang_ninja:
             generator: Ninja
             c_compiler: clang-cl
             cxx_compiler: clang-cl
             use_cache: false
 
-
 root_project: pvt.egorpugin.primitives
 
 common_settings:
     c++: 17
-
-    options:
-        any:
-            compile_options:
-                clang:
-                    private:
-                        - -Wno-assume
-                        - -Wno-potentially-evaluated-expression
-                        - -Wno-delete-non-virtual-dtor
 
 
 projects:
@@ -54,7 +38,6 @@ projects:
         root_directory: command
 
 
-
         static_only: true
 
         options:
@@ -62,7 +45,13 @@ projects:
                 definitions:
                     win32:
                         public:
-                            - _WIN32_WINNT=0x0601
+                            -   _WIN32_WINNT=0x0601
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
 
         dependencies:
             public:
@@ -84,6 +73,29 @@ projects:
 
         static_only: true
 
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+
+    cron:
+        name: cron
+
+        type: library
+
+        root_directory: cron
+
+        dependencies:
+            public:
+                log:
+                    version: "*"
+                executor:
+                    version: "*"
+
     date_time:
         name: date_time
 
@@ -94,6 +106,15 @@ projects:
 
 
         static_only: true
+
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
 
         dependencies:
             public:
@@ -118,7 +139,13 @@ projects:
                 definitions:
                     win32:
                         private:
-                            - _WIN32_WINNT=0x0601
+                            -   _WIN32_WINNT=0x0601
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
 
         dependencies:
             public:
@@ -126,35 +153,10 @@ projects:
                     version: 1
                 pvt.cppan.demo.boost.system:
                     version: 1
-                templates:
-                    version: "*"
                 minidump:
                     version: "*"
-
-
-
-    executor_io:
-        name: executor_io
-
-        type: library
-
-        root_directory: executor_io
-
-
-
-        static_only: true
-
-        options:
-            any:
-                definitions:
-                    win32:
-                        private:
-                            - _WIN32_WINNT=0x0601
-
-        dependencies:
-            pvt.cppan.demo.boost.asio: 1
-            pvt.cppan.demo.boost.system: 1
-
+                templates:
+                    version: "*"
 
     executor_bt:
         name: executor_bt
@@ -172,12 +174,53 @@ projects:
                 definitions:
                     win32:
                         private:
-                            - _WIN32_WINNT=0x0601
+                            -   _WIN32_WINNT=0x0601
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
 
         dependencies:
-            pvt.cppan.demo.boost.asio: 1
-            pvt.cppan.demo.boost.thread: 1
-            pvt.cppan.demo.boost.system: 1
+            public:
+                pvt.cppan.demo.boost.asio:
+                    version: 1
+                pvt.cppan.demo.boost.thread:
+                    version: 1
+                pvt.cppan.demo.boost.system:
+                    version: 1
+
+    executor_io:
+        name: executor_io
+
+        type: library
+
+        root_directory: executor_io
+
+
+
+        static_only: true
+
+        options:
+            any:
+                definitions:
+                    win32:
+                        private:
+                            -   _WIN32_WINNT=0x0601
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+
+        dependencies:
+            public:
+                pvt.cppan.demo.boost.asio:
+                    version: 1
+                pvt.cppan.demo.boost.system:
+                    version: 1
 
     filesystem:
         name: filesystem
@@ -190,14 +233,23 @@ projects:
 
         static_only: true
 
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+
         dependencies:
             public:
                 pvt.cppan.demo.artyom_beilis.nowide:
                     version: master
-                pvt.cppan.demo.boost.filesystem:
-                    version: 1
                 string:
                     version: "*"
+                pvt.cppan.demo.boost.filesystem:
+                    version: 1
                 pvt.cppan.demo.grisumbras.enum_flags:
                     version: master
 
@@ -211,6 +263,15 @@ projects:
 
 
         static_only: true
+
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
 
         dependencies:
             public:
@@ -234,6 +295,12 @@ projects:
 
         options:
             any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
                 link_libraries:
                     win32:
                         public:
@@ -241,10 +308,10 @@ projects:
 
         dependencies:
             public:
-                filesystem:
-                    version: "*"
                 pvt.cppan.demo.badger.curl.libcurl:
                     version: 7
+                filesystem:
+                    version: "*"
                 templates:
                     version: "*"
 
@@ -258,6 +325,15 @@ projects:
 
 
         static_only: true
+
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
 
         dependencies:
             public:
@@ -277,24 +353,43 @@ projects:
 
         static_only: true
 
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+
         dependencies:
             public:
                 pvt.cppan.demo.boost.log:
                     version: 1
 
-
     minidump:
         name: minidump
+
         type: library
+
         root_directory: minidump
+
+
+
         static_only: true
 
         options:
             any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
                 link_libraries:
                     win32:
                         public:
-                            - dbghelp
+                            -   dbghelp
 
     pack:
         name: pack
@@ -307,14 +402,23 @@ projects:
 
         static_only: true
 
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+
         dependencies:
             public:
                 filesystem:
                     version: "*"
-                templates:
-                    version: "*"
                 pvt.cppan.demo.libarchive.libarchive:
                     version: 3
+                templates:
+                    version: "*"
 
     sqlite_db:
         name: sqlite_db
@@ -324,6 +428,15 @@ projects:
         root_directory: sqlite_db
 
 
+
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
 
     string:
         name: string
@@ -335,6 +448,15 @@ projects:
 
 
         static_only: true
+
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
 
         dependencies:
             public:
@@ -349,44 +471,15 @@ projects:
         root_directory: templates
 
 
-    yaml:
-        name: yaml
-        static_only: true
 
-        type: library
-
-
-
-        root_directory: yaml
-
-        dependencies:
-            public:
-                pvt.cppan.demo.jbeder.yaml_cpp:
-                    version: master
-                string:
-                    version: "*"
-
-    testxxx:
-
-
-        files:
-            -   main.cpp
-
-        dependencies:
-            public:
-                command:
-                    version: "*"
-                date_time:
-                    version: "*"
-                executor:
-                #executor_io:
-                    version: "*"
-                hash:
-                    version: "*"
-                yaml:
-                    version: "*"
-                pvt.cppan.demo.philsquared.catch:
-                    version: 1
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
 
     test_executor:
 
@@ -394,12 +487,20 @@ projects:
         files:
             -   test_executor.cpp
 
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+
         dependencies:
             public:
                 command:
                     version: "*"
                 executor:
-                #executor_io:
                     version: "*"
                 hash:
                     version: "*"
@@ -414,11 +515,50 @@ projects:
         files:
             -   test_executor_bt.cpp
 
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+
         dependencies:
             public:
                 command:
                     version: "*"
+                pvt.cppan.demo.philsquared.catch:
+                    version: 1
                 executor_bt:
+                    version: "*"
+                hash:
+                    version: "*"
+                yaml:
+                    version: "*"
+
+    testxxx:
+
+
+        files:
+            -   main.cpp
+
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+
+        dependencies:
+            public:
+                command:
+                    version: "*"
+                date_time:
+                    version: "*"
+                executor:
                     version: "*"
                 hash:
                     version: "*"
@@ -427,4 +567,30 @@ projects:
                 pvt.cppan.demo.philsquared.catch:
                     version: 1
 
+    yaml:
+        name: yaml
+
+        type: library
+
+        root_directory: yaml
+
+
+
+        static_only: true
+
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+
+        dependencies:
+            public:
+                pvt.cppan.demo.jbeder.yaml_cpp:
+                    version: master
+                string:
+                    version: "*"
 

@@ -737,7 +737,7 @@ std::vector<std::exception_ptr> waitAndGetAllExceptions(const std::vector<F> &fu
 namespace primitives::executor
 {
 
-extern bool bExecutorUseSEH;
+inline bool bExecutorUseSEH = false;
 
 }
 #endif

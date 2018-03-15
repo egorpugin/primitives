@@ -12,15 +12,6 @@
 //#include "log.h"
 //DECLARE_STATIC_LOGGER(logger, "executor");
 
-#ifdef _WIN32
-namespace primitives::executor
-{
-
-bool bExecutorUseSEH = false;
-
-}
-#endif
-
 size_t get_max_threads(size_t N)
 {
     return std::max<size_t>(N, std::thread::hardware_concurrency());
