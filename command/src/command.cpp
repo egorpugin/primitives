@@ -136,9 +136,11 @@ void Command::execute1(std::error_code *ec_in)
         auto p = resolve_executable(program);
         if (p.empty())
         {
+            auto e = "Cannot resolve executable: " + program.string();
             if (!ec_in)
-                throw std::runtime_error("Cannot resolve executable: " + program.string());
+                throw std::runtime_error(e);
             *ec_in = std::make_error_code(std::errc::no_such_file_or_directory);
+            err.text = e;
             return;
         }
         program = p;

@@ -567,6 +567,31 @@ projects:
                 pvt.cppan.demo.philsquared.catch:
                     version: 1
 
+
+    win32helpers:
+        name: win32helpers
+
+        type: library
+
+        root_directory: win32helpers
+
+        options:
+            any:
+                definitions:
+                    win32:
+                        private:
+                            -   UNICODE
+
+        dependencies:
+            public:
+                filesystem:
+                    version: "*"
+                pvt.cppan.demo.boost.dll:
+                    version: 1
+                pvt.cppan.demo.boost.algorithm:
+                    version: 1
+
+
     yaml:
         name: yaml
 
