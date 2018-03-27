@@ -331,3 +331,11 @@ void elevate()
     Elevate();
 #endif
 }
+
+bool is_elevated()
+{
+#ifdef _WIN32
+    return IsRunAsAdmin();
+#endif
+    return false;
+}

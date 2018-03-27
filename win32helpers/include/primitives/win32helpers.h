@@ -20,6 +20,7 @@
 
 bool create_link(const path &file, const path &link, const String &description = String());
 void elevate();
+bool is_elevated();
 
 #ifdef _WIN32
 using _DWORD = unsigned long;
