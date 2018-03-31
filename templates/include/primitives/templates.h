@@ -18,7 +18,10 @@
 #endif
 
 #define SCOPE_EXIT \
-    auto ANONYMOUS_VARIABLE(SCOPE_EXIT_STATE) = ::detail::ScopeGuardOnExit() + [&]()
+    auto ANONYMOUS_VARIABLE(SCOPE_EXIT_STATE) = SCOPE_EXIT_NAMED
+
+#define SCOPE_EXIT_NAMED \
+    ::detail::ScopeGuardOnExit() + [&]()
 
 #define RUN_ONCE_IMPL(kv) \
     kv std::once_flag ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG); ScopeGuard(&ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG)) + [&]()

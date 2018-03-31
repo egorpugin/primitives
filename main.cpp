@@ -5,6 +5,9 @@ name: main
 
 #include <primitives/command.h>
 #include <primitives/date_time.h>
+#include <primitives/db.h>
+#include <primitives/schema_manager.h>
+#include <primitives/db/sqlite3.h>
 #include <primitives/executor.h>
 #include <primitives/filesystem.h>
 #include <primitives/hash.h>
@@ -492,6 +495,167 @@ TEST_CASE("Checking executor", "[executor]")
         f3.get();
         REQUIRE(i == 172);
     }
+}
+
+TEST_CASE("Checking db", "[db]")
+{
+    using namespace primitives::db;
+    using namespace primitives::db::sqlite3;
+
+    auto get_db = [](int n)
+    {
+        return std::to_string(n) + ".db";
+    };
+
+    int i = 1;
+    while (1)
+    {
+        auto db = get_db(i++);
+        if (!fs::exists(db))
+            break;
+        fs::remove(db);
+    }
+
+    std::vector<SqliteDatabase> sdb;
+    for (int i = 0; i < 4 + 1; i++)
+        sdb.emplace_back(get_db(i));
+
+    StringDatabaseSchemaManager m;
+    m.database = &sdb[1];
+    m.latestSchema = "CREATE TABLE a (a INTERGER)";
+
+    // create db 1
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    REQUIRE_NOTHROW(m.createOrUpdate());
+
+    // create db 2
+    m.database = &sdb[2];
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    m.database = &sdb[1];
+
+    // ...
+
+    m.latestSchema = R"xxx(
+CREATE TABLE a (a INTERGER);
+CREATE TABLE b (b INTERGER);
+)xxx";
+    m.diffSqls = {
+        "CREATE TABLE b (b INTERGER)"
+    };
+
+    // update db 1
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    REQUIRE_NOTHROW(m.createOrUpdate());
+
+    // create db 3
+    m.database = &sdb[3];
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    m.database = &sdb[1];
+
+    // ...
+
+    m.latestSchema = R"xxx(
+CREATE TABLE a (a INTERGER);
+CREATE TABLE b (b INTERGER);
+CREATE TABLE c (c INTERGER);
+)xxx";
+    m.diffSqls = {
+        "CREATE TABLE b (b INTERGER)",
+        "CREATE TABLE c (c INTERGER)",
+    };
+
+    // update db 1
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    REQUIRE_NOTHROW(m.createOrUpdate());
+
+    // update db 2
+    m.database = &sdb[2];
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    m.database = &sdb[1];
+
+    // update db 3
+    m.database = &sdb[3];
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    m.database = &sdb[1];
+
+    // ...
+
+    m.latestSchema = R"xxx(
+CREATE TABLE a (a INTERGER);
+CREATE TABLE b (b INTERGER);
+CREATE TABLE c (c INTERGER);
+CREATE TABLE d (d INTERGER);
+)xxx";
+    m.diffSqls = {
+        "CREATE TABLE b (b INTERGER)",
+        "CREATE TABLE c (c INTERGER)",
+        "CREATE TABLE d (d INTERGER)",
+    };
+
+    // update db 1
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    REQUIRE_NOTHROW(m.createOrUpdate());
+
+    // update db 2
+    m.database = &sdb[2];
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    m.database = &sdb[1];
+
+    // update db 3
+    m.database = &sdb[3];
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    m.database = &sdb[1];
+
+    // create db 4
+    m.database = &sdb[4];
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    REQUIRE_NOTHROW(m.createOrUpdate());
+    m.database = &sdb[1];
+
+    REQUIRE(sdb[1].getValue<int>("version") == 3);
+    REQUIRE(sdb[2].getValue<int>("version") == 3);
+    REQUIRE(sdb[3].getValue<int>("version") == 3);
+    REQUIRE(sdb[4].getValue<int>("version") == 3);
+
+    sdb[1].setValue<int>("version", 0);
+    REQUIRE_THROWS(m.createOrUpdate());
+
+    sdb[1].setValue<int>("version", 1);
+    REQUIRE_THROWS(m.createOrUpdate());
+
+    sdb[1].setValue<int>("version", 2);
+    REQUIRE_THROWS(m.createOrUpdate());
+
+    sdb[1].setValue<int>("version", 3);
+    REQUIRE_NOTHROW(m.createOrUpdate());
+
+    REQUIRE_THROWS(sdb[1].setValue<int>("-", 3));
+    REQUIRE_THROWS(sdb[1].setValue<double>("'", 3));
+    REQUIRE_THROWS(sdb[1].setValue<String>("85", ""));
+    REQUIRE_THROWS(sdb[1].setValue<String>("8a", ""));
+    REQUIRE_THROWS(sdb[1].getValue<String>("abc-"));
+
+    REQUIRE_NOTHROW(sdb[1].getValue<String>("abc_85") == "");
+    REQUIRE_NOTHROW(sdb[1].setValue<String>("_a8_123asd", "123"));
+    REQUIRE_NOTHROW(sdb[1].getValue<String>("_a8_123asd") == "123");
+    REQUIRE_NOTHROW(sdb[1].setValue<double>("_a8_123asd1", 2.5));
+    REQUIRE_NOTHROW(sdb[1].getValue<double>("_a8_123asd1") == 2.5);
+
+    REQUIRE(!sdb[1].getValue<int>("versionxxx"));
+    REQUIRE(!sdb[1].getValue<int>("_a8_123asd2"));
+
+    REQUIRE_NOTHROW(sdb[1].setValue("xxx1", 1));
+    REQUIRE_NOTHROW(sdb[1].setValue("xxx2", 11.234));
+    REQUIRE_NOTHROW(sdb[1].setValue("xxx3", "123"));
+    REQUIRE_NOTHROW(sdb[1].getValue<String>("xxx3") == "123");
+    REQUIRE_NOTHROW(sdb[1].setValue("xxx3", "123"s));
+    REQUIRE_NOTHROW(sdb[1].getValue<String>("xxx3") == "123"s);
 }
 
 #include <primitives/yaml.h>

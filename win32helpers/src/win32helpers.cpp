@@ -275,10 +275,8 @@ void SetupConsole()
                 exit(1);
             }
         }
-
-        // if we got inherited streams, do not rebind std handles
-        // maybe put this outside condition?
-        if (flags & HANDLE_FLAG_INHERIT)
+        // if we've attached (got inherited streams), do not rebind std handles
+        else if (flags & HANDLE_FLAG_INHERIT)
             return;
     }
 

@@ -96,6 +96,42 @@ projects:
                 executor:
                     version: "*"
 
+    db.common:
+        type: library
+
+        root_directory: db/common
+
+        dependencies:
+            public:
+                filesystem:
+                    version: "*"
+                templates:
+                    version: "*"
+
+    db.sqlite3:
+        type: library
+
+        root_directory: db/sqlite3
+
+        dependencies:
+            public:
+                db.common:
+                    version: "*"
+                pvt.cppan.demo.sqlite3:
+                    version: 3
+
+    db.postgresql:
+        type: library
+
+        root_directory: db/postgresql
+
+        dependencies:
+            public:
+                db.common:
+                    version: "*"
+                pvt.cppan.demo.jtv.pqxx:
+                    version: "*"
+
     date_time:
         name: date_time
 
@@ -555,6 +591,8 @@ projects:
         dependencies:
             public:
                 command:
+                    version: "*"
+                db.sqlite3:
                     version: "*"
                 date_time:
                     version: "*"
