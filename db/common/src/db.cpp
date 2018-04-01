@@ -1,7 +1,5 @@
 #include <primitives/db.h>
 
-#include <primitives/schema_manager.h>
-
 #include <primitives/templates.h>
 
 #include <regex>
@@ -67,18 +65,49 @@ size_t StringDatabaseSchemaManager::getDiffSqlSize() const
     return diffSqls.size();
 }
 
+FileDatabaseSchemaManager StringDatabaseSchemaManager::write(const path &dir) const
+{
+    if (fs::exists(dir))
+        remove_all_from_dir(dir);
+    else
+        fs::create_directories(dir);
+
+    FileDatabaseSchemaManager fm;
+    fm.diffSqlsDir = dir;
+    fm.latestSchemaFilename = dir / default_schema_filename;
+    write_file(fm.latestSchemaFilename, latestSchema);
+    int i = 0;
+    for (auto &d : diffSqls)
+        write_file(fm.getDiffSqlFilename(i++), d);
+    return fm;
+}
+
+StringDatabaseSchemaManager FileDatabaseSchemaManager::read(const path &dir) const
+{
+    StringDatabaseSchemaManager sm;
+    sm.latestSchema = read_file(latestSchemaFilename);
+    auto n = getDiffSqlSize();
+    for (size_t i = 0; i < n; i++)
+        sm.diffSqls.push_back(getDiffSql(i));
+    return sm;
+}
+
 String FileDatabaseSchemaManager::getLatestSchema() const
 {
     return read_file(latestSchemaFilename, true);
 }
 
-String FileDatabaseSchemaManager::getDiffSql(int i) const
+path FileDatabaseSchemaManager::getDiffSqlFilename(int i) const
 {
-    path fn = diffSqlsDir;
     const int sz = 100;
     char buf[sz] = { 0 };
     snprintf(buf, sz, diffSqlsFileMask.c_str(), i);
-    return read_file(fn / buf);
+    return diffSqlsDir / buf;
+}
+
+String FileDatabaseSchemaManager::getDiffSql(int i) const
+{
+    return read_file(getDiffSqlFilename(i));
 }
 
 size_t FileDatabaseSchemaManager::getDiffSqlSize() const
@@ -86,7 +115,7 @@ size_t FileDatabaseSchemaManager::getDiffSqlSize() const
     size_t n = 0;
     for (auto &f : boost::make_iterator_range(fs::directory_iterator(diffSqlsDir), {}))
     {
-        if (fs::is_regular_file(f))
+        if (fs::is_regular_file(f) && f.path().filename().string().find(default_diffs_prefix) == 0)
             n++;
     }
     return n;

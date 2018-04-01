@@ -15,9 +15,6 @@ name: main
 #include <chrono>
 #include <iostream>
 
-#undef min
-#undef max
-
 #define CATCH_CONFIG_RUNNER
 #include <catch.hpp>
 
@@ -507,7 +504,7 @@ TEST_CASE("Checking db", "[db]")
         return std::to_string(n) + ".db";
     };
 
-    int i = 1;
+    int i = 0;
     while (1)
     {
         auto db = get_db(i++);
@@ -641,11 +638,11 @@ CREATE TABLE d (d INTERGER);
     REQUIRE_THROWS(sdb[1].setValue<String>("8a", ""));
     REQUIRE_THROWS(sdb[1].getValue<String>("abc-"));
 
-    REQUIRE_NOTHROW(sdb[1].getValue<String>("abc_85") == "");
+    REQUIRE(!sdb[1].getValue<String>("abc_85"));
     REQUIRE_NOTHROW(sdb[1].setValue<String>("_a8_123asd", "123"));
-    REQUIRE_NOTHROW(sdb[1].getValue<String>("_a8_123asd") == "123");
+    REQUIRE(sdb[1].getValue<String>("_a8_123asd") == "123");
     REQUIRE_NOTHROW(sdb[1].setValue<double>("_a8_123asd1", 2.5));
-    REQUIRE_NOTHROW(sdb[1].getValue<double>("_a8_123asd1") == 2.5);
+    REQUIRE(sdb[1].getValue<double>("_a8_123asd1") == 2.5);
 
     REQUIRE(!sdb[1].getValue<int>("versionxxx"));
     REQUIRE(!sdb[1].getValue<int>("_a8_123asd2"));
@@ -653,12 +650,48 @@ CREATE TABLE d (d INTERGER);
     REQUIRE_NOTHROW(sdb[1].setValue("xxx1", 1));
     REQUIRE_NOTHROW(sdb[1].setValue("xxx2", 11.234));
     REQUIRE_NOTHROW(sdb[1].setValue("xxx3", "123"));
-    REQUIRE_NOTHROW(sdb[1].getValue<String>("xxx3") == "123");
+    REQUIRE(sdb[1].getValue<String>("xxx3") == "123");
     REQUIRE_NOTHROW(sdb[1].setValue("xxx3", "123"s));
-    REQUIRE_NOTHROW(sdb[1].getValue<String>("xxx3") == "123"s);
+    REQUIRE(sdb[1].getValue<String>("xxx3") == "123"s);
+
+    REQUIRE(sdb[1].getValue<String>("xxx3", "x") == "123"s);
+    REQUIRE(sdb[1].getValue<String>("xxx4", "x") == "x"s);
+    REQUIRE(sdb[1].getValue("xxx4", "123"s) == "x"s);
+    REQUIRE_THROWS(sdb[1].getValue("xxx4", 0) == 0); // different types
+    REQUIRE(sdb[1].getValue("xxx5", 0) == 0);
+    REQUIRE(sdb[1].getValue("xxx6", 5.5) == 5.5);
+    REQUIRE(sdb[1].getValue<double>("xxx6", 0) == 5.5);
+
+    REQUIRE(sdb[1].getValue("xxx7", 0) == 0);
+    REQUIRE(sdb[1].getValue<int>("xxx7") == 0);
+
+    REQUIRE(sdb[1].getValue("xxx8", 10) == 10);
+    REQUIRE(sdb[1].getValue<int>("xxx8") == 10);
+
+    auto fm = m.write("1");
+    REQUIRE(fm.getDiffSqlSize() == 3);
+    write_file(fm.getDiffSqlFilename(fm.getDiffSqlSize()), "CREATE TABLE e (e INTERGER)");
+    REQUIRE(fm.getDiffSqlSize() == 4);
+    fm.database = &sdb[1];
+
+    REQUIRE_NOTHROW(fm.createOrUpdate());
+    REQUIRE_NOTHROW(fm.createOrUpdate());
+    REQUIRE_THROWS(sdb[1].execute("CREATE TABLE e (e INTERGER)"));
+
+    m = fm.read(fm.diffSqlsDir);
+    REQUIRE(m.getDiffSqlSize() == 4);
+
+    write_file(fm.getDiffSqlFilename(fm.getDiffSqlSize()), "CREATE TABLE f (f INTERGER)");
+    REQUIRE_NOTHROW(createOrUpdateSchema(sdb[1], fm.latestSchemaFilename, path("1")));
+    REQUIRE_THROWS(sdb[1].execute("CREATE TABLE f (f INTERGER)"));
+
+    REQUIRE_NOTHROW(fm.createOrUpdate());
+    REQUIRE_NOTHROW(fm.createOrUpdate());
+
+    REQUIRE(fm.getDiffSqlSize() == 5);
 }
 
-#include <primitives/yaml.h>
+//#include <primitives/yaml.h>
 
 int main(int argc, char **argv)
 {

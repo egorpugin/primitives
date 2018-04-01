@@ -196,6 +196,7 @@ projects:
 
     executor_bt:
         name: executor_bt
+        skip_on_server: true
 
         type: library
 
@@ -229,6 +230,7 @@ projects:
 
     executor_io:
         name: executor_io
+        skip_on_server: true
 
         type: library
 
@@ -518,6 +520,7 @@ projects:
                             -   -Wno-potentially-evaluated-expression
 
     test_executor:
+        skip_on_server: true
 
 
         files:
@@ -542,10 +545,11 @@ projects:
                     version: "*"
                 yaml:
                     version: "*"
-                pvt.cppan.demo.philsquared.catch:
-                    version: 1
+                pvt.cppan.demo.catchorg.catch2:
+                    version: 2
 
     test_executor_bt:
+        skip_on_server: true
 
 
         files:
@@ -564,8 +568,8 @@ projects:
             public:
                 command:
                     version: "*"
-                pvt.cppan.demo.philsquared.catch:
-                    version: 1
+                pvt.cppan.demo.catchorg.catch2:
+                    version: 2
                 executor_bt:
                     version: "*"
                 hash:
@@ -574,6 +578,7 @@ projects:
                     version: "*"
 
     testxxx:
+        skip_on_server: true
 
 
         files:
@@ -602,8 +607,8 @@ projects:
                     version: "*"
                 yaml:
                     version: "*"
-                pvt.cppan.demo.philsquared.catch:
-                    version: 1
+                pvt.cppan.demo.catchorg.catch2:
+                    version: 2
 
 
     win32helpers:

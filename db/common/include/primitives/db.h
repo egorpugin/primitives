@@ -1,6 +1,6 @@
 #pragma once
 
-#include <primitives/filesystem.h>
+#include <primitives/schema_manager.h>
 #include <primitives/stdcompat/optional.h>
 
 namespace primitives::db
@@ -30,6 +30,24 @@ struct LiteDatabase
     }
 
     template <typename T>
+    T getValue(const String &key, const T &default)
+    {
+        checkKey(key);
+        auto v = getValueByKey(key);
+        if (!v)
+        {
+            setValue(key, default);
+            return default;
+        }
+        if constexpr (std::is_same_v<T, int>)
+            return std::stoi(v.value());
+        else if constexpr (std::is_same_v<T, double>)
+            return std::stod(v.value());
+        else
+            return v.value();
+    }
+
+    template <typename T>
     void setValue(const String &key, const T &v)
     {
         checkKey(key);
@@ -46,6 +64,6 @@ private:
 };
 
 void createOrUpdateSchema(LiteDatabase &database, const String &latestSchema, const Strings &diffSqls);
-void createOrUpdateSchema(LiteDatabase &database, const path &latestSchemaFilename, const path &diffSqlsDir, const String &diffSqlsFileMask);
+void createOrUpdateSchema(LiteDatabase &database, const path &latestSchemaFilename, const path &diffSqlsDir, const String &diffSqlsFileMask = DatabaseSchemaManager::default_diffs_mask);
 
 }
