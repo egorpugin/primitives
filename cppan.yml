@@ -35,7 +35,7 @@ projects:
 
         type: library
 
-        root_directory: command
+        root_directory: src/command
 
 
         static_only: true
@@ -67,7 +67,7 @@ projects:
 
         type: library
 
-        root_directory: context
+        root_directory: src/context
 
 
 
@@ -87,7 +87,7 @@ projects:
 
         type: library
 
-        root_directory: cron
+        root_directory: src/cron
 
         dependencies:
             public:
@@ -99,7 +99,7 @@ projects:
     db.common:
         type: library
 
-        root_directory: db/common
+        root_directory: src/db/common
 
         dependencies:
             public:
@@ -111,7 +111,7 @@ projects:
     db.sqlite3:
         type: library
 
-        root_directory: db/sqlite3
+        root_directory: src/db/sqlite3
 
         dependencies:
             public:
@@ -123,7 +123,7 @@ projects:
     db.postgresql:
         type: library
 
-        root_directory: db/postgresql
+        root_directory: src/db/postgresql
 
         dependencies:
             public:
@@ -137,7 +137,7 @@ projects:
 
         type: library
 
-        root_directory: date_time
+        root_directory: src/date_time
 
 
 
@@ -164,7 +164,7 @@ projects:
 
         type: library
 
-        root_directory: executor
+        root_directory: src/executor
 
 
 
@@ -194,78 +194,12 @@ projects:
                 templates:
                     version: "*"
 
-    executor_bt:
-        name: executor_bt
-        skip_on_server: true
-
-        type: library
-
-        root_directory: executor_bt
-
-
-
-        static_only: true
-
-        options:
-            any:
-                definitions:
-                    win32:
-                        private:
-                            -   _WIN32_WINNT=0x0601
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-
-        dependencies:
-            public:
-                pvt.cppan.demo.boost.asio:
-                    version: 1
-                pvt.cppan.demo.boost.thread:
-                    version: 1
-                pvt.cppan.demo.boost.system:
-                    version: 1
-
-    executor_io:
-        name: executor_io
-        skip_on_server: true
-
-        type: library
-
-        root_directory: executor_io
-
-
-
-        static_only: true
-
-        options:
-            any:
-                definitions:
-                    win32:
-                        private:
-                            -   _WIN32_WINNT=0x0601
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-
-        dependencies:
-            public:
-                pvt.cppan.demo.boost.asio:
-                    version: 1
-                pvt.cppan.demo.boost.system:
-                    version: 1
-
     filesystem:
         name: filesystem
 
         type: library
 
-        root_directory: filesystem
+        root_directory: src/filesystem
 
 
 
@@ -296,7 +230,7 @@ projects:
 
         type: library
 
-        root_directory: hash
+        root_directory: src/hash
 
 
 
@@ -325,7 +259,7 @@ projects:
 
         type: library
 
-        root_directory: http
+        root_directory: src/http
 
 
 
@@ -358,7 +292,7 @@ projects:
 
         type: library
 
-        root_directory: lock
+        root_directory: src/lock
 
 
 
@@ -385,7 +319,7 @@ projects:
 
         type: library
 
-        root_directory: log
+        root_directory: src/log
 
 
 
@@ -410,7 +344,7 @@ projects:
 
         type: library
 
-        root_directory: minidump
+        root_directory: src/minidump
 
 
 
@@ -434,7 +368,7 @@ projects:
 
         type: library
 
-        root_directory: pack
+        root_directory: src/pack
 
 
 
@@ -463,7 +397,7 @@ projects:
 
         type: library
 
-        root_directory: sqlite_db
+        root_directory: src/sqlite_db
 
 
 
@@ -481,7 +415,7 @@ projects:
 
         type: library
 
-        root_directory: string
+        root_directory: src/string
 
 
 
@@ -506,7 +440,7 @@ projects:
 
         type: library
 
-        root_directory: templates
+        root_directory: src/templates
 
 
 
@@ -519,12 +453,133 @@ projects:
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
 
-    test_executor:
+
+
+    win32helpers:
+        name: win32helpers
+
+        type: library
+
+        root_directory: src/win32helpers
+
+        options:
+            any:
+                definitions:
+                    win32:
+                        private:
+                            -   UNICODE
+
+        dependencies:
+            public:
+                filesystem:
+                    version: "*"
+                pvt.cppan.demo.boost.dll:
+                    version: 1
+                pvt.cppan.demo.boost.algorithm:
+                    version: 1
+
+
+    yaml:
+        name: yaml
+
+        type: library
+
+        root_directory: src/yaml
+
+
+
+        static_only: true
+
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+
+        dependencies:
+            public:
+                pvt.cppan.demo.jbeder.yaml_cpp:
+                    version: master
+                string:
+                    version: "*"
+
+    old.executor_bt:
+        name: executor_bt
+        skip_on_server: true
+
+        type: library
+
+        root_directory: src/executor_bt
+
+
+
+        static_only: true
+
+        options:
+            any:
+                definitions:
+                    win32:
+                        private:
+                            -   _WIN32_WINNT=0x0601
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+
+        dependencies:
+            public:
+                pvt.cppan.demo.boost.asio:
+                    version: 1
+                pvt.cppan.demo.boost.thread:
+                    version: 1
+                pvt.cppan.demo.boost.system:
+                    version: 1
+
+    old.executor_io:
+        name: executor_io
+        skip_on_server: true
+
+        type: library
+
+        root_directory: src/executor_io
+
+
+
+        static_only: true
+
+        options:
+            any:
+                definitions:
+                    win32:
+                        private:
+                            -   _WIN32_WINNT=0x0601
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+
+        dependencies:
+            public:
+                pvt.cppan.demo.boost.asio:
+                    version: 1
+                pvt.cppan.demo.boost.system:
+                    version: 1
+
+
+
+    test.executor:
         skip_on_server: true
 
 
         files:
-            -   test_executor.cpp
+            -   src/test_executor.cpp
 
         options:
             any:
@@ -548,12 +603,12 @@ projects:
                 pvt.cppan.demo.catchorg.catch2:
                     version: 2
 
-    test_executor_bt:
+    test.executor_bt:
         skip_on_server: true
 
 
         files:
-            -   test_executor_bt.cpp
+            -   src/test_executor_bt.cpp
 
         options:
             any:
@@ -577,12 +632,12 @@ projects:
                 yaml:
                     version: "*"
 
-    testxxx:
+    test.main:
         skip_on_server: true
 
 
         files:
-            -   main.cpp
+            -   src/main.cpp
 
         options:
             any:
@@ -609,56 +664,3 @@ projects:
                     version: "*"
                 pvt.cppan.demo.catchorg.catch2:
                     version: 2
-
-
-    win32helpers:
-        name: win32helpers
-
-        type: library
-
-        root_directory: win32helpers
-
-        options:
-            any:
-                definitions:
-                    win32:
-                        private:
-                            -   UNICODE
-
-        dependencies:
-            public:
-                filesystem:
-                    version: "*"
-                pvt.cppan.demo.boost.dll:
-                    version: 1
-                pvt.cppan.demo.boost.algorithm:
-                    version: 1
-
-
-    yaml:
-        name: yaml
-
-        type: library
-
-        root_directory: yaml
-
-
-
-        static_only: true
-
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-
-        dependencies:
-            public:
-                pvt.cppan.demo.jbeder.yaml_cpp:
-                    version: master
-                string:
-                    version: "*"
-
