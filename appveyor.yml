@@ -31,9 +31,10 @@ before_build:
 
 build_script:
   - cppan --build . -s
+  - bin\\main.exe
 
-test_script:
-  - bin\testxxx
+#test_script:
+#  - bin\testxxx
 
 artifacts:
   - path: bin
