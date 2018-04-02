@@ -50,4 +50,4 @@ install:
 script:
   - if [[ $LINUX ]]; then cppan --build . --config gcc7 -s; fi
   - if [[ $OSX ]];   then cppan --build . -s; fi
-  - ./bin/testxxx
+  - ./bin/main
