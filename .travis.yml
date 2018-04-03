@@ -28,6 +28,8 @@ addons:
     - g++-7
     - ninja-build
     - cmake
+    - postgresql
+    - postgresql-server-dev-all
 
 before_install:
   - if [[ $TRAVIS_OS_NAME == linux   ]]; then LINUX=true; fi
