@@ -8,6 +8,12 @@
 #include <iostream>
 #include <regex>
 
+#ifndef _WIN32
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+#endif
+
 path get_home_directory()
 {
 #ifdef _WIN32
@@ -17,7 +23,12 @@ path get_home_directory()
 #else
     auto home = getenv("HOME");
     if (!home)
+    {
+        auto p = getpwuid(getuid());
+        if (p)
+            return p->pw_dir;
         std::cerr << "Cannot get user's home directory ($HOME)\n";
+    }
 #endif
     if (home == nullptr)
         return "";
