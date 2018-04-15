@@ -99,6 +99,62 @@ String read_file(const path &p, bool no_size_check)
     return f;
 }
 
+String read_file_without_bom(const path &p, bool no_size_check)
+{
+    auto s = read_file(p, no_size_check);
+    auto d = (const uint8_t *)s.data();
+
+    // UTF-8
+    if (s.size() >= 3 && d[0] == 0xEF && d[1] == 0xBB && d[2] == 0xBF)
+        s = s.substr(3);
+
+    // UTF-16 BE, LE
+    else if (s.size() >= 2 &&
+        d[0] == 0xFE && d[1] == 0xFF ||
+        d[0] == 0xFF && d[1] == 0xFE)
+        s = s.substr(2);
+
+    // UTF-32 BE, LE
+    else if (s.size() >= 4 &&
+        d[0] == 0x00 && d[1] == 0x00 && d[2] == 0xFE && d[3] == 0xFF ||
+        d[0] == 0xFE && d[1] == 0xFF && d[2] == 0x00 && d[3] == 0x00
+        )
+        s = s.substr(4);
+
+    // UTF-7
+    else if (s.size() >= 4 &&
+        d[0] == 0x2B && d[1] == 0x2F && d[2] == 0x76 &&
+        (d[3] == 0x38 || d[3] == 0x39 || d[3] == 0x2B || d[3] == 0x2F))
+    {
+        if (s.size() >= 5 && d[3] == 0x38 && d[4] == 0x2D)
+            s = s.substr(5);
+        else
+            s = s.substr(4);
+    }
+
+    // UTF-1
+    else if (s.size() >= 3 && d[0] == 0xF7 && d[1] == 0x64 && d[2] == 0x4C)
+        s = s.substr(3);
+
+    // UTF-EBCDIC
+    else if (s.size() >= 4 && d[0] == 0xDD && d[1] == 0x73 && d[2] == 0x66 && d[3] == 0x73)
+        s = s.substr(4);
+
+    // SCSU
+    else if (s.size() >= 3 && d[0] == 0x0E && d[1] == 0xFE && d[2] == 0xFF)
+        s = s.substr(3);
+
+    // BOCU-1
+    else if (s.size() >= 3 && d[0] == 0xFB && d[1] == 0xEE && d[2] == 0x28)
+        s = s.substr(3);
+
+    // GB-18030
+    else if (s.size() >= 4 && d[0] == 0x84 && d[1] == 0x31 && d[2] == 0x95 && d[3] == 0x33)
+        s = s.substr(4);
+
+    return s;
+}
+
 Strings read_lines(const path &p)
 {
     auto s = read_file(p);

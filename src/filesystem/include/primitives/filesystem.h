@@ -28,6 +28,7 @@ path get_home_directory();
 path current_thread_path(const path &p = path());
 
 String read_file(const path &p, bool no_size_check = false);
+String read_file_without_bom(const path &p, bool no_size_check = false);
 void write_file(const path &p, const String &s);
 void write_file_if_different(const path &p, const String &s);
 void prepend_file(const path &p, const String &s);
