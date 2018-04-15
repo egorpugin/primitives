@@ -181,7 +181,7 @@ void Command::execute1(std::error_code *ec_in)
                 stream << str;
             }
             if (out.action)
-                out.action(str, ec);
+                out.action(str, !!ec);
             if (!out.file.empty())
                 fwrite(&str[0], str.size(), 1, out_fs);
         }
