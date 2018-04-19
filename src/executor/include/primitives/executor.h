@@ -72,6 +72,8 @@ public:
 
     bool try_push(Task &&t)
     {
+        if (done_)
+            return false;
         {
             Lock lock(m, std::try_to_lock);
             if (!lock)
@@ -82,18 +84,21 @@ public:
         return true;
     }
 
-    bool try_pop(Task &t)
+    bool try_pop(Task &t, std::atomic_bool &busy)
     {
         Lock lock(m, std::try_to_lock);
         if (!lock || q.empty() || done_)
             return false;
         t = std::move(q.front());
+        busy = true;
         q.pop_front();
         return true;
     }
 
     void push(Task &&t)
     {
+        if (done_)
+            return;
         {
             Lock lock(m);
             q.emplace_back(std::move(t));
@@ -101,7 +106,7 @@ public:
         cv.notify_one();
     }
 
-    bool pop(Task &t)
+    bool pop(Task &t, std::atomic_bool &busy)
     {
         Lock lock(m);
         while (q.empty() && !done_)
@@ -109,6 +114,7 @@ public:
         if (q.empty() || done_)
             return false;
         t = std::move(q.front());
+        busy = true;
         q.pop_front();
         return true;
     }
@@ -288,6 +294,14 @@ private:
     mutable SharedStatePtr<Ret> s;
 };
 
+enum class WaitStatus
+{
+    Running,
+    AllowIncoming,
+    BlockIncoming,
+    RejectIncoming,
+};
+
 class Executor
 {
     struct Thread
@@ -329,10 +343,10 @@ public:
         return fut;
     }
 
-    void join();
-    void stop();
+    void join(); // wait & terminate all workers
+    void stop(); // wait and
+    void wait(WaitStatus p = WaitStatus::BlockIncoming);
     bool stopped() const { return stopped_; }
-    void wait();
 
     bool is_in_executor() const;
     bool try_run_one();
@@ -342,15 +356,18 @@ private:
     size_t nThreads = std::thread::hardware_concurrency();
     std::atomic_size_t index{ 0 };
     std::atomic_bool stopped_{ false };
+    std::mutex m_wait;
+    std::condition_variable cv_wait;
+    std::atomic<WaitStatus> waiting_{ WaitStatus::Running };
     std::unordered_map<std::thread::id, size_t> thread_ids;
     std::mutex m;
 
     void run(size_t i, const std::string &name);
     void run2(size_t i, const std::string &name);
     bool run_task();
-    bool run_task(Task t);
+    bool run_task(Task &t);
     bool run_task(size_t i);
-    void run_task(size_t i, Task t) noexcept;
+    void run_task(size_t i, Task &t) noexcept;
     size_t get_n() const;
     Task get_task();
     Task get_task(size_t i);

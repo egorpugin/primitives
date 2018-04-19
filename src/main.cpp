@@ -446,8 +446,8 @@ TEST_CASE("Checking executor", "[executor]")
         volatile int i = 2;
 
         Executor e(1);
-        e.push(
-            [&] { i += 2; })
+        e
+            .push([&] { i += 2; })
             .then([&] { i *= 2; })
             .get()
             ;
@@ -493,6 +493,28 @@ TEST_CASE("Checking executor", "[executor]")
         f3.get();
         REQUIRE(i == 172);
     }
+
+    // test fast wait
+    {
+        volatile int i = 0;
+
+        Executor e(1);
+        e.push([&i] { std::this_thread::sleep_for(100ms); i = 1; });
+        e.wait();
+        REQUIRE(i == 1);
+    }
+}
+
+TEST_CASE("Checking executor: test fast wait", "[executor]")
+{
+    using namespace std::literals::chrono_literals;
+
+    volatile int i = 0;
+
+    Executor e(1);
+    e.push([&i] { i = 1; });
+    e.wait();
+    REQUIRE(i == 1);
 }
 
 TEST_CASE("Checking db", "[db]")

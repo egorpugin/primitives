@@ -101,7 +101,7 @@ void Executor::run(size_t i, const std::string &name)
     }
     else
 #endif
-    run2(i, name);
+        run2(i, name);
 }
 
 void Executor::run2(size_t i, const std::string &name)
@@ -125,7 +125,7 @@ bool Executor::run_task()
     return run_task(get_n());
 }
 
-bool Executor::run_task(Task t)
+bool Executor::run_task(Task &t)
 {
     run_task(get_n(), t);
     return true;
@@ -143,10 +143,9 @@ bool Executor::run_task(size_t i)
     return true;
 }
 
-void Executor::run_task(size_t i, Task t) noexcept
+void Executor::run_task(size_t i, Task &t) noexcept
 {
     auto &thr = thread_pool[i];
-    thr.busy = true;
     t();
     thr.busy = false;
 }
@@ -161,7 +160,7 @@ Task Executor::get_task(size_t i)
     auto &thr = thread_pool[i];
     Task t = try_pop(i);
     // no task popped, probably shutdown command was issues
-    if (!t && !thr.q.pop(t))
+    if (!t && !thr.q.pop(t, thr.busy))
         return Task();
 
     return t;
@@ -176,7 +175,7 @@ Task Executor::get_task_non_stealing(size_t i)
 {
     auto &thr = thread_pool[i];
     Task t;
-    if (thr.q.pop(t))
+    if (thr.q.pop(t, thr.busy))
         return t;
     return Task();
 }
@@ -199,8 +198,17 @@ void Executor::stop()
         t.q.done();
 }
 
-void Executor::wait()
+void Executor::wait(WaitStatus p)
 {
+    std::unique_lock<std::mutex> lk(m_wait, std::try_to_lock);
+    if (!lk.owns_lock())
+    {
+        std::unique_lock<std::mutex> lk(m_wait);
+        return;
+    }
+
+    waiting_ = p;
+
     bool run_again = is_in_executor();
 
     // wait for empty queues
@@ -214,7 +222,7 @@ void Executor::wait()
                 for (auto &t : thread_pool)
                 {
                     Task ta;
-                    if (t.q.try_pop(ta))
+                    if (t.q.try_pop(ta, thread_pool[get_n()].busy))
                         run_task(get_n(), ta);
                 }
             }
@@ -233,10 +241,21 @@ void Executor::wait()
         while (t.busy && !stopped_)
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+
+    waiting_ = WaitStatus::Running;
+    cv_wait.notify_all();
 }
 
 void Executor::push(Task &&t)
 {
+    if (waiting_ == WaitStatus::RejectIncoming)
+        throw std::runtime_error("Executor is in the wait state and rejects new jobs");
+    if (waiting_ == WaitStatus::BlockIncoming)
+    {
+        std::unique_lock<std::mutex> lk(m_wait);
+        cv_wait.wait(lk, [this] { return waiting_ == WaitStatus::Running; });
+    }
+
     auto i = index++;
     for (size_t n = 0; n != nThreads; ++n)
     {
@@ -257,7 +276,7 @@ Task Executor::try_pop(size_t i)
     const size_t spin_count = nThreads * 4;
     for (auto n = 0; n != spin_count; ++n)
     {
-        if (thread_pool[(i + n) % nThreads].q.try_pop(t))
+        if (thread_pool[(i + n) % nThreads].q.try_pop(t, thread_pool[i].busy))
             break;
     }
     return t;
