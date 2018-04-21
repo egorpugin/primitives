@@ -249,6 +249,9 @@ struct Future
         then(F2 &&f, ArgTypes2 && ... args);
 };
 
+template <class T>
+using Futures = std::vector<Future<T>>;
+
 template <class F, class ... ArgTypes>
 struct PackagedTask
 {
@@ -430,7 +433,7 @@ Future<Ret>::then(F2 &&f, ArgTypes2 && ... args)
 
 // vector versions
 template <typename F>
-Future<void> whenAll(const std::vector<F> &futures)
+Future<void> whenAll(const Futures<F> &futures)
 {
     using Ret = void;
 
@@ -487,7 +490,7 @@ Future<void> whenAll(const std::vector<F> &futures)
 }
 
 template <class F>
-Future<size_t> whenAny(const std::vector<F> &futures)
+Future<size_t> whenAny(const Futures<F> &futures)
 {
     using Ret = size_t;
 
@@ -548,15 +551,38 @@ Future<size_t> whenAny(const std::vector<F> &futures)
 }
 
 template <class F>
-void waitAll(const std::vector<F> &futures)
+void waitAll(const Futures<F> &futures)
 {
     whenAll(futures).get();
 }
 
 template <class F>
-void waitAny(const std::vector<F> &futures)
+void waitAny(const Futures<F> &futures)
 {
     whenAny(futures).get();
+}
+
+template <class F>
+void waitAndGet(const Futures<F> &futures)
+{
+    for (auto &f : futures)
+        f.wait();
+    for (auto &f : futures)
+        f.get();
+}
+
+template <class F>
+std::vector<std::exception_ptr> waitAndGetAllExceptions(const Futures<F> &futures)
+{
+    for (auto &f : futures)
+        f.wait();
+    std::vector<std::exception_ptr> eptrs;
+    for (auto &f : futures)
+    {
+        if (f.state->eptr)
+            eptrs.push_back(f.state->eptr);
+    }
+    return eptrs;
 }
 
 // variadic versions
@@ -734,29 +760,6 @@ template <class ... Futures>
 void waitAny(Futures && ... futures)
 {
     whenAny(std::forward<Futures>(futures)...).get();
-}
-
-template <class F>
-void waitAndGet(const std::vector<F> &futures)
-{
-    for (auto &f : futures)
-        f.wait();
-    for (auto &f : futures)
-        f.get();
-}
-
-template <class F>
-std::vector<std::exception_ptr> waitAndGetAllExceptions(const std::vector<F> &futures)
-{
-    for (auto &f : futures)
-        f.wait();
-    std::vector<std::exception_ptr> eptrs;
-    for (auto &f : futures)
-    {
-        if (f.state->eptr)
-            eptrs.push_back(f.state->eptr);
-    }
-    return eptrs;
 }
 
 #ifdef _WIN32
