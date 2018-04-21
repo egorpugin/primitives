@@ -22,7 +22,8 @@ void LiteDatabase::checkKey(const String &key)
 
 void DatabaseSchemaManager::createOrUpdate() const
 {
-    if (!database->getValue<int>(version_column))
+    auto v = database->getValue<int>(version_column);
+    if (!v || v == -1)
         create();
     else
         update();
@@ -33,7 +34,7 @@ void DatabaseSchemaManager::create() const
     database->execute("BEGIN");
     database->execute(getLatestSchema());
     database->setValue(version_column, getDiffSqlSize());
-    database->execute("END");
+    database->execute("COMMIT");
 }
 
 void DatabaseSchemaManager::update() const
@@ -52,7 +53,7 @@ void DatabaseSchemaManager::update() const
     for (auto i = v; i < sz; i++)
         database->execute(getDiffSql(i));
     database->setValue(version_column, getDiffSqlSize());
-    database->execute("END");
+    database->execute("COMMIT");
     scope.dismiss();
 }
 

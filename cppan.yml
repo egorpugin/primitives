@@ -5,6 +5,8 @@ local_settings:
     builds:
         vs_release:
             generator: Visual Studio 15 2017
+        vs_release64:
+            generator: Visual Studio 15 2017 Win64
         vs_preview:
             c_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
             cxx_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
@@ -521,12 +523,17 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
+                    msvc:
+                        public:
+                            - /bigobj
 
         dependencies:
             public:
                 command:
                     version: "*"
                 db.sqlite3:
+                    version: "*"
+                db.postgresql:
                     version: "*"
                 date_time:
                     version: "*"

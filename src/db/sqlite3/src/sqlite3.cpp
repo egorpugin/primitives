@@ -88,7 +88,7 @@ void SqliteDatabase::setValueByKey(const String &key, const String &value)
 void SqliteDatabase::createServiceTable()
 {
     // create table and ignore errors
-    auto q = "CREATE TABLE " + service_table + " (version TEXT NOT NULL DEFAULT \"\")";
+    auto q = "CREATE TABLE " + service_table + " (version INTEGER NOT NULL DEFAULT \"\")";
     sqlite3_exec(db, q.c_str(), 0, 0, 0);
 
     int r = 0;

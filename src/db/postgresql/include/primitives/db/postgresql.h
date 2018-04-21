@@ -8,27 +8,36 @@
 
 #include <primitives/db.h>
 
+#include <pqxx/connection.hxx>
+
 namespace primitives::db::postgresql
 {
 
 struct PostgresqlDatabase : primitives::db::LiteDatabase
 {
-    PostgresqlDatabase(const path &fn);
+    PostgresqlDatabase(const String &cs);
     PostgresqlDatabase(PostgresqlDatabase &&);
     virtual ~PostgresqlDatabase();
 
     void execute(const String &q) override;
 
 private:
-    static inline const String service_table{ "service.kv_settings" };
+    std::unique_ptr<pqxx::connection> c;
 
-    void check_error(int r, int ec);
+    static inline const String service_schema_name{ "service" };
+    static inline const String service_table_name{ "kv_settings" };
+    static inline const String service_table{ service_schema_name + "." + service_table_name };
+
+    bool execute_and_check(const String &q, const String &allowed_error_code);
 
     optional<String> getValueByKey(const String &key) override;
     void setValueByKey(const String &key, const String &value) override;
 
     void createServiceTable();
-    int createServiceTableColumn(const String &col);
+    bool createServiceTableColumn(const String &col);
 };
+
+void createDb(const String &root_cs, const String &dbname, const String &owner);
+void dropDb(const String &root_cs, const String &dbname);
 
 }
