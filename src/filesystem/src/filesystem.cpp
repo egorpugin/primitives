@@ -23,7 +23,7 @@
 path get_home_directory()
 {
 #ifdef _WIN32
-    auto home = getenv("USERPROFILE");
+    auto home = _wgetenv(L"USERPROFILE");
     if (!home)
         std::cerr << "Cannot get user's home directory (%USERPROFILE%)\n";
 #else
