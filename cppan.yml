@@ -531,6 +531,39 @@ projects:
             public:
                 command:
                     version: "*"
+                date_time:
+                    version: "*"
+                executor:
+                    version: "*"
+                hash:
+                    version: "*"
+                yaml:
+                    version: "*"
+                pvt.cppan.demo.catchorg.catch2:
+                    version: 2
+    test.db:
+        skip_on_server: true
+
+
+        files:
+            -   src/db.cpp
+
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+                    msvc:
+                        public:
+                            - /bigobj
+
+        dependencies:
+            public:
+                command:
+                    version: "*"
                 db.sqlite3:
                     version: "*"
                 db.postgresql:
