@@ -3,10 +3,10 @@ local_settings:
     use_shared_libs: false
     rc_enabled: false
     builds:
-        vs_release:
-            generator: Visual Studio 15 2017
         vs_release64:
             generator: Visual Studio 15 2017 Win64
+        vs_release:
+            generator: Visual Studio 15 2017
         vs_preview:
             c_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
             cxx_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
@@ -100,6 +100,7 @@ projects:
 
     db.common:
         type: library
+        static_only: true
 
         root_directory: src/db/common
 
@@ -112,6 +113,7 @@ projects:
 
     db.sqlite3:
         type: library
+        static_only: true
 
         root_directory: src/db/sqlite3
 
@@ -124,6 +126,7 @@ projects:
 
     db.postgresql:
         type: library
+        static_only: true
 
         root_directory: src/db/postgresql
 
@@ -138,6 +141,7 @@ projects:
         name: date_time
 
         type: library
+        static_only: true
 
         root_directory: src/date_time
 

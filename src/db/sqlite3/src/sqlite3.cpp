@@ -52,7 +52,7 @@ optional<String> SqliteDatabase::getValueByKey(const String &key)
     int r = 0;
     auto q = "SELECT " + key + " FROM " + service_table;
     sqlite3_stmt *s;
-    r = sqlite3_prepare_v2(db, q.c_str(), q.size(), &s, 0);
+    r = sqlite3_prepare_v2(db, q.c_str(), (int)q.size(), &s, 0);
     CHECK_RC(r, SQLITE_OK);
     r = sqlite3_step(s);
     CHECK_RC(r, SQLITE_ROW);
@@ -75,7 +75,7 @@ void SqliteDatabase::setValueByKey(const String &key, const String &value)
     int r = 0;
     auto q = "UPDATE " + service_table + " SET " + key + " = ?";
     sqlite3_stmt *s;
-    r = sqlite3_prepare_v2(db, q.c_str(), q.size(), &s, 0);
+    r = sqlite3_prepare_v2(db, q.c_str(), (int)q.size(), &s, 0);
     check_error(r, SQLITE_OK);
     r = sqlite3_bind_text(s, 1, value.c_str(), -1, 0);
     check_error(r, SQLITE_OK);
@@ -96,7 +96,7 @@ void SqliteDatabase::createServiceTable()
     // check rows count
     q = "SELECT count(*) FROM " + service_table;
     sqlite3_stmt *s;
-    r = sqlite3_prepare_v2(db, q.c_str(), q.size(), &s, 0);
+    r = sqlite3_prepare_v2(db, q.c_str(), (int)q.size(), &s, 0);
     check_error(r, SQLITE_OK);
     r = sqlite3_step(s);
     check_error(r, SQLITE_ROW);
@@ -111,7 +111,7 @@ void SqliteDatabase::createServiceTable()
         // add main row
         q = "INSERT INTO " + service_table + " (version) values (-1)";
         sqlite3_stmt *s;
-        r = sqlite3_prepare_v2(db, q.c_str(), q.size(), &s, 0);
+        r = sqlite3_prepare_v2(db, q.c_str(), (int)q.size(), &s, 0);
         check_error(r, SQLITE_OK);
         r = sqlite3_step(s);
         check_error(r, SQLITE_DONE);

@@ -31,7 +31,7 @@ private:
     void update() const;
 
     virtual String getLatestSchema() const = 0;
-    virtual String getDiffSql(int i) const = 0;
+    virtual String getDiffSql(size_t i) const = 0;
 };
 
 struct FileDatabaseSchemaManager;
@@ -46,7 +46,7 @@ struct StringDatabaseSchemaManager : DatabaseSchemaManager
 
 private:
     String getLatestSchema() const override;
-    String getDiffSql(int i) const override;
+    String getDiffSql(size_t i) const override;
 };
 
 struct FileDatabaseSchemaManager : DatabaseSchemaManager
@@ -56,12 +56,12 @@ struct FileDatabaseSchemaManager : DatabaseSchemaManager
     String diffSqlsFileMask = default_diffs_mask;
 
     StringDatabaseSchemaManager read(const path &dir) const;
-    path getDiffSqlFilename(int i) const;
+    path getDiffSqlFilename(size_t i) const;
     size_t getDiffSqlSize() const override;
 
 private:
     String getLatestSchema() const override;
-    String getDiffSql(int i) const override;
+    String getDiffSql(size_t i) const override;
 };
 
 }

@@ -62,7 +62,7 @@ String StringDatabaseSchemaManager::getLatestSchema() const
     return latestSchema;
 }
 
-String StringDatabaseSchemaManager::getDiffSql(int i) const
+String StringDatabaseSchemaManager::getDiffSql(size_t i) const
 {
     return diffSqls[i];
 }
@@ -104,7 +104,7 @@ String FileDatabaseSchemaManager::getLatestSchema() const
     return read_file(latestSchemaFilename, true);
 }
 
-path FileDatabaseSchemaManager::getDiffSqlFilename(int i) const
+path FileDatabaseSchemaManager::getDiffSqlFilename(size_t i) const
 {
     const int sz = 100;
     char buf[sz] = { 0 };
@@ -112,7 +112,7 @@ path FileDatabaseSchemaManager::getDiffSqlFilename(int i) const
     return diffSqlsDir / buf;
 }
 
-String FileDatabaseSchemaManager::getDiffSql(int i) const
+String FileDatabaseSchemaManager::getDiffSql(size_t i) const
 {
     return read_file(getDiffSqlFilename(i));
 }
