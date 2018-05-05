@@ -465,6 +465,7 @@ projects:
         name: win32helpers
 
         type: library
+        static_only: true
 
         root_directory: src/win32helpers
 
