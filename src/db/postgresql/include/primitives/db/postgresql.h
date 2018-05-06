@@ -13,7 +13,7 @@
 namespace primitives::db::postgresql
 {
 
-struct PostgresqlDatabase : primitives::db::LiteDatabase
+struct PRIMITIVES_DB_POSTGRESQL_API PostgresqlDatabase : primitives::db::LiteDatabase
 {
     PostgresqlDatabase(const String &cs);
     PostgresqlDatabase(PostgresqlDatabase &&);
@@ -37,7 +37,10 @@ private:
     bool createServiceTableColumn(const String &col);
 };
 
+PRIMITIVES_DB_POSTGRESQL_API
 void createDb(const String &root_cs, const String &dbname, const String &owner);
+
+PRIMITIVES_DB_POSTGRESQL_API
 void dropDb(const String &root_cs, const String &dbname);
 
 }

@@ -13,7 +13,7 @@
 #include <mutex>
 #include <thread>
 
-class Cron
+class PRIMITIVES_CRON_API Cron
 {
 public:
     using Clock = std::chrono::system_clock;
@@ -100,4 +100,5 @@ private:
     void run();
 };
 
+PRIMITIVES_CRON_API
 Cron &get_cron(Cron *c = nullptr);

@@ -54,10 +54,13 @@ struct Future;
 template <class T>
 struct SharedState;
 
+PRIMITIVES_EXECUTOR_API
 size_t get_max_threads(size_t N = 4);
+
+PRIMITIVES_EXECUTOR_API
 Executor &getExecutor(size_t N = 0);
 
-class TaskQueue
+class PRIMITIVES_EXECUTOR_API TaskQueue
 {
     using Tasks = std::deque<Task>;
     using Lock = std::unique_lock<std::mutex>;
@@ -305,7 +308,7 @@ enum class WaitStatus
     RejectIncoming,
 };
 
-class Executor
+class PRIMITIVES_EXECUTOR_API Executor
 {
     struct Thread
     {
@@ -766,7 +769,8 @@ void waitAny(Futures && ... futures)
 namespace primitives::executor
 {
 
-inline bool bExecutorUseSEH = false;
+PRIMITIVES_EXECUTOR_API
+extern bool bExecutorUseSEH;
 
 }
 #endif

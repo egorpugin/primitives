@@ -20,9 +20,16 @@ using TimePoint = Clock::time_point;
 
 using ptime = boost::posix_time::ptime;
 
+PRIMITIVES_DATE_TIME_API
 TimePoint getUtc();
+
+PRIMITIVES_DATE_TIME_API
 TimePoint string2timepoint(const String &s);
+
+PRIMITIVES_DATE_TIME_API
 time_t string2time_t(const String &s);
+
+PRIMITIVES_DATE_TIME_API
 String local_time();
 
 // time of operation
@@ -55,7 +62,7 @@ auto get_time_custom(F &&f, Args && ... args)
     return std::chrono::duration_cast<std::chrono::duration<T>>(t).count();
 }
 
-struct ScopedTime
+struct PRIMITIVES_DATE_TIME_API ScopedTime
 {
     using clock = std::chrono::high_resolution_clock;
 

@@ -15,6 +15,7 @@ struct ProxySettings
     String user;
 };
 
+PRIMITIVES_HTTP_API
 String getAutoProxy();
 
 struct HttpSettings
@@ -24,7 +25,7 @@ struct HttpSettings
     ProxySettings proxy;
 };
 
-extern HttpSettings httpSettings;
+extern PRIMITIVES_HTTP_API HttpSettings httpSettings;
 
 struct HttpRequest : public HttpSettings
 {
@@ -55,8 +56,14 @@ struct HttpResponse
     String response;
 };
 
+PRIMITIVES_HTTP_API
 HttpResponse url_request(const HttpRequest &settings);
+
+PRIMITIVES_HTTP_API
 void download_file(const String &url, const path &fn, int64_t file_size_limit = 1_MB);
+
+PRIMITIVES_HTTP_API
 String download_file(const String &url);
 
+PRIMITIVES_HTTP_API
 bool isUrl(const String &s);

@@ -24,7 +24,6 @@ extern int v_patch;
 
 int GenerateDump(_EXCEPTION_POINTERS* pExceptionPointers);
 
-
 }
 
 #endif

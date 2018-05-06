@@ -24,39 +24,79 @@ using FilesOrdered = std::vector<path>;
 using Files = std::unordered_set<path>;
 using FilesMap = std::unordered_map<path, path>;
 
+PRIMITIVES_FILESYSTEM_API
 path get_home_directory();
+
+PRIMITIVES_FILESYSTEM_API
 path current_thread_path(const path &p = path());
 
+PRIMITIVES_FILESYSTEM_API
 String read_file(const path &p, bool no_size_check = false);
+
+PRIMITIVES_FILESYSTEM_API
 String read_file_without_bom(const path &p, bool no_size_check = false);
+
+PRIMITIVES_FILESYSTEM_API
 void write_file(const path &p, const String &s);
+
+PRIMITIVES_FILESYSTEM_API
 void write_file_if_different(const path &p, const String &s);
+
+PRIMITIVES_FILESYSTEM_API
 void prepend_file(const path &p, const String &s);
+
+PRIMITIVES_FILESYSTEM_API
 void append_file(const path &p, const String &s);
+
+PRIMITIVES_FILESYSTEM_API
 Strings read_lines(const path &p);
 
+PRIMITIVES_FILESYSTEM_API
 void remove_file(const path &p);
+
+PRIMITIVES_FILESYSTEM_API
 void remove_all_from_dir(const path &dir);
 
+PRIMITIVES_FILESYSTEM_API
 String normalize_path(const path &p);
+
+PRIMITIVES_FILESYSTEM_API
 std::wstring wnormalize_path(const path &p);
 
+PRIMITIVES_FILESYSTEM_API
 bool is_under_root(path p, const path &root_dir);
 
+PRIMITIVES_FILESYSTEM_API
 void copy_dir(const path &source, const path &destination);
+
+PRIMITIVES_FILESYSTEM_API
 void remove_files(const Files &files);
+
+PRIMITIVES_FILESYSTEM_API
 void remove_files_like(const path &dir, const String &regex, bool recursive = true);
+
+PRIMITIVES_FILESYSTEM_API
 void remove_files_like(const Files &files, const String &regex);
 
+PRIMITIVES_FILESYSTEM_API
 Files enumerate_files(const path &dir, bool recursive = true);
+
+PRIMITIVES_FILESYSTEM_API
 Files enumerate_files_like(const path &dir, const String &regex, bool recursive = true);
+
+PRIMITIVES_FILESYSTEM_API
 Files enumerate_files_like(const Files &files, const String &regex);
 
+PRIMITIVES_FILESYSTEM_API
 Files filter_files_like(const Files &files, const String &regex);
 
+PRIMITIVES_FILESYSTEM_API
 bool compare_files(const path &fn1, const path &fn2);
+
+PRIMITIVES_FILESYSTEM_API
 bool compare_dirs(const path &dir1, const path &dir2);
 
+PRIMITIVES_FILESYSTEM_API
 void setup_utf8_filesystem();
 
 namespace std
@@ -80,7 +120,7 @@ enum class CurrentPathScope
 };
 ALLOW_FLAGS_FOR_ENUM(CurrentPathScope);
 
-class ScopedCurrentPath
+class PRIMITIVES_FILESYSTEM_API ScopedCurrentPath
 {
 public:
     ScopedCurrentPath(CurrentPathScope scope = CurrentPathScope::Process)
@@ -146,12 +186,15 @@ private:
 namespace primitives::filesystem
 {
 
+PRIMITIVES_FILESYSTEM_API
 FILE *fopen(const path &p, const char *mode);
+
+PRIMITIVES_FILESYSTEM_API
 void create(const path &p);
 
 }
 
-class ScopedFile
+class PRIMITIVES_FILESYSTEM_API ScopedFile
 {
 public:
     ScopedFile(const path &p, const char *mode);

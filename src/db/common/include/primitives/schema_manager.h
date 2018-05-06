@@ -11,7 +11,7 @@
 namespace primitives::db
 {
 
-struct DatabaseSchemaManager
+struct PRIMITIVES_DB_COMMON_API DatabaseSchemaManager
 {
     struct LiteDatabase *database = nullptr;
 
@@ -36,7 +36,7 @@ private:
 
 struct FileDatabaseSchemaManager;
 
-struct StringDatabaseSchemaManager : DatabaseSchemaManager
+struct PRIMITIVES_DB_COMMON_API StringDatabaseSchemaManager : DatabaseSchemaManager
 {
     String latestSchema;
     Strings diffSqls;
@@ -49,7 +49,7 @@ private:
     String getDiffSql(size_t i) const override;
 };
 
-struct FileDatabaseSchemaManager : DatabaseSchemaManager
+struct PRIMITIVES_DB_COMMON_API FileDatabaseSchemaManager : DatabaseSchemaManager
 {
     path latestSchemaFilename;
     path diffSqlsDir;

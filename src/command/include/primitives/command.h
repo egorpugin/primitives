@@ -18,7 +18,7 @@ using Commands = std::unordered_set<Command*>;
 // return value:
 //   1. throw if exit_code != 0
 //   2. no throw when ec is provided
-struct Command
+struct PRIMITIVES_COMMAND_API Command
 {
     using ActionType = void(const String &, bool);
 
@@ -74,7 +74,10 @@ private:
     static void execute1(const path &p, const Strings &args = Strings(), std::error_code *ec = nullptr);
 };
 
+PRIMITIVES_COMMAND_API
 path resolve_executable(const path &p);
+
+PRIMITIVES_COMMAND_API
 path resolve_executable(const std::vector<path> &paths);
 
 }

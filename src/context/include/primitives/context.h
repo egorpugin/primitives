@@ -12,7 +12,7 @@
 #include <stack>
 #include <sstream>
 
-class Context
+class PRIMITIVES_CONTEXT_API Context
 {
 public:
     using Text = std::string;

@@ -8,7 +8,7 @@
 
 #include <primitives/filesystem.h>
 
-struct Hasher
+struct PRIMITIVES_HASH_API Hasher
 {
     String hash;
 

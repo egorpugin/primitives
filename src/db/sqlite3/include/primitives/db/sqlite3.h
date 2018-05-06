@@ -13,7 +13,7 @@ struct sqlite3;
 namespace primitives::db::sqlite3
 {
 
-struct SqliteDatabase : primitives::db::LiteDatabase
+struct PRIMITIVES_DB_SQLITE3_API SqliteDatabase : primitives::db::LiteDatabase
 {
     SqliteDatabase(const path &fn);
     SqliteDatabase(SqliteDatabase &&);

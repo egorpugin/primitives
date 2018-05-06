@@ -8,20 +8,34 @@
 
 #include <primitives/filesystem.h>
 
+PRIMITIVES_WIN32HELPERS_API
 bool create_link(const path &file, const path &link, const String &description = String());
+
+PRIMITIVES_WIN32HELPERS_API
 void elevate();
+
+PRIMITIVES_WIN32HELPERS_API
 bool is_elevated();
 
 #ifdef _WIN32
 using _DWORD = unsigned long;
 
+PRIMITIVES_WIN32HELPERS_API
 std::string get_last_error();
+
+PRIMITIVES_WIN32HELPERS_API
 std::string get_last_error(_DWORD ec);
 
+PRIMITIVES_WIN32HELPERS_API
 void message_box(const std::string &s);
+
+PRIMITIVES_WIN32HELPERS_API
 void message_box(const std::wstring &s);
 
+PRIMITIVES_WIN32HELPERS_API
 void BindStdHandlesToConsole();
+
+PRIMITIVES_WIN32HELPERS_API
 void SetupConsole();
 
 struct ServiceDescriptor
@@ -32,5 +46,7 @@ struct ServiceDescriptor
     String args;
 };
 
+PRIMITIVES_WIN32HELPERS_API
 _DWORD InstallService(ServiceDescriptor desc);
+
 #endif

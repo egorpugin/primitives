@@ -209,4 +209,5 @@ struct YamlMergeFlags
     int scalar_scalar = 0;
 };
 
+PRIMITIVES_YAML_API
 void merge(yaml &dst, const yaml &src, const YamlMergeFlags &flags = YamlMergeFlags());

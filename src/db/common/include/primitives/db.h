@@ -14,7 +14,7 @@ namespace primitives::db
 
 /// lite db: has execute() call
 /// kv db accessor in column manner: has getValue()/setValue() calls
-struct LiteDatabase
+struct PRIMITIVES_DB_COMMON_API LiteDatabase
 {
     virtual ~LiteDatabase() = default;
 
@@ -69,7 +69,10 @@ private:
     void checkKey(const String &key);
 };
 
+PRIMITIVES_DB_COMMON_API
 void createOrUpdateSchema(LiteDatabase &database, const String &latestSchema, const Strings &diffSqls);
+
+PRIMITIVES_DB_COMMON_API
 void createOrUpdateSchema(LiteDatabase &database, const path &latestSchemaFilename, const path &diffSqlsDir, const String &diffSqlsFileMask = DatabaseSchemaManager::default_diffs_mask);
 
 }

@@ -1,6 +1,6 @@
 local_settings:
     #build_dir_type: local
-    use_shared_libs: false
+    #use_shared_libs: false
     rc_enabled: false
     builds:
         vs_release64:
@@ -24,24 +24,15 @@ local_settings:
             c_compiler: clang-cl
             cxx_compiler: clang-cl
             use_cache: false
-
 root_project: pvt.egorpugin.primitives
-
 common_settings:
     c++: 17
-
-
+    default_api_start: primitives
 projects:
     command:
         name: command
-
         type: library
-
         root_directory: src/command
-
-
-        static_only: true
-
         options:
             any:
                 definitions:
@@ -54,7 +45,6 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
-
         dependencies:
             public:
                 filesystem:
@@ -63,18 +53,11 @@ projects:
                     version: "*"
                 pvt.cppan.demo.boost.process:
                     version: 1
-
     context:
         name: context
-
         type: library
 
         root_directory: src/context
-
-
-
-        static_only: true
-
         options:
             any:
                 compile_options:
@@ -83,72 +66,52 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
-
     cron:
         name: cron
-
         type: library
 
         root_directory: src/cron
-
         dependencies:
             public:
                 log:
                     version: "*"
                 executor:
                     version: "*"
-
     db.common:
         type: library
-        static_only: true
 
         root_directory: src/db/common
-
         dependencies:
             public:
                 filesystem:
                     version: "*"
                 templates:
                     version: "*"
-
     db.sqlite3:
         type: library
-        static_only: true
 
         root_directory: src/db/sqlite3
-
         dependencies:
             public:
                 db.common:
                     version: "*"
                 pvt.cppan.demo.sqlite3:
                     version: 3
-
     db.postgresql:
         type: library
-        static_only: true
 
         root_directory: src/db/postgresql
-
         dependencies:
             public:
                 db.common:
                     version: "*"
                 pvt.cppan.demo.jtv.pqxx:
                     version: "*"
-
     date_time:
         name: date_time
-
         type: library
-        static_only: true
 
         root_directory: src/date_time
-
-
-
-        static_only: true
-
         options:
             any:
                 compile_options:
@@ -157,25 +120,17 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
-
         dependencies:
             public:
                 pvt.cppan.demo.boost.date_time:
                     version: 1
                 string:
                     version: "*"
-
     executor:
         name: executor
-
         type: library
 
         root_directory: src/executor
-
-
-
-        static_only: true
-
         options:
             any:
                 definitions:
@@ -188,7 +143,6 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
-
         dependencies:
             public:
                 pvt.cppan.demo.boost.asio:
@@ -199,18 +153,11 @@ projects:
                     version: "*"
                 templates:
                     version: "*"
-
     filesystem:
         name: filesystem
-
         type: library
 
         root_directory: src/filesystem
-
-
-
-        static_only: true
-
         options:
             any:
                 compile_options:
@@ -219,7 +166,6 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
-
         dependencies:
             public:
                 pvt.cppan.demo.artyom_beilis.nowide:
@@ -230,18 +176,11 @@ projects:
                     version: 1
                 pvt.cppan.demo.grisumbras.enum_flags:
                     version: master
-
     hash:
         name: hash
-
         type: library
 
         root_directory: src/hash
-
-
-
-        static_only: true
-
         options:
             any:
                 compile_options:
@@ -250,7 +189,6 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
-
         dependencies:
             public:
                 filesystem:
@@ -259,18 +197,11 @@ projects:
                     version: 1
                 pvt.cppan.demo.openssl.crypto:
                     version: 1
-
     http:
         name: http
-
         type: library
 
         root_directory: src/http
-
-
-
-        static_only: true
-
         options:
             any:
                 compile_options:
@@ -283,7 +214,6 @@ projects:
                     win32:
                         public:
                             -   Winhttp
-
         dependencies:
             public:
                 pvt.cppan.demo.badger.curl.libcurl:
@@ -292,18 +222,10 @@ projects:
                     version: "*"
                 templates:
                     version: "*"
-
     lock:
         name: lock
-
         type: library
-
         root_directory: src/lock
-
-
-
-        static_only: true
-
         options:
             any:
                 compile_options:
@@ -312,25 +234,16 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
-
         dependencies:
             public:
                 filesystem:
                     version: "*"
                 pvt.cppan.demo.boost.interprocess:
                     version: 1
-
     log:
         name: log
-
         type: library
-
         root_directory: src/log
-
-
-
-        static_only: true
-
         options:
             any:
                 compile_options:
@@ -339,23 +252,15 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
-
         dependencies:
             public:
                 pvt.cppan.demo.boost.log:
                     version: 1
-
     minidump:
         name: minidump
-
         type: library
-
-        root_directory: src/minidump
-
-
-
         static_only: true
-
+        root_directory: src/minidump
         options:
             any:
                 compile_options:
@@ -368,18 +273,10 @@ projects:
                     win32:
                         public:
                             -   dbghelp
-
     pack:
         name: pack
-
         type: library
-
         root_directory: src/pack
-
-
-
-        static_only: true
-
         options:
             any:
                 compile_options:
@@ -388,7 +285,6 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
-
         dependencies:
             public:
                 filesystem:
@@ -397,36 +293,22 @@ projects:
                     version: 3
                 templates:
                     version: "*"
-
-    sqlite_db:
-        name: sqlite_db
-
-        type: library
-
-        root_directory: src/sqlite_db
-
-
-
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-
+    #sqlite_db:
+        #name: sqlite_db
+        #type: library
+        #root_directory: src/sqlite_db
+        #options:
+            #any:
+                #compile_options:
+                    #clang:
+                        #private:
+                            #-   -Wno-assume
+                            #-   -Wno-delete-non-virtual-dtor
+                            #-   -Wno-potentially-evaluated-expression
     string:
         name: string
-
         type: library
-
         root_directory: src/string
-
-
-
-        static_only: true
-
         options:
             any:
                 compile_options:
@@ -435,21 +317,14 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
-
         dependencies:
             public:
                 pvt.cppan.demo.boost.algorithm:
                     version: 1
-
     templates:
         name: templates
-
         type: library
-
         root_directory: src/templates
-
-
-
         options:
             any:
                 compile_options:
@@ -458,24 +333,16 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
-
-
-
     win32helpers:
         name: win32helpers
-
         type: library
-        static_only: true
-
         root_directory: src/win32helpers
-
         options:
             any:
                 definitions:
                     win32:
                         private:
                             -   UNICODE
-
         dependencies:
             public:
                 filesystem:
@@ -484,19 +351,10 @@ projects:
                     version: 1
                 pvt.cppan.demo.boost.algorithm:
                     version: 1
-
-
     yaml:
         name: yaml
-
         type: library
-
         root_directory: src/yaml
-
-
-
-        static_only: true
-
         options:
             any:
                 compile_options:
@@ -505,21 +363,16 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
-
         dependencies:
             public:
                 pvt.cppan.demo.jbeder.yaml_cpp:
                     version: master
                 string:
                     version: "*"
-
     test.main:
         skip_on_server: true
-
-
         files:
             -   src/main.cpp
-
         options:
             any:
                 compile_options:
@@ -531,7 +384,6 @@ projects:
                     msvc:
                         public:
                             - /bigobj
-
         dependencies:
             public:
                 command:
@@ -548,11 +400,8 @@ projects:
                     version: 2
     test.db:
         skip_on_server: true
-
-
         files:
             -   src/db.cpp
-
         options:
             any:
                 compile_options:
@@ -564,7 +413,6 @@ projects:
                     msvc:
                         public:
                             - /bigobj
-
         dependencies:
             public:
                 command:

@@ -45,7 +45,10 @@ struct LoggerSettings
     bool append = false;
 };
 
+PRIMITIVES_LOG_API
 void initLogger(LoggerSettings &s);
+
+PRIMITIVES_LOG_API
 void loggerFlush();
 
 #else // !USE_LOGGER

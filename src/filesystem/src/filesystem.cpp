@@ -337,7 +337,7 @@ bool compare_dirs(const path &dir1, const path &dir2)
     return true;
 }
 
-FileIterator::FileIterator(const std::vector<path> &fns)
+FileIterator::FileIterator(const FilesOrdered &fns)
 {
     if (fns.empty())
         throw std::runtime_error("Provide at least one file");
@@ -347,7 +347,7 @@ FileIterator::FileIterator(const std::vector<path> &fns)
         File d;
         d.size = fs::file_size(f);
         d.ifile = std::make_unique<ScopedFile>(f, "rb");
-        files.push_back(std::move(d));
+        files.emplace_back(std::move(d));
     }
 }
 

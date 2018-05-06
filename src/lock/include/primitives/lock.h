@@ -25,7 +25,7 @@ using FileLock = Interprocess::file_lock;
 using FileLockPtr = std::unique_ptr<FileLock>;
 using InterprocessMutex = Interprocess::named_mutex;
 
-class ScopedFileLock
+class PRIMITIVES_LOCK_API ScopedFileLock
 {
 public:
     ScopedFileLock(const path &fn);
@@ -41,7 +41,7 @@ private:
     bool locked = false;
 };
 
-class ScopedShareableFileLock
+class PRIMITIVES_LOCK_API ScopedShareableFileLock
 {
 public:
     ScopedShareableFileLock(const path &fn);
