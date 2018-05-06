@@ -27,6 +27,7 @@ local_settings:
 root_project: pvt.egorpugin.primitives
 common_settings:
     c++: 17
+    create_default_api: true
     default_api_start: primitives
 projects:
     command:
