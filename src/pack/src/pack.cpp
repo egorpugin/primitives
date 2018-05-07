@@ -136,7 +136,7 @@ Files unpack_file(const path &fn, const path &dst)
         if (!o)
         {
 #ifdef _WIN32
-            if (fn.size() >= MAX_PATH)
+            if (fn.wstring().size() >= MAX_PATH)
             {
                 fclose(o);
                 continue;

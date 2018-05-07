@@ -91,7 +91,7 @@ path resolve_executable(const path &p)
     if (fs::exists(p) && fs::is_regular_file(p))
         return p;
 #endif
-    return bp::search_path(p);
+    return bp::search_path(p.u8string()).wstring();
 }
 
 path resolve_executable(const std::vector<path> &paths)
@@ -253,9 +253,9 @@ void Command::execute1(std::error_code *ec_in)
         if (!out.file.empty() && !err.file.empty())
         {
             c = bp::child(
-                program
+                program.u8string()
                 , bp::args = wargs
-                , bp::start_dir = working_directory
+                , bp::start_dir = working_directory.u8string()
 
                 , bp::std_in < stdin
                 , bp::std_out > out.file
@@ -271,9 +271,9 @@ void Command::execute1(std::error_code *ec_in)
         else if (!out.file.empty())
         {
             c = bp::child(
-                program
+                program.u8string()
                 , bp::args = wargs
-                , bp::start_dir = working_directory
+                , bp::start_dir = working_directory.u8string()
 
                 , bp::std_in < stdin
                 , bp::std_out > out.file
@@ -292,9 +292,9 @@ void Command::execute1(std::error_code *ec_in)
         else if (!err.file.empty())
         {
             c = bp::child(
-                program
+                program.u8string()
                 , bp::args = wargs
-                , bp::start_dir = working_directory
+                , bp::start_dir = working_directory.u8string()
 
                 , bp::std_in < stdin
                 , bp::std_out > d.pout
@@ -314,9 +314,9 @@ void Command::execute1(std::error_code *ec_in)
     else
     {
         c = bp::child(
-            program
+            program.u8string()
             , bp::args = wargs
-            , bp::start_dir = working_directory
+            , bp::start_dir = working_directory.u8string()
 
             , bp::std_in < stdin
             , bp::std_out > d.pout

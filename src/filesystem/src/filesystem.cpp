@@ -10,6 +10,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/nowide/integration/filesystem.hpp>
+#include <boost/filesystem.hpp>
 
 #include <iostream>
 #include <regex>
@@ -205,7 +206,7 @@ void copy_dir(const path &src, const path &dst)
         if (fs::is_directory(f))
             copy_dir(f, dst / f.path().filename());
         else
-            copy_file(f, dst / f.path().filename(), copy_options::overwrite_existing);
+            copy_file(f, dst / f.path().filename(), fs::copy_options::overwrite_existing);
     }
 }
 
@@ -396,6 +397,11 @@ bool FileIterator::iterate(std::function<bool(const BuffersRef &, uint64_t)> f)
 void setup_utf8_filesystem()
 {
     boost::nowide::nowide_filesystem();
+}
+
+path unique_path(const path &p)
+{
+    return boost::filesystem::unique_path(p.u8string()).wstring();
 }
 
 namespace primitives::filesystem

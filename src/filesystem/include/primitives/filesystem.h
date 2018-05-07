@@ -7,77 +7,16 @@
 #pragma once
 
 #include <primitives/string.h>
-
-#if __has_include(<filesystem>)
-#define USE_CPP17_FILESYSTEM 1
-#else
-#define USE_CPP17_FILESYSTEM 0
-#endif
-
-#if !USE_CPP17_FILESYSTEM
-#include <boost/filesystem.hpp>
-#include <boost/functional/hash.hpp>
-#include <boost/range.hpp>
-#endif
 #include <flags/flags.hpp>
 
-#if USE_CPP17_FILESYSTEM
 #include <filesystem>
-#endif
 #include <unordered_map>
 #include <unordered_set>
 
-#if USE_CPP17_FILESYSTEM
 namespace fs = std::filesystem;
 using error_code = std::error_code;
-#else
-namespace fs = boost::filesystem;
-using error_code = boost::system::error_code;
-#endif
 
 using path = fs::path;
-
-enum class copy_options
-{
-#if USE_CPP17_FILESYSTEM
-    overwrite_existing = (int)fs::copy_options::overwrite_existing,
-#else
-    overwrite_existing = (int)fs::copy_option::overwrite_if_exists,
-#endif
-};
-
-#if USE_CPP17_FILESYSTEM
-namespace std::filesystem
-{
-
-inline bool copy_file(const path& _From, const path& _To, const ::copy_options _Options)
-{
-    return copy_file(_From, _To, (copy_options)_Options);
-}
-
-}
-
-struct __fs_dummy {};
-
-template <class I>
-decltype(auto) make_iterator_range(fs::directory_iterator &&i, __fs_dummy)
-{
-    return std::forward<I>(i);
-}
-#else
-namespace boost::filesystem
-{
-
-inline bool copy_file(const path& _From, const path& _To, const ::copy_options _Options)
-{
-    copy_file(_From, _To, (copy_option)_Options);
-    return true;
-}
-
-}
-
-using boost::make_iterator_range;
-#endif
 
 using FilesSorted = std::set<path>;
 using FilesOrdered = std::vector<path>;
@@ -158,6 +97,9 @@ bool compare_dirs(const path &dir1, const path &dir2);
 
 PRIMITIVES_FILESYSTEM_API
 void setup_utf8_filesystem();
+
+PRIMITIVES_FILESYSTEM_API
+path unique_path(const path &p = "%%%%-%%%%-%%%%-%%%%");
 
 namespace std
 {
