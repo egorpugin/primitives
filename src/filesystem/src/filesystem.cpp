@@ -51,7 +51,7 @@ path current_thread_path(const path &p)
 
 void remove_file(const path &p)
 {
-    boost::system::error_code ec;
+    error_code ec;
     fs::remove(p, ec);
     if (ec)
         std::cerr << "Cannot remove file: " << p.string() << "\n";
@@ -198,14 +198,14 @@ void append_file(const path &p, const String &s)
 
 void copy_dir(const path &src, const path &dst)
 {
-    boost::system::error_code ec;
+    error_code ec;
     fs::create_directories(dst, ec);
     for (auto &f : boost::make_iterator_range(fs::directory_iterator(src), {}))
     {
         if (fs::is_directory(f))
             copy_dir(f, dst / f.path().filename());
         else
-            fs::copy_file(f, dst / f.path().filename(), fs::copy_option::overwrite_if_exists);
+            copy_file(f, dst / f.path().filename(), copy_options::overwrite_existing);
     }
 }
 

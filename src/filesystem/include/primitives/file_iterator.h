@@ -8,6 +8,8 @@
 
 #include "filesystem.h"
 
+#include <functional>
+
 struct PRIMITIVES_FILESYSTEM_API FileIterator
 {
     using Buffer = std::vector<uint8_t>;

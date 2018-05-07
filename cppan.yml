@@ -29,6 +29,13 @@ common_settings:
     c++: 17
     create_default_api: true
     default_api_start: primitives
+    options:
+        any:
+            compile_options:
+                msvc:
+                    public:
+                        - /wd4251
+                        - /wd4275
 projects:
     command:
         name: command
