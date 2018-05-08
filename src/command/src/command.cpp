@@ -45,6 +45,9 @@ struct CommandData
     std::mutex m;
     std::condition_variable cv;
 
+    bool active = false;
+    bool synchronous = false;
+
     CommandData(boost::asio::io_service &ios)
         : ios(ios), pout(ios), perr(ios)
     {
@@ -167,8 +170,12 @@ void Command::execute1(std::error_code *ec_in)
     // local scope, so we automatically close and destroy everything on exit
     CommandData d(get_io_service());
 
-    auto async_read = [this, &cv = d.cv](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
+    auto async_read = [this, &cv = d.cv, &d](const boost::system::error_code &ec, std::size_t s,
+        auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
     {
+        if (!d.synchronous)
+            d.active = true;
+
         if (s)
         {
             String str(out_buf.begin(), out_buf.begin() + s);
@@ -185,8 +192,12 @@ void Command::execute1(std::error_code *ec_in)
             if (!out.file.empty())
                 fwrite(&str[0], str.size(), 1, out_fs);
         }
+
         if (!ec)
-            p.async_read_some(boost::asio::buffer(out_buf), out_cb);
+        {
+            if (!d.synchronous)
+                p.async_read_some(boost::asio::buffer(out_buf), out_cb);
+        }
         else
         {
             // win32: ec = 109, pipe is ended
@@ -225,6 +236,8 @@ void Command::execute1(std::error_code *ec_in)
     d.out_buf.resize(buf_size);
     d.err_buf.resize(buf_size);
 
+    // move this after process start?
+    // make a copy there below?
     d.pout.async_read_some(boost::asio::buffer(d.out_buf), d.out_cb);
     d.perr.async_read_some(boost::asio::buffer(d.err_buf), d.err_cb);
 
@@ -370,6 +383,36 @@ void Command::execute1(std::error_code *ec_in)
             delay = 100ms;
             continue;
         }
+
+        // fast programs can arrive here fast
+        // ???
+        /*if (d.pout.is_open())
+        d.pout.async_read_some(boost::asio::buffer(d.out_buf), d.out_cb);
+        if (d.perr.is_open())
+        d.perr.async_read_some(boost::asio::buffer(d.err_buf), d.err_cb);*/
+
+        // manual squential reads
+        // due to bp bug? race?
+        if (!d.active)
+        {
+            d.synchronous = true;
+            boost::system::error_code ec;
+            while (d.pout.is_open() || d.perr.is_open())
+            {
+                if (d.pout.is_open())
+                {
+                    auto sz = d.pout.read_some(boost::asio::buffer(d.out_buf), ec);
+                    d.out_cb(ec, sz);
+                }
+                if (d.perr.is_open())
+                {
+                    auto sz = d.perr.read_some(boost::asio::buffer(d.err_buf), ec);
+                    d.err_cb(ec, sz);
+                }
+            }
+            break;
+        }
+
         // no jobs available, do a small sleep waiting for pipes closed
         std::unique_lock<std::mutex> lk(d.m);
         delay = delay > max ? max : delay;
@@ -378,19 +421,9 @@ void Command::execute1(std::error_code *ec_in)
 
         /*if (repeats-- == 0)
         {
-            std::cerr << "looks like a deadlock in primitives.command (boost::process)" << std::endl;
-            if (d.pout.is_open())
-            {
-                auto sz = d.pout.read_some(boost::asio::buffer(d.out_buf));
-                int a = 5;
-                a++;
-            }
-            if (d.perr.is_open())
-            {
-                auto sz = d.perr.read_some(boost::asio::buffer(d.err_buf));
-                int a = 5;
-                a++;
-            }
+        repeats = 5;
+        std::cerr << "looks like a deadlock in primitives.command (boost::process)" << std::endl;
+        break;
         }*/
     }
 
