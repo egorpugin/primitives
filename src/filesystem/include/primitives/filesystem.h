@@ -7,16 +7,15 @@
 #pragma once
 
 #include <primitives/string.h>
-
-#include <boost/filesystem.hpp>
-#include <boost/functional/hash.hpp>
-#include <boost/range.hpp>
 #include <flags/flags.hpp>
 
+#include <filesystem>
 #include <unordered_map>
 #include <unordered_set>
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
+using error_code = std::error_code;
+
 using path = fs::path;
 
 using FilesSorted = std::set<path>;
@@ -98,6 +97,9 @@ bool compare_dirs(const path &dir1, const path &dir2);
 
 PRIMITIVES_FILESYSTEM_API
 void setup_utf8_filesystem();
+
+PRIMITIVES_FILESYSTEM_API
+path unique_path(const path &p = "%%%%-%%%%-%%%%-%%%%");
 
 namespace std
 {

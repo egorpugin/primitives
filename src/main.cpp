@@ -47,9 +47,9 @@ TEST_CASE("Checking hashes", "[hash]")
     path fox_file;
     path fox_point_file;
 
-    write_file(empty_file = fs::temp_directory_path() / fs::unique_path(), "");
-    write_file(fox_file = fs::temp_directory_path() / fs::unique_path(), "The quick brown fox jumps over the lazy dog");
-    write_file(fox_point_file = fs::temp_directory_path() / fs::unique_path(), "The quick brown fox jumps over the lazy dog.");
+    write_file(empty_file = fs::temp_directory_path() / unique_path(), "");
+    write_file(fox_file = fs::temp_directory_path() / unique_path(), "The quick brown fox jumps over the lazy dog");
+    write_file(fox_point_file = fs::temp_directory_path() / unique_path(), "The quick brown fox jumps over the lazy dog.");
 
     REQUIRE(sha256  (""s)  == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
     REQUIRE(sha3_256(""s)  == "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a");
@@ -87,10 +87,10 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
 {
     using namespace primitives;
 
-    path dir = fs::temp_directory_path() / "cppąń-storage-寿星天文历的";
+    path dir = fs::temp_directory_path() / u"cppąń-storage-寿星天文历的";
     REQUIRE_NOTHROW(fs::create_directories(dir));
 
-    std::error_code ec;
+    error_code ec;
 
 #ifdef _WIN32
     auto p = dir / "1.bat";
@@ -128,7 +128,7 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
 #ifdef _WIN32
     {
         path x;
-        boost::system::error_code ec;
+        error_code ec;
 
         // match
         write_file("x.exe", "");

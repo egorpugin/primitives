@@ -189,9 +189,10 @@ HttpResponse url_request(const HttpRequest &request)
     return response;
 }
 
+
 String download_file(const String &url)
 {
-    auto fn = fs::temp_directory_path() / fs::unique_path();
+    auto fn = fs::temp_directory_path() / unique_path();
     download_file(url, fn, 1_GB);
     auto s = read_file(fn);
     fs::remove(fn);

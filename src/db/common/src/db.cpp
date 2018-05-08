@@ -120,7 +120,7 @@ String FileDatabaseSchemaManager::getDiffSql(size_t i) const
 size_t FileDatabaseSchemaManager::getDiffSqlSize() const
 {
     size_t n = 0;
-    for (auto &f : boost::make_iterator_range(fs::directory_iterator(diffSqlsDir), {}))
+    for (auto &f : fs::directory_iterator(diffSqlsDir))
     {
         if (fs::is_regular_file(f) && f.path().filename().string().find(default_diffs_prefix) == 0)
             n++;

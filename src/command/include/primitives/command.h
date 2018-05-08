@@ -9,6 +9,8 @@
 #include <primitives/filesystem.h>
 #include <primitives/stdcompat/optional.h>
 
+#include <functional>
+
 namespace primitives
 {
 
