@@ -91,7 +91,7 @@ path resolve_executable(const path &p)
     if (fs::exists(p) && fs::is_regular_file(p))
         return p;
 #endif
-    return bp::search_path(p.u8string()).wstring();
+    return bp::search_path(p.wstring()).wstring();
 }
 
 path resolve_executable(const std::vector<path> &paths)
@@ -116,7 +116,7 @@ Command::~Command()
 String Command::print() const
 {
     String s;
-    s += "\"" + program.string() + "\" ";
+    s += "\"" + program.u8string() + "\" ";
     for (auto &a : args)
         s += "\"" + a + "\" ";
     s.resize(s.size() - 1);
@@ -142,7 +142,7 @@ void Command::execute1(std::error_code *ec_in)
         auto p = resolve_executable(program);
         if (p.empty())
         {
-            auto e = "Cannot resolve executable: " + program.string();
+            auto e = "Cannot resolve executable: " + program.u8string();
             if (!ec_in)
                 throw std::runtime_error(e);
             *ec_in = std::make_error_code(std::errc::no_such_file_or_directory);
@@ -167,7 +167,8 @@ void Command::execute1(std::error_code *ec_in)
     // local scope, so we automatically close and destroy everything on exit
     CommandData d(get_io_service());
 
-    auto async_read = [this, &cv = d.cv](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
+    auto async_read = [this, &cv = d.cv](const boost::system::error_code &ec, std::size_t s,
+        auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
     {
         if (s)
         {
@@ -194,7 +195,7 @@ void Command::execute1(std::error_code *ec_in)
             {
                 if (s)
                 {
-                    //p.async_close();
+                    p.async_close();
                     p.close();
                     assert(false && "non zero message with closed pipe");
                     throw std::runtime_error("primitives.command (" + std::to_string(__LINE__) + "): non zero message with closed pipe");
@@ -253,9 +254,9 @@ void Command::execute1(std::error_code *ec_in)
         if (!out.file.empty() && !err.file.empty())
         {
             c = bp::child(
-                program.u8string()
+                program.wstring()
                 , bp::args = wargs
-                , bp::start_dir = working_directory.u8string()
+                , bp::start_dir = working_directory.wstring()
 
                 , bp::std_in < stdin
                 , bp::std_out > out.file
@@ -271,9 +272,9 @@ void Command::execute1(std::error_code *ec_in)
         else if (!out.file.empty())
         {
             c = bp::child(
-                program.u8string()
+                program.wstring()
                 , bp::args = wargs
-                , bp::start_dir = working_directory.u8string()
+                , bp::start_dir = working_directory.wstring()
 
                 , bp::std_in < stdin
                 , bp::std_out > out.file
@@ -292,9 +293,9 @@ void Command::execute1(std::error_code *ec_in)
         else if (!err.file.empty())
         {
             c = bp::child(
-                program.u8string()
+                program.wstring()
                 , bp::args = wargs
-                , bp::start_dir = working_directory.u8string()
+                , bp::start_dir = working_directory.wstring()
 
                 , bp::std_in < stdin
                 , bp::std_out > d.pout
@@ -314,9 +315,9 @@ void Command::execute1(std::error_code *ec_in)
     else
     {
         c = bp::child(
-            program.u8string()
+            program.wstring()
             , bp::args = wargs
-            , bp::start_dir = working_directory.u8string()
+            , bp::start_dir = working_directory.wstring()
 
             , bp::std_in < stdin
             , bp::std_out > d.pout

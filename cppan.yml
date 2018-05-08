@@ -61,6 +61,8 @@ projects:
                     version: "*"
                 pvt.cppan.demo.boost.process:
                     version: 1
+                pvt.cppan.demo.poco.foundation:
+                    version: "*"
     context:
         name: context
         type: library
