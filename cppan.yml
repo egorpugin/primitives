@@ -1,6 +1,6 @@
 local_settings:
     #build_dir_type: local
-    #use_shared_libs: false
+    use_shared_libs: false
     rc_enabled: false
     builds:
         vs_release64:

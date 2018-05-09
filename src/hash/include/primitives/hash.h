@@ -8,6 +8,8 @@
 
 #include <primitives/filesystem.h>
 
+#include <boost/container_hash/hash.hpp>
+
 PRIMITIVES_HASH_API
 String generate_random_alnum_sequence(uint32_t len);
 

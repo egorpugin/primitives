@@ -283,7 +283,7 @@ bool is_under_root(path p, const path &root_dir)
         // Converts p, which must exist, to an absolute path
         // that has no symbolic link, dot, or dot-dot elements.
         p = fs::canonical(p);
-    while (!p.empty())
+    while (!p.empty() && p != p.root_path())
     {
         if (p == root_dir)
             return true;
