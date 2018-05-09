@@ -10,6 +10,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio/use_future.hpp>
+#include <boost/asio/executor_work_guard.hpp>
 #include <boost/nowide/convert.hpp>
 #include <boost/process.hpp>
 
@@ -18,10 +19,12 @@
 #include <iostream>
 #include <mutex>
 
-auto &get_io_service()
+auto &get_io_context()
 {
-    static boost::asio::io_service ios;
-    return ios;
+    static boost::asio::io_context io_context;
+    // protect context from being stopped
+    static auto wg = boost::asio::make_work_guard(io_context);
+    return io_context;
 }
 
 namespace primitives
@@ -44,6 +47,8 @@ struct CommandData
 
     std::mutex m;
     std::condition_variable cv;
+
+    // TODO: add pid and option to command to execute callbacks right in this thread
 
     CommandData(boost::asio::io_service &ios)
         : ios(ios), pout(ios), perr(ios)
@@ -105,14 +110,6 @@ path resolve_executable(const std::vector<path> &paths)
     return path();
 }
 
-Command::Command()
-{
-}
-
-Command::~Command()
-{
-}
-
 String Command::print() const
 {
     String s;
@@ -165,7 +162,7 @@ void Command::execute1(std::error_code *ec_in)
 #endif
 
     // local scope, so we automatically close and destroy everything on exit
-    CommandData d(get_io_service());
+    CommandData d(get_io_context());
 
     auto async_read = [this, &cv = d.cv](const boost::system::error_code &ec, std::size_t s, auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
     {
