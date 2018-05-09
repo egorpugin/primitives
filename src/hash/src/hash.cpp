@@ -45,7 +45,7 @@ String generate_random_bytes(uint32_t len)
 String generate_strong_random_bytes(uint32_t len)
 {
     String bytes(len, 0);
-    if (!RAND_bytes((unsigned char *)&bytes[0], bytes.size()))
+    if (!RAND_bytes((unsigned char *)&bytes[0], (int)bytes.size()))
         throw std::runtime_error("Error during getting random bytes");
     return bytes;
 }

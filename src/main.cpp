@@ -514,22 +514,12 @@ TEST_CASE("Checking executor: test fast wait", "[executor]")
     REQUIRE(i == 1);
 }
 
-//#include <primitives/yaml.h>
-
 int main(int argc, char **argv)
 try
 {
     setup_utf8_filesystem();
 
     Catch::Session().run(argc, argv);
-
-    /*std::istringstream ss("x: a\nx2:\n\ta: b\n\tc: d");
-    auto n = YAML::Load(ss);
-    get_variety_and_iterate(n, [](auto &v) {}, [](auto &v) {});
-    get_variety_and_iterate(yaml(), [](auto &v) {}, [](auto &v) {});
-
-    std::map<String, String> m;
-    get_string_map(n, "x2", m);*/
 
     return 0;
 }

@@ -10,6 +10,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio/use_future.hpp>
+#include <boost/asio/executor_work_guard.hpp>
 #include <boost/nowide/convert.hpp>
 #include <boost/process.hpp>
 
@@ -18,10 +19,12 @@
 #include <iostream>
 #include <mutex>
 
-auto &get_io_service()
+auto &get_io_context()
 {
-    static boost::asio::io_service ios;
-    return ios;
+    static boost::asio::io_context io_context;
+    // protect context from being stopped
+    static auto wg = boost::asio::make_work_guard(io_context);
+    return io_context;
 }
 
 namespace primitives
@@ -45,8 +48,7 @@ struct CommandData
     std::mutex m;
     std::condition_variable cv;
 
-    bool active = false;
-    bool synchronous = false;
+    // TODO: add pid and option to command to execute callbacks right in this thread
 
     CommandData(boost::asio::io_service &ios)
         : ios(ios), pout(ios), perr(ios)
@@ -108,14 +110,6 @@ path resolve_executable(const std::vector<path> &paths)
     return path();
 }
 
-Command::Command()
-{
-}
-
-Command::~Command()
-{
-}
-
 String Command::print() const
 {
     String s;
@@ -168,14 +162,11 @@ void Command::execute1(std::error_code *ec_in)
 #endif
 
     // local scope, so we automatically close and destroy everything on exit
-    CommandData d(get_io_service());
+    CommandData d(get_io_context());
 
     auto async_read = [this, &cv = d.cv, &d](const boost::system::error_code &ec, std::size_t s,
         auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
     {
-        if (!d.synchronous)
-            d.active = true;
-
         if (s)
         {
             String str(out_buf.begin(), out_buf.begin() + s);
@@ -195,8 +186,7 @@ void Command::execute1(std::error_code *ec_in)
 
         if (!ec)
         {
-            if (!d.synchronous)
-                p.async_read_some(boost::asio::buffer(out_buf), out_cb);
+            p.async_read_some(boost::asio::buffer(out_buf), out_cb);
         }
         else
         {
@@ -374,7 +364,6 @@ void Command::execute1(std::error_code *ec_in)
         delay += 100ms;
     }
 
-    //int repeats = 5;
     while (d.pout.is_open() || d.perr.is_open())
     {
         // in case we're done or two pipes were closed, we do not wait in cv anymore
@@ -384,47 +373,11 @@ void Command::execute1(std::error_code *ec_in)
             continue;
         }
 
-        // fast programs can arrive here fast
-        // ???
-        /*if (d.pout.is_open())
-        d.pout.async_read_some(boost::asio::buffer(d.out_buf), d.out_cb);
-        if (d.perr.is_open())
-        d.perr.async_read_some(boost::asio::buffer(d.err_buf), d.err_cb);*/
-
-        // manual squential reads
-        // due to bp bug? race?
-        if (!d.active)
-        {
-            d.synchronous = true;
-            boost::system::error_code ec;
-            while (d.pout.is_open() || d.perr.is_open())
-            {
-                if (d.pout.is_open())
-                {
-                    auto sz = d.pout.read_some(boost::asio::buffer(d.out_buf), ec);
-                    d.out_cb(ec, sz);
-                }
-                if (d.perr.is_open())
-                {
-                    auto sz = d.perr.read_some(boost::asio::buffer(d.err_buf), ec);
-                    d.err_cb(ec, sz);
-                }
-            }
-            break;
-        }
-
         // no jobs available, do a small sleep waiting for pipes closed
         std::unique_lock<std::mutex> lk(d.m);
         delay = delay > max ? max : delay;
         d.cv.wait_for(lk, delay, [&d] {return !d.pout.is_open() && !d.perr.is_open(); });
         delay += 100ms;
-
-        /*if (repeats-- == 0)
-        {
-        repeats = 5;
-        std::cerr << "looks like a deadlock in primitives.command (boost::process)" << std::endl;
-        break;
-        }*/
     }
 
     exit_code = c.exit_code();

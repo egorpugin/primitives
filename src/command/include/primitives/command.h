@@ -53,8 +53,8 @@ struct PRIMITIVES_COMMAND_API Command
     //bool capture = true;
     bool inherit = false;
 
-    Command();
-    virtual ~Command();
+    Command() = default;
+    virtual ~Command() = default;
 
     virtual void execute() { execute1(); }
     virtual void execute(std::error_code &ec) { execute1(&ec); }
