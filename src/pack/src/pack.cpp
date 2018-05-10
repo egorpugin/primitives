@@ -143,7 +143,7 @@ Files unpack_file(const path &fn, const path &dst)
             }
 #elif defined(__APPLE__)
 #else
-            if (fn.size() >= PATH_MAX)
+            if (fn.string().size() >= PATH_MAX)
             {
                 fclose(o);
                 continue;

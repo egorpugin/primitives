@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <boost/asio/io_service.hpp>
+#include <boost/asio/io_context.hpp>
 
 #include <primitives/command.h>
 
@@ -36,7 +36,7 @@ struct CommandData
 {
     using cb_func = std::function<void(const boost::system::error_code &, std::size_t)>;
 
-    boost::asio::io_service &ios;
+    boost::asio::io_context &ios;
     boost::process::async_pipe pout, perr;
 
     cb_func out_cb, err_cb;
@@ -50,7 +50,7 @@ struct CommandData
 
     // TODO: add pid and option to command to execute callbacks right in this thread
 
-    CommandData(boost::asio::io_service &ios)
+    CommandData(boost::asio::io_context &ios)
         : ios(ios), pout(ios), perr(ios)
     {
     }
