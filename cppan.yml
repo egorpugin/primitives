@@ -175,6 +175,10 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
+                link_libraries:
+                    unix:
+                        public:
+                            - stdc++fs
         dependencies:
             public:
                 pvt.cppan.demo.artyom_beilis.nowide:
