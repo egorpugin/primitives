@@ -36,14 +36,14 @@ struct PRIMITIVES_DB_COMMON_API LiteDatabase
     }
 
     template <typename T>
-    T getValue(const String &key, const T &default)
+    T getValue(const String &key, const T &default_)
     {
         checkKey(key);
         auto v = getValueByKey(key);
         if (!v)
         {
-            setValue(key, default);
-            return default;
+            setValue(key, default_);
+            return default_;
         }
         if constexpr (std::is_same_v<T, int>)
             return std::stoi(v.value());

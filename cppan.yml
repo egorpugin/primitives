@@ -1,6 +1,6 @@
 local_settings:
     #build_dir_type: local
-    use_shared_libs: false
+    #use_shared_libs: false
     rc_enabled: false
     builds:
         vs_release64:
@@ -34,8 +34,9 @@ common_settings:
             compile_options:
                 msvc:
                     public:
-                        - /wd4251
-                        - /wd4275
+                        - /wd4251 # needs to have dll-interface to be used by clients of
+                        #- /wd4275 # non dll-interface used as base for dll-interface
+                        - /permissive-
 projects:
     command:
         name: command

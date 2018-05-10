@@ -35,7 +35,7 @@ size_t get_max_threads(size_t N)
 
 Executor &getExecutor(size_t N)
 {
-    static int threads = [&N]()
+    static size_t threads = [&N]()
     {
         if (N > 0)
             return N;
