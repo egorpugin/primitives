@@ -136,6 +136,13 @@ projects:
                     version: 1
                 string:
                     version: "*"
+    embedder:
+        name: embedder
+        root_directory: src/embedder
+        dependencies:
+            public:
+                filesystem:
+                    version: "*"
     executor:
         name: executor
         type: library
