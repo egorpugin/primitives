@@ -39,11 +39,11 @@ try
     if (!fs::exists(p))
     {
         std::cerr << "no such file: " << p.string() << "\n";
-        return 1;
+        return 2;
     }
 
     auto s = read_file(p);
-    std::regex r("CPPAN_INCLUDE<(.*?)>");
+    std::regex r("EMBED<(.*?)>");
     std::smatch m;
     while (std::regex_search(s, m, r))
     {
@@ -53,7 +53,7 @@ try
         if (!fs::exists(f))
         {
             std::cerr << "no such include file: " << f.string() << "\n";
-            return 1;
+            return 3;
         }
         str += preprocess_file(read_file(f));
         str += m.suffix();
@@ -67,10 +67,10 @@ try
 catch (const std::exception &e)
 {
     std::cerr << e.what() << "\n";
-    return 1;
+    return 10;
 }
 catch (...)
 {
     std::cerr << "Unhandled unknown exception" << "\n";
-    return 1;
+    return 11;
 }
