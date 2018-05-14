@@ -293,7 +293,8 @@ void Command::execute1(std::error_code *ec_in)
                 , bp::on_exit(on_exit)
             );
             d.pout.close();
-            d.stopped++;
+            // do not increment d.stopped here,
+            // because asio will still call that callback once
         }
         else if (!err.file.empty())
         {
@@ -315,7 +316,8 @@ void Command::execute1(std::error_code *ec_in)
                 , bp::on_exit(on_exit)
             );
             d.perr.close();
-            d.stopped++;
+            // do not increment d.stopped here,
+            // because asio will still call that callback once
         }
     }
     else
