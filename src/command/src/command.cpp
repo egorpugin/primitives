@@ -47,6 +47,7 @@ struct CommandData
 
     std::mutex m;
     std::condition_variable cv;
+    std::atomic_int stopped{ 0 };
 
     // TODO: add pid and option to command to execute callbacks right in this thread
 
@@ -206,6 +207,7 @@ void Command::execute1(std::error_code *ec_in)
             // if we somehow hit this w/o p.is_open(),
             // we still consider pipe as closed and notice users
             cv.notify_all();
+            d.stopped++;
         }
     };
 
@@ -291,6 +293,7 @@ void Command::execute1(std::error_code *ec_in)
                 , bp::on_exit(on_exit)
             );
             d.pout.close();
+            d.stopped++;
         }
         else if (!err.file.empty())
         {
@@ -312,6 +315,7 @@ void Command::execute1(std::error_code *ec_in)
                 , bp::on_exit(on_exit)
             );
             d.perr.close();
+            d.stopped++;
         }
     }
     else
@@ -377,6 +381,23 @@ void Command::execute1(std::error_code *ec_in)
         std::unique_lock<std::mutex> lk(d.m);
         delay = delay > max ? max : delay;
         d.cv.wait_for(lk, delay, [&d] {return !d.pout.is_open() && !d.perr.is_open(); });
+        delay += 100ms;
+    }
+
+    // cv notifcation may hang a bit, so in async handler it will be called on destroyed object
+    while (d.stopped != 2)
+    {
+        // in case we're done or two pipes were closed, we do not wait in cv anymore
+        if (d.ios.poll_one())
+        {
+            delay = 100ms;
+            continue;
+        }
+
+        // no jobs available, do a small sleep waiting for pipes closed
+        std::unique_lock<std::mutex> lk(d.m);
+        delay = delay > max ? max : delay;
+        d.cv.wait_for(lk, delay, [&d] {return d.stopped == 2; });
         delay += 100ms;
     }
 
