@@ -60,7 +60,7 @@ void remove_file(const path &p)
 
 void remove_all_from_dir(const path &dir)
 {
-    for (auto &f : boost::make_iterator_range(fs::directory_iterator(dir), {}))
+    for (auto &f : fs::directory_iterator(dir))
         fs::remove_all(f);
 }
 
@@ -201,7 +201,7 @@ void copy_dir(const path &src, const path &dst)
 {
     error_code ec;
     fs::create_directories(dst, ec);
-    for (auto &f : boost::make_iterator_range(fs::directory_iterator(src), {}))
+    for (auto &f : fs::directory_iterator(src))
     {
         if (fs::is_directory(f))
             copy_dir(f, dst / f.path().filename());
@@ -233,7 +233,7 @@ Files enumerate_files(const path &dir, bool recursive)
         return files;
     if (recursive)
     {
-        for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+        for (auto &f : fs::recursive_directory_iterator(dir))
         {
             if (!fs::is_regular_file(f))
                 continue;
@@ -242,7 +242,7 @@ Files enumerate_files(const path &dir, bool recursive)
     }
     else
     {
-        for (auto &f : boost::make_iterator_range(fs::directory_iterator(dir), {}))
+        for (auto &f : fs::directory_iterator(dir))
         {
             if (!fs::is_regular_file(f))
                 continue;
@@ -310,12 +310,14 @@ bool compare_dirs(const path &dir1, const path &dir2)
     {
         std::vector<path> files;
         if (fs::exists(dir))
-            for (auto &f : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {}))
+        {
+            for (auto &f : fs::recursive_directory_iterator(dir))
             {
                 if (!fs::is_regular_file(f))
                     continue;
                 files.push_back(f);
             }
+        }
         return files;
     };
 
