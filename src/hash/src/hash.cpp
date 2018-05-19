@@ -90,6 +90,14 @@ String sha256(const String &data)
     return bytes_to_string(hash, hash_size);
 }
 
+String blake2b_512(const String &data)
+{
+    uint8_t hash[EVP_MAX_MD_SIZE];
+    uint32_t hash_size;
+    EVP_Digest(data.data(), data.size(), hash, &hash_size, EVP_blake2b512(), nullptr);
+    return bytes_to_string(hash, hash_size);
+}
+
 String sha256(const path &fn)
 {
     return sha256(read_file(fn, true));
@@ -123,11 +131,28 @@ String md5(const path &fn)
     return md5(read_file(fn, true));
 }
 
+std::tuple<HashType, HashType> load_strong_hash_prefix(const String &hash)
+{
+    auto p = hash.find('$');
+    if (p == -1)
+        return { HashType::sha3_256, HashType::sha2_256 };
+    auto fht_s = hash.substr(0, hash.find('_'));
+    auto sht_s = hash.substr(hash.find('_') + 1, p);
+    auto fht = (HashType)std::stoi(fht_s);
+    auto sht = (HashType)std::stoi(sht_s);
+    return { fht,sht };
+}
+
+String save_strong_hash_prefix(HashType hash1, HashType hash2)
+{
+    return std::to_string((int)HashType::blake2b_512) + "_" + std::to_string((int)HashType::sha3_256) + "$";
+}
+
 String strong_file_hash(const String &data)
 {
     // algorithm:
-    //  sha3(sha2(f+sz) + sha3(f+sz) + sz)
-    // sha2, sha3 - 256 bit versions
+    //  sha3_256(sha2(f+sz) + sha3_256(f+sz) + sz)
+    // sha2, sha3_256 - 256 bit versions
 
     auto sz = std::to_string(data.size());
     auto f = data + sz;
@@ -137,8 +162,8 @@ String strong_file_hash(const String &data)
 String strong_file_hash(const path &fn)
 {
     // algorithm:
-    //  sha3(sha2(f+sz) + sha3(f+sz) + sz)
-    // sha2, sha3 - 256 bit versions
+    //  sha3_256(sha2(f+sz) + sha3_256(f+sz) + sz)
+    // sha2, sha3_256 - 256 bit versions
 
     uint8_t hash2[EVP_MAX_MD_SIZE];
     uint32_t hash2_size;
@@ -180,4 +205,71 @@ String strong_file_hash(const path &fn)
     auto p2 = bytes_to_string(hash3);
     auto &p3 = sz;
     return sha3_256(p1 + p2 + p3);
+}
+
+String strong_file_hash_sha3_sha2(const String &data)
+{
+    return strong_file_hash(data);
+}
+
+String strong_file_hash_sha3_sha2(const path &fn)
+{
+    return strong_file_hash(fn);
+}
+
+String strong_file_hash_blake2b_sha3(const String &data)
+{
+    // algorithm:
+    //  blake2b_512(sha3_256(data+sz) + blake2b_512(data+sz) + sz)
+
+    auto sz = std::to_string(data.size());
+    auto f = data + sz;
+    return save_strong_hash_prefix(HashType::blake2b_512, HashType::sha3_256) + blake2b_512(sha3_256(f) + blake2b_512(f) + sz);
+}
+
+String strong_file_hash_blake2b_sha3(const path &fn)
+{
+    // algorithm:
+    //  blake2b_512(sha3_256(data+sz) + blake2b_512(data+sz) + sz)
+
+    uint8_t blake2b[EVP_MAX_MD_SIZE];
+    uint32_t blake2b_size;
+
+    std::string sha3(32, 0);
+
+    auto blake2b_ctx = EVP_MD_CTX_create();
+    if (!blake2b)
+        throw std::runtime_error("Cannot create blake2b context");
+    EVP_DigestInit(blake2b_ctx, EVP_blake2b512());
+
+    auto sha3_256_ctx = rhash_init(RHASH_SHA3_256);
+    if (!sha3_256_ctx)
+        throw std::runtime_error("Cannot create sha3 context");
+
+    FileIterator fi({ fn });
+    auto r = fi.iterate([blake2b_ctx, sha3_256_ctx](const auto &b, auto sz)
+    {
+        EVP_DigestUpdate(blake2b_ctx, b[0].get().data(), (size_t)sz);
+        rhash_update(sha3_256_ctx, b[0].get().data(), (size_t)sz);
+        return true;
+    });
+
+    // add size
+    auto sz = std::to_string(fi.files.front().size);
+    EVP_DigestUpdate(blake2b_ctx, sz.data(), sz.size());
+    rhash_update(sha3_256_ctx, sz.data(), sz.size());
+
+    EVP_DigestFinal(blake2b_ctx, blake2b, &blake2b_size);
+    rhash_final(sha3_256_ctx, (unsigned char *)&sha3[0]);
+
+    EVP_MD_CTX_destroy(blake2b_ctx);
+    rhash_free(sha3_256_ctx);
+
+    if (!r)
+        throw std::runtime_error("Error during strong_file_hash_blake2b_sha3()");
+
+    auto p1 = bytes_to_string(sha3);
+    auto p2 = bytes_to_string(blake2b, blake2b_size);
+    auto &p3 = sz;
+    return save_strong_hash_prefix(HashType::blake2b_512, HashType::sha3_256) + blake2b_512(p1 + p2 + p3);
 }
