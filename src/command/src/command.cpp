@@ -430,53 +430,41 @@ void Command::execute1(std::error_code *ec_in)
     // setup pipes
     uv_fs_t out_file_req, err_file_req;
     uv_pipe_t pout = { 0 }, perr = { 0 };
-    pout.data = perr.data = this;
+    pout.data = &this->out;
+    perr.data = &this->err;
 
     uv_stdio_container_t child_stdio[3];
     child_stdio[0].flags = UV_IGNORE;
 
-    if (out.inherit)
+    auto setup_pipe = [&loop, &child_stdio](auto &stream, int fd, auto &pipe, auto &file_req, auto &file)
     {
-        child_stdio[1].flags = UV_INHERIT_FD;
-        child_stdio[1].data.fd = 1;
-    }
-    else if (!out.file.empty())
-    {
-        uv_fs_open(&loop, &out_file_req, out_file_s.c_str(), O_CREAT | O_RDWR, 0644, NULL);
-        uv_fs_req_cleanup(&out_file_req);
-        child_stdio[1].flags = UV_INHERIT_FD;
-        child_stdio[1].data.fd = out_file_req.result;
-    }
-    else
-    {
-        uv_pipe_init(&loop, &pout, 0);
-        child_stdio[1].flags = (uv_stdio_flags)(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-        child_stdio[1].data.stream = (uv_stream_t*)&pout;
-    }
-
-    if (err.inherit)
-    {
-        child_stdio[2].flags = UV_INHERIT_FD;
-        child_stdio[2].data.fd = 2;
-    }
-    else if (!err.file.empty())
-    {
-        uv_fs_open(&loop, &err_file_req, err_file_s.c_str(), O_CREAT | O_RDWR, 0644, NULL);
-        uv_fs_req_cleanup(&err_file_req);
-        child_stdio[2].flags = UV_INHERIT_FD;
-        child_stdio[2].data.fd = err_file_req.result;
-    }
-    else
-    {
-        uv_pipe_init(&loop, &perr, 0);
-        child_stdio[2].flags = (uv_stdio_flags)(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-        child_stdio[2].data.stream = (uv_stream_t*)&perr;
-    }
+        if (stream.inherit)
+        {
+            child_stdio[fd].flags = UV_INHERIT_FD;
+            child_stdio[fd].data.fd = fd;
+        }
+        else if (!stream.file.empty())
+        {
+            uv_fs_open(&loop, &file_req, file.c_str(), O_CREAT | O_RDWR, 0644, NULL);
+            uv_fs_req_cleanup(&file_req);
+            child_stdio[fd].flags = UV_INHERIT_FD;
+            child_stdio[fd].data.fd = file_req.result;
+        }
+        else
+        {
+            uv_pipe_init(&loop, &pipe, 0);
+            child_stdio[fd].flags = (uv_stdio_flags)(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
+            child_stdio[fd].data.stream = (uv_stream_t*)&pipe;
+        }
+    };
+    setup_pipe(out, 1, pout, out_file_req, out_file_s);
+    setup_pipe(err, 2, perr, err_file_req, err_file_s);
 
     // exit callback
     auto on_exit = [](uv_process_t *req, int64_t exit_status, int term_signal)
     {
         ((Command*)(req->data))->exit_code = exit_status;
+        uv_close((uv_handle_t*)req, 0);
     };
 
     // options
@@ -496,64 +484,40 @@ void Command::execute1(std::error_code *ec_in)
         errors.push_back("child not started: "s + uv_strerror(r));
 
     // capture callbacks
-    auto on_alloc_out = [](uv_handle_t *s, size_t suggested_size, uv_buf_t *buf)
+    auto on_alloc = [](uv_handle_t *s, size_t suggested_size, uv_buf_t *buf)
     {
-        auto c = ((Command*)s->data);
-        buf->base = c->out.buf;
-        buf->len = sizeof(c->out.buf);
+        auto c = ((Command::Stream*)s->data);
+        buf->base = c->buf;
+        buf->len = sizeof(c->buf);
     };
-    auto on_read_out = [](uv_stream_t *s, ssize_t nread, const uv_buf_t *rdbuf)
+    auto on_read = [](uv_stream_t *s, ssize_t nread, const uv_buf_t *rdbuf)
     {
-        auto c = ((Command*)s->data);
+        auto c = ((Command::Stream*)s->data);
 
         if (nread == UV_EOF)
         {
-            if (c->out.action)
-                c->out.action({}, true);
+            if (c->action)
+                c->action({}, true);
             return;
         }
         if (nread <= 0)
             return; // something really wrong - throw?
 
-        c->out.text.append(rdbuf->base, rdbuf->base + nread);
+        c->text.append(rdbuf->base, rdbuf->base + nread);
 
-        if (c->out.action)
-            c->out.action({ rdbuf->base, rdbuf->base + nread }, false);
-    };
-    auto on_alloc_err = [](uv_handle_t *s, size_t suggested_size, uv_buf_t *buf)
-    {
-        auto c = ((Command*)s->data);
-        buf->base = c->err.buf;
-        buf->len = sizeof(c->err.buf);
-    };
-    auto on_read_err = [](uv_stream_t *s, ssize_t nread, const uv_buf_t *rdbuf)
-    {
-        auto c = ((Command*)s->data);
-
-        if (nread == UV_EOF)
-        {
-            if (c->err.action)
-                c->err.action({}, true);
-            return;
-        }
-        if (nread <= 0)
-            return; // something really wrong - throw?
-
-        c->err.text.append(rdbuf->base, rdbuf->base + nread);
-
-        if (c->err.action)
-            c->err.action({ rdbuf->base, rdbuf->base + nread }, false);
+        if (c->action)
+            c->action({ rdbuf->base, rdbuf->base + nread }, false);
     };
 
     // start capture
     if (!out.inherit && out.file.empty())
     {
-        if (r = uv_read_start((uv_stream_t*)&pout, on_alloc_out, on_read_out); r)
+        if (r = uv_read_start((uv_stream_t*)&pout, on_alloc, on_read); r)
             errors.push_back("cannot start read from stdout: "s + uv_strerror(r));
     }
     if (!err.inherit && err.file.empty())
     {
-        if (r = uv_read_start((uv_stream_t*)&perr, on_alloc_err, on_read_err); r)
+        if (r = uv_read_start((uv_stream_t*)&perr, on_alloc, on_read); r)
             errors.push_back("cannot start read from stderr: "s + uv_strerror(r));
     }
 
@@ -562,21 +526,19 @@ void Command::execute1(std::error_code *ec_in)
         errors.push_back("something goes wrong in the loop: "s + uv_strerror(r));
 
     // cleanup
-    uv_close((uv_handle_t*)&child_req, NULL);
-
-    if (!out.inherit && out.file.empty())
-        uv_close((uv_handle_t*)&pout, NULL);
-    else if (!out.file.empty())
-        uv_fs_close(&loop, &out_file_req, out_file_req.result, 0);
-
-    if (!err.inherit && err.file.empty())
-        uv_close((uv_handle_t*)&perr, NULL);
-    else if (!err.file.empty())
-        uv_fs_close(&loop, &err_file_req, err_file_req.result, 0);
+    auto close = [&loop](auto &stream, auto &pipe, auto &file_req)
+    {
+        if (!stream.inherit && stream.file.empty())
+            uv_close((uv_handle_t*)&pipe, NULL);
+        else if (!stream.file.empty())
+            uv_fs_close(&loop, &file_req, file_req.result, 0);
+    };
+    close(out, pout, out_file_req);
+    close(err, perr, err_file_req);
 
     // pipes and process want endgames
     if (r = uv_run(&loop, UV_RUN_DEFAULT); r)
-        errors.push_back("something goes wrong in the loop: "s + uv_strerror(r));
+        errors.push_back("something goes wrong in the endgames loop: "s + uv_strerror(r));
 
     // cleanup loop
     if (r = uv_loop_close(&loop); r)
