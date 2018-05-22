@@ -110,8 +110,25 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
 
 #ifdef _WIN32
     auto p = dir / "1.bat";
-    write_file(p, "echo hello world");
 
+    {
+        write_file(p, "@echo hello world");
+        Command c;
+        c.program = p;
+        c.out.file = dir / "1.txt";
+        REQUIRE_NOTHROW(c.execute());
+        CHECK(read_file(dir / "1.txt") == "hello world\r\n");
+    }
+
+    {
+        write_file(p, "@echo hello world\n@echo hello world\n@echo hello world");
+        Command c;
+        c.program = p;
+        REQUIRE_NOTHROW(c.execute());
+        REQUIRE((c.out.text == "hello world\r\nhello world\r\nhello world\r\n"));
+    }
+
+    write_file(p, "@echo hello world");
     Command c;
     c.program = p;
     REQUIRE_NOTHROW(c.execute());

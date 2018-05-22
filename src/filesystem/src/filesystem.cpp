@@ -84,15 +84,15 @@ std::wstring wnormalize_path(const path &p)
 
 String read_file(const path &p, bool no_size_check)
 {
-    if (!fs::exists(p))
+    error_code ec;
+    if (!fs::exists(p, ec))
         throw std::runtime_error("File '" + p.string() + "' does not exist");
 
-    auto fn = p.string();
-    ScopedFile ifile(fn, "rb");
+    ScopedFile ifile(p, "rb");
 
     size_t sz = (size_t)fs::file_size(p);
     if (!no_size_check && sz > 10'000'000)
-        throw std::runtime_error("File " + fn + " is very big (> ~10 MB)");
+        throw std::runtime_error("File " + p.u8string() + " is very big (> ~10 MB)");
 
     String f;
     f.resize(sz);
@@ -177,7 +177,8 @@ void write_file(const path &p, const String &s)
 
 void write_file_if_different(const path &p, const String &s)
 {
-    if (fs::exists(p))
+    error_code ec;
+    if (fs::exists(p, ec))
     {
         auto s2 = read_file(p, true);
         if (s == s2)
@@ -229,7 +230,8 @@ void remove_files_like(const path &dir, const String &regex, bool recursive)
 Files enumerate_files(const path &dir, bool recursive)
 {
     Files files;
-    if (!fs::exists(dir))
+    error_code ec;
+    if (!fs::exists(dir, ec))
         return files;
     if (recursive)
     {
@@ -279,11 +281,11 @@ bool is_under_root(path p, const path &root_dir)
 {
     if (p.empty())
         return false;
-    if (fs::exists(p))
+    error_code ec;
+    if (fs::exists(p, ec))
         // Converts p, which must exist, to an absolute path
         // that has no symbolic link, dot, or dot-dot elements.
         p = fs::canonical(p);
-    error_code ec;
     while (!p.empty() && p != p.root_path())
     {
         if (fs::equivalent(p, root_dir, ec))
@@ -309,7 +311,8 @@ bool compare_dirs(const path &dir1, const path &dir2)
     auto traverse_dir = [](const auto &dir)
     {
         std::vector<path> files;
-        if (fs::exists(dir))
+        error_code ec;
+        if (fs::exists(dir, ec))
         {
             for (auto &f : fs::recursive_directory_iterator(dir))
             {
