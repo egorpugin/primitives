@@ -397,8 +397,16 @@ void SharedState<T>::wait()
 
     if (!e.is_in_executor())
     {
-        std::unique_lock<std::mutex> lk(m);
-        cv.wait(lk, [this] { return set.load(); });
+        // there is a deadlock somewhere related to this
+        // so we workaround with wait_for()
+        const auto max_delay = 1s;
+        auto delay = 100ms;
+        while (!set)
+        {
+            std::unique_lock<std::mutex> lk(m);
+            cv.wait_for(lk, delay, [this] { return set.load(); });
+            delay = delay > max_delay ? max_delay : (delay + 100ms);
+        }
         return;
     }
 
