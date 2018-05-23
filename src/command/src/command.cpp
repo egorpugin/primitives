@@ -510,12 +510,12 @@ void Command::execute1(std::error_code *ec_in)
     };
 
     // start capture
-    auto start_capture = [&r, &on_alloc, &on_read, this](auto &stream, auto &pipe, const String &pipe_name)
+    auto start_capture = [&r, &on_alloc, &on_read, this](auto &stream, auto &pipe, auto &pipe_name)
     {
         if (!stream.inherit && stream.file.empty())
         {
             if (r = uv_read_start((uv_stream_t*)&pipe, on_alloc, on_read); r)
-                errors.push_back("cannot start read from std" + pipe_name + ": "s + uv_strerror(r));
+                errors.push_back("cannot start read from std"s + pipe_name + ": " + uv_strerror(r));
         }
     };
     start_capture(out, pout, "out");
