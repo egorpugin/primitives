@@ -510,16 +510,16 @@ void Command::execute1(std::error_code *ec_in)
     };
 
     // start capture
-    if (!out.inherit && out.file.empty())
+    auto start_capture = [&r, &on_alloc, &on_read, this](auto &stream, auto &pipe, const String &pipe_name)
     {
-        if (r = uv_read_start((uv_stream_t*)&pout, on_alloc, on_read); r)
-            errors.push_back("cannot start read from stdout: "s + uv_strerror(r));
-    }
-    if (!err.inherit && err.file.empty())
-    {
-        if (r = uv_read_start((uv_stream_t*)&perr, on_alloc, on_read); r)
-            errors.push_back("cannot start read from stderr: "s + uv_strerror(r));
-    }
+        if (!stream.inherit && stream.file.empty())
+        {
+            if (r = uv_read_start((uv_stream_t*)&pipe, on_alloc, on_read); r)
+                errors.push_back("cannot start read from std" + pipe_name + ": "s + uv_strerror(r));
+        }
+    };
+    start_capture(out, pout, "out");
+    start_capture(err, perr, "err");
 
     // main loop
     if (r = uv_run(&loop, UV_RUN_DEFAULT); r)
