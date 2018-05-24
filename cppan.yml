@@ -199,6 +199,8 @@ projects:
                     version: 1
                 pvt.cppan.demo.grisumbras.enum_flags:
                     version: master
+                pvt.cppan.demo.libuv:
+                    version: 1
     hash:
         name: hash
         type: library
