@@ -7,6 +7,7 @@
 #include <boost/asio/io_context.hpp>
 
 #include <primitives/command.h>
+#include <primitives/file_monitor.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio/use_future.hpp>
@@ -541,24 +542,7 @@ void Command::execute1(std::error_code *ec_in)
         errors.push_back("something goes wrong in the endgames loop: "s + uv_strerror(r));
 
     // cleanup loop
-    if (r = uv_loop_close(&loop); r)
-    {
-        if (r == UV_EBUSY)
-        {
-            auto wlk = [](uv_handle_t* handle, void* arg) { uv_close(handle, 0); };
-            uv_walk(&loop, wlk, 0);
-            uv_run(&loop, UV_RUN_ONCE);
-            if (r = uv_loop_close(&loop); r)
-            {
-                if (r == UV_EBUSY)
-                    errors.push_back("resources were not cleaned up: "s + uv_strerror(r));
-                else
-                    errors.push_back("uv_loop_close() error: "s + uv_strerror(r));
-            }
-        }
-        else
-            errors.push_back("uv_loop_close() error: "s + uv_strerror(r));
-    }
+    r = ::primitives::detail::uv_loop_close(loop, errors);
 
     if (exit_code && exit_code.value() == 0)
         return;

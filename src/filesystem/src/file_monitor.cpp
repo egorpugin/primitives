@@ -6,7 +6,39 @@
 
 #include <primitives/file_monitor.h>
 
-namespace primitives::filesystem
+namespace primitives
+{
+
+namespace detail
+{
+
+int uv_loop_close(uv_loop_t &loop, Strings &errors)
+{
+    int r;
+    if (r = uv_loop_close(&loop); r)
+    {
+        if (r == UV_EBUSY)
+        {
+            auto wlk = [](uv_handle_t* handle, void* arg) { uv_close(handle, 0); };
+            uv_walk(&loop, wlk, 0);
+            uv_run(&loop, UV_RUN_ONCE);
+            if (r = uv_loop_close(&loop); r)
+            {
+                if (r == UV_EBUSY)
+                    errors.push_back("resources were not cleaned up: "s + uv_strerror(r));
+                else
+                    errors.push_back("uv_loop_close() error: "s + uv_strerror(r));
+            }
+        }
+        else
+            errors.push_back("uv_loop_close() error: "s + uv_strerror(r));
+    }
+    return r;
+}
+
+}
+
+namespace filesystem
 {
 
 FileMonitor::record::record(FileMonitor *mon, const path &dir, Callback callback)
@@ -58,27 +90,9 @@ FileMonitor::~FileMonitor()
     t.join();
 
     Strings errors;
-    int r;
 
     // and cleanup loop
-    if (r = uv_loop_close(&loop); r)
-    {
-        if (r == UV_EBUSY)
-        {
-            auto wlk = [](uv_handle_t* handle, void* arg) { uv_close(handle, 0); };
-            uv_walk(&loop, wlk, 0);
-            uv_run(&loop, UV_RUN_ONCE);
-            if (r = uv_loop_close(&loop); r)
-            {
-                if (r == UV_EBUSY)
-                    errors.push_back("resources were not cleaned up: "s + uv_strerror(r));
-                else
-                    errors.push_back("uv_loop_close() error: "s + uv_strerror(r));
-            }
-        }
-        else
-            errors.push_back("uv_loop_close() error: "s + uv_strerror(r));
-    }
+    ::primitives::detail::uv_loop_close(loop, errors);
 }
 
 void FileMonitor::start()
@@ -122,6 +136,8 @@ bool FileMonitor::has_file(const path &dir, const path &fn) const
         return false;
     boost::upgrade_lock lk2(di->second.m);
     return di->second.files.find(fn) != di->second.files.end();
+}
+
 }
 
 }

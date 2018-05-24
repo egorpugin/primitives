@@ -17,7 +17,18 @@
 #include <memory>
 #include <thread>
 
-namespace primitives::filesystem
+namespace primitives
+{
+
+namespace detail
+{
+
+PRIMITIVES_FILESYSTEM_API
+int uv_loop_close(uv_loop_t &loop, Strings &errors);
+
+}
+
+namespace filesystem
 {
 
 class PRIMITIVES_FILESYSTEM_API FileMonitor
@@ -63,5 +74,7 @@ private:
     void start();
     bool has_file(const path &dir, const path &fn) const;
 };
+
+}
 
 }
