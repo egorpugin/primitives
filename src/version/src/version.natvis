@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+    <Type Name="primitives::version::Version">
+        <DisplayString Condition="branch._Mypair._Myval2._Mysize != 0">{branch,sb}</DisplayString>
+        <DisplayString Condition="branch._Mypair._Myval2._Mysize == 0 &amp;&amp;
+            tweak &gt; 0
+            ">
+            {major}.{minor}.{patch}.{tweak}
+        </DisplayString>
+        <DisplayString Condition="branch._Mypair._Myval2._Mysize == 0 &amp;&amp;
+            tweak == 0
+            ">
+            {major}.{minor}.{patch}
+        </DisplayString>
+        <DisplayString>empty!</DisplayString>
+    </Type>
+
+    <Type Name="std::pair &lt; primitives::version::Version, primitives::version::Version &gt;">
+        <DisplayString>[{first}, {second}]</DisplayString>
+    </Type>
+
+</AutoVisualizer>
