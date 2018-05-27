@@ -34,7 +34,7 @@ bool Version::parse(Version &v, const std::string &s)
         extra = extra_part ('.' extra_part)*;
         version = basic_version ('-' extra)?;
 
-        branch = (alpha_ alnum_*) >SB %{ v.branch.assign(sb, p); };
+        branch = (alpha_ (alnum_ | '-')*) >SB %{ v.branch.assign(sb, p); };
 
         main := (version | branch) %OK;
 
@@ -97,23 +97,39 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
 
     enum { ANY = -2, UNSET = -1, };
 
-    // on stack variables do not follow each other
-    struct
-    {
-        Version::Number major;
-        Version::Number minor;
-        Version::Number patch;
-        Version::Number tweak;
-    } vn;
-
-    Version::Extra extra;
-
     RangePair rp;
     Version v;
     Version::Number *part;
-    VersionRange vr_and;
+    Range vr_and;
 
     enum { LT, GT, LE, GE, EQ, NE, } sign;
+
+    auto prepare_version = [](auto &ver, Version::Number val = 0, Version::Number tw = 0)
+    {
+        auto e = &ver.major;
+        for (int i = 0; i < 3; i++)
+            *e++ = *e < 0 ? val : *e;
+        *e++ = *e < 0 ? (tw > 0 ? val : 0) : *e;
+        return ver;
+    };
+
+    auto prepare_pair = [&prepare_version](auto &p)
+    {
+        if (p.second < p.first)
+            std::swap(p.first, p.second);
+        auto tw = std::max(p.first.tweak, p.second.tweak);
+        prepare_version(p.first, 0, tw);
+        if (p.first < Version::min(tw))
+            p.first = Version::min(tw);
+        prepare_version(p.second, Version::maxNumber(), tw);
+        if (p.second > Version::max(tw))
+            p.second = Version::max(tw);
+        return p;
+    };
+
+/*#define CHECK_IF_NOT_RANGE(v) \
+    if ((v).major == ANY || (v).minor == ANY || (v).patch == ANY || (v).tweak == ANY) \
+        return false*/
 
     %%{
         machine VersionRange;
@@ -122,58 +138,209 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
         action SB { sb = p; }
         action OK { ok = p == pe; }
 
-        action CMP
+        action RESET_VER
         {
+            v.major = UNSET;
+            v.minor = UNSET;
+            v.patch = UNSET;
+            v.tweak = UNSET;
+            v.extra.clear();
+            part = &v.major;
+        }
+
+        action RESET_PAIR
+        {
+            rp = RangePair();
+            rp.first.patch = 0;
+            rp.second.patch = 0;
+        }
+
+        action RANGE_CMP
+        {
+            //CHECK_IF_NOT_RANGE(v);
+
             switch (sign)
             {
             case LT:
-                rp.first = Version::min();
-                rp.second = v.getPreviousVersion();
+                rp.first = Version::min(v);
+                rp.second = prepare_version(v).getPreviousVersion();
                 break;
             case LE:
-                rp.first = Version::min();
-                rp.second = v;
+                rp.first = Version::min(v);
+                rp.second = prepare_version(v);
                 break;
             case GT:
-                rp.first = v.getNextVersion();
-                rp.second = Version::max();
+                rp.first = prepare_version(v).getNextVersion();
+                rp.second = Version::max(v);
                 break;
             case GE:
-                rp.first = v;
-                rp.second = Version::max();
+                rp.first = prepare_version(v);
+                rp.second = Version::max(v);
                 break;
             case EQ:
-                rp.first = v;
-                rp.second = v;
+                rp.first = prepare_version(v);
+                rp.second = prepare_version(v);
                 break;
             case NE:
-                rp.first = Version::min();
-                rp.second = v.getPreviousVersion();
-                vr.range.insert(rp);
-                rp.first = v.getNextVersion();
-                rp.second = Version::max();
+                rp.first = Version::min(v);
+                rp.second = prepare_version(v).getPreviousVersion();
+                vr_and.push_back(rp);
+                rp.first = prepare_version(v).getNextVersion();
+                rp.second = Version::max(v);
                 break;
             }
-            vr.range.insert(rp);
         }
 
-        action RESET_VER
+        action RANGE_VER
         {
-            vn.major = UNSET;
-            vn.minor = UNSET;
-            vn.patch = UNSET;
-            vn.tweak = UNSET;
-            extra.clear();
-            part = &vn.major;
+            // at the moment we do not allow ranges like *.2.* and similar
+            // they must be filled only from the beginning
+
+            rp.first = v;
+
+            if (v.major < 0)
+            {
+                rp.first = Version::min(v);
+                rp.second = Version::max(v);
+            }
+            else
+            {
+                if (v.minor < 0)
+                {
+                    rp.second = Version::max(v);
+                    rp.second.major = v.major;
+                }
+                else
+                {
+                    if (v.patch < 0)
+                    {
+                        rp.second = Version::max(v);
+                        rp.second.major = v.major;
+                        rp.second.minor = v.minor;
+                    }
+                    else
+                    {
+                        if (v.tweak == ANY)
+                        {
+                            rp.second = Version::max(v);
+                            rp.second.major = v.major;
+                            rp.second.minor = v.minor;
+                            rp.second.patch = v.patch;
+                        }
+                        rp.second = rp.first;
+                    }
+                }
+            }
+            rp.first.extra = v.extra;
+            rp.second.extra = v.extra;
         }
 
-        action BUILD_VER
+        action TILDE_VER
         {
-            v.major = vn.major;
-            v.minor = vn.minor == UNSET ? 0 : vn.minor;
-            v.patch = vn.patch == UNSET ? 0 : vn.patch;
-            v.tweak = vn.tweak == UNSET ? 0 : vn.tweak;
-            v.extra = extra;
+            // at the moment we do not allow ranges like *.2.* and similar
+            // they must be filled only from the beginning
+
+            rp.first = v;
+
+            if (v.major < 0)
+                return false;
+            else
+            {
+                if (v.minor < 0)
+                {
+                    rp.second.major = v.major + 1;
+                }
+                else
+                {
+                    if (v.patch < 0)
+                    {
+                        rp.second.major = v.major;
+                        rp.second.minor = v.minor + 1;
+                    }
+                    else
+                    {
+                        if (v.tweak < 0)
+                        {
+                            rp.second.major = v.major;
+                            rp.second.minor = v.minor + 1;
+                            rp.second.patch = 0;
+                        }
+                        else
+                        {
+                            rp.second.major = v.major;
+                            rp.second.minor = v.minor + 1;
+                            rp.second.patch = 0;
+                            rp.second.tweak = 0;
+                        }
+                    }
+                }
+            }
+            rp.first.extra = v.extra;
+            rp.second.extra = v.extra;
+            rp.second.decrementVersion();
+        }
+
+        action CARET_VER
+        {
+            // at the moment we do not allow ranges like *.2.* and similar
+            // they must be filled only from the beginning
+
+            rp.first = v;
+
+            if (v.major < 0)
+                return false;
+            else if (v.major > 0)
+                rp.second.major = v.major + 1;
+            else
+            {
+                if (v.minor < 0)
+                {
+                    rp.second.major = v.major + 1;
+                }
+                else if (v.minor > 0)
+                    rp.second.minor = v.minor + 1;
+                else
+                {
+                    if (v.patch < 0)
+                    {
+                        rp.second.major = v.major;
+                        rp.second.minor = v.minor + 1;
+                    }
+                    else if (v.patch > 0)
+                        rp.second.patch = v.patch + 1;
+                    else
+                    {
+                        if (v.tweak < 0)
+                        {
+                            rp.second.major = v.major;
+                            rp.second.minor = v.minor + 1;
+                            rp.second.patch = 0;
+                        }
+                        else if (v.tweak > 0)
+                            rp.second.tweak = v.tweak + 1;
+                        else
+                        {
+                            rp.second.major = v.major;
+                            rp.second.minor = v.minor + 1;
+                            rp.second.patch = 0;
+                            rp.second.tweak = 0;
+                        }
+                    }
+                }
+            }
+
+            rp.first.extra = v.extra;
+            rp.second.extra = v.extra;
+            prepare_version(rp.second, 0, v.tweak);
+            rp.second.decrementVersion();
+        }
+
+        action ADD_RANGE
+        {
+            VersionRange r;
+            r.range = vr_and;
+            r.normalize(true);
+            vr.range.insert(vr.range.end(), r.range.begin(), r.range.end());
         }
 
         alpha_ = alpha | '_';
@@ -188,12 +355,12 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
         basic_version = number_version_part ('.' number_version_part){,3};
         extra_part = alnum_+ >SB %{ v.extra.emplace_back(sb, p); };
         extra = extra_part ('.' extra_part)*;
-        version = (basic_version ('-' extra)?) >RESET_VER %BUILD_VER;
+        version = (basic_version ('-' extra)?) >RESET_VER;
         #
 
-        hyphen = version %{ rp.first = v; } space+ '-' space+ version %{ rp.second = v; vr.range.insert(rp); };
-        tilde = '~' space* version;
-        caret = '^' space* version;
+        hyphen = version %{ rp.first = v; } space+ '-' space+ version %{ rp.second = v; vr_and.pop_back(); };
+        tilde = '~' space* version %TILDE_VER;
+        caret = '^' space* version %CARET_VER;
         cmp = (
             '<'  %{ sign = LT; } |
             '>'  %{ sign = GT; } |
@@ -201,11 +368,13 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
             '>=' %{ sign = GE; } |
             '='  %{ sign = EQ; } |
             '!=' %{ sign = NE; }
-        ) space* version %CMP;
+        ) space* version;
 
-        range = version %{ sign = EQ; } %CMP | cmp | caret | tilde | hyphen;
+        range = (
+            cmp %RANGE_CMP | caret | tilde | hyphen | version %RANGE_VER
+        ) >RESET_PAIR %{ vr_and.push_back(prepare_pair(rp)); };
 
-        range_set_and = range (logical_and range)*;
+        range_set_and = (range (logical_and range)*) >{ vr_and = Range{}; } %ADD_RANGE;
         range_set_or = range_set_and (logical_or range_set_and)*;
 
         main := range_set_or %OK;

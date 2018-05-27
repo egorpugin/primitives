@@ -9,6 +9,9 @@
 #include <iostream>
 #include <regex>
 
+// TODO: we can zip required files (text)
+// add an option for this
+
 String preprocess_file(const String &s)
 {
     String o;

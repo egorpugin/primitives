@@ -16,6 +16,7 @@ namespace primitives::db::sqlite3
 struct PRIMITIVES_DB_SQLITE3_API SqliteDatabase : primitives::db::LiteDatabase
 {
     SqliteDatabase(const path &fn);
+    SqliteDatabase(::sqlite3 *db);
     SqliteDatabase(SqliteDatabase &&);
     virtual ~SqliteDatabase();
 
@@ -23,6 +24,7 @@ struct PRIMITIVES_DB_SQLITE3_API SqliteDatabase : primitives::db::LiteDatabase
 
 private:
     ::sqlite3 *db = nullptr;
+    bool needs_close = true;
     static inline const String service_table{ "_svc_kv_settings" };
 
     void check_error(int r, int ec);

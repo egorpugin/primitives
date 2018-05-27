@@ -16,6 +16,12 @@ SqliteDatabase::SqliteDatabase(const path &fn)
     sqlite3_open(fn.string().c_str(), &db);
 }
 
+SqliteDatabase::SqliteDatabase(::sqlite3 *db)
+    : db(db)
+{
+    needs_close = false;
+}
+
 SqliteDatabase::SqliteDatabase(SqliteDatabase &&rhs)
 {
     db = rhs.db;
@@ -24,7 +30,8 @@ SqliteDatabase::SqliteDatabase(SqliteDatabase &&rhs)
 
 SqliteDatabase::~SqliteDatabase()
 {
-    sqlite3_close(db);
+    if (needs_close)
+        sqlite3_close(db);
 }
 
 void SqliteDatabase::execute(const String &q)

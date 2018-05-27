@@ -437,6 +437,9 @@ void Command::execute1(std::error_code *ec_in)
     uv_stdio_container_t child_stdio[3];
     child_stdio[0].flags = UV_IGNORE;
 
+    if (inherit)
+        out.inherit = err.inherit = true;
+
     auto setup_pipe = [&loop, &child_stdio](auto &stream, int fd, auto &pipe, auto &file_req, auto &file)
     {
         if (stream.inherit)

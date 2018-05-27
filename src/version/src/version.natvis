@@ -16,7 +16,7 @@
         <DisplayString>empty!</DisplayString>
     </Type>
 
-    <Type Name="std::pair &lt; primitives::version::Version, primitives::version::Version &gt;">
+    <Type Name="primitives::version::VersionRange::RangePair">
         <DisplayString>[{first}, {second}]</DisplayString>
     </Type>
 
