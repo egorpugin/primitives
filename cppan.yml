@@ -358,6 +358,38 @@ projects:
                             -   -Wno-assume
                             -   -Wno-delete-non-virtual-dtor
                             -   -Wno-potentially-evaluated-expression
+
+    version:
+        name: version
+        type: library
+        root_directory: src/version
+
+        options:
+            any:
+                compile_options:
+                    clang:
+                        private:
+                            -   -Wno-assume
+                            -   -Wno-delete-non-virtual-dtor
+                            -   -Wno-potentially-evaluated-expression
+
+        dependencies:
+            public:
+                pvt.cppan.demo.ragel:
+                    version: 6
+        post_sources: |
+            macro(ragel f)
+                set(i ${SDIR}/src/${f}.rl)
+                set(o ${f}.rl.cpp)
+                add_custom_command(OUTPUT ${BDIR}/${o}
+                    COMMAND pvt.cppan.demo.ragel ${i} -o ${BDIR}/${o}
+                    DEPENDS ${i}
+                )
+                set(src ${src} ${BDIR}/${o})
+            endmacro(ragel)
+
+            ragel(version)
+
     win32helpers:
         name: win32helpers
         type: library
@@ -457,54 +489,8 @@ projects:
                 pvt.cppan.demo.catchorg.catch2:
                     version: 2
 
-    version:
-        name: version
-
-        type: library
-
-        root_directory: src/version
-
-
-        static_only: true
-
-        options:
-            any:
-                definitions:
-                    win32:
-                        public:
-                            -   _WIN32_WINNT=0x0601
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-
-        dependencies:
-            public:
-                filesystem:
-                    version: "*"
-                string:
-                    version: "*"
-
-                pvt.cppan.demo.ragel:
-                    version: 6
-        post_sources: |
-            macro(ragel f)
-                set(i ${SDIR}/src/${f}.rl)
-                set(o ${f}.rl.cpp)
-                add_custom_command(OUTPUT ${BDIR}/${o}
-                    COMMAND pvt.cppan.demo.ragel ${i} -o ${BDIR}/${o}
-                    DEPENDS ${i}
-                )
-                set(src ${src} ${BDIR}/${o})
-            endmacro(ragel)
-
-            ragel(version)
-
     test.version:
         skip_on_server: true
-
 
         files:
             -   src/version.cpp
