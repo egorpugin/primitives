@@ -7,7 +7,12 @@
 %{
 #include <range.h>
 
-#define yylex(p) p.lex()
+// C++
+#define YY_RANGESTYPE int
+
+#define yy_rangelex(val,loc) ((RangeParserDriver*)&yyparser)->lex(val,loc)
+// C
+//#define yy_rangeerror(p,e) p.error(e)
 %}
 
 ////////////////////////////////////////
@@ -23,30 +28,33 @@
 
 ////////////////////////////////////////
 
+%glr-parser
+
 // c++ skeleton and options
-//%glr-parser
-%skeleton "lalr1.cc"
+%skeleton "glr.cc"
 
 %define api.prefix {yy_range}
-%define api.value.type variant
-%define api.token.constructor // C++ style of handling variants
-%define parse.assert // check C++ variant types
+//%define api.value.type union
+//%define api.value.type {struct my_data}
+//%define api.value.type variant
+//%define api.token.constructor // C++ style of handling variants
+//%define parse.assert // check C++ variant types
 
 %code requires // forward decl of C++ driver (our parser) in HPP
 {
 #pragma warning(disable: 4005)
 #pragma warning(disable: 4065)
 
-struct RangeParserDriver;
+// C
+//#define YY_RANGESTYPE void*
+
+// C++
+#define YY_RANGESTYPE int
 
 #include <primitives/version.h>
-
 using namespace primitives::version;
-}
 
-// param to yy::parser() constructor
-// the parsing context
-%param { RangeParserDriver &driver }
+}
 
 ////////////////////////////////////////
 

@@ -38,314 +38,6 @@ common_settings:
                         #- /wd4275 # non dll-interface used as base for dll-interface
                         - /permissive-
 projects:
-    command:
-        name: command
-        type: library
-        root_directory: src/command
-        options:
-            any:
-                definitions:
-                    win32:
-                        public:
-                            -   _WIN32_WINNT=0x0601
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-        dependencies:
-            public:
-                filesystem:
-                    version: "*"
-                templates:
-                    version: "*"
-                pvt.cppan.demo.boost.process:
-                    version: 1
-                pvt.cppan.demo.libuv:
-                    version: 1
-
-    context:
-        name: context
-        type: library
-
-        root_directory: src/context
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-    cron:
-        name: cron
-        type: library
-
-        root_directory: src/cron
-        dependencies:
-            public:
-                log:
-                    version: "*"
-                executor:
-                    version: "*"
-    db.common:
-        type: library
-
-        root_directory: src/db/common
-        dependencies:
-            public:
-                filesystem:
-                    version: "*"
-                templates:
-                    version: "*"
-    db.sqlite3:
-        type: library
-
-        root_directory: src/db/sqlite3
-        dependencies:
-            public:
-                db.common:
-                    version: "*"
-                pvt.cppan.demo.sqlite3:
-                    version: 3
-    db.postgresql:
-        type: library
-
-        root_directory: src/db/postgresql
-        dependencies:
-            public:
-                db.common:
-                    version: "*"
-                pvt.cppan.demo.jtv.pqxx:
-                    version: "*"
-    date_time:
-        name: date_time
-        type: library
-
-        root_directory: src/date_time
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-        dependencies:
-            public:
-                pvt.cppan.demo.boost.date_time:
-                    version: 1
-                string:
-                    version: "*"
-    embedder:
-        name: embedder
-        root_directory: src/embedder
-        dependencies:
-            public:
-                filesystem:
-                    version: "*"
-    executor:
-        name: executor
-        type: library
-
-        root_directory: src/executor
-        options:
-            any:
-                definitions:
-                    win32:
-                        private:
-                            -   _WIN32_WINNT=0x0601
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-        dependencies:
-            public:
-                pvt.cppan.demo.boost.asio:
-                    version: 1
-                pvt.cppan.demo.boost.system:
-                    version: 1
-                minidump:
-                    version: "*"
-                templates:
-                    version: "*"
-    filesystem:
-        name: filesystem
-        type: library
-
-        root_directory: src/filesystem
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-                link_libraries:
-                    unix:
-                        public:
-                            - stdc++fs
-        dependencies:
-            public:
-                pvt.cppan.demo.artyom_beilis.nowide:
-                    version: master
-                string:
-                    version: "*"
-                pvt.cppan.demo.boost.filesystem:
-                    version: 1
-                pvt.cppan.demo.grisumbras.enum_flags:
-                    version: master
-                pvt.cppan.demo.libuv:
-                    version: 1
-    hash:
-        name: hash
-        type: library
-
-        root_directory: src/hash
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-        dependencies:
-            public:
-                filesystem:
-                    version: "*"
-                pvt.cppan.demo.aleksey14.rhash:
-                    version: 1
-                pvt.cppan.demo.openssl.crypto:
-                    version: 1
-    http:
-        name: http
-        type: library
-
-        root_directory: src/http
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-                link_libraries:
-                    win32:
-                        public:
-                            -   Winhttp
-        dependencies:
-            public:
-                pvt.cppan.demo.badger.curl.libcurl:
-                    version: 7
-                filesystem:
-                    version: "*"
-                templates:
-                    version: "*"
-    lock:
-        name: lock
-        type: library
-        root_directory: src/lock
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-        dependencies:
-            public:
-                filesystem:
-                    version: "*"
-                pvt.cppan.demo.boost.interprocess:
-                    version: 1
-    log:
-        name: log
-        type: library
-        root_directory: src/log
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-        dependencies:
-            public:
-                pvt.cppan.demo.boost.log:
-                    version: 1
-    minidump:
-        name: minidump
-        type: library
-        static_only: true
-        root_directory: src/minidump
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-                link_libraries:
-                    win32:
-                        public:
-                            -   dbghelp
-    pack:
-        name: pack
-        type: library
-        root_directory: src/pack
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-        dependencies:
-            public:
-                filesystem:
-                    version: "*"
-                pvt.cppan.demo.libarchive.libarchive:
-                    version: 3
-                templates:
-                    version: "*"
-    #sqlite_db:
-        #name: sqlite_db
-        #type: library
-        #root_directory: src/sqlite_db
-        #options:
-            #any:
-                #compile_options:
-                    #clang:
-                        #private:
-                            #-   -Wno-assume
-                            #-   -Wno-delete-non-virtual-dtor
-                            #-   -Wno-potentially-evaluated-expression
-    string:
-        name: string
-        type: library
-        root_directory: src/string
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-        dependencies:
-            public:
-                pvt.cppan.demo.boost.algorithm:
-                    version: 1
     templates:
         name: templates
         type: library
@@ -375,8 +67,18 @@ projects:
 
         dependencies:
             public:
+                templates:
+                    version: "*"
                 pvt.cppan.demo.ragel:
                     version: 6
+                pvt.cppan.demo.lexxmark.winflexbison.flex:
+                    version: master
+                    ref: flex
+                pvt.cppan.demo.lexxmark.winflexbison.bison:
+                    version: master
+                    ref: bison
+                pvt.cppan.demo.imageworks.pystring:
+                    version: 1
         post_sources: |
             macro(ragel f)
                 set(i ${SDIR}/src/${f}.rl)
@@ -390,111 +92,52 @@ projects:
 
             ragel(version)
 
-    win32helpers:
-        name: win32helpers
-        type: library
-        root_directory: src/win32helpers
-        options:
-            any:
-                definitions:
-                    win32:
-                        private:
-                            -   UNICODE
-        dependencies:
-            public:
-                filesystem:
-                    version: "*"
-                pvt.cppan.demo.boost.dll:
-                    version: 1
-                pvt.cppan.demo.boost.algorithm:
-                    version: 1
-    yaml:
-        name: yaml
-        type: library
-        root_directory: src/yaml
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-        dependencies:
-            public:
-                pvt.cppan.demo.jbeder.yaml_cpp:
-                    version: master
-                string:
-                    version: "*"
-    test.main:
-        skip_on_server: true
-        files:
-            -   src/main.cpp
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-                    msvc:
-                        public:
-                            - /bigobj
-        dependencies:
-            public:
-                command:
-                    version: "*"
-                date_time:
-                    version: "*"
-                executor:
-                    version: "*"
-                hash:
-                    version: "*"
-                yaml:
-                    version: "*"
-                pvt.cppan.demo.catchorg.catch2:
-                    version: 2
-    test.db:
-        skip_on_server: true
-        files:
-            -   src/db.cpp
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
-                    msvc:
-                        public:
-                            - /bigobj
-        dependencies:
-            public:
-                command:
-                    version: "*"
-                db.sqlite3:
-                    version: "*"
-                db.postgresql:
-                    version: "*"
-                date_time:
-                    version: "*"
-                executor:
-                    version: "*"
-                hash:
-                    version: "*"
-                yaml:
-                    version: "*"
-                pvt.cppan.demo.catchorg.catch2:
-                    version: 2
+            #
+
+        post_target: |
+            macro(flex_bison lexer parser)
+                set(bdir ${BDIR_PRIVATE}/fb)
+
+                get_filename_component(d ${lexer} DIRECTORY)
+                execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
+
+                add_custom_command(OUTPUT
+                        ${bdir}/${parser}.cpp
+                        ${bdir}/${parser}.hpp
+                    COMMAND ${bison} -o ${bdir}/${parser}.cpp --defines=${bdir}/${parser}.hpp ${SDIR}/${parser}
+                    DEPENDS ${bison} ${SDIR}/${parser}
+                    WORKING_DIRECTORY ${d}
+                )
+                target_include_directories(${this} PRIVATE ${bdir}/${d})
+
+                get_filename_component(d ${parser} DIRECTORY)
+                execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
+
+                add_custom_command(OUTPUT
+                        ${bdir}/${lexer}.cpp
+                        ${bdir}/${lexer}.h
+                    COMMAND ${flex} -o ${bdir}/${lexer}.cpp --header-file=${lexer}.h ${SDIR}/${lexer}
+                    DEPENDS ${flex} ${SDIR}/${lexer} ${bdir}/${parser}.hpp
+                    WORKING_DIRECTORY ${bdir}
+                )
+                target_include_directories(${this} PRIVATE ${bdir}/${d})
+
+                target_sources(${this} PRIVATE
+                    ${bdir}/${parser}.cpp
+                    ${bdir}/${parser}.hpp
+                    ${bdir}/${lexer}.cpp
+                    ${bdir}/${lexer}.h
+                )
+            endmacro()
+
+            flex_bison(src/range.ll src/range.yy)
+
+
 
     test.version:
         skip_on_server: true
-
         files:
             -   src/version.cpp
-
         options:
             any:
                 compile_options:

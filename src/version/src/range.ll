@@ -10,11 +10,21 @@
 
 #include <range.yy.hpp>
 
-#define YY_USER_ACTION loc.columns(yyleng);
-#define YY_DECL yy_range::parser::symbol_type yylex(yyscan_t yyscanner, yy_range::location &loc)
+// C
+//#define YY_DECL int yylex(yyscan_t yyscanner, YY_RANGELTYPE &loc)
+//#define MAKE(x) x//yy_range::parser::make_ ## x(loc)
+//#define MAKE_VALUE(x, v) x//yy_range::parser::make_ ## x((v), loc)
 
-#define MAKE(x) yy_range::parser::make_ ## x(loc)
-#define MAKE_VALUE(x, v) yy_range::parser::make_ ## x((v), loc)
+// C++, make_ is for variants
+#define YY_USER_ACTION loc.columns(yyleng);
+#define YY_DECL int yylex(yyscan_t yyscanner, yy_range::parser::location_type &loc)
+//#define YY_DECL yy_range::parser::symbol_type yylex(yyscan_t yyscanner, yy_range::parser::location_type &loc)
+// make_ is for variants
+//#define MAKE(x) yy_range::parser::make_ ## x(loc)
+//#define MAKE_VALUE(x, v) yy_range::parser::make_ ## x((v), loc)
+//
+#define MAKE(x) yy_range::parser::token::x
+#define MAKE_VALUE(x, v) yy_range::parser::token::x
 %}
 
 %option nounistd

@@ -10,23 +10,29 @@
 
 #include <string>
 
-struct RangeParserDriver
+struct RangeParserDriver : yy_range::parser
 {
-    bool debug = true;
+    using base = yy_range::parser;
+
+    bool debug = false;
     bool can_throw = false;
 
     int parse(const std::string &s);
 
+    // C
+    //int lex();
+    //void error(const std::string &m);
+
+    // C++
+    int lex(YY_RANGESTYPE *val, location_type *loc);
+
     // lex & parse
 private:
     void *scanner;
-    yy_range::location location;
 
-    int parse();
-    yy_range::parser::symbol_type lex();
+    // C
+    //YY_RANGELTYPE location;
 
-    void error(const yy_range::location &l, const std::string &m);
-    void error(const std::string &m);
-
-    friend yy_range::parser;
+    // C++
+    void error(const location_type &loc, const std::string& msg) override;
 };

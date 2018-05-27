@@ -1,18 +1,8 @@
-/*
- * Copyright (C) 2016-2017, Egor Pugin
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright (C) 2018 Egor Pugin <egor.pugin@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 // before main include
 // Prevent using <unistd.h> because of bug in flex.
@@ -22,53 +12,36 @@
 
 #include "range.h"
 
+#include <iostream>
 #include <sstream>
 
-extern yy_range::parser::symbol_type ll_rangelex(yyscan_t yyscanner, yy_range::location &loc);
+//extern int ll_rangelex(yyscan_t yyscanner, YY_RANGELTYPE &loc);
+extern int ll_rangelex(yyscan_t yyscanner, yy_range::parser::location_type &loc);
 
-yy_range::parser::symbol_type RangeParserDriver::lex()
+int RangeParserDriver::lex(YY_RANGESTYPE *val, location_type *loc)
 {
-    auto ret = ll_rangelex(scanner, location);
+    auto ret = ll_rangelex(scanner, *loc);
     return ret;
-}
-
-void yy_range::parser::error(const location_type& l, const std::string& m)
-{
-    driver.error(l, m);
 }
 
 int RangeParserDriver::parse(const std::string &s)
 {
     ll_rangelex_init(&scanner);
     ll_range_scan_string(s.c_str(), scanner);
-    auto res = parse();
+    set_debug_level(debug);
+    auto res = base::parse();
     ll_rangelex_destroy(scanner);
 
     return res;
 }
 
-int RangeParserDriver::parse()
-{
-    yy_range::parser parser(*this);
-    parser.set_debug_level(debug);
-    int res = parser.parse();
-    return res;
-}
+// for some reason this is missing in bison
+void yy_range::parser::error(const location_type& loc, const std::string& msg) {}
 
-void RangeParserDriver::error(const yy_range::location &l, const std::string &m)
+void RangeParserDriver::error(const location_type& loc, const std::string& msg)
 {
     std::ostringstream ss;
-    ss << l << " " << m << "\n";
-    if (!can_throw)
-        std::cerr << ss.str();
-    else
-        throw std::runtime_error("Error during bazel parse: " + ss.str());
-}
-
-void RangeParserDriver::error(const std::string& m)
-{
-    std::ostringstream ss;
-    ss << m << "\n";
+    ss << loc << " " << msg << "\n";
     if (!can_throw)
         std::cerr << ss.str();
     else
