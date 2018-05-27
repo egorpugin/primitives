@@ -1,15 +1,17 @@
 #include <primitives/version.h>
 
-#include <boost/algorithm/string.hpp>
+#include <pystring.h>
+
+#include <algorithm>
 
 static std::string preprocess_input(const std::string &in)
 {
-    return boost::trim_copy(in);
+    return pystring::strip(in);
 }
 
 static std::string preprocess_input_extra(const std::string &in)
 {
-    return boost::to_lower_copy(preprocess_input(in));
+    return pystring::lower(preprocess_input(in));
 }
 
 static void throw_bad_version(const std::string &s)
@@ -72,12 +74,16 @@ Version::Version(Number ma, Number mi, Number pa)
     if (major < 0 || minor < 0 || patch < 0)
         throw_bad_version(toString());
     else if (major == 0 && minor == 0 && patch == 0)
+    {
         tweak = 1;
+        level = 4;
+    }
 }
 
 Version::Version(Number ma, Number mi, Number pa, Number tw)
     : major(ma), minor(mi), patch(pa), tweak(tw)
 {
+    level = 4;
     if (major < 0 || minor < 0 || patch < 0 || tweak < 0)
         throw_bad_version(toString());
     else if (major == 0 && minor == 0 && patch == 0 && tweak == 0)
@@ -140,12 +146,42 @@ Version::Version(Number ma, Number mi, Number pa, Number tw, const std::string &
         throw_bad_version_extra(e);
 }
 
-std::string Version::toString(Number tw) const
+Version::Number Version::getMajor() const
+{
+    return major;
+}
+
+Version::Number Version::getMinor() const
+{
+    return minor;
+}
+
+Version::Number Version::getPatch() const
+{
+    return patch;
+}
+
+Version::Number Version::getTweak() const
+{
+    return tweak;
+}
+
+Version::Extra Version::getExtra() const
+{
+    return extra;
+}
+
+std::string Version::getBranch() const
+{
+    return branch;
+}
+
+std::string Version::toString(int level) const
 {
     if (!branch.empty())
         return branch;
 
-    auto s = printVersion(tw);
+    auto s = printVersion(level);
     if (!extra.empty())
         s += "-" + printExtra();
     return s;
@@ -153,16 +189,16 @@ std::string Version::toString(Number tw) const
 
 std::string Version::toString(const Version &v) const
 {
-    return toString(v.tweak);
+    return toString(v.level);
 }
 
-std::string Version::printVersion(Number tw) const
+std::string Version::printVersion(int level) const
 {
     std::string s;
     s += std::to_string(major);
     s += "." + std::to_string(minor);
     s += "." + std::to_string(patch);
-    if (tweak > 0 || tw > 0)
+    if (tweak > 0 || level > 3)
         s += "." + std::to_string(tweak);
     return s;
 }
@@ -253,70 +289,97 @@ bool Version::operator!=(const Version &rhs) const
     return !operator==(rhs);
 }
 
-Version Version::min(Number tweak)
+Version Version::min(int level)
 {
-    if (tweak > 0)
+    if (level > 3)
         return Version(0, 0, 0);
     return Version();
 }
 
 Version Version::min(const Version &v)
 {
-    return min(v.tweak);
+    return min(v.level);
 }
 
-Version Version::max(Number tweak)
+Version Version::max(int level)
 {
-    if (tweak > 0)
+    if (level > 3)
         return Version(maxNumber(), maxNumber(), maxNumber(), maxNumber());
     return Version(maxNumber(), maxNumber(), maxNumber());
 }
 
 Version Version::max(const Version &v)
 {
-    return max(v.tweak);
+    return max(v.level);
 }
 
 Version::Number Version::maxNumber()
 {
-    // currently set a limit up to 1 bi excluding
+    // currently set a limit up to 1 billion excluding
     return 999'999'999;
 }
 
 void Version::decrementVersion()
 {
+    decrementVersion(level);
+}
+
+void Version::incrementVersion()
+{
+    incrementVersion(level);
+}
+
+Version Version::getNextVersion() const
+{
+    return getNextVersion(level);
+}
+
+Version Version::getPreviousVersion() const
+{
+    return getPreviousVersion(level);
+}
+
+void Version::decrementVersion(int l)
+{
     if (*this == min(*this))
         return;
 
-    auto current = tweak != 0 ? &tweak : &patch;
+    auto current = l > 3 ? &tweak : &(&major)[l - 1];
     while (*current == 0)
         *current-- = maxNumber();
     (*current)--;
 }
 
-void Version::incrementVersion()
+void Version::incrementVersion(int l)
 {
     if (*this == max(*this))
         return;
 
-    auto current = tweak != 0 ? &tweak : &patch;
+    auto current = l > 3 ? &tweak : &(&major)[l - 1];
     while (*current == maxNumber())
         *current-- = 0;
     (*current)++;
 }
 
-Version Version::getNextVersion() const
+Version Version::getNextVersion(int l) const
 {
     auto v = *this;
-    v.incrementVersion();
+    v.incrementVersion(l);
     return v;
 }
 
-Version Version::getPreviousVersion() const
+Version Version::getPreviousVersion(int l) const
 {
     auto v = *this;
-    v.decrementVersion();
+    v.decrementVersion(l);
     return v;
+}
+
+bool VersionRange::RangePair::hasVersion(const Version &v) const
+{
+    if (v.level > std::max(first.level, second.level))
+        return false;
+    return first <= v && v <= second;
 }
 
 VersionRange::VersionRange()
@@ -326,64 +389,45 @@ VersionRange::VersionRange()
 
 VersionRange::VersionRange(const std::string &s)
 {
-    if (!parse(*this, preprocess_input(s)))
-        throw_bad_version(s);
-    normalize();
+    auto in = preprocess_input(s);
+    if (in.empty())
+        range.emplace_back(Version::min(), Version::max());
+    else if (!parse(*this, in))
+        throw_bad_version(in);
 }
 
-void VersionRange::normalize(bool and_)
+optional<VersionRange> VersionRange::parse(const std::string &s)
 {
-    if (range.size() < 2)
-        return;
+    VersionRange vr;
+    auto in = preprocess_input(s);
+    if (in.empty())
+        vr.range.emplace_back(Version::min(), Version::max());
+    else if (!parse(vr, in))
+        return {};
+    return vr;
+}
 
-    std::sort(range.begin(), range.end());
+bool VersionRange::empty() const
+{
+    return range.empty();
+}
 
-    Range range2;
-    if (and_)
-    {
-    }
-    else
-    {
-        for (auto r1 = range.begin(); r1 < range.end(); r1++)
-        {
-            bool processed = false;
-            for (auto r2 = r1 + 1; r2 < range.end(); r2++)
-            {
-                if (r1->second >= r2->second)
-                    continue;
-                if (r1->second >= r2->first)
-                {
-                    range2.emplace_back(r1->first, r2->second);
-                    r1 = r2;
-                }
-                else
-                {
-                    range2.emplace_back(*r1);
-                    r1 = r2 - 1;
-                }
-                processed = true;
-                break;
-            }
-            if (!processed)
-            {
-                range2.emplace_back(*r1);
-                break;
-            }
-        }
-    }
-    range = range2;
+bool VersionRange::hasVersion(const Version &v) const
+{
+    return std::any_of(range.begin(), range.end(),
+            [&v](const auto &r) { return r.hasVersion(v); });
 }
 
 std::string VersionRange::RangePair::toString() const
 {
-    auto tw = std::max(first.tweak, second.tweak);
+    auto level = std::max(first.level, second.level);
     if (first == second)
-        return first.toString(tw);
+        return first.toString(level);
     std::string s;
     if (first != Version::min(first))
     {
         s += ">=";
-        s += first.toString(tw);
+        s += first.toString(level);
     }
     if (second.major == Version::maxNumber() ||
         second.minor == Version::maxNumber() ||
@@ -402,12 +446,12 @@ std::string VersionRange::RangePair::toString() const
         {
             if (!s.empty())
                 s += " ";
-            return s + "<" + second.getNextVersion().toString(tw);
+            return s + "<" + second.getNextVersion().toString(level);
         }
     }
     if (!s.empty())
         s += " ";
-    return s + "<=" + second.toString(tw);
+    return s + "<=" + second.toString(level);
 }
 
 std::string VersionRange::toString() const
@@ -420,25 +464,100 @@ std::string VersionRange::toString() const
     return s;
 }
 
-VersionRange::RangePair VersionRange::RangePair::operator|(const RangePair &rhs) const
+VersionRange &VersionRange::operator|=(const RangePair &p)
 {
+    // we can do pairs |= p
+    // but we still need to merge overlapped after
+    // so we choose simple iterative approach instead
 
+    bool added = false;
+    for (auto i = range.begin(); i < range.end(); i++)
+    {
+        if (!added)
+        {
+            // skip add, p is greater
+            if (i->second < p.first)
+                ;
+            // insert as is
+            else if (i->first > p.second)
+            {
+                i = range.insert(i, p);
+                break; // no further merges requires
+            }
+            // merge overlapped
+            else
+            {
+                i->first = std::min(i->first, p.first);
+                i->second = std::max(i->second, p.second);
+                added = true;
+            }
+        }
+        else
+        {
+            // after merging with existing entry we must ensure that
+            // following intervals do not require merges too
+            if ((i - 1)->second < i->first)
+                break;
+            else
+            {
+                (i - 1)->second = std::max((i - 1)->second, i->second);
+                i = range.erase(i) - 1;
+            }
+        }
+    }
+    if (!added)
+        range.push_back(p);
+    return *this;
 }
 
-VersionRange::RangePair VersionRange::RangePair::operator&(const RangePair &) const
+VersionRange &VersionRange::operator&=(const RangePair &rhs)
 {
+    if (range.empty())
+        return *this;
 
+    auto p = rhs;
+    for (auto i = range.begin(); i < range.end(); i++)
+    {
+        p.first = std::max(i->first, p.first);
+        p.second = std::min(i->second, p.second);
+
+        if (p.first > p.second)
+        {
+            range.clear();
+            return *this;
+        }
+    }
+    range.clear();
+    range.push_back(p);
+    return *this;
 }
 
-VersionRange::RangePair &VersionRange::RangePair::operator|=(const RangePair &) const
+VersionRange &VersionRange::operator|=(const VersionRange &rhs)
 {
-
+    for (auto &rp : rhs.range)
+        operator|=(rp);
+    return *this;
 }
 
-VersionRange::RangePair &VersionRange::RangePair::operator&=(const RangePair &) const
+VersionRange &VersionRange::operator&=(const VersionRange &rhs)
 {
-
+    for (auto &rp : rhs.range)
+        operator&=(rp);
+    return *this;
 }
 
+VersionRange VersionRange::operator|(const VersionRange &rhs) const
+{
+    auto tmp = *this;
+    tmp |= rhs;
+    return tmp;
+}
+
+VersionRange VersionRange::operator&(const VersionRange &rhs) const
+{
+    auto tmp = *this;
+    tmp &= rhs;
+    return tmp;
+}
 
 }

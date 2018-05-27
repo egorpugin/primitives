@@ -1,4 +1,12 @@
+// Copyright (C) 2018 Egor Pugin <egor.pugin@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 #include <primitives/version.h>
+
+#include <algorithm>
 
 namespace primitives::version
 {
@@ -47,7 +55,10 @@ bool Version::parse(Version &v, const std::string &s)
         if (part != &v.tweak)
             v.patch = 1;
         else
+        {
             v.tweak = 1;
+            v.level = 4;
+        }
     }
 
     return ok;
@@ -84,7 +95,7 @@ bool Version::parseExtra(Version &v, const std::string &s)
     return ok;
 }
 
-bool VersionRange::parse(VersionRange &vr, const std::string &ts)
+bool VersionRange::parse1(VersionRange &vr, const std::string &ts)
 {
     bool ok = false;
 	int cs = 0;
@@ -97,19 +108,20 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
 
     enum { ANY = -2, UNSET = -1, };
 
-    RangePair rp;
+    VersionRange::RangePair rp;
     Version v;
     Version::Number *part;
-    Range vr_and;
+    VersionRange::Range vr_and;
+    VersionRange vr_or_neq;
 
     enum { LT, GT, LE, GE, EQ, NE, } sign;
 
-    auto prepare_version = [](auto &ver, Version::Number val = 0, Version::Number tw = 0)
+    auto prepare_version = [](auto &ver, Version::Number val = 0, int level = Version::default_level)
     {
         auto e = &ver.major;
         for (int i = 0; i < 3; i++)
             *e++ = *e < 0 ? val : *e;
-        *e++ = *e < 0 ? (tw > 0 ? val : 0) : *e;
+        *e++ = *e < 0 ? (level > 3 ? val : 0) : *e;
         return ver;
     };
 
@@ -117,13 +129,13 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
     {
         if (p.second < p.first)
             std::swap(p.first, p.second);
-        auto tw = std::max(p.first.tweak, p.second.tweak);
-        prepare_version(p.first, 0, tw);
-        if (p.first < Version::min(tw))
-            p.first = Version::min(tw);
-        prepare_version(p.second, Version::maxNumber(), tw);
-        if (p.second > Version::max(tw))
-            p.second = Version::max(tw);
+        auto level = std::max(p.first.level, p.second.level);
+        prepare_version(p.first, 0, level);
+        if (p.first < Version::min(level))
+            p.first = Version::min(level);
+        prepare_version(p.second, Version::maxNumber(), level);
+        if (p.second > Version::max(level))
+            p.second = Version::max(level);
         return p;
     };
 
@@ -148,11 +160,19 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
             part = &v.major;
         }
 
+        action SET_VER_LEVEL
+        {
+            if (v.tweak != UNSET)
+                v.level = 4;
+        }
+
         action RESET_PAIR
         {
-            rp = RangePair();
+            rp = VersionRange::RangePair();
             rp.first.patch = 0;
             rp.second.patch = 0;
+            sign = LT;
+            v.level = Version::default_level;
         }
 
         action RANGE_CMP
@@ -184,9 +204,10 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
             case NE:
                 rp.first = Version::min(v);
                 rp.second = prepare_version(v).getPreviousVersion();
-                vr_and.push_back(rp);
+                vr_or_neq |= rp;
                 rp.first = prepare_version(v).getNextVersion();
                 rp.second = Version::max(v);
+                vr_or_neq |= rp;
                 break;
             }
         }
@@ -197,6 +218,7 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
             // they must be filled only from the beginning
 
             rp.first = v;
+            rp.second.level = v.level;
 
             if (v.major < 0)
             {
@@ -232,7 +254,7 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
                 }
             }
             rp.first.extra = v.extra;
-            rp.second.extra = v.extra;
+            //rp.second.extra = v.extra;
         }
 
         action TILDE_VER
@@ -241,6 +263,7 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
             // they must be filled only from the beginning
 
             rp.first = v;
+            rp.second.level = v.level;
 
             if (v.major < 0)
                 return false;
@@ -276,7 +299,7 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
                 }
             }
             rp.first.extra = v.extra;
-            rp.second.extra = v.extra;
+            //rp.second.extra = v.extra;
             rp.second.decrementVersion();
         }
 
@@ -286,6 +309,7 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
             // they must be filled only from the beginning
 
             rp.first = v;
+            rp.second.level = v.level;
 
             if (v.major < 0)
                 return false;
@@ -330,17 +354,27 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
             }
 
             rp.first.extra = v.extra;
-            rp.second.extra = v.extra;
-            prepare_version(rp.second, 0, v.tweak);
+            //rp.second.extra = v.extra;
+            prepare_version(rp.second, 0, v.level);
             rp.second.decrementVersion();
         }
 
         action ADD_RANGE
         {
+            VersionRange a;
+            a.range.clear();
+            if (!vr_and.empty())
+            {
+                a |= vr_and.back();
+                vr_and.pop_back();
+                for (auto &vr : vr_and)
+                    a &= vr;
+            }
             VersionRange r;
-            r.range = vr_and;
-            r.normalize(true);
-            vr.range.insert(vr.range.end(), r.range.begin(), r.range.end());
+            r.range.clear();
+            r |= a;
+            r |= vr_or_neq;
+            vr |= r;
         }
 
         alpha_ = alpha | '_';
@@ -355,10 +389,10 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
         basic_version = number_version_part ('.' number_version_part){,3};
         extra_part = alnum_+ >SB %{ v.extra.emplace_back(sb, p); };
         extra = extra_part ('.' extra_part)*;
-        version = (basic_version ('-' extra)?) >RESET_VER;
+        version = (basic_version ('-' extra)?) >RESET_VER %SET_VER_LEVEL;
         #
 
-        hyphen = version %{ rp.first = v; } space+ '-' space+ version %{ rp.second = v; vr_and.pop_back(); };
+        hyphen = version %{ rp.first = v; } space+ '-' space+ version %{ rp.second = v; if (!vr_and.empty()) vr_and.pop_back(); };
         tilde = '~' space* version %TILDE_VER;
         caret = '^' space* version %CARET_VER;
         cmp = (
@@ -372,9 +406,9 @@ bool VersionRange::parse(VersionRange &vr, const std::string &ts)
 
         range = (
             cmp %RANGE_CMP | caret | tilde | hyphen | version %RANGE_VER
-        ) >RESET_PAIR %{ vr_and.push_back(prepare_pair(rp)); };
+        ) >RESET_PAIR %{ if (sign != NE) vr_and.push_back(prepare_pair(rp)); };
 
-        range_set_and = (range (logical_and range)*) >{ vr_and = Range{}; } %ADD_RANGE;
+        range_set_and = (range (logical_and range)*) >{ vr_and = VersionRange::Range{}; vr_or_neq.range.clear(); } %ADD_RANGE;
         range_set_or = range_set_and (logical_or range_set_and)*;
 
         main := range_set_or %OK;

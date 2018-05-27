@@ -1,22 +1,31 @@
+// Copyright (C) 2018 Egor Pugin <egor.pugin@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 #pragma once
 
-#include <string>
 #include <set>
+#include <string>
 #include <vector>
-#include <regex>
+
+#include <primitives/stdcompat/optional.h>
 
 namespace primitives::version
 {
+
+// extract GenericVersion - GenericNumericVersion?
 
 struct PRIMITIVES_VERSION_API Version
 {
     using Number = int64_t;
     using Extra = std::vector<std::string>;
 
-    /// default is 0.0.1
+    /// default is min()
     Version();
 
-    /// default is 0.0.1
+    /// default is min()
     Version(const Extra &e);
 
     /// parse from string
@@ -38,24 +47,26 @@ struct PRIMITIVES_VERSION_API Version
     Version(Number ma, Number mi, Number pa, Number tw, const std::string &e);
 
     // basic access
-    Number getMajor() const { return major; }
-    Number getMinor() const { return minor; }
-    Number getPatch() const { return patch; }
-    Number getTweak() const { return tweak; }
-    Extra getExtra() const { return extra; }
-    std::string getBranch() const { return branch; }
+    Number getMajor() const;
+    Number getMinor() const;
+    Number getPatch() const;
+    Number getTweak() const;
+    Extra getExtra() const;
+    std::string getBranch() const;
 
-    /// print like tweak if own tweak is 0
-    std::string toString(Number tweak = 0) const;
-
-    /// print like tweak if own tweak is 0
+    std::string toString(int level = default_level) const;
     std::string toString(const Version &v) const;
 
-    // modificators and getters?
-    void decrementVersion(/* int level? */);
+    // modificators
+    void decrementVersion();
     void incrementVersion();
     Version getNextVersion() const;
     Version getPreviousVersion() const;
+
+    void decrementVersion(int level);
+    void incrementVersion(int level);
+    Version getNextVersion(int level) const;
+    Version getPreviousVersion(int level) const;
 
     bool isBranch() const;
     bool isVersion() const;
@@ -67,20 +78,15 @@ struct PRIMITIVES_VERSION_API Version
     bool operator==(const Version &) const;
     bool operator!=(const Version &) const;
 
+    // add +,-?
+    // int compare()?
+
 public:
-    /// minimal version depends on tweak: tw == 0 ? 0.0.1 : 0.0.0.1
-    static Version min(Number tweak = 0);
-
-    /// minimal version depends on v.tweak: tw == 0 ? 0.0.1 : 0.0.0.1
+    static Version min(int level = default_level);
     static Version min(const Version &v);
-
-    /// maximal version version depends on tweak: tw == 0 ? NumberMax.NumberMax.NumberMax : NumberMax.NumberMax.NumberMax.NumberMax
-    static Version max(Number tweak = 0);
-
-    /// maximal version version depends on v.tweak: tw == 0 ? NumberMax.NumberMax.NumberMax : NumberMax.NumberMax.NumberMax.NumberMax
+    static Version max(int level = default_level);
     static Version max(const Version &v);
 
-    /// maximal version is NumberMax.NumberMax.NumberMax.NumberMax (or NumberMax.NumberMax.NumberMax?)
     static Number maxNumber();
 
 private:
@@ -88,6 +94,8 @@ private:
     Number minor = 0;
     Number patch = 0;
     Number tweak = 0;
+    // shows how many numbers are used
+    int level = default_level;
     Extra extra;
     std::string branch;
 
@@ -95,12 +103,14 @@ private:
     static bool parse(Version &v, const std::string &s);
     static bool parseExtra(Version &v, const std::string &s);
 
-    std::string printVersion(Number tweak = 0) const;
+    std::string printVersion(int level = default_level) const;
     std::string printExtra() const;
 
     void checkExtra() const;
 
-    friend struct VersionRange;
+    static const int default_level = 3;
+
+    friend struct VersionRange; // used in RangePair::toString();
 };
 
 struct PRIMITIVES_VERSION_API VersionRange
@@ -111,9 +121,7 @@ struct PRIMITIVES_VERSION_API VersionRange
         using base::base;
 
         std::string toString() const;
-
-        VersionRange operator|(const RangePair &) const;
-        VersionRange operator&(const RangePair &) const;
+        bool hasVersion(const Version &v) const;
     };
     using Range = std::vector<RangePair>;
 
@@ -123,24 +131,30 @@ struct PRIMITIVES_VERSION_API VersionRange
     /// parse from string
     VersionRange(const std::string &v);
 
-    /// prints in normalized form
     std::string toString() const;
+
+    bool empty() const;
+    bool hasVersion(const Version &v) const;
+
+    Version getMinSatisfyingVersion(const std::set<Version> &) const;
+    Version getMaxSatisfyingVersion(const std::set<Version> &) const;
 
     VersionRange operator|(const VersionRange &) const;
     VersionRange operator&(const VersionRange &) const;
-    VersionRange &operator|=(const VersionRange &) const;
-    VersionRange &operator&=(const VersionRange &) const;
+    VersionRange &operator|=(const VersionRange &);
+    VersionRange &operator&=(const VersionRange &);
+
+    static optional<VersionRange> parse(const std::string &s);
 
 private:
     Range range;
 
-    // make unions of intersected ranges
-    // two modes: 'and' or 'or' merging
-    // 'or' is default
-    void normalize(bool and_ = false);
-
     /// range will be in an invalid state in case of errors
-    bool parse(VersionRange &v, const std::string &s);
+    static bool parse(VersionRange &v, const std::string &s);
+    static bool parse1(VersionRange &v, const std::string &s);
+
+    VersionRange &operator|=(const RangePair &);
+    VersionRange &operator&=(const RangePair &);
 };
 
 }
