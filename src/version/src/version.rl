@@ -31,6 +31,18 @@ bool Version::parse(Version &v, const std::string &s)
         action SB { sb = p; }
         action OK { ok = p == pe; }
 
+        action ADD_EXTRA
+        {
+            try
+            {
+                v.extra.emplace_back(std::stoll(std::string{sb, p}));
+            }
+            catch (...)
+            {
+                v.extra.emplace_back(std::string{sb, p});
+            }
+        }
+
         alpha_ = alpha | '_';
         alnum_ = alnum | '_';
 
@@ -38,7 +50,7 @@ bool Version::parse(Version &v, const std::string &s)
         number_version_part = number %{ *part++ = n; };
         #basic_version = [=]? [v]? number_version_part ('.' number_version_part){,3};
         basic_version = number_version_part ('.' number_version_part){,3};
-        extra_part = alnum_+ >SB %{ v.extra.emplace_back(sb, p); };
+        extra_part = alnum_+ >SB %ADD_EXTRA;
         extra = extra_part ('.' extra_part)*;
         version = basic_version ('-' extra)?;
 
@@ -81,9 +93,22 @@ bool Version::parseExtra(Version &v, const std::string &s)
         action SB { sb = p; }
         action OK { ok = p == pe; }
 
+        action ADD_EXTRA
+        {
+            try
+            {
+                v.extra.emplace_back(std::stoll(std::string{sb, p}));
+            }
+            catch (...)
+            {
+                v.extra.emplace_back(std::string{sb, p});
+            }
+        }
+
         alnum_ = alnum | '_';
 
-        extra_part = alnum_+ >SB %{ v.extra.emplace_back(sb, p); };
+        number = digit+ >SB %{ n = std::stoll(std::string{sb, p}); };
+        extra_part = alnum_+ >SB %ADD_EXTRA;
         extra = extra_part ('.' extra_part)*;
 
         main := extra %OK;
@@ -387,7 +412,7 @@ bool VersionRange::parse1(VersionRange &vr, const std::string &ts)
         number = digit+ >SB %{ n = std::stoll(std::string{sb, p}); };
         number_version_part = number %{ *part++ = n; } | [Xx*] %{ *part++ = ANY; };
         basic_version = number_version_part ('.' number_version_part){,3};
-        extra_part = alnum_+ >SB %{ v.extra.emplace_back(sb, p); };
+        extra_part = alnum_+ >SB %{ v.extra.emplace_back(std::string{sb, p}); };
         extra = extra_part ('.' extra_part)*;
         version = (basic_version ('-' extra)?) >RESET_VER %SET_VER_LEVEL;
         #

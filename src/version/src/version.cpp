@@ -1,5 +1,7 @@
 #include <primitives/version.h>
 
+#include "range_parser.h"
+
 #include <pystring.h>
 
 #include <algorithm>
@@ -166,7 +168,7 @@ Version::Number Version::getTweak() const
     return tweak;
 }
 
-Version::Extra Version::getExtra() const
+const Version::Extra &Version::getExtra() const
 {
     return extra;
 }
@@ -207,7 +209,17 @@ std::string Version::printExtra() const
 {
     std::string s;
     for (auto &e : extra)
-        s += e + ".";
+    {
+        switch (e.index())
+        {
+        case 0:
+            s += std::get<std::string>(e) + ".";
+            break;
+        case 1:
+            s += std::to_string(std::get<Number>(e)) + ".";
+            break;
+        }
+    }
     s.resize(s.size() - 1);
     return s;
 }
@@ -216,7 +228,12 @@ void Version::checkExtra() const
 {
     Version v;
     auto c = std::any_of(extra.begin(), extra.end(),
-        [&v](const auto &e) { return !parseExtra(v, e); });
+        [&v](const auto &e)
+    {
+        if (std::holds_alternative<Number>(e))
+            return true;
+        return !parseExtra(v, std::get<std::string>(e));
+    });
     if (c || v.extra != extra)
         throw_bad_version(toString());
 }
@@ -382,9 +399,16 @@ bool VersionRange::RangePair::hasVersion(const Version &v) const
     return first <= v && v <= second;
 }
 
-VersionRange::VersionRange()
+VersionRange::VersionRange(int level)
+    : VersionRange(Version::min(level), Version::max(level))
 {
-    range.emplace_back(Version::min(), Version::max());
+}
+
+VersionRange::VersionRange(const Version &v1, const Version &v2)
+{
+    if (v1 > v2)
+        range.emplace_back(v2, v1);
+    range.emplace_back(v1, v2);
 }
 
 VersionRange::VersionRange(const std::string &s)
@@ -392,8 +416,24 @@ VersionRange::VersionRange(const std::string &s)
     auto in = preprocess_input(s);
     if (in.empty())
         range.emplace_back(Version::min(), Version::max());
-    else if (!parse(*this, in))
-        throw_bad_version(in);
+    else if (auto r = parse(*this, in); !std::get<0>(r))
+        throw_bad_version_range(in + ", error: " + std::get<1>(r));
+}
+
+std::tuple<bool, std::string> VersionRange::parse(VersionRange &vr, const std::string &s)
+{
+    RangeParser d;
+    //d.set_debug_level(d.bb.debug);
+    auto r = d.parse(s);
+    auto error = d.bb.error_msg;
+    if (r == 0)
+    {
+        if (auto res = d.bb.getResult<VersionRange>(); res)
+            vr = res.value();
+        else
+            error = "parser error: empty result";
+    }
+    return { r == 0, error };
 }
 
 optional<VersionRange> VersionRange::parse(const std::string &s)
@@ -402,20 +442,37 @@ optional<VersionRange> VersionRange::parse(const std::string &s)
     auto in = preprocess_input(s);
     if (in.empty())
         vr.range.emplace_back(Version::min(), Version::max());
-    else if (!parse(vr, in))
+    else if (auto r = parse(vr, in); !std::get<0>(r))
         return {};
     return vr;
 }
 
-bool VersionRange::empty() const
+bool VersionRange::isEmpty() const
 {
     return range.empty();
+}
+
+VersionRange VersionRange::empty()
+{
+    VersionRange vr;
+    vr.range.clear();
+    return vr;
 }
 
 bool VersionRange::hasVersion(const Version &v) const
 {
     return std::any_of(range.begin(), range.end(),
             [&v](const auto &r) { return r.hasVersion(v); });
+}
+
+optional<VersionRange::RangePair> VersionRange::RangePair::operator&(const RangePair &rhs) const
+{
+    VersionRange::RangePair rp;
+    rp.first = std::max(first, rhs.first);
+    rp.second = std::min(second, rhs.second);
+    if (rp.first > rp.second)
+        return {};
+    return rp;
 }
 
 std::string VersionRange::RangePair::toString() const
@@ -515,20 +572,20 @@ VersionRange &VersionRange::operator&=(const RangePair &rhs)
     if (range.empty())
         return *this;
 
-    auto p = rhs;
+    auto rp = rhs;
     for (auto i = range.begin(); i < range.end(); i++)
     {
-        p.first = std::max(i->first, p.first);
-        p.second = std::min(i->second, p.second);
+        rp.first = std::max(i->first, rp.first);
+        rp.second = std::min(i->second, rp.second);
 
-        if (p.first > p.second)
+        if (rp.first > rp.second)
         {
             range.clear();
             return *this;
         }
     }
     range.clear();
-    range.push_back(p);
+    range.push_back(rp);
     return *this;
 }
 
@@ -541,9 +598,17 @@ VersionRange &VersionRange::operator|=(const VersionRange &rhs)
 
 VersionRange &VersionRange::operator&=(const VersionRange &rhs)
 {
-    for (auto &rp : rhs.range)
-        operator&=(rp);
-    return *this;
+    VersionRange vr;
+    vr.range.clear();
+    for (auto &rp1 : range)
+    {
+        for (auto &rp2 : rhs.range)
+        {
+            if (auto o = rp1 & rp2; o)
+                vr |= o.value();
+        }
+    }
+    return *this = vr;
 }
 
 VersionRange VersionRange::operator|(const VersionRange &rhs) const

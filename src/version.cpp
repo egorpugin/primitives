@@ -316,13 +316,22 @@ TEST_CASE("Checking versions", "[version]")
     }
 
     {
+        Version v("1.2-1");
+        CHECK(v.getMajor() == 1);
+        CHECK(v.getMinor() == 2);
+        CHECK(v.getPatch() == 0);
+        CHECK(v.getTweak() == 0);
+        CHECK(v.getExtra()[0] == 1);
+    }
+
+    {
         Version v("1.2-rc2.3._a_");
         CHECK(v.getMajor() == 1);
         CHECK(v.getMinor() == 2);
         CHECK(v.getPatch() == 0);
         CHECK(v.getTweak() == 0);
         CHECK(v.getExtra()[0] == "rc2");
-        CHECK(v.getExtra()[1] == "3");
+        CHECK(v.getExtra()[1] == 3);
         CHECK(v.getExtra()[2] == "_a_");
     }
 
@@ -342,7 +351,7 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(v.getPatch() == 3);
         CHECK(v.getTweak() == 4);
         CHECK(v.getExtra()[0] == "rc2");
-        CHECK(v.getExtra()[1] == "3");
+        CHECK(v.getExtra()[1] == 3);
         CHECK(v.getExtra()[2] == "_a_");
     }
 
@@ -360,7 +369,7 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(v.getPatch() == 1);
         CHECK(v.getTweak() == 0);
         CHECK(v.getExtra()[0] == "rc2");
-        CHECK(v.getExtra()[1] == "3");
+        CHECK(v.getExtra()[1] == 3);
         CHECK(v.getExtra()[2] == "_a_");
     }
 
@@ -371,7 +380,7 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(v.getPatch() == 0);
         CHECK(v.getTweak() == 1);
         CHECK(v.getExtra()[0] == "rc2");
-        CHECK(v.getExtra()[1] == "3");
+        CHECK(v.getExtra()[1] == 3);
         CHECK(v.getExtra()[2] == "_a_");
     }
 
@@ -672,10 +681,20 @@ TEST_CASE("Checking version ranges", "[range]")
         auto s = vr.toString();
         CHECK(s == ">=1.0.0 <3.0.0");
     }
+    {
+        VersionRange vr("1 - 3 <2");
+        auto s = vr.toString();
+        CHECK(s == ">=1.0.0 <2.0.0");
+    }
 
     {
         VersionRange vr("1-2");
         CHECK(vr.toString() == ">=1.0.0-2 <2.0.0");
+    }
+
+    {
+        VersionRange vr("1-a");
+        CHECK(vr.toString() == ">=1.0.0-a <2.0.0");
     }
 
     {
@@ -828,12 +847,6 @@ TEST_CASE("Checking version ranges", "[range]")
 int main(int argc, char **argv)
 try
 {
-    // TODO: limit version and range strings
-
-    using namespace primitives::version;
-    VersionRange vr1("> 1 < 3 || > 5 < 7");
-    //VersionRange vr1(">x > 1 < 3 || > 5 < 7");
-
     Catch::Session().run(argc, argv);
 
     return 0;

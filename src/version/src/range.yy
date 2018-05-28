@@ -5,14 +5,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 %{
-#include <range.h>
+#include <range_parser.h>
 %}
 
 ////////////////////////////////////////
 
 // general settings
 %require "3.0"
-%debug
+//%debug
 %start file
 %locations
 %verbose
@@ -23,11 +23,13 @@
 
 %glr-parser
 %skeleton "glr.cc" // c++ skeleton
-%define api.prefix {yy_range}
 %define api.value.type {MY_STORAGE}
+%define api.prefix {yy_range}
 
 %{
-#define PRIMITIVES_VERSION_PARSER
+// allows user classes to open their private fields
+#define BISON_PARSER 1
+
 #include <primitives/version.h>
 using namespace primitives::version;
 
@@ -82,65 +84,47 @@ auto prepare_pair(VersionRange::RangePair &p)
 %token <v> XNUMBER NUMBER EXTRA
 
 %type <v> file
-%type <v> range_set_or range range_as_range
-%type <v> range_set_and range_set_and_as_range
+%type <v> range_set_or range
+%type <v> range_set_and
 %type <v> compare caret tilde hyphen version
-%type <v> basic_version number extra
+%type <v> basic_version number extra extra_part
 
 ////////////////////////////////////////
 
 %%
 
 file: range_set_or EOQ
+    {
+        SET_PARSER_RESULT($1);
+
+// in-rule definition to convert $$
+#define SET_RETURN_VALUE(xxxxx) SET_VALUE($$, xxxxx)
+    }
     ;
 
-range_set_or: range_set_and_as_range
-    | range_set_or or range_set_and_as_range
+range_set_or: range_set_and
+    | range_set_or or range_set_and
     {
         EXTRACT_VALUE(VersionRange, vr, $1);
         EXTRACT_VALUE(VersionRange, vr_and, $3);
         vr |= vr_and;
-        SET_VALUE($$, vr);
+        SET_RETURN_VALUE(vr);
     }
     ;
 
-range_set_and_as_range: range_set_and
+range_set_and: range
     {
-        EXTRACT_VALUE(VersionRange::Range, vr_and, $1);
-        VersionRange a;
-        a.range.clear();
-        if (!vr_and.empty())
-        {
-            a |= vr_and.back();
-            vr_and.pop_back();
-            for (auto &vr : vr_and)
-                a &= vr;
-        }
-        SET_VALUE($$, a);
+        EXTRACT_VALUE(VersionRange, vr, $1);
+        auto vr_and = VersionRange::empty();
+        vr_and |= vr;
+        SET_RETURN_VALUE(vr_and);
     }
-    ;
-
-range_set_and: range_as_range
+    | range_set_and and range
     {
-        EXTRACT_VALUE(VersionRange::Range, vr_and, $1);
-        SET_VALUE($$, vr_and);
-    }
-    | range_set_and and range_as_range
-    {
-        EXTRACT_VALUE(VersionRange::Range, vr_and, $1);
-        EXTRACT_VALUE(VersionRange::Range, rp, $3);
-        for (auto &r : rp)
-            vr_and.push_back(r);
-        SET_VALUE($$, vr_and);
-    }
-    ;
-
-range_as_range: range
-    {
-        EXTRACT_VALUE(VersionRange::RangePair, rp, $1);
-        VersionRange::Range vr_and;
-        vr_and.push_back(rp);
-        SET_VALUE($$, vr_and);
+        EXTRACT_VALUE(VersionRange, vr_and, $1);
+        EXTRACT_VALUE(VersionRange, vr, $3);
+        vr_and &= vr;
+        SET_RETURN_VALUE(vr_and);
     }
     ;
 
@@ -149,20 +133,66 @@ range: compare | caret | tilde | hyphen
     {
         EXTRACT_VALUE(Version, v, $1);
         VersionRange::RangePair rp;
-        rp.first = prepare_version(v);
-        rp.second = prepare_version(v);
-        SET_VALUE($$, prepare_pair(rp));
+        rp.first.patch = 0;
+        rp.second.patch = 0;
+
+        // at the moment we do not allow ranges like *.2.* and similar
+        // they must be filled only from the beginning
+
+        rp.first = v;
+        rp.second.level = v.level;
+
+        if (v.major < 0)
+        {
+            rp.first = Version::min(v);
+            rp.second = Version::max(v);
+        }
+        else
+        {
+            if (v.minor < 0)
+            {
+                rp.second = Version::max(v);
+                rp.second.major = v.major;
+            }
+            else
+            {
+                if (v.patch < 0)
+                {
+                    rp.second = Version::max(v);
+                    rp.second.major = v.major;
+                    rp.second.minor = v.minor;
+                }
+                else
+                {
+                    if (v.tweak == ANY)
+                    {
+                        rp.second = Version::max(v);
+                        rp.second.major = v.major;
+                        rp.second.minor = v.minor;
+                        rp.second.patch = v.patch;
+                    }
+                    rp.second = rp.first;
+                }
+            }
+        }
+        rp.first.extra = v.extra;
+
+        auto vr = VersionRange::empty();
+        vr |= prepare_pair(rp);
+        SET_RETURN_VALUE(vr);
     }
     ;
 
-compare:
-      LT space_or_empty version
+compare: LT space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
         VersionRange::RangePair rp;
         rp.first = Version::min(v);
         rp.second = prepare_version(v).getPreviousVersion();
-        SET_VALUE($$, prepare_pair(rp));
+
+        auto vr = VersionRange::empty();
+        vr |= prepare_pair(rp);
+        SET_RETURN_VALUE(vr);
     }
     | LE space_or_empty version
     {
@@ -170,7 +200,10 @@ compare:
         VersionRange::RangePair rp;
         rp.first = Version::min(v);
         rp.second = prepare_version(v);
-        SET_VALUE($$, prepare_pair(rp));
+
+        auto vr = VersionRange::empty();
+        vr |= prepare_pair(rp);
+        SET_RETURN_VALUE(vr);
     }
     | GT space_or_empty version
     {
@@ -178,7 +211,10 @@ compare:
         VersionRange::RangePair rp;
         rp.first = prepare_version(v).getNextVersion();
         rp.second = Version::max(v);
-        SET_VALUE($$, prepare_pair(rp));
+
+        auto vr = VersionRange::empty();
+        vr |= prepare_pair(rp);
+        SET_RETURN_VALUE(vr);
     }
     | GE space_or_empty version
     {
@@ -186,7 +222,10 @@ compare:
         VersionRange::RangePair rp;
         rp.first = prepare_version(v);
         rp.second = Version::max(v);
-        SET_VALUE($$, prepare_pair(rp));
+
+        auto vr = VersionRange::empty();
+        vr |= prepare_pair(rp);
+        SET_RETURN_VALUE(vr);
     }
     | EQ space_or_empty version
     {
@@ -194,7 +233,10 @@ compare:
         VersionRange::RangePair rp;
         rp.first = prepare_version(v);
         rp.second = prepare_version(v);
-        SET_VALUE($$, prepare_pair(rp));
+
+        auto vr = VersionRange::empty();
+        vr |= prepare_pair(rp);
+        SET_RETURN_VALUE(vr);
     }
     | NE space_or_empty version
     {
@@ -202,34 +244,157 @@ compare:
         VersionRange::RangePair rp;
         rp.first = Version::min(v);
         rp.second = prepare_version(v).getPreviousVersion();
-        /*vr_or_neq |= rp;
+
+        auto vr = VersionRange::empty();
+        vr |= prepare_pair(rp);
         rp.first = prepare_version(v).getNextVersion();
         rp.second = Version::max(v);
-        vr_or_neq |= rp;*/
-        SET_VALUE($$, prepare_pair(rp));
+        vr |= prepare_pair(rp);
+
+        SET_RETURN_VALUE(vr);
     }
     ;
 
 caret: CARET space_or_empty version
-    { $$ = $3; }
+    {
+        EXTRACT_VALUE(Version, v, $3);
+        VersionRange::RangePair rp;
+        rp.first.patch = 0;
+        rp.second.patch = 0;
+
+        // at the moment we do not allow ranges like *.2.* and similar
+        // they must be filled only from the beginning
+
+        rp.first = v;
+        rp.second.level = v.level;
+
+        if (v.major < 0)
+            YYABORT;
+        else if (v.major > 0)
+            rp.second.major = v.major + 1;
+        else
+        {
+            if (v.minor < 0)
+            {
+                rp.second.major = v.major + 1;
+            }
+            else if (v.minor > 0)
+                rp.second.minor = v.minor + 1;
+            else
+            {
+                if (v.patch < 0)
+                {
+                    rp.second.major = v.major;
+                    rp.second.minor = v.minor + 1;
+                }
+                else if (v.patch > 0)
+                    rp.second.patch = v.patch + 1;
+                else
+                {
+                    if (v.tweak < 0)
+                    {
+                        rp.second.major = v.major;
+                        rp.second.minor = v.minor + 1;
+                        rp.second.patch = 0;
+                    }
+                    else if (v.tweak > 0)
+                        rp.second.tweak = v.tweak + 1;
+                    else
+                    {
+                        rp.second.major = v.major;
+                        rp.second.minor = v.minor + 1;
+                        rp.second.patch = 0;
+                        rp.second.tweak = 0;
+                    }
+                }
+            }
+        }
+
+        rp.first.extra = v.extra;
+        //rp.second.extra = v.extra;
+        prepare_version(rp.second, 0, v.level);
+        rp.second.decrementVersion();
+
+        auto vr = VersionRange::empty();
+        vr |= prepare_pair(rp);
+        SET_RETURN_VALUE(vr);
+    }
     ;
 
 tilde: TILDE space_or_empty version
-    { $$ = $3; }
+    {
+        EXTRACT_VALUE(Version, v, $3);
+        VersionRange::RangePair rp;
+        rp.first.patch = 0;
+        rp.second.patch = 0;
+
+        // at the moment we do not allow ranges like *.2.* and similar
+        // they must be filled only from the beginning
+
+        // unset rp
+        rp.first = v;
+        rp.second.level = v.level;
+
+        if (v.major < 0)
+            YYABORT;
+        else
+        {
+            if (v.minor < 0)
+            {
+                rp.second.major = v.major + 1;
+            }
+            else
+            {
+                if (v.patch < 0)
+                {
+                    rp.second.major = v.major;
+                    rp.second.minor = v.minor + 1;
+                }
+                else
+                {
+                    if (v.tweak < 0)
+                    {
+                        rp.second.major = v.major;
+                        rp.second.minor = v.minor + 1;
+                        rp.second.patch = 0;
+                    }
+                    else
+                    {
+                        rp.second.major = v.major;
+                        rp.second.minor = v.minor + 1;
+                        rp.second.patch = 0;
+                        rp.second.tweak = 0;
+                    }
+                }
+            }
+        }
+        rp.first.extra = v.extra;
+        //rp.second.extra = v.extra;
+        rp.second.decrementVersion();
+
+        auto vr = VersionRange::empty();
+        vr |= prepare_pair(rp);
+        SET_RETURN_VALUE(vr);
+    }
     ;
 
 hyphen: version SPACE HYPHEN SPACE version
     {
         EXTRACT_VALUE(Version, v1, $1);
         EXTRACT_VALUE(Version, v2, $5);
-        if (v1 > v2)
-            std::swap(v1, v2);
-        VersionRange::RangePair p;
-        p.first = v1;
-        p.second = v2;
-        SET_VALUE($$, prepare_pair(p));
+        VersionRange::RangePair rp;
+        rp.first = v1;
+        rp.second = v2;
+
+        auto vr = VersionRange::empty();
+        vr |= prepare_pair(rp);
+        SET_RETURN_VALUE(vr);
     }
     ;
+
+//
+// simple types, no much logic
+//
 
 version: basic_version
     | basic_version HYPHEN extra
@@ -237,7 +402,7 @@ version: basic_version
         EXTRACT_VALUE(Version, v, $1);
         EXTRACT_VALUE(Version::Extra, extra, $3);
         v.extra = extra;
-        SET_VALUE($$, prepare_version(v));
+        SET_RETURN_VALUE(prepare_version(v));
     }
     ;
 
@@ -248,7 +413,7 @@ basic_version:
         Version v;
         reset_version(v);
         v.major = major;
-        SET_VALUE($$, v);
+        SET_RETURN_VALUE(v);
     }
     | number DOT number
     {
@@ -258,7 +423,7 @@ basic_version:
         reset_version(v);
         v.major = major;
         v.minor = minor;
-        SET_VALUE($$, v);
+        SET_RETURN_VALUE(v);
     }
     | number DOT number DOT number
     {
@@ -270,7 +435,7 @@ basic_version:
         v.major = major;
         v.minor = minor;
         v.patch = patch;
-        SET_VALUE($$, v);
+        SET_RETURN_VALUE(v);
     }
     | number DOT number DOT number DOT number
     {
@@ -285,17 +450,39 @@ basic_version:
         v.patch = patch;
         v.tweak = tweak;
         v.level = 4;
-        SET_VALUE($$, v);
+        SET_RETURN_VALUE(v);
     }
     ;
 
 number: NUMBER
     | XNUMBER
-    { SET_VALUE($$, ANY); }
+    { SET_RETURN_VALUE((Version::Number)ANY); }
     ;
 
-extra: EXTRA
-    | extra DOT EXTRA
+extra: extra_part
+    | extra DOT extra_part
+    {
+        EXTRACT_VALUE(Version::Extra, extra, $1);
+        EXTRACT_VALUE(Version::Extra, e, $3);
+        extra.insert(extra.end(), e.begin(), e.end());
+        SET_RETURN_VALUE(extra);
+    }
+    ;
+
+extra_part: EXTRA
+    {
+        EXTRACT_VALUE(std::string, e, $1);
+        Version::Extra extra;
+        extra.push_back(e);
+        SET_RETURN_VALUE(extra);
+    }
+    | NUMBER
+    {
+        EXTRACT_VALUE(Version::Number, e, $1);
+        Version::Extra extra;
+        extra.push_back(e);
+        SET_RETURN_VALUE(extra);
+    }
     ;
 
 or: space_or_empty OR space_or_empty

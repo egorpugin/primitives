@@ -11,16 +11,56 @@
 #include <vector>
 
 #include <primitives/stdcompat/optional.h>
+#include <primitives/stdcompat/variant.h>
 
 namespace primitives::version
 {
+
+namespace detail
+{
+
+using Number = int64_t;
+
+template <class T, class ... Args>
+struct access_vector : std::vector<T, Args...>
+{
+    using base = std::vector<T, Args...>;
+
+    using base::base;
+
+    const T &operator[](int i) const
+    {
+        return const_cast<access_vector*>(this)->base::operator[](i);
+    }
+};
+
+template <class ... Args>
+struct comparable_variant : std::variant<Args...>
+{
+    using base = std::variant<Args...>;
+
+    using base::base;
+
+    bool operator==(Number n) const
+    {
+        return std::get<Number>(*this) == n;
+    }
+
+    bool operator==(const std::string &s) const
+    {
+        return std::get<std::string>(*this) == s;
+    }
+};
+
+}
 
 // extract GenericVersion - GenericNumericVersion?
 
 struct PRIMITIVES_VERSION_API Version
 {
-    using Number = int64_t;
-    using Extra = std::vector<std::string>;
+    using Number = detail::Number;
+    // enough numbers, here string goes first
+    using Extra = detail::access_vector<detail::comparable_variant<std::string, Number>>;
 
     /// default is min()
     Version();
@@ -51,7 +91,7 @@ struct PRIMITIVES_VERSION_API Version
     Number getMinor() const;
     Number getPatch() const;
     Number getTweak() const;
-    Extra getExtra() const;
+    const Extra &getExtra() const;
     std::string getBranch() const;
 
     std::string toString(int level = default_level) const;
@@ -89,7 +129,7 @@ public:
 
     static Number maxNumber();
 
-#ifndef PRIMITIVES_VERSION_PARSER
+#ifndef BISON_PARSER
 private:
 #endif
     Number major = 0;
@@ -112,7 +152,8 @@ private:
 
     static const int default_level = 3;
 
-    friend struct VersionRange; // used in RangePair::toString();
+    // used in RangePair::toString();
+    friend struct VersionRange;
 };
 
 struct PRIMITIVES_VERSION_API VersionRange
@@ -124,18 +165,23 @@ struct PRIMITIVES_VERSION_API VersionRange
 
         std::string toString() const;
         bool hasVersion(const Version &v) const;
+
+        optional<RangePair> operator&(const RangePair &) const;
     };
     using Range = std::vector<RangePair>;
 
     /// default is any version or * or Version::min() - Version::max()
-    VersionRange();
+    VersionRange(int level = Version::default_level);
+
+    /// from two versions
+    VersionRange(const Version &v1, const Version &v2);
 
     /// parse from string
     VersionRange(const std::string &v);
 
     std::string toString() const;
 
-    bool empty() const;
+    bool isEmpty() const;
     bool hasVersion(const Version &v) const;
 
     Version getMinSatisfyingVersion(const std::set<Version> &) const;
@@ -153,13 +199,16 @@ struct PRIMITIVES_VERSION_API VersionRange
 
     static optional<VersionRange> parse(const std::string &s);
 
-#ifndef PRIMITIVES_VERSION_PARSER
+    static VersionRange empty();
+
+#ifndef BISON_PARSER
 private:
 #endif
+    // always sorted with less
     Range range;
 
     /// range will be in an invalid state in case of errors
-    static bool parse(VersionRange &v, const std::string &s);
+    static std::tuple<bool, std::string> parse(VersionRange &v, const std::string &s);
     static bool parse1(VersionRange &v, const std::string &s);
 };
 

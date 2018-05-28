@@ -5,7 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <range.h>
+#include <range_parser.h>
 
 // C++, make_ is for variants
 #define YY_USER_ACTION loc.columns(yyleng);
@@ -44,12 +44,15 @@ extra  [_a-zA-Z0-9]+
 "-"                     return MAKE(HYPHEN);
 "."                     return MAKE(DOT);
 
-"x"                     return MAKE(XNUMBER);
+"x"                     |
+"X"                     |
+"*"                     return MAKE(XNUMBER);
+
 ",|&&"                  return MAKE(AND);
 "||"                    return MAKE(OR);
 
 {number}                return MAKE_VALUE(NUMBER, std::stoll(yytext));
-{extra}                 return MAKE_VALUE(EXTRA, yytext);
+{extra}                 return MAKE_VALUE(EXTRA, std::string(yytext));
 
 .                       { /*printf("err = %s\n", yytext);*/ return MAKE(ERROR_SYMBOL); }
 <<EOF>>                 return MAKE(EOQ);
