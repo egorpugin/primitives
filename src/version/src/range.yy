@@ -35,12 +35,34 @@ using namespace primitives::version;
 
 enum : Version::Number { ANY = -2, UNSET = -1, };
 
-void reset_version(Version &v)
+void reset(Version &v)
 {
     v.major = UNSET;
     v.minor = UNSET;
     v.patch = UNSET;
     v.tweak = UNSET;
+}
+
+void reset(VersionRange::RangePair &p)
+{
+    reset(p.first);
+    reset(p.second);
+}
+
+Version empty_version()
+{
+    Version v;
+    reset(v);
+    return v;
+}
+
+VersionRange::RangePair empty_pair()
+{
+    VersionRange::RangePair rp;
+    //reset(rp);
+    rp.first.patch = 0;
+    rp.second.patch = 0;
+    return rp;
 }
 
 auto prepare_version(Version &ver, Version::Number val = 0, int level = Version::default_level)
@@ -132,9 +154,7 @@ range: compare | caret | tilde | hyphen
     | version
     {
         EXTRACT_VALUE(Version, v, $1);
-        VersionRange::RangePair rp;
-        rp.first.patch = 0;
-        rp.second.patch = 0;
+        auto rp = empty_pair();
 
         // at the moment we do not allow ranges like *.2.* and similar
         // they must be filled only from the beginning
@@ -186,7 +206,7 @@ range: compare | caret | tilde | hyphen
 compare: LT space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        VersionRange::RangePair rp;
+        auto rp = empty_pair();
         rp.first = Version::min(v);
         rp.second = prepare_version(v).getPreviousVersion();
 
@@ -197,7 +217,7 @@ compare: LT space_or_empty version
     | LE space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        VersionRange::RangePair rp;
+        auto rp = empty_pair();
         rp.first = Version::min(v);
         rp.second = prepare_version(v);
 
@@ -208,7 +228,7 @@ compare: LT space_or_empty version
     | GT space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        VersionRange::RangePair rp;
+        auto rp = empty_pair();
         rp.first = prepare_version(v).getNextVersion();
         rp.second = Version::max(v);
 
@@ -219,7 +239,7 @@ compare: LT space_or_empty version
     | GE space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        VersionRange::RangePair rp;
+        auto rp = empty_pair();
         rp.first = prepare_version(v);
         rp.second = Version::max(v);
 
@@ -230,7 +250,7 @@ compare: LT space_or_empty version
     | EQ space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        VersionRange::RangePair rp;
+        auto rp = empty_pair();
         rp.first = prepare_version(v);
         rp.second = prepare_version(v);
 
@@ -241,7 +261,7 @@ compare: LT space_or_empty version
     | NE space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        VersionRange::RangePair rp;
+        auto rp = empty_pair();
         rp.first = Version::min(v);
         rp.second = prepare_version(v).getPreviousVersion();
 
@@ -258,9 +278,7 @@ compare: LT space_or_empty version
 caret: CARET space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        VersionRange::RangePair rp;
-        rp.first.patch = 0;
-        rp.second.patch = 0;
+        auto rp = empty_pair();
 
         // at the moment we do not allow ranges like *.2.* and similar
         // they must be filled only from the beginning
@@ -324,9 +342,7 @@ caret: CARET space_or_empty version
 tilde: TILDE space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        VersionRange::RangePair rp;
-        rp.first.patch = 0;
-        rp.second.patch = 0;
+        auto rp = empty_pair();
 
         // at the moment we do not allow ranges like *.2.* and similar
         // they must be filled only from the beginning
@@ -370,6 +386,7 @@ tilde: TILDE space_or_empty version
         }
         rp.first.extra = v.extra;
         //rp.second.extra = v.extra;
+        prepare_version(rp.second, 0, v.level);
         rp.second.decrementVersion();
 
         auto vr = VersionRange::empty();
@@ -382,7 +399,7 @@ hyphen: version SPACE HYPHEN SPACE version
     {
         EXTRACT_VALUE(Version, v1, $1);
         EXTRACT_VALUE(Version, v2, $5);
-        VersionRange::RangePair rp;
+        auto rp = empty_pair();
         rp.first = v1;
         rp.second = v2;
 
@@ -402,54 +419,27 @@ version: basic_version
         EXTRACT_VALUE(Version, v, $1);
         EXTRACT_VALUE(Version::Extra, extra, $3);
         v.extra = extra;
-        SET_RETURN_VALUE(prepare_version(v));
+        SET_RETURN_VALUE(v);
     }
     ;
 
-basic_version:
-      number
+basic_version: number
     {
         EXTRACT_VALUE(Version::Number, major, $1);
-        Version v;
-        reset_version(v);
+        auto v = empty_version();
         v.major = major;
         SET_RETURN_VALUE(v);
     }
-    | number DOT number
+    | basic_version DOT number
     {
-        EXTRACT_VALUE(Version::Number, major, $1);
-        EXTRACT_VALUE(Version::Number, minor, $3);
-        Version v;
-        reset_version(v);
-        v.major = major;
-        v.minor = minor;
-        SET_RETURN_VALUE(v);
-    }
-    | number DOT number DOT number
-    {
-        EXTRACT_VALUE(Version::Number, major, $1);
-        EXTRACT_VALUE(Version::Number, minor, $3);
-        EXTRACT_VALUE(Version::Number, patch, $5);
-        Version v;
-        reset_version(v);
-        v.major = major;
-        v.minor = minor;
-        v.patch = patch;
-        SET_RETURN_VALUE(v);
-    }
-    | number DOT number DOT number DOT number
-    {
-        EXTRACT_VALUE(Version::Number, major, $1);
-        EXTRACT_VALUE(Version::Number, minor, $3);
-        EXTRACT_VALUE(Version::Number, patch, $5);
-        EXTRACT_VALUE(Version::Number, tweak, $7);
-        Version v;
-        reset_version(v);
-        v.major = major;
-        v.minor = minor;
-        v.patch = patch;
-        v.tweak = tweak;
-        v.level = 4;
+        EXTRACT_VALUE(Version, v, $1);
+        EXTRACT_VALUE(Version::Number, n, $3);
+        auto p = &v.major;
+        while (*p != UNSET)
+            p++;
+        *p = n;
+        if (p > &v.patch)
+            v.level = 4;
         SET_RETURN_VALUE(v);
     }
     ;

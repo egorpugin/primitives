@@ -503,7 +503,7 @@ std::string VersionRange::RangePair::toString() const
         {
             if (!s.empty())
                 s += " ";
-            return s + "<" + second.getNextVersion().toString(level);
+            return s + "<" + second.getNextVersion(level).toString(level);
         }
     }
     if (!s.empty())

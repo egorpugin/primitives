@@ -56,15 +56,7 @@ struct bison_any_storage
     template <class U>
     void setValue(basic_block &bb, const U &v2)
     {
-        if (v)
-        {
-            *v = v2;
-        }
-        else
-        {
-            bb.data.emplace_back(v2);
-            v = &bb.data.back();
-        }
+        v = bb.add_data(v2);
     }
 
     template <class U>
@@ -109,6 +101,13 @@ struct basic_block
 
     // data storage, list iterators are not invalidated
     std::list<std::any> data;
+
+    template <class U>
+    auto add_data(U &&u)
+    {
+        data.emplace_back(std::forward<U>(u));
+        return &data.back();
+    }
 
     template <class T>
     void setResult(const T &v)
@@ -162,10 +161,7 @@ struct some_parser : BaseParser
         {                                                                                    \
             auto ret = LEXER_NAME(lex)(bb.scanner, *loc);                                    \
             if (std::get<1>(ret).has_value())                                                \
-            {                                                                                \
-                bb.data.emplace_back(std::get<1>(ret));                                      \
-                val->v = &bb.data.back();                                                    \
-            }                                                                                \
+                val->v = bb.add_data(std::get<1>(ret));                                      \
             return std::get<0>(ret);                                                         \
         }                                                                                    \
                                                                                              \

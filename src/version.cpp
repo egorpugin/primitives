@@ -735,17 +735,22 @@ TEST_CASE("Checking version ranges", "[range]")
     // NORMALIZE
     {
         VersionRange vr(">7 >8 >9");
-        CHECK(vr.toString() == ">=7.0.1");
+        CHECK(vr.toString() == ">=9.0.1");
     }
 
     {
         VersionRange vr(">=7 >8 >9");
-        CHECK(vr.toString() == ">=7.0.0");
+        CHECK(vr.toString() == ">=9.0.1");
+    }
+
+    {
+        VersionRange vr(">=7 >8 >=9");
+        CHECK(vr.toString() == ">=9.0.0");
     }
 
     {
         VersionRange vr(">7 >8 <10");
-        CHECK(vr.toString() == "*");
+        CHECK(vr.toString() == ">=8.0.1 <10.0.0");
     }
 
     {
