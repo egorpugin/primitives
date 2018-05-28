@@ -828,8 +828,11 @@ TEST_CASE("Checking version ranges", "[range]")
 int main(int argc, char **argv)
 try
 {
+    // TODO: limit version and range strings
+
     using namespace primitives::version;
     VersionRange vr1("> 1 < 3 || > 5 < 7");
+    //VersionRange vr1(">x > 1 < 3 || > 5 < 7");
 
     Catch::Session().run(argc, argv);
 

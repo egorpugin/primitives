@@ -89,7 +89,9 @@ public:
 
     static Number maxNumber();
 
+#ifndef PRIMITIVES_VERSION_PARSER
 private:
+#endif
     Number major = 0;
     Number minor = 0;
     Number patch = 0;
@@ -144,17 +146,21 @@ struct PRIMITIVES_VERSION_API VersionRange
     VersionRange &operator|=(const VersionRange &);
     VersionRange &operator&=(const VersionRange &);
 
+    // think like it's private
+    // does not work in dll builds when private
+    VersionRange &operator|=(const RangePair &);
+    VersionRange &operator&=(const RangePair &);
+
     static optional<VersionRange> parse(const std::string &s);
 
+#ifndef PRIMITIVES_VERSION_PARSER
 private:
+#endif
     Range range;
 
     /// range will be in an invalid state in case of errors
     static bool parse(VersionRange &v, const std::string &s);
     static bool parse1(VersionRange &v, const std::string &s);
-
-    VersionRange &operator|=(const RangePair &);
-    VersionRange &operator&=(const RangePair &);
 };
 
 }

@@ -5,26 +5,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#pragma warning(disable: 4005)
-#pragma warning(disable: 4065)
-
-#include <range.yy.hpp>
-
-// C
-//#define YY_DECL int yylex(yyscan_t yyscanner, YY_RANGELTYPE &loc)
-//#define MAKE(x) x//yy_range::parser::make_ ## x(loc)
-//#define MAKE_VALUE(x, v) x//yy_range::parser::make_ ## x((v), loc)
+#include <range.h>
 
 // C++, make_ is for variants
 #define YY_USER_ACTION loc.columns(yyleng);
-#define YY_DECL int yylex(yyscan_t yyscanner, yy_range::parser::location_type &loc)
-//#define YY_DECL yy_range::parser::symbol_type yylex(yyscan_t yyscanner, yy_range::parser::location_type &loc)
-// make_ is for variants
-//#define MAKE(x) yy_range::parser::make_ ## x(loc)
-//#define MAKE_VALUE(x, v) yy_range::parser::make_ ## x((v), loc)
-//
-#define MAKE(x) yy_range::parser::token::x
-#define MAKE_VALUE(x, v) yy_range::parser::token::x
 %}
 
 %option nounistd
@@ -60,7 +44,7 @@ extra  [_a-zA-Z0-9]+
 "-"                     return MAKE(HYPHEN);
 "."                     return MAKE(DOT);
 
-"x|X|*"                 return MAKE(XNUMBER);
+"x"                     return MAKE(XNUMBER);
 ",|&&"                  return MAKE(AND);
 "||"                    return MAKE(OR);
 

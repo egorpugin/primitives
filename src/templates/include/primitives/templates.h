@@ -1,13 +1,12 @@
 #pragma once
 
+#include "preprocessor.h"
+
 #include <functional>
 #include <mutex>
 #include <utility>
 
 // scope guard
-#define CONCATENATE_IMPL(s1, s2) s1##s2
-#define CONCATENATE(s1, s2) CONCATENATE_IMPL(s1, s2)
-
 #define ANONYMOUS_VARIABLE_COUNTER(s) CONCATENATE(s, __COUNTER__)
 #define ANONYMOUS_VARIABLE_LINE(s) CONCATENATE(s, __LINE__)
 

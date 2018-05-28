@@ -74,9 +74,13 @@ projects:
                 pvt.cppan.demo.lexxmark.winflexbison.flex:
                     version: master
                     ref: flex
+                    condition:
+                        - WIN32
                 pvt.cppan.demo.lexxmark.winflexbison.bison:
                     version: master
                     ref: bison
+                    condition:
+                        - WIN32
                 pvt.cppan.demo.imageworks.pystring:
                     version: 1
         post_sources: |
@@ -98,6 +102,11 @@ projects:
             macro(flex_bison lexer parser)
                 set(bdir ${BDIR_PRIVATE}/fb)
 
+                if (NOT WIN32)
+                    set(flex flex)
+                    set(bison bison)
+                endif()
+
                 get_filename_component(d ${lexer} DIRECTORY)
                 execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
 
@@ -106,7 +115,7 @@ projects:
                         ${bdir}/${parser}.hpp
                     COMMAND ${bison} -o ${bdir}/${parser}.cpp --defines=${bdir}/${parser}.hpp ${SDIR}/${parser}
                     DEPENDS ${bison} ${SDIR}/${parser}
-                    WORKING_DIRECTORY ${d}
+                    WORKING_DIRECTORY ${bdir}/${d}
                 )
                 target_include_directories(${this} PRIVATE ${bdir}/${d})
 
@@ -115,8 +124,9 @@ projects:
 
                 add_custom_command(OUTPUT
                         ${bdir}/${lexer}.cpp
-                        ${bdir}/${lexer}.h
-                    COMMAND ${flex} -o ${bdir}/${lexer}.cpp --header-file=${lexer}.h ${SDIR}/${lexer}
+                        #${bdir}/${lexer}.h
+                    #COMMAND ${flex} -o ${bdir}/${lexer}.cpp --header-file=${lexer}.h ${SDIR}/${lexer}
+                    COMMAND ${flex} -o ${bdir}/${lexer}.cpp ${SDIR}/${lexer}
                     DEPENDS ${flex} ${SDIR}/${lexer} ${bdir}/${parser}.hpp
                     WORKING_DIRECTORY ${bdir}
                 )
@@ -126,7 +136,7 @@ projects:
                     ${bdir}/${parser}.cpp
                     ${bdir}/${parser}.hpp
                     ${bdir}/${lexer}.cpp
-                    ${bdir}/${lexer}.h
+                    #${bdir}/${lexer}.h
                 )
             endmacro()
 
