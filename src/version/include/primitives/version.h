@@ -54,11 +54,21 @@ struct comparable_variant : std::variant<Args...>
 
 }
 
-// extract GenericVersion - GenericNumericVersion?
-
-struct PRIMITIVES_VERSION_API Version
+struct GenericNumericVersion
 {
     using Number = detail::Number;
+
+    std::vector<Number> numbers;
+
+    // shows how many numbers are used
+    int level = default_level;
+
+    static const int default_level = 3;
+    static const int max_level = 4;
+};
+
+struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
+{
     // enough numbers, here string goes first
     using Extra = detail::access_vector<detail::comparable_variant<std::string, Number>>;
 
@@ -136,8 +146,6 @@ private:
     Number minor = 0;
     Number patch = 0;
     Number tweak = 0;
-    // shows how many numbers are used
-    int level = default_level;
     Extra extra;
     std::string branch;
 
@@ -149,8 +157,6 @@ private:
     std::string printExtra() const;
 
     void checkExtra() const;
-
-    static const int default_level = 3;
 
     // used in RangePair::toString();
     friend struct VersionRange;
@@ -182,10 +188,15 @@ struct PRIMITIVES_VERSION_API VersionRange
     std::string toString() const;
 
     bool isEmpty() const;
-    bool hasVersion(const Version &v) const;
+    bool isOutside(const Version &) const;
+    bool hasVersion(const Version &) const;
 
-    Version getMinSatisfyingVersion(const std::set<Version> &) const;
-    Version getMaxSatisfyingVersion(const std::set<Version> &) const;
+    optional<Version> getMinSatisfyingVersion(const std::set<Version> &) const;
+    optional<Version> getMaxSatisfyingVersion(const std::set<Version> &) const;
+
+public:
+    bool operator==(const VersionRange &) const;
+    bool operator!=(const VersionRange &) const;
 
     VersionRange operator|(const VersionRange &) const;
     VersionRange operator&(const VersionRange &) const;
@@ -197,8 +208,11 @@ struct PRIMITIVES_VERSION_API VersionRange
     VersionRange &operator|=(const RangePair &);
     VersionRange &operator&=(const RangePair &);
 
+public:
+    /// get range from string without throw
     static optional<VersionRange> parse(const std::string &s);
 
+    /// returns empty set
     static VersionRange empty();
 
 #ifndef BISON_PARSER
@@ -209,7 +223,23 @@ private:
 
     /// range will be in an invalid state in case of errors
     static std::tuple<bool, std::string> parse(VersionRange &v, const std::string &s);
-    static bool parse1(VersionRange &v, const std::string &s);
+
+    friend bool operator<(const VersionRange &, const Version &);
+    friend bool operator<(const Version &, const VersionRange &);
+    friend bool operator>(const VersionRange &, const Version &);
+    friend bool operator>(const Version &, const VersionRange &);
 };
+
+/// Return true if version is greater than all the versions possible in the range.
+bool operator<(const VersionRange &, const Version &);
+
+/// Return true if version is less than all the versions possible in the range.
+bool operator<(const Version &, const VersionRange &);
+
+/// Return true if version is less than all the versions possible in the range.
+bool operator>(const VersionRange &, const Version &);
+
+/// Return true if version is greater than all the versions possible in the range.
+bool operator>(const Version &, const VersionRange &);
 
 }

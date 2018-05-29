@@ -45,10 +45,11 @@ extra  [_a-zA-Z0-9]+
 "."                     return MAKE(DOT);
 
 "x"                     |
-"X"                     |
-"*"                     return MAKE(XNUMBER);
+"X"                     return MAKE_VALUE(X_NUMBER, std::string(yytext));
+"*"                     return MAKE(STAR_NUMBER);
 
-",|&&"                  return MAKE(AND);
+","                     return MAKE(AND);
+"&&"                    return MAKE(AND);
 "||"                    return MAKE(OR);
 
 {number}                return MAKE_VALUE(NUMBER, std::stoll(yytext));

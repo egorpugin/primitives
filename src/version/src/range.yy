@@ -82,10 +82,18 @@ auto prepare_pair(VersionRange::RangePair &p)
     auto level = std::max(p.first.level, p.second.level);
     prepare_version(p.first, 0, level);
     if (p.first < Version::min(level))
+    {
+        // keep extra for first
+        auto e = p.first.extra;
         p.first = Version::min(level);
+        p.first.extra = e;
+    }
     prepare_version(p.second, Version::maxNumber(), level);
     if (p.second > Version::max(level))
+    {
+        // but not second?
         p.second = Version::max(level);
+    }
     return p;
 }
 
@@ -103,7 +111,7 @@ auto prepare_pair(VersionRange::RangePair &p)
 %token OR
 %token CARET TILDE HYPHEN DOT
 
-%token <v> XNUMBER NUMBER EXTRA
+%token <v> NUMBER X_NUMBER STAR_NUMBER EXTRA
 
 %type <v> file
 %type <v> range_set_or range
@@ -149,6 +157,10 @@ range_set_and: range
         SET_RETURN_VALUE(vr_and);
     }
     ;
+
+////////////////////////////////////////////////////////////////////////////////
+// single ranges
+////////////////////////////////////////////////////////////////////////////////
 
 range: compare | caret | tilde | hyphen
     | version
@@ -409,9 +421,9 @@ hyphen: version SPACE HYPHEN SPACE version
     }
     ;
 
-//
+////////////////////////////////////////////////////////////////////////////////
 // simple types, no much logic
-//
+////////////////////////////////////////////////////////////////////////////////
 
 version: basic_version
     | basic_version HYPHEN extra
@@ -445,7 +457,9 @@ basic_version: number
     ;
 
 number: NUMBER
-    | XNUMBER
+    | X_NUMBER
+    { SET_RETURN_VALUE((Version::Number)ANY); }
+    | STAR_NUMBER
     { SET_RETURN_VALUE((Version::Number)ANY); }
     ;
 
@@ -466,6 +480,13 @@ extra_part: EXTRA
         extra.push_back(e);
         SET_RETURN_VALUE(extra);
     }
+    | X_NUMBER
+    {
+        EXTRACT_VALUE(std::string, e, $1);
+        Version::Extra extra;
+        extra.push_back(e);
+        SET_RETURN_VALUE(extra);
+    }
     | NUMBER
     {
         EXTRACT_VALUE(Version::Number, e, $1);
@@ -474,6 +495,10 @@ extra_part: EXTRA
         SET_RETURN_VALUE(extra);
     }
     ;
+
+////////////////////////////////////////////////////////////////////////////////
+// logical
+////////////////////////////////////////////////////////////////////////////////
 
 or: space_or_empty OR space_or_empty
     ;

@@ -452,6 +452,11 @@ bool VersionRange::isEmpty() const
     return range.empty();
 }
 
+bool VersionRange::isOutside(const Version &v) const
+{
+    return *this < v || *this > v;
+}
+
 VersionRange VersionRange::empty()
 {
     VersionRange vr;
@@ -462,7 +467,7 @@ VersionRange VersionRange::empty()
 bool VersionRange::hasVersion(const Version &v) const
 {
     return std::any_of(range.begin(), range.end(),
-            [&v](const auto &r) { return r.hasVersion(v); });
+        [&v](const auto &r) { return r.hasVersion(v); });
 }
 
 optional<VersionRange::RangePair> VersionRange::RangePair::operator&(const RangePair &rhs) const
@@ -519,6 +524,16 @@ std::string VersionRange::toString() const
     if (!s.empty())
         s.resize(s.size() - 4);
     return s;
+}
+
+bool VersionRange::operator==(const VersionRange &rhs) const
+{
+    return range == rhs.range;
+}
+
+bool VersionRange::operator!=(const VersionRange &rhs) const
+{
+    return !operator==(rhs);
 }
 
 VersionRange &VersionRange::operator|=(const RangePair &p)
@@ -623,6 +638,54 @@ VersionRange VersionRange::operator&(const VersionRange &rhs) const
     auto tmp = *this;
     tmp &= rhs;
     return tmp;
+}
+
+bool operator<(const VersionRange &r, const Version &v)
+{
+    if (r.isEmpty())
+        return false;
+    return r.range.back().second < v;
+}
+
+bool operator<(const Version &v, const VersionRange &r)
+{
+    if (r.isEmpty())
+        return false;
+    return v < r.range.front().first;
+}
+
+bool operator>(const VersionRange &r, const Version &v)
+{
+    if (r.isEmpty())
+        return false;
+    return r.range.front().first > v;
+}
+
+bool operator>(const Version &v, const VersionRange &r)
+{
+    if (r.isEmpty())
+        return false;
+    return v > r.range.back().second;
+}
+
+optional<Version> VersionRange::getMinSatisfyingVersion(const std::set<Version> &s) const
+{
+    for (auto &v : s)
+    {
+        if (hasVersion(v))
+            return v;
+    }
+    return {};
+}
+
+optional<Version> VersionRange::getMaxSatisfyingVersion(const std::set<Version> &s) const
+{
+    for (auto i = s.rbegin(); i != s.rend(); i++)
+    {
+        if (hasVersion(*i))
+            return *i;
+    }
+    return {};
 }
 
 }
