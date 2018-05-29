@@ -58,6 +58,9 @@ projects:
 
         options:
             any:
+                definitions:
+                    private:
+                        - BISON_PARSER
                 compile_options:
                     clang:
                         private:

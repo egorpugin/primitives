@@ -2,6 +2,8 @@
 
 #include "range_parser.h"
 
+#include <primitives/constants.h>
+
 #include <pystring.h>
 
 #include <algorithm>
@@ -34,9 +36,73 @@ static void throw_bad_version_range(const std::string &s)
 namespace primitives::version
 {
 
+GenericNumericVersion::GenericNumericVersion()
+    : GenericNumericVersion(minimum_level)
+{
+}
+
+GenericNumericVersion::GenericNumericVersion(empty_tag, Level level)
+{
+    numbers.resize(level);
+}
+
+GenericNumericVersion::GenericNumericVersion(Level level)
+{
+    numbers.resize(level - 1);
+    numbers.push_back(1);
+}
+
+GenericNumericVersion::GenericNumericVersion(const std::initializer_list<Number> &list, Level level)
+    : numbers(list)
+{
+    if (std::any_of(numbers.begin(), numbers.end(), [](const auto &n) {return n < 0; }))
+        throw std::runtime_error("Version number cannot be less than 0");
+    auto l = std::max(minimum_level, level);
+    if (numbers.size() < l)
+        numbers.resize(l);
+    setFirstVersion();
+}
+
+void GenericNumericVersion::fill(Number n)
+{
+    std::fill(numbers.begin(), numbers.end(), n);
+}
+
+GenericNumericVersion::Number GenericNumericVersion::get(Level level) const
+{
+    if (numbers.size() <= level)
+        return 0;
+        //throw std::runtime_error("There is no that much numbers");
+    return numbers[level];
+}
+
+std::string GenericNumericVersion::printVersion() const
+{
+    std::string s;
+    for (auto &n : numbers)
+        s += "." + std::to_string(n);
+    s = s.substr(1);
+    return s;
+}
+
+GenericNumericVersion::Level GenericNumericVersion::getLevel() const
+{
+    return numbers.size();
+}
+
+void GenericNumericVersion::setLevel(Level level, Number fill)
+{
+    numbers.resize(level, fill);
+}
+
+void GenericNumericVersion::setFirstVersion()
+{
+    if (std::all_of(numbers.begin(), numbers.end(), [](const auto &n) {return n == 0; }))
+        numbers.back() = 1;
+}
+
 Version::Version()
 {
-    patch = 1;
 }
 
 Version::Version(const Extra &e)
@@ -47,49 +113,45 @@ Version::Version(const Extra &e)
 }
 
 Version::Version(const std::string &s)
+    : GenericNumericVersion(empty_tag{})
 {
     if (!parse(*this, preprocess_input(s)))
         throw_bad_version(s);
 }
 
-Version::Version(Number ma)
-    : major(ma)
+Version::Version(Level level)
+    : GenericNumericVersion(level)
 {
-    if (major < 0)
-        throw_bad_version(toString());
-    else if (major == 0)
-        patch = 1;
+}
+
+Version::Version(const std::initializer_list<Number> &l)
+    : GenericNumericVersion(l)
+{
+}
+
+Version::Version(int ma)
+    : GenericNumericVersion({ ma })
+{
+}
+
+Version::Version(Number ma)
+    : GenericNumericVersion({ ma })
+{
 }
 
 Version::Version(Number ma, Number mi)
-    : major(ma), minor(mi)
+    : GenericNumericVersion({ ma, mi })
 {
-    if (major < 0 || minor < 0)
-        throw_bad_version(toString());
-    else if (major == 0 && minor == 0)
-        patch = 1;
 }
 
 Version::Version(Number ma, Number mi, Number pa)
-    : major(ma), minor(mi), patch(pa)
+    : GenericNumericVersion({ ma, mi, pa })
 {
-    if (major < 0 || minor < 0 || patch < 0)
-        throw_bad_version(toString());
-    else if (major == 0 && minor == 0 && patch == 0)
-    {
-        tweak = 1;
-        level = 4;
-    }
 }
 
 Version::Version(Number ma, Number mi, Number pa, Number tw)
-    : major(ma), minor(mi), patch(pa), tweak(tw)
+    : GenericNumericVersion({ ma, mi, pa, tw })
 {
-    level = 4;
-    if (major < 0 || minor < 0 || patch < 0 || tweak < 0)
-        throw_bad_version(toString());
-    else if (major == 0 && minor == 0 && patch == 0 && tweak == 0)
-        throw_bad_version(toString());
 }
 
 Version::Version(Number ma, const Extra &e)
@@ -150,22 +212,22 @@ Version::Version(Number ma, Number mi, Number pa, Number tw, const std::string &
 
 Version::Number Version::getMajor() const
 {
-    return major;
+    return get(0);
 }
 
 Version::Number Version::getMinor() const
 {
-    return minor;
+    return get(1);
 }
 
 Version::Number Version::getPatch() const
 {
-    return patch;
+    return get(2);
 }
 
 Version::Number Version::getTweak() const
 {
-    return tweak;
+    return get(3);
 }
 
 const Version::Extra &Version::getExtra() const
@@ -178,12 +240,12 @@ std::string Version::getBranch() const
     return branch;
 }
 
-std::string Version::toString(int level) const
+std::string Version::toString(Level level) const
 {
     if (!branch.empty())
         return branch;
 
-    auto s = printVersion(level);
+    auto s = printVersion(/*level*/);
     if (!extra.empty())
         s += "-" + printExtra();
     return s;
@@ -191,18 +253,7 @@ std::string Version::toString(int level) const
 
 std::string Version::toString(const Version &v) const
 {
-    return toString(v.level);
-}
-
-std::string Version::printVersion(int level) const
-{
-    std::string s;
-    s += std::to_string(major);
-    s += "." + std::to_string(minor);
-    s += "." + std::to_string(patch);
-    if (tweak > 0 || level > 3)
-        s += "." + std::to_string(tweak);
-    return s;
+    return toString(v.numbers.size());
 }
 
 std::string Version::printExtra() const
@@ -256,7 +307,17 @@ bool Version::operator<(const Version &rhs) const
         return false;
     if (rhs.isBranch())
         return true;
-    return std::tie(major, minor, patch, tweak, extra) < std::tie(rhs.major, rhs.minor, rhs.patch, rhs.tweak, rhs.extra);
+    if (numbers < rhs.numbers)
+        return true;
+    if (numbers == rhs.numbers)
+    {
+        if (extra.empty())
+            return false; // >=
+        if (rhs.extra.empty())
+            return true;
+        return extra < rhs.extra;
+    }
+    return false;
 }
 
 bool Version::operator>(const Version &rhs) const
@@ -267,7 +328,7 @@ bool Version::operator>(const Version &rhs) const
         return true;
     if (rhs.isBranch())
         return false;
-    return std::tie(major, minor, patch, tweak, extra) > std::tie(rhs.major, rhs.minor, rhs.patch, rhs.tweak, rhs.extra);
+    return std::tie(numbers, extra) > std::tie(rhs.numbers, rhs.extra);
 }
 
 bool Version::operator<=(const Version &rhs) const
@@ -278,7 +339,7 @@ bool Version::operator<=(const Version &rhs) const
         return false;
     if (rhs.isBranch())
         return true;
-    return std::tie(major, minor, patch, tweak, extra) <= std::tie(rhs.major, rhs.minor, rhs.patch, rhs.tweak, rhs.extra);
+    return std::tie(numbers, extra) <= std::tie(rhs.numbers, rhs.extra);
 }
 
 bool Version::operator>=(const Version &rhs) const
@@ -289,7 +350,7 @@ bool Version::operator>=(const Version &rhs) const
         return true;
     if (rhs.isBranch())
         return false;
-    return std::tie(major, minor, patch, tweak, extra) >= std::tie(rhs.major, rhs.minor, rhs.patch, rhs.tweak, rhs.extra);
+    return std::tie(numbers, extra) >= std::tie(rhs.numbers, rhs.extra);
 }
 
 bool Version::operator==(const Version &rhs) const
@@ -298,7 +359,7 @@ bool Version::operator==(const Version &rhs) const
         return branch == rhs.branch;
     if (isBranch() || rhs.isBranch())
         return false;
-    return std::tie(major, minor, patch, tweak, extra) == std::tie(rhs.major, rhs.minor, rhs.patch, rhs.tweak, rhs.extra);
+    return std::tie(numbers, extra) == std::tie(rhs.numbers, rhs.extra);
 }
 
 bool Version::operator!=(const Version &rhs) const
@@ -306,28 +367,26 @@ bool Version::operator!=(const Version &rhs) const
     return !operator==(rhs);
 }
 
-Version Version::min(int level)
+Version Version::min(Level level)
 {
-    if (level > 3)
-        return Version(0, 0, 0);
-    return Version();
+    return Version(level);
 }
 
 Version Version::min(const Version &v)
 {
-    return min(v.level);
+    return min(v.getLevel());
 }
 
-Version Version::max(int level)
+Version Version::max(Level level)
 {
-    if (level > 3)
-        return Version(maxNumber(), maxNumber(), maxNumber(), maxNumber());
-    return Version(maxNumber(), maxNumber(), maxNumber());
+    Version v(level);
+    v.fill(maxNumber());
+    return v;
 }
 
 Version Version::max(const Version &v)
 {
-    return max(v.level);
+    return max(v.getLevel());
 }
 
 Version::Number Version::maxNumber()
@@ -338,54 +397,58 @@ Version::Number Version::maxNumber()
 
 void Version::decrementVersion()
 {
-    decrementVersion(level);
+    decrementVersion(getLevel());
 }
 
 void Version::incrementVersion()
 {
-    incrementVersion(level);
+    incrementVersion(getLevel());
 }
 
 Version Version::getNextVersion() const
 {
-    return getNextVersion(level);
+    return getNextVersion(getLevel());
 }
 
 Version Version::getPreviousVersion() const
 {
-    return getPreviousVersion(level);
+    return getPreviousVersion(getLevel());
 }
 
-void Version::decrementVersion(int l)
+void Version::decrementVersion(Level l)
 {
     if (*this == min(*this))
         return;
 
-    auto current = l > 3 ? &tweak : &(&major)[l - 1];
+    if (l > getLevel())
+        setLevel(l);
+    auto current = &numbers[l - 1];
     while (*current == 0)
         *current-- = maxNumber();
     (*current)--;
 }
 
-void Version::incrementVersion(int l)
+void Version::incrementVersion(Level l)
 {
     if (*this == max(*this))
         return;
 
-    auto current = l > 3 ? &tweak : &(&major)[l - 1];
+    if (l > getLevel())
+        setLevel(l);
+    auto current = &numbers[l - 1];
     while (*current == maxNumber())
         *current-- = 0;
     (*current)++;
 }
 
-Version Version::getNextVersion(int l) const
+Version Version::getNextVersion(Level l) const
 {
     auto v = *this;
     v.incrementVersion(l);
     return v;
 }
 
-Version Version::getPreviousVersion(int l) const
+Version Version::getPreviousVersion(Level l) const
 {
     auto v = *this;
     v.decrementVersion(l);
@@ -394,12 +457,12 @@ Version Version::getPreviousVersion(int l) const
 
 bool VersionRange::RangePair::hasVersion(const Version &v) const
 {
-    if (v.level > std::max(first.level, second.level))
+    if (v.getLevel() > std::max(first.getLevel(), second.getLevel()))
         return false;
     return first <= v && v <= second;
 }
 
-VersionRange::VersionRange(int level)
+VersionRange::VersionRange(GenericNumericVersion::Level level)
     : VersionRange(Version::min(level), Version::max(level))
 {
 }
@@ -416,12 +479,15 @@ VersionRange::VersionRange(const std::string &s)
     auto in = preprocess_input(s);
     if (in.empty())
         range.emplace_back(Version::min(), Version::max());
-    else if (auto r = parse(*this, in); !std::get<0>(r))
-        throw_bad_version_range(in + ", error: " + std::get<1>(r));
+    else if (auto r = parse(*this, in); r)
+        throw_bad_version_range(in + ", error: " + r.value());
 }
 
-std::tuple<bool, std::string> VersionRange::parse(VersionRange &vr, const std::string &s)
+optional<std::string> VersionRange::parse(VersionRange &vr, const std::string &s)
 {
+    if (s.size() > 32_KB)
+        return { "Range string length must be less than 32K" };
+
     RangeParser d;
     //d.set_debug_level(d.bb.debug);
     auto r = d.parse(s);
@@ -429,11 +495,14 @@ std::tuple<bool, std::string> VersionRange::parse(VersionRange &vr, const std::s
     if (r == 0)
     {
         if (auto res = d.bb.getResult<VersionRange>(); res)
+        {
             vr = res.value();
+            return {};
+        }
         else
             error = "parser error: empty result";
     }
-    return { r == 0, error };
+    return error;
 }
 
 optional<VersionRange> VersionRange::parse(const std::string &s)
@@ -442,7 +511,7 @@ optional<VersionRange> VersionRange::parse(const std::string &s)
     auto in = preprocess_input(s);
     if (in.empty())
         vr.range.emplace_back(Version::min(), Version::max());
-    else if (auto r = parse(vr, in); !std::get<0>(r))
+    else if (auto r = parse(vr, in); r)
         return {};
     return vr;
 }
@@ -482,7 +551,7 @@ optional<VersionRange::RangePair> VersionRange::RangePair::operator&(const Range
 
 std::string VersionRange::RangePair::toString() const
 {
-    auto level = std::max(first.level, second.level);
+    auto level = std::max(first.getLevel(), second.getLevel());
     if (first == second)
         return first.toString(level);
     std::string s;
@@ -491,11 +560,8 @@ std::string VersionRange::RangePair::toString() const
         s += ">=";
         s += first.toString(level);
     }
-    if (second.major == Version::maxNumber() ||
-        second.minor == Version::maxNumber() ||
-        second.patch == Version::maxNumber() ||
-        second.tweak == Version::maxNumber()
-        )
+    if (std::any_of(second.numbers.begin(), second.numbers.end(),
+        [](const auto &n) {return n == Version::maxNumber(); }))
     {
         if (second == Version::max(second))
         {
@@ -503,8 +569,8 @@ std::string VersionRange::RangePair::toString() const
                 return "*";
             return s;
         }
-        if (second.patch == Version::maxNumber() ||
-            second.tweak == Version::maxNumber())
+        if (second.getPatch() == Version::maxNumber() ||
+            second.getTweak() == Version::maxNumber())
         {
             if (!s.empty())
                 s += " ";

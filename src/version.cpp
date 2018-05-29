@@ -89,15 +89,15 @@ TEST_CASE("Checking versions", "[version]")
         Version v("0.0.0");
         CHECK(v.getMajor() == 0);
         CHECK(v.getMinor() == 0);
-        CHECK(v.getPatch() == 0);
-        CHECK(v.getTweak() == 1);
+        CHECK(v.getPatch() == 1);
+        CHECK(v.getTweak() == 0);
         v.decrementVersion();
         v.decrementVersion();
         v.decrementVersion();
         CHECK(v.getMajor() == 0);
         CHECK(v.getMinor() == 0);
-        CHECK(v.getPatch() == 0);
-        CHECK(v.getTweak() == 1);
+        CHECK(v.getPatch() == 1);
+        CHECK(v.getTweak() == 0);
     }
 
     {
@@ -120,15 +120,15 @@ TEST_CASE("Checking versions", "[version]")
         Version v = Version::min(v1);
         CHECK(v.getMajor() == 0);
         CHECK(v.getMinor() == 0);
-        CHECK(v.getPatch() == 0);
-        CHECK(v.getTweak() == 1);
+        CHECK(v.getPatch() == 1);
+        CHECK(v.getTweak() == 0);
         v.decrementVersion();
         v.decrementVersion();
         v.decrementVersion();
         CHECK(v.getMajor() == 0);
         CHECK(v.getMinor() == 0);
-        CHECK(v.getPatch() == 0);
-        CHECK(v.getTweak() == 1);
+        CHECK(v.getPatch() == 1);
+        CHECK(v.getTweak() == 0);
     }
 
     {
@@ -152,14 +152,14 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(v.getMajor() == Version::maxNumber());
         CHECK(v.getMinor() == Version::maxNumber());
         CHECK(v.getPatch() == Version::maxNumber());
-        CHECK(v.getTweak() == Version::maxNumber());
+        CHECK(v.getTweak() == 0);
         v.decrementVersion();
         v.decrementVersion();
         v.decrementVersion();
         CHECK(v.getMajor() == Version::maxNumber());
         CHECK(v.getMinor() == Version::maxNumber());
-        CHECK(v.getPatch() == Version::maxNumber());
-        CHECK(v.getTweak() == Version::maxNumber() - 3);
+        CHECK(v.getPatch() == Version::maxNumber() - 3);
+        CHECK(v.getTweak() == 0);
     }
 
     {
@@ -206,28 +206,28 @@ TEST_CASE("Checking versions", "[version]")
         Version v("0.0.0");
         CHECK(v.getMajor() == 0);
         CHECK(v.getMinor() == 0);
-        CHECK(v.getPatch() == 0);
-        CHECK(v.getTweak() == 1);
+        CHECK(v.getPatch() == 1);
+        CHECK(v.getTweak() == 0);
         v.incrementVersion();
-        CHECK(v.getTweak() == 2);
+        CHECK(v.getPatch() == 2);
         v.incrementVersion();
-        CHECK(v.getTweak() == 3);
+        CHECK(v.getPatch() == 3);
         v.decrementVersion();
         v.decrementVersion();
-        CHECK(v.getTweak() == 1);
+        CHECK(v.getPatch() == 1);
         v.decrementVersion();
-        CHECK(v.getTweak() == 1);
+        CHECK(v.getPatch() == 1);
         v.decrementVersion();
         v.decrementVersion();
-        CHECK(v.getTweak() == 1);
+        CHECK(v.getPatch() == 1);
     }
 
     {
         Version v(0, 0, 0);
         CHECK(v.getMajor() == 0);
         CHECK(v.getMinor() == 0);
-        CHECK(v.getPatch() == 0);
-        CHECK(v.getTweak() == 1);
+        CHECK(v.getPatch() == 1);
+        CHECK(v.getTweak() == 0);
     }
 
     {
@@ -377,8 +377,8 @@ TEST_CASE("Checking versions", "[version]")
         Version v(0,0,0, "rc2.3._a_");
         CHECK(v.getMajor() == 0);
         CHECK(v.getMinor() == 0);
-        CHECK(v.getPatch() == 0);
-        CHECK(v.getTweak() == 1);
+        CHECK(v.getPatch() == 1);
+        CHECK(v.getTweak() == 0);
         CHECK(v.getExtra()[0] == "rc2");
         CHECK(v.getExtra()[1] == 3);
         CHECK(v.getExtra()[2] == "_a_");
@@ -410,6 +410,37 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(v.getMinor() == 3);
         CHECK(v.getPatch() == 1);
         CHECK(v.getTweak() == 1);
+        v.decrementVersion();
+        CHECK(v.getTweak() == 0);
+        v.decrementVersion();
+        CHECK(v.getPatch() == 0);
+        CHECK(v.getTweak() == Version::maxNumber());
+    }
+
+    {
+        Version v(1, 2, 0);
+        CHECK(v.getMajor() == 1);
+        CHECK(v.getMinor() == 2);
+        CHECK(v.getPatch() == 0);
+        CHECK(v.getTweak() == 0);
+        v.incrementVersion(2);
+        CHECK(v.getMajor() == 1);
+        CHECK(v.getMinor() == 3);
+        CHECK(v.getPatch() == 0);
+        CHECK(v.getTweak() == 0);
+        v.incrementVersion(1);
+        CHECK(v.getMajor() == 2);
+        CHECK(v.getMinor() == 3);
+        CHECK(v.getPatch() == 0);
+        CHECK(v.getTweak() == 0);
+        v.incrementVersion();
+        CHECK(v.getMajor() == 2);
+        CHECK(v.getMinor() == 3);
+        CHECK(v.getPatch() == 1);
+        CHECK(v.getTweak() == 0);
+        v.decrementVersion(4);
+        CHECK(v.getPatch() == 0);
+        CHECK(v.getTweak() == Version::maxNumber());
     }
 
     CHECK(Version(0, 0, 0, "rc2.3._a_") > Version(0, 0, 0, "rc1.3._a_"));
@@ -805,8 +836,8 @@ TEST_CASE("Checking version ranges", "[range]")
         ">=1.0.0.0 <2.0.0.0 || >=2.5.0");
     CHECK(VersionRange("1.x.x.* || >=2.5.0 || 5.0.0 - 7.2.3").toString() ==
         ">=1.0.0.0 <2.0.0.0 || >=2.5.0");
-    CHECK(VersionRange("42.6.7-alpha").toString() == "42.6.7-alpha");
-    CHECK(VersionRange("42.6.7.9-alpha").toString() == "42.6.7.9-alpha");
+    CHECK(VersionRange("42.6.7-alpha").toString() == ">=42.6.7-alpha <=42.6.7");
+    CHECK(VersionRange("42.6.7.9-alpha").toString() == ">=42.6.7.9-alpha <=42.6.7.9");
     CHECK(VersionRange(">1.2.3-alpha.3").toString() == ">=1.2.4-alpha.3");
     CHECK(VersionRange("1.2.3 - 2.3.4").toString() == ">=1.2.3 <=2.3.4");
     CHECK(VersionRange("1.2 - 2.3.4").toString() == ">=1.2.0 <=2.3.4");
@@ -921,8 +952,67 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange(">= 1.2&&< 3.0.0 || >= 4.2.3").toString() == ">=1.2.0 <3.0.0 || >=4.2.3");
     CHECK(VersionRange("<1.1 || >= 1.2&&< 3.0.0 || >= 4.2.3").toString() == "<1.1.0 || >=1.2.0 <3.0.0 || >=4.2.3");
 
-    //CHECK(VersionRange("1.2.3.4.5.6.7").toString() == "<1.0.0");
+    // https://doc.rust-lang.org/stable/cargo/reference/specifying-dependencies.html
+    CHECK(VersionRange(">= 1.2.0").toString() == ">=1.2.0");
+    CHECK(VersionRange("> 1").toString() == ">=1.0.1");
+    CHECK(VersionRange(">= 1").toString() == ">=1.0.0");
+    CHECK(VersionRange("< 2").toString() == "<2.0.0");
+    CHECK(VersionRange("== 1.2.3").toString() == "1.2.3");
+    CHECK(VersionRange("== 1.2.3.4").toString() == "1.2.3.4");
 
+    CHECK(VersionRange("1.2.3.4.5.6.7").toString() == "1.2.3.4.5.6.7");
+    CHECK(VersionRange("1.2.3.4.5.6.7-1").toString() == ">=1.2.3.4.5.6.7-1 <=1.2.3.4.5.6.7");
+
+    // intervals
+    CHECK_THROWS(VersionRange("[1.0]"));
+    CHECK_THROWS(VersionRange("[1.0,,]"));
+    CHECK_THROWS(VersionRange("[1.0,,1.0]"));
+    CHECK_THROWS(VersionRange("[1.0,1.0,1.0]"));
+    CHECK_THROWS(VersionRange("[1.0,1.0,]"));
+    CHECK_THROWS(VersionRange("[,1.0,1.0,]"));
+    CHECK_THROWS(VersionRange("[,1.0,1.0]"));
+    CHECK_THROWS(VersionRange("[,,]"));
+    CHECK_THROWS(VersionRange("[,]"));
+    CHECK_THROWS(VersionRange("[]"));
+
+    // left
+    CHECK(VersionRange("[,2.0]").toString() == "<=2.0.0");
+    CHECK(VersionRange("[,2.0.*]").toString() == "<=2.0.0");
+    CHECK(VersionRange("[,2.0.5]").toString() == "<=2.0.5");
+    CHECK(VersionRange("(,2.0]").toString() == "<=2.0.0");
+    CHECK(VersionRange("(,2.0.*]").toString() == "<=2.0.0");
+    CHECK(VersionRange("(,2.0.5]").toString() == "<=2.0.5");
+    CHECK(VersionRange("(,2.0)").toString() == "<2.0.0");
+    CHECK(VersionRange("(,2.0.*)").toString() == "<2.0.0");
+    CHECK(VersionRange(" ( , 2.0.5 ) ").toString() == "<=2.0.4");
+
+    // right
+    CHECK(VersionRange("[1.0,]").toString() == ">=1.0.0");
+    CHECK(VersionRange(" [ 1.0 , ) ").toString() == ">=1.0.0");
+    CHECK(VersionRange("(1.0,]").toString() == ">=1.0.1");
+    CHECK(VersionRange(" ( 1.0 , ) ").toString() == ">=1.0.1");
+    CHECK(VersionRange("(1,]").toString() == ">=1.0.1");
+    CHECK(VersionRange(" ( 1 , ) ").toString() == ">=1.0.1");
+    CHECK(VersionRange("(1.x,]").toString() == ">=1.0.1");
+    CHECK(VersionRange(" ( 1.* , ) ").toString() == ">=1.0.1");
+    CHECK(VersionRange("(1.5.*,]").toString() == ">=1.5.1");
+    CHECK(VersionRange(" ( 1.5.X , ) ").toString() == ">=1.5.1");
+
+    // both
+    CHECK(VersionRange("[1,2]").toString() == ">=1.0.0 <=2.0.0");
+    CHECK(VersionRange("[1,2)").toString() == ">=1.0.0 <2.0.0");
+    CHECK(VersionRange("(1,2]").toString() == ">=1.0.1 <=2.0.0");
+    CHECK(VersionRange("(1,2)").toString() == ">=1.0.1 <2.0.0");
+    CHECK(VersionRange("(1.2.3,2)").toString() == ">=1.2.4 <2.0.0");
+    CHECK(VersionRange("(1.2.3.4,2.0.0.0)").toString() == ">=1.2.3.5 <2.0.0.0");
+    CHECK(VersionRange("(1.2.3.4,2)").toString() == ">=1.2.3.5 <2.0.0.0");
+    CHECK(VersionRange("(1,2.3.4.5)").toString() == ">=1.0.0.1 <=2.3.4.4");
+    CHECK(VersionRange("(1,2.3.4.5]").toString() == ">=1.0.0.1 <=2.3.4.5");
+    CHECK(VersionRange("(1,2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17]").toString()
+        == ">=1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 <=2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17");
+
+    // complex
+    CHECK(VersionRange("[1,4] [2,3]").toString() == ">=2.0.0 <=3.0.0");
 }
 
 int main(int argc, char **argv)

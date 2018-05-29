@@ -37,6 +37,7 @@ extra  [_a-zA-Z0-9]+
 "<="                    return MAKE(LE);
 ">="                    return MAKE(GE);
 "="                     return MAKE(EQ);
+"=="                    return MAKE(EQ);
 "!="                    return MAKE(NE);
 
 "^"                     return MAKE(CARET);
@@ -48,7 +49,12 @@ extra  [_a-zA-Z0-9]+
 "X"                     return MAKE_VALUE(X_NUMBER, std::string(yytext));
 "*"                     return MAKE(STAR_NUMBER);
 
-","                     return MAKE(AND);
+"["                     return MAKE(L_SQUARE_BRACKET);
+"]"                     return MAKE(R_SQUARE_BRACKET);
+"("                     return MAKE(L_BRACKET);
+")"                     return MAKE(R_BRACKET);
+
+","                     return MAKE(COMMA);
 "&&"                    return MAKE(AND);
 "||"                    return MAKE(OR);
 

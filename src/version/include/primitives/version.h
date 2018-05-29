@@ -54,34 +54,61 @@ struct comparable_variant : std::variant<Args...>
 
 }
 
-struct GenericNumericVersion
+//template <3, 4, 10>
+struct PRIMITIVES_VERSION_API GenericNumericVersion
 {
     using Number = detail::Number;
+    using Numbers = std::vector<Number>;
+    using Level = size_t;
 
-    std::vector<Number> numbers;
+    GenericNumericVersion();
+    explicit GenericNumericVersion(Level level);
+    explicit GenericNumericVersion(const std::initializer_list<Number> &, Level level = 0);
 
-    // shows how many numbers are used
-    int level = default_level;
+    static const Level minimum_level = 3;
+    static const Level default_level = 4;
+    static const Level maximum_level = 10;
 
-    static const int default_level = 3;
-    static const int max_level = 4;
+#ifndef BISON_PARSER
+protected:
+#endif
+    struct empty_tag {};
+
+    explicit GenericNumericVersion(empty_tag, Level level = minimum_level);
+
+    Numbers numbers;
+
+    Number get(Level level) const;
+    std::string printVersion() const;
+    Level getLevel() const;
+    void setLevel(Level level, Number fill = 0);
+    void setFirstVersion();
+    void fill(Number);
+
+    static_assert(minimum_level <= default_level, "minimum level must be less or equal to default level");
+    static_assert(default_level <= maximum_level, "default level must be less or equal to maximum level");
 };
 
 struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
 {
     // enough numbers, here string goes first
+    //using Extra = std::vector<detail::comparable_variant<std::string, Number>>;
     using Extra = detail::access_vector<detail::comparable_variant<std::string, Number>>;
 
     /// default is min()
     Version();
 
     /// default is min()
-    Version(const Extra &e);
+    explicit Version(const Extra &e);
 
     /// parse from string
-    Version(const std::string &v);
+    explicit Version(const std::string &v);
 
-    Version(Number ma);
+    explicit Version(Level level);
+    explicit Version(const std::initializer_list<Number> &);
+
+    explicit Version(Number ma);
+    explicit Version(int ma);
     Version(Number ma, Number mi);
     Version(Number ma, Number mi, Number pa);
     Version(Number ma, Number mi, Number pa, Number tw);
@@ -104,7 +131,7 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     const Extra &getExtra() const;
     std::string getBranch() const;
 
-    std::string toString(int level = default_level) const;
+    std::string toString(Level level = minimum_level) const;
     std::string toString(const Version &v) const;
 
     // modificators
@@ -113,13 +140,15 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     Version getNextVersion() const;
     Version getPreviousVersion() const;
 
-    void decrementVersion(int level);
-    void incrementVersion(int level);
-    Version getNextVersion(int level) const;
-    Version getPreviousVersion(int level) const;
+    void decrementVersion(Level level);
+    void incrementVersion(Level level);
+    Version getNextVersion(Level level) const;
+    Version getPreviousVersion(Level level) const;
 
+    //
     bool isBranch() const;
     bool isVersion() const;
+    //bool isTag() const; todo - add tags
 
     bool operator<(const Version &) const;
     bool operator>(const Version &) const;
@@ -132,9 +161,9 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     // int compare()?
 
 public:
-    static Version min(int level = default_level);
+    static Version min(Level level = minimum_level);
     static Version min(const Version &v);
-    static Version max(int level = default_level);
+    static Version max(Level level = minimum_level);
     static Version max(const Version &v);
 
     static Number maxNumber();
@@ -142,10 +171,6 @@ public:
 #ifndef BISON_PARSER
 private:
 #endif
-    Number major = 0;
-    Number minor = 0;
-    Number patch = 0;
-    Number tweak = 0;
     Extra extra;
     std::string branch;
 
@@ -153,13 +178,9 @@ private:
     static bool parse(Version &v, const std::string &s);
     static bool parseExtra(Version &v, const std::string &s);
 
-    std::string printVersion(int level = default_level) const;
     std::string printExtra() const;
 
     void checkExtra() const;
-
-    // used in RangePair::toString();
-    friend struct VersionRange;
 };
 
 struct PRIMITIVES_VERSION_API VersionRange
@@ -177,7 +198,7 @@ struct PRIMITIVES_VERSION_API VersionRange
     using Range = std::vector<RangePair>;
 
     /// default is any version or * or Version::min() - Version::max()
-    VersionRange(int level = Version::default_level);
+    VersionRange(GenericNumericVersion::Level level = Version::minimum_level);
 
     /// from two versions
     VersionRange(const Version &v1, const Version &v2);
@@ -203,11 +224,6 @@ public:
     VersionRange &operator|=(const VersionRange &);
     VersionRange &operator&=(const VersionRange &);
 
-    // think like it's private
-    // does not work in dll builds when private
-    VersionRange &operator|=(const RangePair &);
-    VersionRange &operator&=(const RangePair &);
-
 public:
     /// get range from string without throw
     static optional<VersionRange> parse(const std::string &s);
@@ -221,8 +237,12 @@ private:
     // always sorted with less
     Range range;
 
+    VersionRange &operator|=(const RangePair &);
+    VersionRange &operator&=(const RangePair &);
+
     /// range will be in an invalid state in case of errors
-    static std::tuple<bool, std::string> parse(VersionRange &v, const std::string &s);
+    /// optional error will be returned
+    static optional<std::string> parse(VersionRange &v, const std::string &s);
 
     friend bool operator<(const VersionRange &, const Version &);
     friend bool operator<(const Version &, const VersionRange &);

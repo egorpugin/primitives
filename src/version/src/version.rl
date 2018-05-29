@@ -13,6 +13,9 @@ namespace primitives::version
 
 bool Version::parse(Version &v, const std::string &s)
 {
+    if (s.size() > 8192)
+        return false;
+
     bool ok = false;
 	int cs = 0;
 	auto p = s.data();
@@ -22,7 +25,7 @@ bool Version::parse(Version &v, const std::string &s)
     Version::Number n; // number
     auto sb = p; // string begin
 
-    auto part = &v.major;
+    int i = 0;
 
     %%{
         machine Version;
@@ -43,11 +46,18 @@ bool Version::parse(Version &v, const std::string &s)
             }
         }
 
+        action ADD_PART
+        {
+            if (i >= v.numbers.size())
+                v.numbers.resize(v.numbers.size() + 1);
+            v.numbers[i++] = n;
+        }
+
         alpha_ = alpha | '_';
         alnum_ = alnum | '_';
 
         number = digit+ >SB %{ n = std::stoll(std::string{sb, p}); };
-        number_version_part = number %{ *part++ = n; };
+        number_version_part = number %ADD_PART;
         # to parse versions from git, we could try our best
         basic_version = [=]? [v]? number_version_part ('.' number_version_part){,3};
         #basic_version = number_version_part ('.' number_version_part){,3};
@@ -63,22 +73,16 @@ bool Version::parse(Version &v, const std::string &s)
 		write exec;
     }%%
 
-    if (v.major == 0 && v.minor == 0 && v.patch == 0 && v.tweak == 0)
-    {
-        if (part != &v.tweak)
-            v.patch = 1;
-        else
-        {
-            v.tweak = 1;
-            v.level = 4;
-        }
-    }
+    v.setFirstVersion();
 
     return ok;
 }
 
 bool Version::parseExtra(Version &v, const std::string &s)
 {
+    if (s.size() > 8192)
+        return false;
+
     bool ok = false;
 	int cs = 0;
 	auto p = s.data();

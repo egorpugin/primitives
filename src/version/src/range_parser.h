@@ -29,5 +29,4 @@
 #include <range.yy.hpp>
 
 // 5
-
 DECLARE_PARSER;
