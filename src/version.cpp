@@ -456,6 +456,72 @@ TEST_CASE("Checking versions", "[version]")
     CHECK(Version(0, 0, 0, "1.1") < Version(0, 0, 0, "1.2"));
     CHECK(Version(0, 0, 0, "1.1") == Version(0, 0, 0, "1.1"));
     CHECK(Version(0, 0, 0, "1.1.a") < Version(0, 0, 0, "1.1.z"));
+
+    CHECK(Version(0).format("{ML}") == "A");
+    CHECK(Version(1).format("{ML}") == "B");
+    CHECK(Version(2).format("{ML}") == "C");
+    CHECK(Version(3).format("{ML}") == "D");
+    CHECK(Version(24).format("{ML}") == "Y");
+    CHECK(Version(25).format("{ML}") == "Z");
+    CHECK(Version(26).format("{ML}") == "AA");
+    CHECK(Version(27).format("{ML}") == "AB");
+    CHECK(Version(28).format("{ML}") == "AC");
+    CHECK(Version(26 + 25).format("{ML}") == "AZ");
+    CHECK(Version(26 + 26).format("{ML}") == "BA");
+    CHECK(Version(26 + 26 + 25).format("{ML}") == "BZ");
+    CHECK(Version(26 + 26 + 26).format("{ML}") == "CA");
+    CHECK(Version(26 * 26 - 2).format("{ML}") == "YY");
+    CHECK(Version(26 * 26 - 1).format("{ML}") == "YZ");
+    CHECK(Version(26 * 26).format("{ML}") == "ZA");
+    CHECK(Version(26 * 26 + 26 - 2).format("{ML}") == "ZY");
+    CHECK(Version(26 * 26 + 26 - 1).format("{ML}") == "ZZ");
+    CHECK(Version(26 * 26 + 26).format("{ML}") == "AAA");
+    CHECK(Version(26 * 26 * 26).format("{ML}") == "YZA");
+    CHECK(Version(26 * 26 * 26 + 26 * 26 + 26 - 1).format("{ML}") == "ZZZ");
+    CHECK(Version(26 * 26 * 26 + 26 * 26 + 26).format("{ML}") == "AAAA");
+
+    {
+        std::string s = "{ML}";
+        Version v(27);
+        v.format(s);
+        CHECK(s == "AB");
+    }
+    {
+        std::string s = "{mL}";
+        Version v(0);
+        v.format(s);
+        CHECK(s == "A");
+    }
+    {
+        std::string s = "{ML}";
+        Version v(25);
+        v.format(s);
+        CHECK(s == "Z");
+    }
+    {
+        std::string s = "{ML}";
+        Version v(26);
+        v.format(s);
+        CHECK(s == "AA");
+    }
+    {
+        std::string s = "{Ml}";
+        Version v(1);
+        v.format(s);
+        CHECK(s == "b");
+    }
+    {
+        std::string s = "{ML}";
+        Version v(234236523);
+        v.format(s);
+        CHECK(s == "SROASB");
+    }
+    {
+        std::string s = "{Ml}";
+        Version v(234236523);
+        v.format(s);
+        CHECK(s == "sroasb");
+    }
 }
 
 TEST_CASE("Checking version ranges", "[range]")
@@ -724,8 +790,9 @@ TEST_CASE("Checking version ranges", "[range]")
     {
         VersionRange vr("1 - 2");
         auto s = vr.toString();
-        CHECK(s == ">=1.0.0 <3.0.0");
+        CHECK(s == ">=1.0.0 <=2.0.0");
     }
+
     {
         VersionRange vr("1 - 3 <2");
         auto s = vr.toString();
@@ -744,22 +811,22 @@ TEST_CASE("Checking version ranges", "[range]")
 
     {
         VersionRange vr("1-2 - 2-1");
-        CHECK(vr.toString() == ">=1.0.0-2 <3.0.0-1");
+        CHECK(vr.toString() == ">=1.0.0-2 <=2.0.0-1");
     }
 
     {
         VersionRange vr("1.2 - 2");
-        CHECK(vr.toString() == ">=1.2.0 <3.0.0");
+        CHECK(vr.toString() == ">=1.2.0 <=2.0.0");
     }
 
     {
         VersionRange vr("1.2 - 2.3");
-        CHECK(vr.toString() == ">=1.2.0 <2.4.0");
+        CHECK(vr.toString() == ">=1.2.0 <=2.3.0");
     }
 
     {
         VersionRange vr("1.2.3 - 2");
-        CHECK(vr.toString() == ">=1.2.3 <3.0.0");
+        CHECK(vr.toString() == ">=1.2.3 <=2.0.0");
     }
 
     {
@@ -769,7 +836,7 @@ TEST_CASE("Checking version ranges", "[range]")
 
     {
         VersionRange vr("1.2.3.4 - 2");
-        CHECK(vr.toString() == ">=1.2.3.4 <3.0.0.0");
+        CHECK(vr.toString() == ">=1.2.3.4 <=2.0.0.0");
     }
 
     {
@@ -817,10 +884,10 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange("1").toString() == ">=1.0.0 <2.0.0");
     CHECK(VersionRange("1.0.0").toString() == "1.0.0");
     CHECK(VersionRange("1.0.0.01").toString() == "1.0.0.1");
-    CHECK(VersionRange("1 - 2").toString() == ">=1.0.0 <3.0.0");
-    CHECK(VersionRange("1.2 - 2").toString() == ">=1.2.0 <3.0.0");
-    CHECK(VersionRange("1.2.3 - 2").toString() == ">=1.2.3 <3.0.0");
-    CHECK(VersionRange("1.2.3.4 - 2").toString() == ">=1.2.3.4 <3.0.0.0");
+    CHECK(VersionRange("1 - 2").toString() == ">=1.0.0 <=2.0.0");
+    CHECK(VersionRange("1.2 - 2").toString() == ">=1.2.0 <=2.0.0");
+    CHECK(VersionRange("1.2.3 - 2").toString() == ">=1.2.3 <=2.0.0");
+    CHECK(VersionRange("1.2.3.4 - 2").toString() == ">=1.2.3.4 <=2.0.0.0");
 
     // from websites
     // https://docs.npmjs.com/misc/semver
@@ -843,12 +910,12 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange("1.2 - 2.3.4").toString() == ">=1.2.0 <=2.3.4");
     CHECK(VersionRange("1.2.x - 2.3.4").toString() == ">=1.2.0 <=2.3.4");
     CHECK(VersionRange("1.2.* - 2.3.4").toString() == ">=1.2.0 <=2.3.4");
-    CHECK(VersionRange("1.2.3.* - 2.3.4").toString() == ">=1.2.3.0 <2.3.5.0");
-    CHECK(VersionRange("   1.2.3 - 2.3    ").toString() == ">=1.2.3 <2.4.0");
-    CHECK(VersionRange("1.2.3 - 2").toString() == ">=1.2.3 <3.0.0");
+    CHECK(VersionRange("1.2.3.* - 2.3.4").toString() == ">=1.2.3.0 <=2.3.4.0");
+    CHECK(VersionRange("   1.2.3 - 2.3    ").toString() == ">=1.2.3 <=2.3.0");
+    CHECK(VersionRange("1.2.3 - 2").toString() == ">=1.2.3 <=2.0.0");
     CHECK(VersionRange("*").toString() == "*");
-    //CHECK(VersionRange("*").toString() == ">=0.0.1");
-    //CHECK(VersionRange("*.x.X.*").toString() == ">=0.0.0.1");
+    CHECK(VersionRange("*").toString() == "*");
+    CHECK(VersionRange("*.x.X.*").toString() == "*");
     CHECK(VersionRange("1.x").toString() == ">=1.0.0 <2.0.0");
     CHECK(VersionRange("1").toString() == ">=1.0.0 <2.0.0");
     CHECK(VersionRange("1.*").toString() == ">=1.0.0 <2.0.0");
@@ -930,8 +997,7 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange("!=4.6.6").toString() == "<=4.6.5 || >=4.6.7");
     CHECK(VersionRange("!=4.6.6.8").toString() == "<=4.6.6.7 || >=4.6.6.9");
     CHECK(VersionRange("2.0.0 - 3.1.4").toString() == ">=2.0.0 <=3.1.4");
-    // !!!
-    CHECK(VersionRange("0.4 - 2").toString() == ">=0.4.0 <3.0.0");
+    CHECK(VersionRange("0.4 - 2").toString() == ">=0.4.0 <=2.0.0");
     CHECK(VersionRange("2.x").toString() == ">=2.0.0 <3.0.0");
     CHECK(VersionRange("3.1.x").toString() == ">=3.1.0 <3.2.0");
     CHECK(VersionRange("2").toString() == ">=2.0.0 <3.0.0");

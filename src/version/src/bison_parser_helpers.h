@@ -95,7 +95,6 @@ struct bison_any_storage
 struct basic_block
 {
     void *scanner = nullptr;
-    bool debug = false;
     bool can_throw = false;
     std::string error_msg;
 

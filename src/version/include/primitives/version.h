@@ -66,8 +66,6 @@ struct PRIMITIVES_VERSION_API GenericNumericVersion
     explicit GenericNumericVersion(const std::initializer_list<Number> &, Level level = 0);
 
     static const Level minimum_level = 3;
-    static const Level default_level = 4;
-    static const Level maximum_level = 10;
 
 #ifndef BISON_PARSER
 protected:
@@ -84,9 +82,6 @@ protected:
     void setLevel(Level level, Number fill = 0);
     void setFirstVersion();
     void fill(Number);
-
-    static_assert(minimum_level <= default_level, "minimum level must be less or equal to default level");
-    static_assert(default_level <= maximum_level, "default level must be less or equal to maximum level");
 };
 
 struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
@@ -107,8 +102,8 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     explicit Version(Level level);
     explicit Version(const std::initializer_list<Number> &);
 
-    explicit Version(Number ma);
     explicit Version(int ma);
+    explicit Version(Number ma);
     Version(Number ma, Number mi);
     Version(Number ma, Number mi, Number pa);
     Version(Number ma, Number mi, Number pa, Number tw);
@@ -144,6 +139,10 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     void incrementVersion(Level level);
     Version getNextVersion(Level level) const;
     Version getPreviousVersion(Level level) const;
+
+    /// format string
+    void format(std::string &s) const;
+    std::string format(const std::string &s) const;
 
     //
     bool isBranch() const;

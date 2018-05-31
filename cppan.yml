@@ -74,6 +74,8 @@ projects:
                     version: "*"
                 pvt.cppan.demo.ragel:
                     version: 6
+                pvt.cppan.demo.fmt:
+                    version: 4
                 pvt.cppan.demo.lexxmark.winflexbison.flex:
                     version: master
                     ref: flex
@@ -145,6 +147,7 @@ projects:
 
             flex_bison(src/range.ll src/range.yy)
 
+            target_sources(${this} PUBLIC ${SDIR}/src/version.natvis)
 
 
     test.version:

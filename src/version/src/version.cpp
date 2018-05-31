@@ -2,11 +2,13 @@
 
 #include "range_parser.h"
 
+#include <fmt/format.h>
 #include <primitives/constants.h>
 
 #include <pystring.h>
 
 #include <algorithm>
+#include <map>
 
 static std::string preprocess_input(const std::string &in)
 {
@@ -271,7 +273,8 @@ std::string Version::printExtra() const
             break;
         }
     }
-    s.resize(s.size() - 1);
+    if (!s.empty())
+        s.resize(s.size() - 1);
     return s;
 }
 
@@ -453,6 +456,71 @@ Version Version::getPreviousVersion(Level l) const
     auto v = *this;
     v.decrementVersion(l);
     return v;
+}
+
+std::string Version::format(const std::string &s) const
+{
+    auto f = s;
+    format(f);
+    return f;
+}
+
+void Version::format(std::string &s) const
+{
+    auto create_latin_replacements = [](Number n, char base = 'a')
+    {
+        Number a = 26;
+        std::string s;
+        auto p = a;
+        size_t c = 1;
+        while (n >= p)
+        {
+            n -= p;
+            p *= a;
+            c++;
+        }
+        while (n >= a)
+        {
+            auto d = div(n, a);
+            s += (char)(d.rem + base);
+            n = d.quot;
+        }
+        s += (char)(n + base);
+        std::reverse(s.begin(), s.end());
+        if (s.size() < c)
+            s = std::string(c - s.size(), base) + s;
+        return s;
+    };
+
+    auto create_latin_replacements_capital = [&create_latin_replacements](Number n)
+    {
+        return create_latin_replacements(n, 'A');
+    };
+
+    s = fmt::format(s,
+        fmt::arg("M", getMajor()),
+        fmt::arg("m", getMinor()),
+        fmt::arg("p", getPatch()),
+        fmt::arg("t", getTweak()),
+        fmt::arg("5", get(4)),
+        // letter variants
+        // captical
+        fmt::arg("ML", create_latin_replacements_capital(getMajor())),
+        fmt::arg("mL", create_latin_replacements_capital(getMinor())),
+        fmt::arg("pL", create_latin_replacements_capital(getPatch())),
+        fmt::arg("tL", create_latin_replacements_capital(getTweak())),
+        fmt::arg("5L", create_latin_replacements_capital(get(4))),
+        // small
+        fmt::arg("Ml", create_latin_replacements(getMajor())),
+        fmt::arg("ml", create_latin_replacements(getMinor())),
+        fmt::arg("pl", create_latin_replacements(getPatch())),
+        fmt::arg("tl", create_latin_replacements(getTweak())),
+        fmt::arg("5l", create_latin_replacements(get(4))),
+        //
+        fmt::arg("e", printExtra()),
+        fmt::arg("b", branch),
+        fmt::arg("v", toString())
+    );
 }
 
 bool VersionRange::RangePair::hasVersion(const Version &v) const

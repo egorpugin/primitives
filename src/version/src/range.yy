@@ -249,7 +249,8 @@ hyphen: version SPACE HYPHEN SPACE version
         // set right side xversion to zeros
         // npm does not use this
         // yarn does
-        //prepare_version(rp.second);
+        auto level = std::max(rp.first.getLevel(), rp.second.getLevel());
+        prepare_version(rp.second, 0, level);
 
         auto vr = VersionRange::empty();
         vr |= prepare_pair(rp);
