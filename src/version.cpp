@@ -790,7 +790,7 @@ TEST_CASE("Checking version ranges", "[range]")
     {
         VersionRange vr("1 - 2");
         auto s = vr.toString();
-        CHECK(s == ">=1.0.0 <=2.0.0");
+        CHECK(s == ">=1.0.0 <3.0.0");
     }
 
     {
@@ -811,22 +811,22 @@ TEST_CASE("Checking version ranges", "[range]")
 
     {
         VersionRange vr("1-2 - 2-1");
-        CHECK(vr.toString() == ">=1.0.0-2 <=2.0.0-1");
+        CHECK(vr.toString() == ">=1.0.0-2 <3.0.0-1");
     }
 
     {
         VersionRange vr("1.2 - 2");
-        CHECK(vr.toString() == ">=1.2.0 <=2.0.0");
+        CHECK(vr.toString() == ">=1.2.0 <3.0.0");
     }
 
     {
         VersionRange vr("1.2 - 2.3");
-        CHECK(vr.toString() == ">=1.2.0 <=2.3.0");
+        CHECK(vr.toString() == ">=1.2.0 <2.4.0");
     }
 
     {
         VersionRange vr("1.2.3 - 2");
-        CHECK(vr.toString() == ">=1.2.3 <=2.0.0");
+        CHECK(vr.toString() == ">=1.2.3 <3.0.0");
     }
 
     {
@@ -836,7 +836,7 @@ TEST_CASE("Checking version ranges", "[range]")
 
     {
         VersionRange vr("1.2.3.4 - 2");
-        CHECK(vr.toString() == ">=1.2.3.4 <=2.0.0.0");
+        CHECK(vr.toString() == ">=1.2.3.4 <3.0.0.0");
     }
 
     {
@@ -884,10 +884,10 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange("1").toString() == ">=1.0.0 <2.0.0");
     CHECK(VersionRange("1.0.0").toString() == "1.0.0");
     CHECK(VersionRange("1.0.0.01").toString() == "1.0.0.1");
-    CHECK(VersionRange("1 - 2").toString() == ">=1.0.0 <=2.0.0");
-    CHECK(VersionRange("1.2 - 2").toString() == ">=1.2.0 <=2.0.0");
-    CHECK(VersionRange("1.2.3 - 2").toString() == ">=1.2.3 <=2.0.0");
-    CHECK(VersionRange("1.2.3.4 - 2").toString() == ">=1.2.3.4 <=2.0.0.0");
+    CHECK(VersionRange("1 - 2").toString() == ">=1.0.0 <3.0.0");
+    CHECK(VersionRange("1.2 - 2").toString() == ">=1.2.0 <3.0.0");
+    CHECK(VersionRange("1.2.3 - 2").toString() == ">=1.2.3 <3.0.0");
+    CHECK(VersionRange("1.2.3.4 - 2").toString() == ">=1.2.3.4 <3.0.0.0");
 
     // from websites
     // https://docs.npmjs.com/misc/semver
@@ -910,9 +910,9 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange("1.2 - 2.3.4").toString() == ">=1.2.0 <=2.3.4");
     CHECK(VersionRange("1.2.x - 2.3.4").toString() == ">=1.2.0 <=2.3.4");
     CHECK(VersionRange("1.2.* - 2.3.4").toString() == ">=1.2.0 <=2.3.4");
-    CHECK(VersionRange("1.2.3.* - 2.3.4").toString() == ">=1.2.3.0 <=2.3.4.0");
-    CHECK(VersionRange("   1.2.3 - 2.3    ").toString() == ">=1.2.3 <=2.3.0");
-    CHECK(VersionRange("1.2.3 - 2").toString() == ">=1.2.3 <=2.0.0");
+    CHECK(VersionRange("1.2.3.* - 2.3.4").toString() == ">=1.2.3.0 <2.3.5.0");
+    CHECK(VersionRange("   1.2.3 - 2.3    ").toString() == ">=1.2.3 <2.4.0");
+    CHECK(VersionRange("1.2.3 - 2").toString() == ">=1.2.3 <3.0.0");
     CHECK(VersionRange("*").toString() == "*");
     CHECK(VersionRange("*").toString() == "*");
     CHECK(VersionRange("*.x.X.*").toString() == "*");
@@ -997,7 +997,7 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange("!=4.6.6").toString() == "<=4.6.5 || >=4.6.7");
     CHECK(VersionRange("!=4.6.6.8").toString() == "<=4.6.6.7 || >=4.6.6.9");
     CHECK(VersionRange("2.0.0 - 3.1.4").toString() == ">=2.0.0 <=3.1.4");
-    CHECK(VersionRange("0.4 - 2").toString() == ">=0.4.0 <=2.0.0");
+    CHECK(VersionRange("0.4 - 2").toString() == ">=0.4.0 <3.0.0");
     CHECK(VersionRange("2.x").toString() == ">=2.0.0 <3.0.0");
     CHECK(VersionRange("3.1.x").toString() == ">=3.1.0 <3.2.0");
     CHECK(VersionRange("2").toString() == ">=2.0.0 <3.0.0");

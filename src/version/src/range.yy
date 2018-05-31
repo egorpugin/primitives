@@ -249,8 +249,16 @@ hyphen: version SPACE HYPHEN SPACE version
         // set right side xversion to zeros
         // npm does not use this
         // yarn does
-        auto level = std::max(rp.first.getLevel(), rp.second.getLevel());
-        prepare_version(rp.second, 0, level);
+
+        // If you think about this with ABI in mind, you'll see
+        // that 1 - 2 === 1.*.* - 2.*.* expansion is correct.
+        // You say to use from 1 to 2 major abi versions inclusive.
+        // If we expand 1.0.0 - 2.0.0 it means we use first *in theory* abi broken major version 2.0.0
+        // but do not use others.
+        // Or if you think that abi is not broken in 2.0.0 and broken in 2.0.1 - that's not how semver works.
+
+        //auto level = std::max(rp.first.getLevel(), rp.second.getLevel());
+        //prepare_version(rp.second, 0, level);
 
         auto vr = VersionRange::empty();
         vr |= prepare_pair(rp);
