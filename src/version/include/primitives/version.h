@@ -54,7 +54,7 @@ struct comparable_variant : std::variant<Args...>
 
 }
 
-//template <3, 4, 10>
+//template <3>
 struct PRIMITIVES_VERSION_API GenericNumericVersion
 {
     using Number = detail::Number;
