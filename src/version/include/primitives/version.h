@@ -83,13 +83,13 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     explicit Version(const Extra &);
 
     /// parse from string
-    Version(const std::string &);
+    Version(const std::string &); // no explicit
 
     /// parse from raw string
-    Version(const char *);
+    Version(const char *); // no explicit
 
     explicit Version(Level level);
-    explicit Version(const std::initializer_list<Number> &);
+    Version(const std::initializer_list<Number> &); // no explicit
 
     explicit Version(int ma);
     explicit Version(Number ma);
@@ -201,10 +201,10 @@ struct PRIMITIVES_VERSION_API VersionRange
     VersionRange(const Version &from, const Version &to);
 
     /// parse from string
-    VersionRange(const std::string &);
+    VersionRange(const std::string &); // no explicit
 
     /// parse from raw string
-    VersionRange(const char *);
+    VersionRange(const char *); // no explicit
 
     std::string toString() const;
 
