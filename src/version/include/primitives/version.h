@@ -80,10 +80,13 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     Version();
 
     /// default is min()
-    explicit Version(const Extra &e);
+    explicit Version(const Extra &);
 
     /// parse from string
-    explicit Version(const std::string &v);
+    Version(const std::string &);
+
+    /// parse from raw string
+    Version(const char *);
 
     explicit Version(Level level);
     explicit Version(const std::initializer_list<Number> &);
@@ -132,17 +135,23 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     void format(std::string &s) const;
     std::string format(const std::string &s) const;
 
-    //
+    // checkers
     bool isBranch() const;
     bool isVersion() const;
     //bool isTag() const; todo - add tags
 
+    // operators
     bool operator<(const Version &) const;
     bool operator>(const Version &) const;
     bool operator<=(const Version &) const;
     bool operator>=(const Version &) const;
     bool operator==(const Version &) const;
     bool operator!=(const Version &) const;
+
+    Version &operator++();
+    Version &operator--();
+    Version operator++(int);
+    Version operator--(int);
 
     // add +,-?
     // int compare()?
@@ -189,10 +198,13 @@ struct PRIMITIVES_VERSION_API VersionRange
     VersionRange(GenericNumericVersion::Level level = Version::minimum_level);
 
     /// from two versions
-    VersionRange(const Version &v1, const Version &v2);
+    VersionRange(const Version &from, const Version &to);
 
     /// parse from string
-    VersionRange(const std::string &v);
+    VersionRange(const std::string &);
+
+    /// parse from raw string
+    VersionRange(const char *);
 
     std::string toString() const;
 
@@ -205,7 +217,7 @@ struct PRIMITIVES_VERSION_API VersionRange
     optional<Version> getMinSatisfyingVersion(const std::set<Version> &) const;
     optional<Version> getMaxSatisfyingVersion(const std::set<Version> &) const;
 
-public:
+    // operators
     bool operator==(const VersionRange &) const;
     bool operator!=(const VersionRange &) const;
 

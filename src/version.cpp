@@ -50,6 +50,68 @@ TEST_CASE("Checking versions", "[version]")
 
     {
         Version v;
+        Version v1;
+        v = "0.0.1";
+        CHECK(v.getMajor() == 0);
+        CHECK(v.getMinor() == 0);
+        CHECK(v.getPatch() == 1);
+        CHECK(v.getTweak() == 0);
+        v.incrementVersion();
+        CHECK(v.getPatch() == 2);
+        v.incrementVersion();
+        CHECK(v.getPatch() == 3);
+        v.decrementVersion();
+        v.decrementVersion();
+        CHECK(v.getPatch() == 1);
+        v.decrementVersion();
+        CHECK(v.getPatch() == 1);
+        v.decrementVersion();
+        v.decrementVersion();
+        CHECK(v.getPatch() == 1);
+        CHECK(v.isVersion());
+        CHECK_FALSE(v.isBranch());
+        v = v1;
+        CHECK(v.getMajor() == 0);
+        CHECK(v.getMinor() == 0);
+        CHECK(v.getPatch() == 1);
+        CHECK(v.getTweak() == 0);
+        v.incrementVersion();
+        CHECK(v.getPatch() == 2);
+        v.incrementVersion();
+        CHECK(v.getPatch() == 3);
+        v.decrementVersion();
+        v.decrementVersion();
+        CHECK(v.getPatch() == 1);
+        v.decrementVersion();
+        CHECK(v.getPatch() == 1);
+        v.decrementVersion();
+        v.decrementVersion();
+        CHECK(v.getPatch() == 1);
+        CHECK(v.isVersion());
+        CHECK_FALSE(v.isBranch());
+        v = "1.2.3.4";
+        CHECK(v.getMajor() == 1);
+        CHECK(v.getMinor() == 2);
+        CHECK(v.getPatch() == 3);
+        CHECK(v.getTweak() == 4);
+        v.incrementVersion();
+        CHECK(v.getTweak() == 5);
+        v.incrementVersion();
+        CHECK(v.getTweak() == 6);
+        v.decrementVersion();
+        v.decrementVersion();
+        CHECK(v.getTweak() == 4);
+        v.decrementVersion();
+        CHECK(v.getTweak() == 3);
+        v.decrementVersion();
+        v.decrementVersion();
+        CHECK(v.getTweak() == 1);
+        CHECK(v.isVersion());
+        CHECK_FALSE(v.isBranch());
+    }
+
+    {
+        Version v;
         CHECK(v.getMajor() == 0);
         CHECK(v.getMinor() == 0);
         CHECK(v.getPatch() == 1);
@@ -443,6 +505,42 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(v.getTweak() == Version::maxNumber());
     }
 
+    // ++, --
+    {
+        Version v(1, 2);
+        CHECK(v.getMajor() == 1);
+        CHECK(v.getMinor() == 2);
+        CHECK(v.getPatch() == 0);
+        auto v_old = v++;
+        CHECK(v.getMajor() == 1);
+        CHECK(v.getMinor() == 2);
+        CHECK(v.getPatch() == 1);
+        CHECK(v_old.getMajor() == 1);
+        CHECK(v_old.getMinor() == 2);
+        CHECK(v_old.getPatch() == 0);
+        v_old = v--;
+        CHECK(v.getMajor() == 1);
+        CHECK(v.getMinor() == 2);
+        CHECK(v.getPatch() == 0);
+        CHECK(v_old.getMajor() == 1);
+        CHECK(v_old.getMinor() == 2);
+        CHECK(v_old.getPatch() == 1);
+        v_old = ++v;
+        CHECK(v.getMajor() == 1);
+        CHECK(v.getMinor() == 2);
+        CHECK(v.getPatch() == 1);
+        CHECK(v_old.getMajor() == 1);
+        CHECK(v_old.getMinor() == 2);
+        CHECK(v_old.getPatch() == 1);
+        v_old = --v;
+        CHECK(v.getMajor() == 1);
+        CHECK(v.getMinor() == 2);
+        CHECK(v.getPatch() == 0);
+        CHECK(v_old.getMajor() == 1);
+        CHECK(v_old.getMinor() == 2);
+        CHECK(v_old.getPatch() == 0);
+    }
+
     CHECK(Version(0, 0, 0, "rc2.3._a_") > Version(0, 0, 0, "rc1.3._a_"));
     CHECK(Version(0, 0, 0, "rc2.3._a_") > Version(0, 0, 0, "beta.3._a_"));
     CHECK(Version(0, 0, 0, "rc2.3._a_") > Version(0, 0, 0, "alpha.3._a_"));
@@ -527,6 +625,17 @@ TEST_CASE("Checking versions", "[version]")
 TEST_CASE("Checking version ranges", "[range]")
 {
     using namespace primitives::version;
+
+    // assignment
+    {
+        VersionRange vr1;
+        VersionRange vr2;
+        vr2 = " > 1 < 3 || >5 <7 ";
+        vr1 = vr2;
+        CHECK(vr1.toString() == ">=1.0.1 <3.0.0 || >=5.0.1 <7.0.0");
+        vr1 |= ">2 <4||>4 <6";
+        CHECK(vr1.toString() == ">=1.0.1 <4.0.0 || >=4.0.1 <7.0.0");
+    }
 
     // VersionRange ops
     {

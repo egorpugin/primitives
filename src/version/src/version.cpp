@@ -124,6 +124,11 @@ Version::Version(const std::string &s)
         throw_bad_version(s + ", branch must have size <= 200");
 }
 
+Version::Version(const char *s)
+    : Version(std::string(s))
+{
+}
+
 Version::Version(Level level)
     : GenericNumericVersion(level)
 {
@@ -383,6 +388,32 @@ bool Version::operator!=(const Version &rhs) const
     return !operator==(rhs);
 }
 
+Version &Version::operator++()
+{
+    incrementVersion();
+    return *this;
+}
+
+Version &Version::operator--()
+{
+    decrementVersion();
+    return *this;
+}
+
+Version Version::operator++(int)
+{
+    auto v = *this;
+    incrementVersion();
+    return v;
+}
+
+Version Version::operator--(int)
+{
+    auto v = *this;
+    decrementVersion();
+    return v;
+}
+
 Version Version::min(Level level)
 {
     return Version(level);
@@ -562,6 +593,11 @@ VersionRange::VersionRange(const std::string &s)
         range.emplace_back(Version::min(), Version::max());
     else if (auto r = parse(*this, in); r)
         throw_bad_version_range(in + ", error: " + r.value());
+}
+
+VersionRange::VersionRange(const char *v)
+    : VersionRange(std::string(v))
+{
 }
 
 optional<std::string> VersionRange::parse(VersionRange &vr, const std::string &s)
