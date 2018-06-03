@@ -99,6 +99,8 @@ projects:
                     version: "*"
                 templates:
                     version: "*"
+                pvt.cppan.demo.imageworks.pystring:
+                    version: 1
     db.sqlite3:
         type: library
 

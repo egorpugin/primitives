@@ -75,4 +75,10 @@ void createOrUpdateSchema(LiteDatabase &database, const String &latestSchema, co
 PRIMITIVES_DB_COMMON_API
 void createOrUpdateSchema(LiteDatabase &database, const path &latestSchemaFilename, const path &diffSqlsDir, const String &diffSqlsFileMask = DatabaseSchemaManager::default_diffs_mask);
 
+PRIMITIVES_DB_COMMON_API
+void createOrUpdateSchema(LiteDatabase &database, const String &latestSchema, bool split_schema_for_patches = false);
+
+PRIMITIVES_DB_COMMON_API
+void createOrUpdateSchema(LiteDatabase &database, const path &latestSchemaFilename, bool split_schema_for_patches = false);
+
 }

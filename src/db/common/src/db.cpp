@@ -8,6 +8,8 @@
 
 #include <primitives/templates.h>
 
+#include <pystring.h>
+
 #include <regex>
 
 namespace primitives::db
@@ -144,6 +146,32 @@ void createOrUpdateSchema(LiteDatabase &database, const path &latestSchemaFilena
     m.latestSchemaFilename = latestSchemaFilename;
     m.diffSqlsDir = diffSqlsDir;
     m.diffSqlsFileMask = diffSqlsFileMask;
+    m.createOrUpdate();
+}
+
+void createOrUpdateSchema(LiteDatabase &database, const String &latestSchema, bool split_schema_for_patches)
+{
+    StringDatabaseSchemaManager m;
+    m.database = &database;
+    if (split_schema_for_patches)
+    {
+        Strings v;
+        pystring::split(latestSchema, v, "%split");
+        m.latestSchema = v[0];
+        m.diffSqls.assign(v.begin() + 1, v.end());
+    }
+    else
+        m.latestSchema = latestSchema;
+    m.createOrUpdate();
+}
+
+void createOrUpdateSchema(LiteDatabase &database, const path &latestSchemaFilename, bool split_schema_for_patches)
+{
+    StringDatabaseSchemaManager m;
+    m.database = &database;
+    m.latestSchema = read_file(latestSchemaFilename, true);
+    if (split_schema_for_patches)
+        return createOrUpdateSchema(database, m.latestSchema, split_schema_for_patches);
     m.createOrUpdate();
 }
 

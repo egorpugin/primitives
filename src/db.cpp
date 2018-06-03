@@ -281,8 +281,6 @@ CREATE TABLE d (d )xxx" + type + R"xxx();
 int main(int argc, char **argv)
 try
 {
-    setup_utf8_filesystem();
-
     Catch::Session().run(argc, argv);
 
     return 0;
