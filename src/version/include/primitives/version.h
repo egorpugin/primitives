@@ -21,19 +21,6 @@ namespace detail
 
 using Number = int64_t;
 
-template <class T, class ... Args>
-struct access_vector : std::vector<T, Args...>
-{
-    using base = std::vector<T, Args...>;
-
-    using base::base;
-
-    const T &operator[](int i) const
-    {
-        return const_cast<access_vector*>(this)->base::operator[](i);
-    }
-};
-
 template <class ... Args>
 struct comparable_variant : std::variant<Args...>
 {
@@ -87,8 +74,7 @@ protected:
 struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
 {
     // enough numbers, here string goes first
-    //using Extra = std::vector<detail::comparable_variant<std::string, Number>>;
-    using Extra = detail::access_vector<detail::comparable_variant<std::string, Number>>;
+    using Extra = std::vector<detail::comparable_variant<std::string, Number>>;
 
     /// default is min()
     Version();
@@ -128,6 +114,8 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
 
     std::string toString(Level level = minimum_level) const;
     std::string toString(const Version &v) const;
+
+    size_t getStdHash() const;
 
     // modificators
     void decrementVersion();
@@ -191,6 +179,7 @@ struct PRIMITIVES_VERSION_API VersionRange
 
         std::string toString() const;
         bool hasVersion(const Version &v) const;
+        size_t getStdHash() const;
 
         optional<RangePair> operator&(const RangePair &) const;
     };
@@ -206,6 +195,8 @@ struct PRIMITIVES_VERSION_API VersionRange
     VersionRange(const std::string &v);
 
     std::string toString() const;
+
+    size_t getStdHash() const;
 
     bool isEmpty() const;
     bool isOutside(const Version &) const;
@@ -260,5 +251,26 @@ bool operator>(const VersionRange &, const Version &);
 
 /// Return true if version is greater than all the versions possible in the range.
 bool operator>(const Version &, const VersionRange &);
+
+}
+
+namespace std
+{
+
+template<> struct hash<primitives::version::Version>
+{
+    size_t operator()(const primitives::version::Version& v) const
+    {
+        return v.getStdHash();
+    }
+};
+
+template<> struct hash<primitives::version::VersionRange>
+{
+    size_t operator()(const primitives::version::VersionRange& v) const
+    {
+        return v.getStdHash();
+    }
+};
 
 }

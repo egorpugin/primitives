@@ -363,7 +363,7 @@ TEST_CASE("Checking versions", "[version]")
     }
 
     {
-        Version v(0, "rc2.3._a_");
+        const Version v(0, "rc2.3._a_");
         CHECK(v.getMajor() == 0);
         CHECK(v.getMinor() == 0);
         CHECK(v.getPatch() == 1);

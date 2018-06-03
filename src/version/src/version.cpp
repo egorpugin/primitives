@@ -4,6 +4,7 @@
 
 #include <fmt/format.h>
 #include <primitives/constants.h>
+#include <primitives/hash.h>
 
 #include <pystring.h>
 
@@ -119,6 +120,8 @@ Version::Version(const std::string &s)
 {
     if (!parse(*this, preprocess_input(s)))
         throw_bad_version(s);
+    if (isBranch() && branch.size() > 200)
+        throw_bad_version(s + ", branch must have size <= 200");
 }
 
 Version::Version(Level level)
@@ -256,6 +259,16 @@ std::string Version::toString(Level level) const
 std::string Version::toString(const Version &v) const
 {
     return toString(v.numbers.size());
+}
+
+size_t Version::getStdHash() const
+{
+    if (isBranch())
+        return std::hash<std::string>()(getBranch());
+    size_t h = 0;
+    for (auto &n : numbers)
+        hash_combine(h, n);
+    return h;
 }
 
 std::string Version::printExtra() const
@@ -650,6 +663,14 @@ std::string VersionRange::RangePair::toString() const
     return s + "<=" + second.toString(level);
 }
 
+size_t VersionRange::RangePair::getStdHash() const
+{
+    size_t h = 0;
+    hash_combine(h, first.getStdHash());
+    hash_combine(h, second.getStdHash());
+    return h;
+}
+
 std::string VersionRange::toString() const
 {
     std::string s;
@@ -658,6 +679,14 @@ std::string VersionRange::toString() const
     if (!s.empty())
         s.resize(s.size() - 4);
     return s;
+}
+
+size_t VersionRange::getStdHash() const
+{
+    size_t h = 0;
+    for (auto &n : range)
+        hash_combine(h, n.getStdHash());
+    return h;
 }
 
 bool VersionRange::operator==(const VersionRange &rhs) const
