@@ -20,8 +20,8 @@ struct PRIMITIVES_DB_COMMON_API DatabaseSchemaManager
     void createOrUpdate() const;
     virtual size_t getDiffSqlSize() const = 0;
 
-    static const String version_column{ "version" };
-    static const String default_schema_filename{ "schema.sql" };
+    static inline const String version_column{ "version" };
+    static inline const String default_schema_filename{ "schema.sql" };
 
 private:
     void create() const;
