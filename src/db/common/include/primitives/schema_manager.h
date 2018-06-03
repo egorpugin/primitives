@@ -20,7 +20,8 @@ struct PRIMITIVES_DB_COMMON_API DatabaseSchemaManager
     void createOrUpdate() const;
     virtual size_t getDiffSqlSize() const = 0;
 
-    static inline const String version_column{ "version" };
+    static const String version_column{ "version" };
+    static const String default_schema_filename{ "schema.sql" };
 
 private:
     void create() const;
@@ -55,7 +56,6 @@ struct PRIMITIVES_DB_COMMON_API FileDatabaseSchemaManager : DatabaseSchemaManage
     path getDiffSqlFilename(size_t i) const;
     size_t getDiffSqlSize() const override;
 
-    static inline const String default_schema_filename{ "schema.sql" };
     static inline const String default_diffs_spec{ "%06d" };
     static inline const String default_diffs_prefix{ "patch_" };
     static inline const String default_diffs_mask{ default_diffs_prefix + default_diffs_spec + ".sql" };
