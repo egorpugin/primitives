@@ -22,6 +22,7 @@
 
 number [0-9]+
 extra  [_a-zA-Z0-9]+
+branch [_a-zA-Z][_a-zA-Z0-9]*
 
 %%
 
@@ -59,6 +60,7 @@ extra  [_a-zA-Z0-9]+
 "||"                    return MAKE(OR);
 
 {number}                return MAKE_VALUE(NUMBER, std::stoll(yytext));
+{branch}                return MAKE_VALUE(BRANCH, std::string(yytext));
 {extra}                 return MAKE_VALUE(EXTRA, std::string(yytext));
 
 .                       { /*printf("err = %s\n", yytext);*/ return MAKE(ERROR_SYMBOL); }

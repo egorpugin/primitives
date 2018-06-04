@@ -56,6 +56,8 @@ auto prepare_version(Version &ver, Version::Number val = 0, Version::Level level
 
 auto prepare_pair(VersionRange::RangePair &p)
 {
+    if (p.isBranch())
+        return p;
     if (p.second < p.first)
         std::swap(p.first, p.second);
     auto level = std::max(p.first.getLevel(), p.second.getLevel());
@@ -91,7 +93,7 @@ auto prepare_pair(VersionRange::RangePair &p)
 %token CARET TILDE HYPHEN DOT
 
 %token <v> L_SQUARE_BRACKET R_SQUARE_BRACKET L_BRACKET R_BRACKET
-%token <v> NUMBER X_NUMBER STAR_NUMBER EXTRA
+%token <v> NUMBER X_NUMBER STAR_NUMBER EXTRA BRANCH
 
 %type <v> file
 %type <v> range_set_or range
@@ -238,7 +240,7 @@ tilde: TILDE space_or_empty version
     }
     ;
 
-hyphen: version SPACE HYPHEN SPACE version
+hyphen: version SPACE HYPHEN space_or_empty version
     {
         EXTRACT_VALUE(Version, v1, $1);
         EXTRACT_VALUE(Version, v2, $5);
@@ -421,6 +423,13 @@ version: basic_version
         v.extra = extra;
         SET_RETURN_VALUE(v);
     }
+    | BRANCH
+    {
+        EXTRACT_VALUE(std::string, branch, $1);
+        Version v;
+        v.branch = branch;
+        SET_RETURN_VALUE(v);
+    }
     ;
 
 basic_version: number
@@ -457,6 +466,13 @@ extra: extra_part
     ;
 
 extra_part: EXTRA
+    {
+        EXTRACT_VALUE(std::string, e, $1);
+        Version::Extra extra;
+        extra.push_back(e);
+        SET_RETURN_VALUE(extra);
+    }
+    | BRANCH
     {
         EXTRACT_VALUE(std::string, e, $1);
         Version::Extra extra;

@@ -579,6 +579,11 @@ VersionRange::VersionRange(GenericNumericVersion::Level level)
 {
 }
 
+VersionRange::VersionRange(const Version &v)
+    : VersionRange(v, v)
+{
+}
+
 VersionRange::VersionRange(const Version &v1, const Version &v2)
 {
     if (v1 > v2)
@@ -635,7 +640,7 @@ optional<VersionRange> VersionRange::parse(const std::string &s)
 
 bool VersionRange::isEmpty() const
 {
-    return range.empty();
+    return range.empty() && !isBranch();
 }
 
 bool VersionRange::isOutside(const Version &v) const
@@ -652,12 +657,20 @@ VersionRange VersionRange::empty()
 
 bool VersionRange::hasVersion(const Version &v) const
 {
+    if (isBranch() && v.isBranch())
+        return branch == v.getBranch();
+    if (isBranch() || v.isBranch())
+        return false;
     return std::any_of(range.begin(), range.end(),
         [&v](const auto &r) { return r.hasVersion(v); });
 }
 
 optional<VersionRange::RangePair> VersionRange::RangePair::operator&(const RangePair &rhs) const
 {
+    if (isBranch())
+        return *this;
+    if (rhs.isBranch())
+        return rhs;
     VersionRange::RangePair rp;
     rp.first = std::max(first, rhs.first);
     rp.second = std::min(second, rhs.second);
@@ -668,6 +681,11 @@ optional<VersionRange::RangePair> VersionRange::RangePair::operator&(const Range
 
 std::string VersionRange::RangePair::toString() const
 {
+    if (first.isBranch())
+        return first.toString();
+    if (second.isBranch())
+        return second.toString();
+
     auto level = std::max(first.getLevel(), second.getLevel());
     if (first == second)
         return first.toString(level);
@@ -707,8 +725,21 @@ size_t VersionRange::RangePair::getStdHash() const
     return h;
 }
 
+bool VersionRange::RangePair::isBranch() const
+{
+    return first.isBranch() || second.isBranch();
+}
+
+bool VersionRange::isBranch() const
+{
+    return !branch.empty();
+}
+
 std::string VersionRange::toString() const
 {
+    if (isBranch())
+        return branch;
+
     std::string s;
     for (auto &p : range)
         s += p.toString() + " || ";
@@ -719,6 +750,8 @@ std::string VersionRange::toString() const
 
 size_t VersionRange::getStdHash() const
 {
+    if (isBranch())
+        return std::hash<std::string>()(branch);
     size_t h = 0;
     for (auto &n : range)
         hash_combine(h, n.getStdHash());
@@ -727,6 +760,13 @@ size_t VersionRange::getStdHash() const
 
 bool VersionRange::operator<(const VersionRange &rhs) const
 {
+    if (isBranch() && rhs.isBranch())
+        return branch < rhs.branch;
+    if (isBranch())
+        return false;
+    if (rhs.isBranch())
+        return true;
+
     if (rhs.range.empty())
         return false;
     if (range.empty())
@@ -736,7 +776,7 @@ bool VersionRange::operator<(const VersionRange &rhs) const
 
 bool VersionRange::operator==(const VersionRange &rhs) const
 {
-    return range == rhs.range;
+    return range == rhs.range && branch == rhs.branch;
 }
 
 bool VersionRange::operator!=(const VersionRange &rhs) const
@@ -746,6 +786,15 @@ bool VersionRange::operator!=(const VersionRange &rhs) const
 
 VersionRange &VersionRange::operator|=(const RangePair &p)
 {
+    if (isBranch())
+        return *this;
+    if (p.isBranch())
+    {
+        range.clear();
+        branch = p.toString();
+        return *this;
+    }
+
     // we can do pairs |= p
     // but we still need to merge overlapped after
     // so we choose simple iterative approach instead
@@ -792,6 +841,15 @@ VersionRange &VersionRange::operator|=(const RangePair &p)
 
 VersionRange &VersionRange::operator&=(const RangePair &rhs)
 {
+    if (isBranch())
+        return *this;
+    if (rhs.isBranch())
+    {
+        range.clear();
+        branch = rhs.toString();
+        return *this;
+    }
+
     if (range.empty())
         return *this;
 
@@ -814,6 +872,14 @@ VersionRange &VersionRange::operator&=(const RangePair &rhs)
 
 VersionRange &VersionRange::operator|=(const VersionRange &rhs)
 {
+    if (isBranch())
+        return *this;
+    if (rhs.isBranch())
+    {
+        range.clear();
+        branch = rhs.toString();
+        return *this;
+    }
     for (auto &rp : rhs.range)
         operator|=(rp);
     return *this;
@@ -821,6 +887,14 @@ VersionRange &VersionRange::operator|=(const VersionRange &rhs)
 
 VersionRange &VersionRange::operator&=(const VersionRange &rhs)
 {
+    if (isBranch())
+        return *this;
+    if (rhs.isBranch())
+    {
+        range.clear();
+        branch = rhs.toString();
+        return *this;
+    }
     VersionRange vr;
     vr.range.clear();
     for (auto &rp1 : range)
@@ -852,6 +926,8 @@ bool operator<(const VersionRange &r, const Version &v)
 {
     if (r.isEmpty())
         return false;
+    if (r.isBranch())
+        return Version(r.branch) < v;
     return r.range.back().second < v;
 }
 
@@ -859,6 +935,8 @@ bool operator<(const Version &v, const VersionRange &r)
 {
     if (r.isEmpty())
         return false;
+    if (r.isBranch())
+        return v < Version(r.branch);
     return v < r.range.front().first;
 }
 
@@ -866,6 +944,8 @@ bool operator>(const VersionRange &r, const Version &v)
 {
     if (r.isEmpty())
         return false;
+    if (r.isBranch())
+        return Version(r.branch) > v;
     return r.range.front().first > v;
 }
 
@@ -873,6 +953,8 @@ bool operator>(const Version &v, const VersionRange &r)
 {
     if (r.isEmpty())
         return false;
+    if (r.isBranch())
+        return v > Version(r.branch);
     return v > r.range.back().second;
 }
 

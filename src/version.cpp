@@ -620,6 +620,14 @@ TEST_CASE("Checking versions", "[version]")
         v.format(s);
         CHECK(s == "sroasb");
     }
+
+    // cmp
+    CHECK(Version("a") == Version("a"));
+    CHECK_FALSE(Version("a") != Version("a"));
+    CHECK(Version("a") > Version());
+    CHECK(Version() < Version("a"));
+    CHECK(Version() != Version("a"));
+    CHECK(Version("a") < Version("b"));
 }
 
 TEST_CASE("Checking version ranges", "[range]")
@@ -1185,9 +1193,29 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange("(1,2.3.4.5]").toString() == ">=1.0.0.1 <=2.3.4.5");
     CHECK(VersionRange("(1,2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17]").toString()
         == ">=1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 <=2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17");
+    CHECK_THROWS(VersionRange("1 - 2 - 3 || 4"));
 
     // complex
     CHECK(VersionRange("[1,4] [2,3]").toString() == ">=2.0.0 <=3.0.0");
+
+    // branches
+    {
+        VersionRange vr("master");
+        CHECK(vr.toString() == "master");
+    }
+
+    CHECK_THROWS(VersionRange("master-master"));
+    CHECK(VersionRange("a b").toString() == "a");
+    CHECK(VersionRange("a b || c").toString() == "a");
+    CHECK(VersionRange("a b - d || c").toString() == "a");
+    CHECK_THROWS(VersionRange("a - b - d || c || d || e||f").toString() == "a");
+
+    // cmp
+    CHECK(VersionRange("a") == VersionRange("a"));
+    CHECK_FALSE(VersionRange("a") != VersionRange("a"));
+    CHECK(VersionRange() < VersionRange("a"));
+    CHECK(VersionRange() != VersionRange("a"));
+    CHECK(VersionRange("a") < VersionRange("b || c d"));
 }
 
 int main(int argc, char **argv)

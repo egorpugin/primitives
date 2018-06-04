@@ -112,7 +112,9 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     Number getMinor() const;
     Number getPatch() const;
     Number getTweak() const;
+    // return as copy to prevent overwrites?
     const Extra &getExtra() const;
+    // return as const ref like extra?
     std::string getBranch() const;
 
     std::string toString(Level level = minimum_level) const;
@@ -181,30 +183,20 @@ private:
 
 struct PRIMITIVES_VERSION_API VersionRange
 {
-    struct RangePair : std::pair<Version, Version>
-    {
-        using base = std::pair<Version, Version>;
-        using base::base;
-
-        std::string toString() const;
-        bool hasVersion(const Version &v) const;
-        size_t getStdHash() const;
-
-        optional<RangePair> operator&(const RangePair &) const;
-    };
-    using Range = std::vector<RangePair>;
-
     /// default is any version or * or Version::min() - Version::max()
     VersionRange(GenericNumericVersion::Level level = Version::minimum_level);
+
+    /// from one version
+    VersionRange(const Version &);
 
     /// from two versions
     VersionRange(const Version &from, const Version &to);
 
-    /// parse from string
-    VersionRange(const std::string &); // no explicit
-
     /// parse from raw string
     VersionRange(const char *); // no explicit
+
+    /// parse from string
+    VersionRange(const std::string &); // no explicit
 
     std::string toString() const;
 
@@ -237,8 +229,26 @@ public:
 #ifndef BISON_PARSER
 private:
 #endif
+    struct RangePair : std::pair<Version, Version>
+    {
+        using base = std::pair<Version, Version>;
+        using base::base;
+
+        std::string toString() const;
+        bool hasVersion(const Version &v) const;
+        bool isBranch() const;
+        size_t getStdHash() const;
+
+        optional<RangePair> operator&(const RangePair &) const;
+    };
+
+    using Range = std::vector<RangePair>;
+
     // always sorted with less
     Range range;
+    std::string branch;
+
+    bool isBranch() const;
 
     VersionRange &operator|=(const RangePair &);
     VersionRange &operator&=(const RangePair &);
@@ -272,7 +282,7 @@ namespace std
 
 template<> struct hash<primitives::version::Version>
 {
-    size_t operator()(const primitives::version::Version& v) const
+    size_t operator()(const primitives::version::Version &v) const
     {
         return v.getStdHash();
     }
@@ -280,7 +290,7 @@ template<> struct hash<primitives::version::Version>
 
 template<> struct hash<primitives::version::VersionRange>
 {
-    size_t operator()(const primitives::version::VersionRange& v) const
+    size_t operator()(const primitives::version::VersionRange &v) const
     {
         return v.getStdHash();
     }
