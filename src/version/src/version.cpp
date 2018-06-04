@@ -725,6 +725,15 @@ size_t VersionRange::getStdHash() const
     return h;
 }
 
+bool VersionRange::operator<(const VersionRange &rhs) const
+{
+    if (rhs.range.empty())
+        return false;
+    if (range.empty())
+        return true;
+    return range < rhs.range;
+}
+
 bool VersionRange::operator==(const VersionRange &rhs) const
 {
     return range == rhs.range;

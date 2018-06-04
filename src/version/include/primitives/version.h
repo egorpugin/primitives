@@ -218,6 +218,7 @@ struct PRIMITIVES_VERSION_API VersionRange
     optional<Version> getMaxSatisfyingVersion(const std::set<Version> &) const;
 
     // operators
+    bool operator<(const VersionRange &) const;
     bool operator==(const VersionRange &) const;
     bool operator!=(const VersionRange &) const;
 
