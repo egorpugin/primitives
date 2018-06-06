@@ -59,8 +59,9 @@ bool Version::parse(Version &v, const std::string &s)
         number = digit+ >SB %{ n = std::stoll(std::string{sb, p}); };
         number_version_part = number %ADD_PART;
         # to parse versions from git, we could try our best
-        basic_version = [=]? [v]? number_version_part ('.' number_version_part){,3};
-        #basic_version = number_version_part ('.' number_version_part){,3};
+        # this goes to coerce()
+        #basic_version = [=]? [v]? number_version_part ('.' number_version_part){,3};
+        basic_version = number_version_part ('.' number_version_part){,3};
         extra_part = alnum_+ >SB %ADD_EXTRA;
         extra = extra_part ('.' extra_part)*;
         version = basic_version ('-' extra)?;

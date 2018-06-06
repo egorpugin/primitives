@@ -1216,6 +1216,15 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange() < VersionRange("a"));
     CHECK(VersionRange() != VersionRange("a"));
     CHECK(VersionRange("a") < VersionRange("b || c d"));
+
+    // v1 ranges
+    {
+        Version v1(1);
+        Version v2(2);
+        v2--;
+        VersionRange r(v1, v2);
+        CHECK(r.toStringV1() == "1");
+    }
 }
 
 int main(int argc, char **argv)

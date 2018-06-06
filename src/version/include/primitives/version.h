@@ -166,6 +166,10 @@ public:
 
     static Number maxNumber();
 
+    // TODO:
+    /// extended version parsing, e.g. =v1.2
+    //static Version coerce();
+
 #ifndef BISON_PARSER
 private:
 #endif
@@ -198,7 +202,11 @@ struct PRIMITIVES_VERSION_API VersionRange
     /// parse from string
     VersionRange(const std::string &); // no explicit
 
+    /// convert to string
     std::string toString() const;
+
+    /// call to cppan1
+    std::string toStringV1() const;
 
     size_t getStdHash() const;
 

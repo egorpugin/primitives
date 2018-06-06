@@ -16,6 +16,11 @@ PostgresqlDatabase::PostgresqlDatabase(const String &cs)
 {
 }
 
+PostgresqlDatabase::PostgresqlDatabase(std::unique_ptr<pqxx::connection> conn)
+    : c(std::move(conn))
+{
+}
+
 PostgresqlDatabase::PostgresqlDatabase(PostgresqlDatabase &&rhs)
 {
     c = std::move(rhs.c);

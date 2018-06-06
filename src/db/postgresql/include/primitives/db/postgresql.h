@@ -16,6 +16,7 @@ namespace primitives::db::postgresql
 struct PRIMITIVES_DB_POSTGRESQL_API PostgresqlDatabase : primitives::db::LiteDatabase
 {
     PostgresqlDatabase(const String &cs);
+    PostgresqlDatabase(std::unique_ptr<pqxx::connection>);
     PostgresqlDatabase(PostgresqlDatabase &&);
     virtual ~PostgresqlDatabase();
 

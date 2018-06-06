@@ -41,6 +41,7 @@ struct HttpRequest : public HttpSettings
     String username;
     String password;
     int type = Get;
+    String content_type;
     String data;
     int timeout = -1;
     int connect_timeout = -1;

@@ -102,6 +102,7 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
     }
 
     auto res = curl_easy_perform(curl);
+
     long http_code = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
     curl_easy_cleanup(curl);
@@ -179,8 +180,19 @@ HttpResponse url_request(const HttpRequest &request)
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response.response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_string);
 
+    struct curl_slist *list = NULL;
+
+    auto ct = "Content-Type: " + request.content_type;
+    if (!request.content_type.empty())
+    {
+        list = curl_slist_append(list, ct.c_str());
+    }
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
+
     auto res = curl_easy_perform(curl);
+
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response.http_code);
+    curl_slist_free_all(list);
     curl_easy_cleanup(curl);
 
     if (res != CURLE_OK)
