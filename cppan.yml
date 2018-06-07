@@ -424,7 +424,7 @@ projects:
                     set(bison bison)
                 endif()
 
-                get_filename_component(d ${lexer} DIRECTORY)
+                get_filename_component(d ${parser} DIRECTORY)
                 execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
 
                 add_custom_command(OUTPUT
@@ -436,7 +436,7 @@ projects:
                 )
                 target_include_directories(${this} PRIVATE ${bdir}/${d})
 
-                get_filename_component(d ${parser} DIRECTORY)
+                get_filename_component(d ${lexer} DIRECTORY)
                 execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
 
                 add_custom_command(OUTPUT
