@@ -753,8 +753,16 @@ std::string VersionRange::toStringV1() const
     if (isBranch())
         return branch;
 
+    if (range[0].first == Version::min() && range[0].second == Version::max())
+        return "*";
+
     std::string s;
-    for (int i = 2; i >= 0; i--)
+    if (!(
+        ((range[0].first == Version::min() && range[0].first.numbers[2] == 1) ||
+        (range[0].first != Version::min() && range[0].first.numbers[2] == 0))
+        && range[0].second.numbers[2] == Version::maxNumber()))
+        s += std::to_string(range[0].first.numbers[2]) + ".";
+    for (int i = 1; i >= 0; i--)
     {
         if (!(range[0].first.numbers[i] == 0 && range[0].second.numbers[i] == Version::maxNumber()))
             s += std::to_string(range[0].first.numbers[i]) + ".";
