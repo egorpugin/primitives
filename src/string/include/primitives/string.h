@@ -39,9 +39,23 @@ String normalize_string_copy(String s);
 
 PRIMITIVES_STRING_API
 std::wstring normalize_string_copy(std::wstring s);
+
+PRIMITIVES_STRING_API
+void normalize_string_windows(String &s);
+
+PRIMITIVES_STRING_API
+void normalize_string_windows(std::wstring &s);
+
+PRIMITIVES_STRING_API
+String normalize_string_windows_copy(String s);
+
+PRIMITIVES_STRING_API
+std::wstring normalize_string_windows_copy(std::wstring s);
 #else
 #define normalize_string(s) (s)
 #define normalize_string_copy(s) (s)
+#define normalize_string_windows(s) (s)
+#define normalize_string_windows_copy(s) (s)
 #endif
 
 PRIMITIVES_STRING_API

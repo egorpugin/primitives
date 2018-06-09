@@ -100,7 +100,7 @@ String blake2b_512(const String &data)
 
 String sha256(const path &fn)
 {
-    return sha256(read_file(fn, true));
+    return sha256(read_file(fn));
 }
 
 String sha3_256(const String &data)
@@ -113,7 +113,7 @@ String sha3_256(const String &data)
 String sha3_256(const path &fn)
 {
     std::string o(32, 0);
-    auto data = read_file(fn, true);
+    auto data = read_file(fn);
     rhash_msg(RHASH_SHA3_256, &data[0], data.size(), (unsigned char *)&o[0]);
     return bytes_to_string(o);
 }
@@ -128,7 +128,7 @@ String md5(const String &data)
 
 String md5(const path &fn)
 {
-    return md5(read_file(fn, true));
+    return md5(read_file(fn));
 }
 
 std::tuple<HashType, HashType> load_strong_hash_prefix(const String &hash)

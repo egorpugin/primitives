@@ -51,6 +51,28 @@ std::wstring normalize_string_copy(std::wstring s)
     normalize_string(s);
     return s;
 }
+
+void normalize_string_windows(String &s)
+{
+    std::replace(s.begin(), s.end(), '/', '\\');
+}
+
+void normalize_string_windows(std::wstring &s)
+{
+    std::replace(s.begin(), s.end(), L'/', L'\\');
+}
+
+String normalize_string_windows_copy(String s)
+{
+    normalize_string_windows(s);
+    return s;
+}
+
+std::wstring normalize_string_windows_copy(std::wstring s)
+{
+    normalize_string_windows(s);
+    return s;
+}
 #endif
 
 String trim_double_quotes(String s)

@@ -73,6 +73,15 @@ String normalize_path(const path &p)
     return s;
 }
 
+String normalize_path_windows(const path &p)
+{
+    if (p.empty())
+        return "";
+    auto s = p.string();
+    normalize_string_windows(s);
+    return s;
+}
+
 std::wstring wnormalize_path(const path &p)
 {
     if (p.empty())
@@ -82,7 +91,16 @@ std::wstring wnormalize_path(const path &p)
     return s;
 }
 
-String read_file(const path &p, bool no_size_check)
+std::wstring wnormalize_path_windows(const path &p)
+{
+    if (p.empty())
+        return L"";
+    auto s = p.wstring();
+    normalize_string_windows(s);
+    return s;
+}
+
+String read_file(const path &p, uintmax_t max_size)
 {
     error_code ec;
     if (!fs::exists(p, ec))
@@ -90,9 +108,9 @@ String read_file(const path &p, bool no_size_check)
 
     ScopedFile ifile(p, "rb");
 
-    size_t sz = (size_t)fs::file_size(p);
-    if (!no_size_check && sz > 10'000'000)
-        throw std::runtime_error("File " + p.u8string() + " is very big (> ~10 MB)");
+    auto sz = fs::file_size(p);
+    if (sz > max_size)
+        throw std::runtime_error("File " + p.u8string() + " is bigger than allowed limit (" + std::to_string(max_size) + " bytes)");
 
     String f;
     f.resize(sz);
@@ -100,11 +118,13 @@ String read_file(const path &p, bool no_size_check)
     return f;
 }
 
-String read_file_without_bom(const path &p, bool no_size_check)
+String read_file_without_bom(const path &p, uintmax_t max_size)
 {
-    auto s = read_file(p, no_size_check);
+    // TODO: rework
+    // read first 5 bytes, choose bom, read rest
 
-    static const std::vector<std::vector<uint8_t>> boms{
+    static const std::vector<std::vector<uint8_t>> boms
+    {
         // UTF-8
         { 0xEF, 0xBB, 0xBF, },
 
@@ -138,6 +158,8 @@ String read_file_without_bom(const path &p, bool no_size_check)
         // GB-18030
         { 0x84, 0x31, 0x95, 0x33 },
     };
+
+    auto s = read_file(p, max_size);
 
     for (auto &b : boms)
     {
@@ -180,7 +202,7 @@ void write_file_if_different(const path &p, const String &s)
     error_code ec;
     if (fs::exists(p, ec))
     {
-        auto s2 = read_file(p, true);
+        auto s2 = read_file(p);
         if (s == s2)
             return;
     }

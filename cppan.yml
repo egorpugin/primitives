@@ -197,6 +197,8 @@ projects:
                     version: master
                 string:
                     version: "*"
+                templates:
+                    version: "*"
                 pvt.cppan.demo.boost.filesystem:
                     version: 1
                 pvt.cppan.demo.grisumbras.enum_flags:

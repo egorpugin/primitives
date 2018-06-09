@@ -103,7 +103,7 @@ StringDatabaseSchemaManager FileDatabaseSchemaManager::read(const path &dir) con
 
 String FileDatabaseSchemaManager::getLatestSchema() const
 {
-    return read_file(latestSchemaFilename, true);
+    return read_file(latestSchemaFilename);
 }
 
 path FileDatabaseSchemaManager::getDiffSqlFilename(size_t i) const
@@ -169,7 +169,7 @@ void createOrUpdateSchema(LiteDatabase &database, const path &latestSchemaFilena
 {
     StringDatabaseSchemaManager m;
     m.database = &database;
-    m.latestSchema = read_file(latestSchemaFilename, true);
+    m.latestSchema = read_file(latestSchemaFilename);
     if (split_schema_for_patches)
         return createOrUpdateSchema(database, m.latestSchema, split_schema_for_patches);
     m.createOrUpdate();

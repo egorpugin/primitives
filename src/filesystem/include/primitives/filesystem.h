@@ -7,6 +7,7 @@
 #pragma once
 
 #include <primitives/string.h>
+
 #include <flags/flags.hpp>
 
 #include <filesystem>
@@ -30,10 +31,10 @@ PRIMITIVES_FILESYSTEM_API
 path current_thread_path(const path &p = path());
 
 PRIMITIVES_FILESYSTEM_API
-String read_file(const path &p, bool no_size_check = false);
+String read_file(const path &p, uintmax_t max_size = UINTMAX_MAX);
 
 PRIMITIVES_FILESYSTEM_API
-String read_file_without_bom(const path &p, bool no_size_check = false);
+String read_file_without_bom(const path &p, uintmax_t max_size = UINTMAX_MAX);
 
 PRIMITIVES_FILESYSTEM_API
 void write_file(const path &p, const String &s);
@@ -60,7 +61,13 @@ PRIMITIVES_FILESYSTEM_API
 String normalize_path(const path &p);
 
 PRIMITIVES_FILESYSTEM_API
+String normalize_path_windows(const path &p);
+
+PRIMITIVES_FILESYSTEM_API
 std::wstring wnormalize_path(const path &p);
+
+PRIMITIVES_FILESYSTEM_API
+std::wstring wnormalize_path_windows(const path &p);
 
 PRIMITIVES_FILESYSTEM_API
 bool is_under_root(path p, const path &root_dir);
