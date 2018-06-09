@@ -118,6 +118,7 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
         c.out.file = dir / "1.txt";
         REQUIRE_NOTHROW(c.execute());
         CHECK(read_file(dir / "1.txt") == "hello world\r\n");
+        CHECK(read_file_without_bom(dir / "1.txt") == "hello world\r\n");
         CHECK(read_file_from_offset(dir / "1.txt", 1) == "ello world\r\n");
     }
 

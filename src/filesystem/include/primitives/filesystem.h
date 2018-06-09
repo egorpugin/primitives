@@ -34,6 +34,9 @@ PRIMITIVES_FILESYSTEM_API
 String read_file(const path &p, uintmax_t max_size = UINTMAX_MAX);
 
 PRIMITIVES_FILESYSTEM_API
+String read_file_bytes(const path &p, uintmax_t offset = 0, uintmax_t count = UINTMAX_MAX);
+
+PRIMITIVES_FILESYSTEM_API
 String read_file_from_offset(const path &p, uintmax_t offset, uintmax_t max_size = UINTMAX_MAX);
 
 PRIMITIVES_FILESYSTEM_API

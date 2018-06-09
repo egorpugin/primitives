@@ -100,23 +100,36 @@ std::wstring wnormalize_path_windows(const path &p)
     return s;
 }
 
+String read_file_bytes_unchecked(const path &p, uintmax_t offset, uintmax_t count)
+{
+    ScopedFile ifile(p, "rb");
+
+    String f;
+    f.resize(count);
+    ifile.seek(offset);
+    ifile.read(&f[0], count);
+    return f;
+}
+
+String read_file_bytes(const path &p, uintmax_t offset, uintmax_t count)
+{
+    error_code ec;
+    if (!fs::exists(p, ec))
+        throw std::runtime_error("File '" + p.string() + "' does not exist");
+    return read_file_bytes_unchecked(p, offset, count);
+}
+
 String read_file_from_offset(const path &p, uintmax_t offset, uintmax_t max_size)
 {
     error_code ec;
     if (!fs::exists(p, ec))
         throw std::runtime_error("File '" + p.string() + "' does not exist");
 
-    ScopedFile ifile(p, "rb");
-
     auto sz = fs::file_size(p) - offset;
     if (sz > max_size)
         throw std::runtime_error("File " + p.u8string() + " is bigger than allowed limit (" + std::to_string(max_size) + " bytes)");
 
-    String f;
-    f.resize(sz);
-    ifile.seek(offset);
-    ifile.read(&f[0], sz);
-    return f;
+    return read_file_bytes_unchecked(p, offset, sz);
 }
 
 String read_file(const path &p, uintmax_t max_size)
@@ -166,7 +179,7 @@ String read_file_without_bom(const path &p, uintmax_t max_size)
         [](const auto &e1, const auto &e2) { return e1.size() < e2.size(); })->size();
 
     // read max bom length
-    auto s = read_file(p, max_len);
+    auto s = read_file_bytes(p, 0, max_len);
 
     for (auto &b : boms)
     {
