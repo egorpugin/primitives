@@ -500,6 +500,7 @@ Future<void> whenAll(const Futures<F> &futures)
     return s->getFuture();
 }
 
+/// return a future with an index of the finished future
 template <class F>
 Future<size_t> whenAny(const Futures<F> &futures)
 {
@@ -678,6 +679,7 @@ Future<void> whenAll(Futures && ... futures)
     return s->getFuture();
 }
 
+/// return a future with an index of the finished future
 template <
     class ... Futures,
     typename = std::enable_if_t<
@@ -749,11 +751,7 @@ Future<size_t> whenAny(Futures && ... futures)
     i = 0;
     for_each(t, [&s, &i](auto &f)
     {
-        f.state->callbacks.push_back([s, i = i++]
-        {
-            if (s->setExecuted())
-            s->data = i;
-        });
+        f.state->callbacks.push_back([s, i = i++]{ if (s->setExecuted()) s->data = i; });
     });
 
     unlock();

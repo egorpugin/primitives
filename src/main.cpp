@@ -422,7 +422,7 @@ TEST_CASE("Checking executor", "[executor]")
         fs.push_back(e.push([] { std::this_thread::sleep_for(300ms); }));
         fs.push_back(e.push([] { std::this_thread::sleep_for(100ms); }));
         auto f = whenAny(fs);
-        CHECK(f.get() == 3);
+        CHECK(f.get() == 3); // future #3 must be first
     }
 
     {
