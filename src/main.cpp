@@ -118,6 +118,7 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
         c.out.file = dir / "1.txt";
         REQUIRE_NOTHROW(c.execute());
         CHECK(read_file(dir / "1.txt") == "hello world\r\n");
+        CHECK(read_file_from_offset(dir / "1.txt", 1) == "ello world\r\n");
     }
 
     {
@@ -550,8 +551,6 @@ TEST_CASE("Checking executor: test fast wait", "[executor]")
 int main(int argc, char **argv)
 try
 {
-    setup_utf8_filesystem();
-
     Catch::Session().run(argc, argv);
 
     return 0;

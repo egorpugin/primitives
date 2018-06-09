@@ -108,7 +108,7 @@ String read_file_from_offset(const path &p, uintmax_t offset, uintmax_t max_size
 
     ScopedFile ifile(p, "rb");
 
-    auto sz = fs::file_size(p);
+    auto sz = fs::file_size(p) - offset;
     if (sz > max_size)
         throw std::runtime_error("File " + p.u8string() + " is bigger than allowed limit (" + std::to_string(max_size) + " bytes)");
 
