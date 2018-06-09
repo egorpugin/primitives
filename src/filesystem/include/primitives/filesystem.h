@@ -34,6 +34,9 @@ PRIMITIVES_FILESYSTEM_API
 String read_file(const path &p, uintmax_t max_size = UINTMAX_MAX);
 
 PRIMITIVES_FILESYSTEM_API
+String read_file_from_offset(const path &p, uintmax_t offset, uintmax_t max_size = UINTMAX_MAX);
+
+PRIMITIVES_FILESYSTEM_API
 String read_file_without_bom(const path &p, uintmax_t max_size = UINTMAX_MAX);
 
 PRIMITIVES_FILESYSTEM_API
@@ -213,6 +216,7 @@ public:
     operator bool() const { return f; }
 
     size_t read(void *buf, size_t sz);
+    void seek(uintmax_t offset);
 
 private:
     FILE *f = nullptr;

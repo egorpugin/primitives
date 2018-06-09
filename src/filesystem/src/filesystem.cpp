@@ -100,7 +100,7 @@ std::wstring wnormalize_path_windows(const path &p)
     return s;
 }
 
-String read_file(const path &p, uintmax_t max_size)
+String read_file_from_offset(const path &p, uintmax_t offset, uintmax_t max_size)
 {
     error_code ec;
     if (!fs::exists(p, ec))
@@ -114,15 +114,18 @@ String read_file(const path &p, uintmax_t max_size)
 
     String f;
     f.resize(sz);
+    ifile.seek(offset);
     ifile.read(&f[0], sz);
     return f;
 }
 
+String read_file(const path &p, uintmax_t max_size)
+{
+    return read_file_from_offset(p, 0, max_size);
+}
+
 String read_file_without_bom(const path &p, uintmax_t max_size)
 {
-    // TODO: rework
-    // read first 5 bytes, choose bom, read rest
-
     static const std::vector<std::vector<uint8_t>> boms
     {
         // UTF-8
@@ -159,18 +162,19 @@ String read_file_without_bom(const path &p, uintmax_t max_size)
         { 0x84, 0x31, 0x95, 0x33 },
     };
 
-    auto s = read_file(p, max_size);
+    static const auto max_len = std::max_element(boms.begin(), boms.end(),
+        [](const auto &e1, const auto &e2) { return e1.size() < e2.size(); })->size();
+
+    // read max bom length
+    auto s = read_file(p, max_len);
 
     for (auto &b : boms)
     {
         if (s.size() >= b.size() && memcmp(s.data(), b.data(), b.size()) == 0)
-        {
-            s = s.substr(b.size());
-            break;
-        }
+            return read_file_from_offset(p, b.size(), max_size);
     }
 
-    return s;
+    return read_file(p, max_size);
 }
 
 Strings read_lines(const path &p)
@@ -482,4 +486,10 @@ ScopedFile::~ScopedFile()
 size_t ScopedFile::read(void *buf, size_t sz)
 {
     return fread(buf, 1, sz, f);
+}
+
+void ScopedFile::seek(uintmax_t offset)
+{
+    fpos_t pos = offset;
+    fsetpos(f, &pos);
 }
