@@ -503,6 +503,5 @@ size_t ScopedFile::read(void *buf, size_t sz)
 
 void ScopedFile::seek(uintmax_t offset)
 {
-    fpos_t pos = offset;
-    fsetpos(f, &pos);
+    fseek(f, offset, SEEK_SET);
 }
