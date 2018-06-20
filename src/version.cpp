@@ -555,6 +555,7 @@ TEST_CASE("Checking versions", "[version]")
     CHECK(Version(0, 0, 0, "1.1") == Version(0, 0, 0, "1.1"));
     CHECK(Version(0, 0, 0, "1.1.a") < Version(0, 0, 0, "1.1.z"));
 
+    // format
     CHECK(Version(0).format("{ML}") == "A");
     CHECK(Version(1).format("{ML}") == "B");
     CHECK(Version(2).format("{ML}") == "C");
@@ -619,6 +620,50 @@ TEST_CASE("Checking versions", "[version]")
         Version v(234236523);
         v.format(s);
         CHECK(s == "sroasb");
+    }
+
+    {
+        CHECK(Version().format("{v}") == "0.0.1");
+        CHECK(Version().format("{b}") == "");
+        CHECK(Version().format("{e}") == "");
+        CHECK(Version("1-e").format("{e}") == "e");
+        CHECK(Version("1-e.2.3.4").format("{e}") == "e.2.3.4");
+        CHECK(Version(1, "e.2.3.4").format("{e}") == "e.2.3.4");
+        CHECK(Version("branch").format("{v}") == "branch");
+        CHECK(Version("branch").format("{b}") == "branch");
+
+        CHECK(Version().format("{M}") == "0");
+        CHECK(Version().format("{m}") == "0");
+        CHECK(Version().format("{p}") == "1");
+        CHECK(Version().format("{t}") == "0");
+        //CHECK(Version().format("{5}") == "0");
+        CHECK(Version().format("{M}{m}{p}") == "001");
+        CHECK(Version().format("{M}{m}{po}") == "00.1");
+        CHECK(Version(1).format("{M}{mo}{po}") == "1");
+        CHECK(Version(1,2).format("{M}{mo}{po}") == "1.2");
+        CHECK(Version(1,2,3).format("{M}{mo}{po}") == "1.2.3");
+
+        CHECK(Version().format("{ML}") == "A");
+        CHECK(Version().format("{mL}") == "A");
+        CHECK(Version().format("{pL}") == "B");
+        CHECK(Version().format("{tL}") == "A");
+        //CHECK(Version().format("{5L}") == "A");
+        CHECK(Version().format("{ML}{mL}{pL}") == "AAB");
+        CHECK(Version().format("{ML}{mL}{pLo}") == "AA.B");
+        CHECK(Version(1).format("{ML}{mLo}{pLo}") == "B");
+        CHECK(Version(1, 2).format("{ML}{mLo}{pLo}") == "B.C");
+        CHECK(Version(1, 2, 3).format("{ML}{mLo}{pLo}") == "B.C.D");
+
+        CHECK(Version().format("{Ml}") == "a");
+        CHECK(Version().format("{ml}") == "a");
+        CHECK(Version().format("{pl}") == "b");
+        CHECK(Version().format("{tl}") == "a");
+        //CHECK(Version().format("{5l}") == "a");
+        CHECK(Version().format("{Ml}{ml}{pl}") == "aab");
+        CHECK(Version().format("{Ml}{ml}{plo}") == "aa.b");
+        CHECK(Version(1).format("{Ml}{mlo}{plo}") == "b");
+        CHECK(Version(1, 2).format("{Ml}{mlo}{plo}") == "b.c");
+        CHECK(Version(1, 2, 3).format("{Ml}{mlo}{plo}") == "b.c.d");
     }
 
     // cmp

@@ -511,6 +511,8 @@ std::string Version::format(const std::string &s) const
 
 void Version::format(std::string &s) const
 {
+    // TODO: optimize
+
     auto create_latin_replacements = [](Number n, char base = 'a')
     {
         Number a = 26;
@@ -541,30 +543,139 @@ void Version::format(std::string &s) const
         return create_latin_replacements(n, 'A');
     };
 
+    auto get_optional_number = [this](Level level) -> std::optional<Number>
+    {
+        if (level > numbers.size())
+            return {};
+
+        level--;
+
+        bool has_number = false;
+        auto sz = numbers.size();
+        for (auto i = sz - 1; i >= level; i--)
+        {
+            if (numbers[i] == 0)
+                continue;
+            has_number = true;
+            break;
+        }
+        if (has_number)
+        {
+            return numbers[level];
+        }
+        return {};
+    };
+
+    auto get_optional = [this](const auto &n)
+    {
+        if (n)
+            return "." + std::to_string(n.value());
+        return ""s;
+    };
+
+#define VAR(v, l, f) auto v ## l = f(v)
+#define VAR_SMALL(v) VAR(v, l, create_latin_replacements)
+#define VAR_CAP(v) VAR(v, L, create_latin_replacements_capital)
+
+#define VAR_OPT(v, l, f) auto v ## l = v ## on ? ("." + f(v)) : "";
+#define VAR_SMALL_OPT(v) VAR_OPT(v, l ## o, create_latin_replacements)
+#define VAR_CAP_OPT(v) VAR_OPT(v, L ## o, create_latin_replacements_capital)
+
+#define ARG(x) fmt::arg(#x, x)
+#define ARG_OPT(x) ARG(x ## o)
+
+    auto M = getMajor();
+    auto m = getMinor();
+    auto p = getPatch();
+    auto t = getTweak();
+
+    auto mon = get_optional_number(2);
+    auto pon = get_optional_number(3);
+    auto ton = get_optional_number(4);
+
+    auto mo = get_optional(mon);
+    auto po = get_optional(pon);
+    auto to = get_optional(ton);
+
+    VAR_CAP(M);
+    VAR_CAP(m);
+    VAR_CAP(p);
+    VAR_CAP(t);
+
+    VAR_SMALL(M);
+    VAR_SMALL(m);
+    VAR_SMALL(p);
+    VAR_SMALL(t);
+
+    // optional
+    VAR_CAP_OPT(m);
+    VAR_CAP_OPT(p);
+    VAR_CAP_OPT(t);
+
+    VAR_SMALL_OPT(m);
+    VAR_SMALL_OPT(p);
+    VAR_SMALL_OPT(t);
+
     s = fmt::format(s,
-        fmt::arg("M", getMajor()),
-        fmt::arg("m", getMinor()),
-        fmt::arg("p", getPatch()),
-        fmt::arg("t", getTweak()),
-        fmt::arg("5", get(4)),
+        ARG(M),
+        ARG(m),
+        ARG(p),
+        ARG(t),
+
         // letter variants
         // captical
-        fmt::arg("ML", create_latin_replacements_capital(getMajor())),
-        fmt::arg("mL", create_latin_replacements_capital(getMinor())),
-        fmt::arg("pL", create_latin_replacements_capital(getPatch())),
-        fmt::arg("tL", create_latin_replacements_capital(getTweak())),
-        fmt::arg("5L", create_latin_replacements_capital(get(4))),
+        ARG(ML),
+        ARG(mL),
+        ARG(pL),
+        ARG(tL),
+
         // small
-        fmt::arg("Ml", create_latin_replacements(getMajor())),
-        fmt::arg("ml", create_latin_replacements(getMinor())),
-        fmt::arg("pl", create_latin_replacements(getPatch())),
-        fmt::arg("tl", create_latin_replacements(getTweak())),
-        fmt::arg("5l", create_latin_replacements(get(4))),
+        ARG(Ml),
+        ARG(ml),
+        ARG(pl),
+        ARG(tl),
+
+        // optionals
+        // no major!
+        ARG(mo),
+        ARG(po),
+        ARG(to),
+
+        // letter variants
+        // captical
+        ARG(mLo),
+        ARG(pLo),
+        ARG(tLo),
+
+        // small
+        ARG(mlo),
+        ARG(plo),
+        ARG(tlo),
+
         //
         fmt::arg("e", printExtra()),
         fmt::arg("b", branch),
-        fmt::arg("v", toString())
+        fmt::arg("v", toString())//,
+
+        // extended
+        /*fmt::arg("5", get(4)),
+        fmt::arg("5L", create_latin_replacements_capital(get(4))),
+        fmt::arg("5l", create_latin_replacements(get(4))),
+        fmt::arg("5o", "." + std::to_string(get(4))),
+        fmt::arg("5Lo", "." + create_latin_replacements_capital(get(4))),
+        fmt::arg("5lo", "." + create_latin_replacements(get(4)))*/
     );
+
+#undef ARG
+#undef ARG_OPT
+
+#undef VAR
+#undef VAR_SMALL
+#undef VAR_CAP
+
+#undef VAR_OPT
+#undef VAR_SMALL_OPT
+#undef VAR_CAP_OPT
 }
 
 bool VersionRange::RangePair::hasVersion(const Version &v) const

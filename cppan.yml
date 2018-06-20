@@ -37,6 +37,11 @@ common_settings:
                         - /wd4251 # needs to have dll-interface to be used by clients of
                         #- /wd4275 # non dll-interface used as base for dll-interface
                         - /permissive-
+                clang:
+                    private:
+                        -   -Wno-assume
+                        -   -Wno-delete-non-virtual-dtor
+                        -   -Wno-potentially-evaluated-expression
 projects:
     command:
         name: command
@@ -48,12 +53,6 @@ projects:
                     win32:
                         public:
                             -   _WIN32_WINNT=0x0601
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
         dependencies:
             public:
                 filesystem:
@@ -70,14 +69,6 @@ projects:
         type: library
 
         root_directory: src/context
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
     cron:
         name: cron
         type: library
@@ -126,14 +117,6 @@ projects:
         type: library
 
         root_directory: src/date_time
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
         dependencies:
             public:
                 pvt.cppan.demo.boost.date_time:
@@ -158,12 +141,6 @@ projects:
                     win32:
                         private:
                             -   _WIN32_WINNT=0x0601
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
         dependencies:
             public:
                 pvt.cppan.demo.boost.asio:
@@ -181,12 +158,6 @@ projects:
         root_directory: src/filesystem
         options:
             any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
                 link_libraries:
                     unix:
                         public:
@@ -208,14 +179,6 @@ projects:
         type: library
 
         root_directory: src/hash
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
         dependencies:
             public:
                 filesystem:
@@ -231,12 +194,6 @@ projects:
         root_directory: src/http
         options:
             any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
                 link_libraries:
                     win32:
                         public:
@@ -253,14 +210,6 @@ projects:
         name: lock
         type: library
         root_directory: src/lock
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
         dependencies:
             public:
                 filesystem:
@@ -271,14 +220,6 @@ projects:
         name: log
         type: library
         root_directory: src/log
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
         dependencies:
             public:
                 pvt.cppan.demo.boost.log:
@@ -290,12 +231,6 @@ projects:
         root_directory: src/minidump
         options:
             any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
                 link_libraries:
                     win32:
                         public:
@@ -304,14 +239,6 @@ projects:
         name: pack
         type: library
         root_directory: src/pack
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
         dependencies:
             public:
                 filesystem:
@@ -324,26 +251,10 @@ projects:
         #name: sqlite_db
         #type: library
         #root_directory: src/sqlite_db
-        #options:
-            #any:
-                #compile_options:
-                    #clang:
-                        #private:
-                            #-   -Wno-assume
-                            #-   -Wno-delete-non-virtual-dtor
-                            #-   -Wno-potentially-evaluated-expression
     string:
         name: string
         type: library
         root_directory: src/string
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
         dependencies:
             public:
                 pvt.cppan.demo.boost.algorithm:
@@ -352,14 +263,6 @@ projects:
         name: templates
         type: library
         root_directory: src/templates
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
 
     version:
         name: version
@@ -371,12 +274,6 @@ projects:
                 definitions:
                     private:
                         - BISON_PARSER
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
 
         dependencies:
             public:
@@ -484,14 +381,6 @@ projects:
         name: yaml
         type: library
         root_directory: src/yaml
-        options:
-            any:
-                compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
         dependencies:
             public:
                 pvt.cppan.demo.jbeder.yaml_cpp:
@@ -506,11 +395,6 @@ projects:
         options:
             any:
                 compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
                     msvc:
                         public:
                             - /bigobj
@@ -535,11 +419,6 @@ projects:
         options:
             any:
                 compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
                     msvc:
                         public:
                             - /bigobj
@@ -571,11 +450,6 @@ projects:
         options:
             any:
                 compile_options:
-                    clang:
-                        private:
-                            -   -Wno-assume
-                            -   -Wno-delete-non-virtual-dtor
-                            -   -Wno-potentially-evaluated-expression
                     msvc:
                         public:
                             - /bigobj
