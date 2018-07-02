@@ -53,7 +53,7 @@ bool pack_files(const path &fn, const std::unordered_map<path, path> &files)
     auto a = archive_write_new();
     archive_write_add_filter_gzip(a);
     archive_write_set_format_pax_restricted(a);
-    archive_write_open_filename(a, fn.string().c_str());
+    archive_write_open_filename(a, fn.u8string().c_str());
     for (auto &[f, n] : files)
     {
         if (!fs::exists(f))
@@ -68,12 +68,12 @@ bool pack_files(const path &fn, const std::unordered_map<path, path> &files)
 
         auto sz = fs::file_size(f);
         auto e = archive_entry_new();
-        archive_entry_set_pathname(e, n.string().c_str());
+        archive_entry_set_pathname(e, n.u8string().c_str());
         archive_entry_set_size(e, sz);
         archive_entry_set_filetype(e, AE_IFREG);
         archive_entry_set_perm(e, 0644);
         archive_write_header(a, e);
-        auto fp = primitives::filesystem::fopen(f.string().c_str(), "rb");
+        auto fp = primitives::filesystem::fopen(f, "rb");
         if (!fp)
         {
             archive_entry_free(e);
@@ -112,7 +112,7 @@ Files unpack_file(const path &fn, const path &dst)
 
     archive_read_support_filter_all(a);
     archive_read_support_format_all(a);
-    auto r = archive_read_open_filename(a, fn.string().c_str(), BLOCK_SIZE);
+    auto r = archive_read_open_filename(a, fn.u8string().c_str(), BLOCK_SIZE);
     if (r != ARCHIVE_OK)
         throw std::runtime_error(archive_error_string(a));
     archive_entry *entry;
@@ -143,13 +143,13 @@ Files unpack_file(const path &fn, const path &dst)
             }
 #elif defined(__APPLE__)
 #else
-            if (fn.string().size() >= PATH_MAX)
+            if (fn.u8string().size() >= PATH_MAX)
             {
                 fclose(o);
                 continue;
             }
 #endif
-            throw std::runtime_error("Cannot open file: " + f.string() + ", errno = " + std::to_string(errno));
+            throw std::runtime_error("Cannot open file: " + f.u8string() + ", errno = " + std::to_string(errno));
         }
         while (1)
         {

@@ -31,9 +31,38 @@
 #define MY_PARSER_CAST ((MY_PARSER &)yyparser)
 #define MY_PARSER_CAST_BB (((MY_PARSER &)yyparser).bb)
 
+#define MY_STORAGE primitives::bison::any_storage
+
+// yy macros
+#define GET_STORAGE(v) ((MY_STORAGE *)&v)
+
+#define CHECK_TYPE(type, bison_var)                             \
+    if (!GET_STORAGE(bison_var)->hasType<type>(MY_PARSER_CAST_BB)) \
+    YYABORT
+
+#define EXTRACT_VALUE_UNCHECKED(type, bison_var) \
+    GET_STORAGE(bison_var)->getValue<type>()
+
+#define EXTRACT_VALUE(type, var, bison_var) \
+    CHECK_TYPE(type, bison_var);            \
+    type var = EXTRACT_VALUE_UNCHECKED(type, bison_var)
+
+#define SET_VALUE(bison_var, v) GET_STORAGE(bison_var)->setValue(MY_PARSER_CAST_BB, v)
+
+#define SET_PARSER_RESULT(v) MY_PARSER_CAST_BB.setResult(*v)
+
+// lexer
+#define LEXER_FUNCTION std::tuple<int, std::any> LEXER_NAME(lex)(void *yyscanner, THIS_PARSER::parser::location_type &loc)
+#define YY_DECL LEXER_FUNCTION
+#define MAKE(x) {THIS_PARSER::parser::token::x, {}}
+#define MAKE_VALUE(x, v) {THIS_PARSER::parser::token::x, v}
+
+namespace primitives::bison
+{
+
 struct basic_block;
 
-struct bison_any_storage
+struct any_storage
 {
     std::any *v;
 
@@ -65,32 +94,6 @@ struct bison_any_storage
         return std::any_cast<U>(*v);
     }
 };
-
-#define MY_STORAGE bison_any_storage
-
-// yy macros
-#define GET_STORAGE(v) ((MY_STORAGE *)&v)
-
-#define CHECK_TYPE(type, bison_var)                             \
-    if (!GET_STORAGE(bison_var)->hasType<type>(MY_PARSER_CAST_BB)) \
-    YYABORT
-
-#define EXTRACT_VALUE_UNCHECKED(type, bison_var) \
-    GET_STORAGE(bison_var)->getValue<type>()
-
-#define EXTRACT_VALUE(type, var, bison_var) \
-    CHECK_TYPE(type, bison_var);            \
-    type var = EXTRACT_VALUE_UNCHECKED(type, bison_var)
-
-#define SET_VALUE(bison_var, v) GET_STORAGE(bison_var)->setValue(MY_PARSER_CAST_BB, v)
-
-#define SET_PARSER_RESULT(v) MY_PARSER_CAST_BB.setResult(*v)
-
-// lexer
-#define LEXER_FUNCTION std::tuple<int, std::any> LEXER_NAME(lex)(void *yyscanner, THIS_PARSER::parser::location_type &loc)
-#define YY_DECL LEXER_FUNCTION
-#define MAKE(x) {THIS_PARSER::parser::token::x, {}}
-#define MAKE_VALUE(x, v) {THIS_PARSER::parser::token::x, v}
 
 struct basic_block
 {
@@ -124,7 +127,7 @@ struct basic_block
 };
 
 template <class BaseParser>
-struct some_parser : BaseParser
+struct base_parser : BaseParser
 {
     basic_block bb;
 
@@ -137,6 +140,8 @@ struct some_parser : BaseParser
             throw std::runtime_error("Error during parse: " + ss.str());
     }
 };
+
+}
 
 // for parse()
 // set_debug_level(bb.debug);
@@ -152,7 +157,7 @@ struct some_parser : BaseParser
     {                                                                                        \
     }                                                                                        \
                                                                                              \
-    struct MY_PARSER : some_parser<THIS_PARSER::parser>                                      \
+    struct MY_PARSER : primitives::bison::base_parser<THIS_PARSER::parser>                   \
     {                                                                                        \
         using base = THIS_PARSER::parser;                                                    \
                                                                                              \
@@ -168,8 +173,8 @@ struct some_parser : BaseParser
         {                                                                                    \
             struct raii                                                                      \
             {                                                                                \
-                basic_block &bb;                                                             \
-                raii(basic_block &bb) : bb(bb)                                               \
+                primitives::bison::basic_block &bb;                                          \
+                raii(primitives::bison::basic_block &bb) : bb(bb)                            \
                 {                                                                            \
                     LEXER_NAME(lex_init)                                                     \
                     (&bb.scanner);                                                           \
@@ -181,7 +186,7 @@ struct some_parser : BaseParser
                 }                                                                            \
             };                                                                               \
                                                                                              \
-            bb = basic_block{};                                                              \
+            bb = primitives::bison::basic_block{};                                           \
             raii holder(bb);                                                                 \
             LEXER_NAME(_scan_string)                                                         \
             (s.c_str(), bb.scanner);                                                         \

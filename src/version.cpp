@@ -1275,7 +1275,8 @@ TEST_CASE("Checking version ranges", "[range]")
 int main(int argc, char **argv)
 try
 {
-    Catch::Session().run(argc, argv);
+    Catch::Session s;
+    s.run(argc, argv);
 
     return 0;
 }
