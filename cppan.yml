@@ -247,10 +247,7 @@ projects:
                     version: 3
                 templates:
                     version: "*"
-    #sqlite_db:
-        #name: sqlite_db
-        #type: library
-        #root_directory: src/sqlite_db
+
     string:
         name: string
         type: library
