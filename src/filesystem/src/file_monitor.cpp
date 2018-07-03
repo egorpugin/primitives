@@ -56,7 +56,8 @@ FileMonitor::record::record(FileMonitor *mon, const path &dir, Callback callback
 
 FileMonitor::record::~record()
 {
-    uv_close((uv_handle_t*)&e, 0);
+    if (uv_is_active((uv_handle_t*)&e))
+        uv_close((uv_handle_t*)&e, 0);
 }
 
 void FileMonitor::record::stop()
