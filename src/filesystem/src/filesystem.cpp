@@ -473,7 +473,7 @@ void create(const path &p)
     }
 #endif
     fs::create_directories(s);*/
-    fs::create_directories(p);
+    fs::create_directories(p.parent_path());
     fclose(fopen(p, "wb"));
 }
 
