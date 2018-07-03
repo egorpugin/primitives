@@ -25,7 +25,7 @@
 #define yy_rangelex(val,loc) MY_PARSER_CAST.lex(val,loc)
 
 // 3, 4
-#include <bison_parser_helpers.h>
+#include <primitives/helper/bison.h>
 #include <range.yy.hpp>
 
 // 5

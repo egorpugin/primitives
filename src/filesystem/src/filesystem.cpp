@@ -55,7 +55,7 @@ void remove_file(const path &p)
     error_code ec;
     fs::remove(p, ec);
     if (ec)
-        std::cerr << "Cannot remove file: " << p.string() << "\n";
+        std::cerr << "Cannot remove file: " << p.u8string() << "\n";
 }
 
 void remove_all_from_dir(const path &dir)
@@ -68,7 +68,7 @@ String normalize_path(const path &p)
 {
     if (p.empty())
         return "";
-    auto s = p.string();
+    auto s = p.u8string();
     normalize_string(s);
     return s;
 }
@@ -77,7 +77,7 @@ String normalize_path_windows(const path &p)
 {
     if (p.empty())
         return "";
-    auto s = p.string();
+    auto s = p.u8string();
     normalize_string_windows(s);
     return s;
 }
@@ -115,7 +115,7 @@ String read_file_bytes(const path &p, uintmax_t offset, uintmax_t count)
 {
     error_code ec;
     if (!fs::exists(p, ec))
-        throw std::runtime_error("File '" + p.string() + "' does not exist");
+        throw std::runtime_error("File '" + p.u8string() + "' does not exist");
     return read_file_bytes_unchecked(p, offset, count);
 }
 
@@ -123,7 +123,7 @@ String read_file_from_offset(const path &p, uintmax_t offset, uintmax_t max_size
 {
     error_code ec;
     if (!fs::exists(p, ec))
-        throw std::runtime_error("File '" + p.string() + "' does not exist");
+        throw std::runtime_error("File '" + p.u8string() + "' does not exist");
 
     auto sz = fs::file_size(p) - offset;
     if (sz > max_size)
@@ -204,7 +204,7 @@ static void write_file1(const path &p, const String &s, const char *mode)
 
     auto f = primitives::filesystem::fopen(p, mode);
     if (!f)
-        throw std::runtime_error("Cannot open file '" + p.string() + "' for writing");
+        throw std::runtime_error("Cannot open file '" + p.u8string() + "' for writing");
     fwrite(s.c_str(), s.size(), 1, f);
     fclose(f);
 }
@@ -309,7 +309,7 @@ Files filter_files_like(const Files &files, const String &regex)
     std::regex r(regex);
     for (auto &f : files)
     {
-        if (!std::regex_match(f.filename().string(), r))
+        if (!std::regex_match(f.filename().u8string(), r))
             continue;
         fls.insert(f);
     }
@@ -463,13 +463,14 @@ FILE *fopen(const path &p, const char *mode)
     }
     return _wfopen(s.c_str(), path(mode).wstring().c_str());
 #else
-    return ::fopen(p.string().c_str(), mode);
+    return ::fopen(p.u8string().c_str(), mode);
 #endif
 }
 
 void create(const path &p)
 {
-    auto s = p.parent_path().string();
+    // probably this is fixed in MS STL
+    /*auto s = p.parent_path().u8string();
 #ifdef _WIN32
     if (s.size() >= 255)
     {
@@ -477,7 +478,8 @@ void create(const path &p)
         boost::replace_all(s, "/", "\\");
     }
 #endif
-    fs::create_directories(s);
+    fs::create_directories(s);*/
+    fs::create_directories(p);
     fclose(fopen(p, "wb"));
 }
 
@@ -487,7 +489,7 @@ ScopedFile::ScopedFile(const path &p, const char *mode)
 {
     f = primitives::filesystem::fopen(p, mode);
     if (!f)
-        throw std::runtime_error("Cannot open file: " + p.string() + ", errno = " + std::to_string(errno));
+        throw std::runtime_error("Cannot open file: " + p.u8string() + ", errno = " + std::to_string(errno));
 }
 
 ScopedFile::~ScopedFile()

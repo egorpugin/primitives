@@ -867,21 +867,23 @@ std::string VersionRange::toStringV1() const
     if (range[0].first == Version::min() && range[0].second == Version::max())
         return "*";
 
-    std::string s;
+    GenericNumericVersion::Numbers n;
     if (!(
         ((range[0].first == Version::min() && range[0].first.numbers[2] == 1) ||
         (range[0].first != Version::min() && range[0].first.numbers[2] == 0))
         && range[0].second.numbers[2] == Version::maxNumber()))
-        s += std::to_string(range[0].first.numbers[2]) + ".";
+    {
+        n.push_back(range[0].first.numbers[2]);
+    }
     for (int i = 1; i >= 0; i--)
     {
         if (!(range[0].first.numbers[i] == 0 && range[0].second.numbers[i] == Version::maxNumber()))
-            s += std::to_string(range[0].first.numbers[i]) + ".";
+            n.push_back(range[0].first.numbers[i]);
     }
-    if (!s.empty())
-        s.resize(s.size() - 1);
-    std::reverse(s.begin(), s.end());
-    return s;
+    std::reverse(n.begin(), n.end());
+    Version v;
+    v.numbers = n;
+    return v.toString();
 }
 
 size_t VersionRange::getStdHash() const

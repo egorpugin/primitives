@@ -1270,6 +1270,11 @@ TEST_CASE("Checking version ranges", "[range]")
         VersionRange r(v1, v2);
         CHECK(r.toStringV1() == "1");
     }
+
+    {
+        VersionRange v1(Version(1,67,0));
+        CHECK(v1.toStringV1() == "1.67.0");
+    }
 }
 
 int main(int argc, char **argv)
