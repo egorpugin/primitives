@@ -49,7 +49,9 @@ FileMonitor::record::record(FileMonitor *mon, const path &dir, Callback callback
     e.data = this;
     if (uv_fs_event_start(&e, cb, dir_holder.c_str(), 0))
     {
-        uv_close((uv_handle_t*)&e, 0);
+        // maybe unconditionally?
+        if (uv_is_active((uv_handle_t*)&e))
+            uv_close((uv_handle_t*)&e, 0);
         return;
     }
 }
