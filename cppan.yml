@@ -164,10 +164,10 @@ projects:
                             - stdc++fs
         dependencies:
             public:
-                pvt.cppan.demo.artyom_beilis.nowide:
-                    version: master
                 string:
                     version: "*"
+                pvt.cppan.demo.boost.thread:
+                    version: 1
                 pvt.cppan.demo.boost.filesystem:
                     version: 1
                 pvt.cppan.demo.grisumbras.enum_flags:

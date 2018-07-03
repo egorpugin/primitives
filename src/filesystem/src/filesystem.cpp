@@ -9,7 +9,6 @@
 #include <primitives/file_iterator.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/nowide/integration/filesystem.hpp>
 #include <boost/filesystem.hpp>
 
 #include <iostream>
@@ -437,11 +436,6 @@ bool FileIterator::iterate(std::function<bool(const BuffersRef &, uint64_t)> f)
             return false;
     }
     return true;
-}
-
-void setup_utf8_filesystem()
-{
-    boost::nowide::nowide_filesystem();
 }
 
 path unique_path(const path &p)

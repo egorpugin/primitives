@@ -109,9 +109,6 @@ PRIMITIVES_FILESYSTEM_API
 bool compare_dirs(const path &dir1, const path &dir2);
 
 PRIMITIVES_FILESYSTEM_API
-void setup_utf8_filesystem();
-
-PRIMITIVES_FILESYSTEM_API
 path unique_path(const path &p = "%%%%-%%%%-%%%%-%%%%");
 
 namespace std
