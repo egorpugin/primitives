@@ -107,6 +107,9 @@
 #include <any>
 #include <list>
 
+// parser
+#define yylex(val, loc) MY_PARSER_CAST.lex(val, loc)
+
 #define MY_PARSER_CAST ((MY_PARSER &)yyparser)
 #define MY_PARSER_CAST_BB (((MY_PARSER &)yyparser).bb)
 
@@ -115,7 +118,7 @@
 // yy macros
 #define GET_STORAGE(v) ((MY_STORAGE *)&v)
 
-#define CHECK_TYPE(type, bison_var)                             \
+#define CHECK_TYPE(type, bison_var)                                \
     if (!GET_STORAGE(bison_var)->hasType<type>(MY_PARSER_CAST_BB)) \
     YYABORT
 

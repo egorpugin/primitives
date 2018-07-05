@@ -7,29 +7,23 @@
 #pragma once
 
 // How to define your own parser?
-// 1. Write it names - setup parser
-// 2. Write lex macro.
-// 3. Choose parser type.
-// 4. Include parser helpers          - #include <primitives/helper/bison.h>
-// 5. Include parser generated header - #include <THIS_PARSER_NAME.yy.hpp>
-// 6. Declare parser.
+// 1. Set parser name.
+// 2. Choose parser type.
+// 3. Include parser helpers          - #include <primitives/helper/bison.h>
+// 4. Include parser generated header - #include <THIS_PARSER_NAME.yy.hpp>
+// 5. Declare parser.
 
 // 1
-// setup parser
-#define THIS_PARSER_NAME settings
+#define THIS_PARSER_NAME    settings
 #define THIS_PARSER_NAME_UP SETTINGS
-#define MY_PARSER SettingsParser
+#define MY_PARSER           SettingsParser
 
 // 2
-//      vvvvvvvv change here
-#define yy_settingslex(val,loc) MY_PARSER_CAST.lex(val,loc)
-
-// 3
 #define LALR1_CPP_VARIANT_PARSER
 
-// 4, 5
+// 3, 4
 #include <primitives/helper/bison.h>
 #include <settings.yy.hpp>
 
-// 6
+// 5
 DECLARE_PARSER;
