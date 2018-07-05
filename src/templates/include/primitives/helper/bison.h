@@ -297,7 +297,6 @@ struct base_parser : BaseParser
 %glr-parser
 %skeleton "glr.cc" // C++ skeleton
 %define api.value.type {MY_STORAGE}
-%define api.prefix {yy_range}
 
 */
 
@@ -305,7 +304,6 @@ struct base_parser : BaseParser
 // LALR(1) parser in C++ with bison variants
 
 %skeleton "lalr1.cc" // C++ skeleton
-%define api.prefix {yy_settings}
 %define api.value.type variant
 %define api.token.constructor // C++ style of handling variants
 %define parse.assert // check C++ variant types

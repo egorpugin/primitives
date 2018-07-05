@@ -15,7 +15,6 @@
 %option never-interactive
 %option reentrant
 %option noyywrap
-%option prefix="ll_settings"
 
 number [0-9]+
 extra  [_a-zA-Z0-9]+

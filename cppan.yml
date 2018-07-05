@@ -266,61 +266,10 @@ projects:
                         - WIN32
 
         post_sources: |
-            macro(ragel f)
-                set(i ${SDIR}/src/${f}.rl)
-                set(o ${f}.rl.cpp)
-                add_custom_command(OUTPUT ${BDIR}/${o}
-                    COMMAND pvt.cppan.demo.ragel ${i} -o ${BDIR}/${o}
-                    DEPENDS ${i}
-                )
-                set(src ${src} ${BDIR}/${o})
-            endmacro(ragel)
-
-            ragel(path)
+            ragel(src/path.rl)
 
         post_target: |
-            macro(flex_bison lexer parser)
-                set(bdir ${BDIR_PRIVATE}/fb)
-
-                if (NOT WIN32)
-                    set(flex flex)
-                    set(bison bison)
-                endif()
-
-                get_filename_component(d ${parser} DIRECTORY)
-                execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
-
-                add_custom_command(OUTPUT
-                        ${bdir}/${parser}.cpp
-                        ${bdir}/${parser}.hpp
-                    COMMAND ${bison} -o ${bdir}/${parser}.cpp --defines=${bdir}/${parser}.hpp ${SDIR}/${parser}
-                    DEPENDS ${bison} ${SDIR}/${parser}
-                    WORKING_DIRECTORY ${bdir}/${d}
-                )
-                target_include_directories(${this} PRIVATE ${bdir}/${d})
-
-                get_filename_component(d ${lexer} DIRECTORY)
-                execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
-
-                add_custom_command(OUTPUT
-                        ${bdir}/${lexer}.cpp
-                        #${bdir}/${lexer}.h
-                    #COMMAND ${flex} -o ${bdir}/${lexer}.cpp --header-file=${lexer}.h ${SDIR}/${lexer}
-                    COMMAND ${flex} -o ${bdir}/${lexer}.cpp ${SDIR}/${lexer}
-                    DEPENDS ${flex} ${SDIR}/${lexer} ${bdir}/${parser}.hpp
-                    WORKING_DIRECTORY ${bdir}
-                )
-                target_include_directories(${this} PRIVATE ${bdir}/${d})
-
-                target_sources(${this} PRIVATE
-                    ${bdir}/${parser}.cpp
-                    ${bdir}/${parser}.hpp
-                    ${bdir}/${lexer}.cpp
-                    #${bdir}/${lexer}.h
-                )
-            endmacro()
-
-            flex_bison(src/settings.ll src/settings.yy)
+            flex_bison_pair(LALR1_CPP_VARIANT_PARSER src/settings)
 
     pack:
         name: pack
@@ -382,64 +331,10 @@ projects:
                 pvt.cppan.demo.imageworks.pystring:
                     version: 1
         post_sources: |
-            macro(ragel f)
-                set(i ${SDIR}/src/${f}.rl)
-                set(o ${f}.rl.cpp)
-                add_custom_command(OUTPUT ${BDIR}/${o}
-                    COMMAND pvt.cppan.demo.ragel ${i} -o ${BDIR}/${o}
-                    DEPENDS ${i}
-                )
-                set(src ${src} ${BDIR}/${o})
-            endmacro(ragel)
-
-            ragel(version)
-
-            #
+            ragel(src/version.rl)
 
         post_target: |
-            macro(flex_bison lexer parser)
-                set(bdir ${BDIR_PRIVATE}/fb)
-
-                if (NOT WIN32)
-                    set(flex flex)
-                    set(bison bison)
-                endif()
-
-                get_filename_component(d ${parser} DIRECTORY)
-                execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
-
-                add_custom_command(OUTPUT
-                        ${bdir}/${parser}.cpp
-                        ${bdir}/${parser}.hpp
-                    COMMAND ${bison} -o ${bdir}/${parser}.cpp --defines=${bdir}/${parser}.hpp ${SDIR}/${parser}
-                    DEPENDS ${bison} ${SDIR}/${parser}
-                    WORKING_DIRECTORY ${bdir}/${d}
-                )
-                target_include_directories(${this} PRIVATE ${bdir}/${d})
-
-                get_filename_component(d ${lexer} DIRECTORY)
-                execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
-
-                add_custom_command(OUTPUT
-                        ${bdir}/${lexer}.cpp
-                        #${bdir}/${lexer}.h
-                    #COMMAND ${flex} -o ${bdir}/${lexer}.cpp --header-file=${lexer}.h ${SDIR}/${lexer}
-                    COMMAND ${flex} -o ${bdir}/${lexer}.cpp ${SDIR}/${lexer}
-                    DEPENDS ${flex} ${SDIR}/${lexer} ${bdir}/${parser}.hpp
-                    WORKING_DIRECTORY ${bdir}
-                )
-                target_include_directories(${this} PRIVATE ${bdir}/${d})
-
-                target_sources(${this} PRIVATE
-                    ${bdir}/${parser}.cpp
-                    ${bdir}/${parser}.hpp
-                    ${bdir}/${lexer}.cpp
-                    #${bdir}/${lexer}.h
-                )
-            endmacro()
-
-            flex_bison(src/range.ll src/range.yy)
-
+            flex_bison_pair(GLR_CPP_PARSER src/range)
             target_sources(${this} PUBLIC ${SDIR}/src/version.natvis)
 
 

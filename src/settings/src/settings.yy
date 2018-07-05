@@ -22,7 +22,6 @@
 ////////////////////////////////////////
 
 %skeleton "lalr1.cc" // C++ skeleton
-%define api.prefix {yy_settings}
 %define api.value.type variant
 %define api.token.constructor // C++ style of handling variants
 %define parse.assert // check C++ variant types

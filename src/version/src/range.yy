@@ -24,7 +24,6 @@
 %glr-parser
 %skeleton "glr.cc" // C++ skeleton
 %define api.value.type {MY_STORAGE}
-%define api.prefix {yy_range}
 
 %{
 #include <primitives/version.h>
