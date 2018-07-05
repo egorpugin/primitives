@@ -45,12 +45,13 @@ TEST_CASE("Checking settings", "[settings]")
 
     // string
     CHECK(parseSettingPath("\"\"")[0] == "");
-    CHECK(parseSettingPath("\"\\\" \"")[0] == "\"");
+    CHECK_THROWS(parseSettingPath("\"\"\""));
+    CHECK(parseSettingPath("\"\\\" \"")[0] == "\" ");
     CHECK(parseSettingPath("\"\\\"a \"")[0] == "\"a ");
     CHECK(parseSettingPath("\"\\\" \"")[0] == "\" ");
     CHECK(parseSettingPath("\"\\\"a \" . \"\"")[0] == "\"a ");
     CHECK(parseSettingPath("\"\\\"a \" . \"\"")[1] == "");
-    CHECK(parseSettingPath("\" \u1234 \" . \" \U00002345 \"")[0] == "\"");
+    CHECK(parseSettingPath("\" \\u1234 \" . \" \\U00002345 \"")[0] == "\"");
     CHECK(parseSettingPath("\"\\n\"")[0] == "\n");
     CHECK_THROWS(parseSettingPath("\"\n\""));
     CHECK_THROWS(parseSettingPath("\"\"\""));
@@ -74,7 +75,7 @@ try
 
     using namespace llvm;
 
-    auto &set = getSettings().getLocalSettings();
+    auto &set = primitives::getSettings().getLocalSettings();
 
     cl::opt<std::string> OutputFilename("o", cl::desc("Specify output filename"), cl::value_desc("filename"));
 

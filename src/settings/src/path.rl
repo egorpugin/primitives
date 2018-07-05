@@ -9,24 +9,24 @@
 namespace primitives
 {
 
-SettingPath parseSettingPath1(const String &s)
+static String unescapeSettingPart(const String &s)
 {
-    SettingPath setting_path;
+    if (s.empty())
+        return s;
+
+    String basic;
 
     bool ok = false;
 	int cs = 0;
 	auto p = s.data();
     auto pe = p + s.size();
     auto eof = pe;
-    //int stack[100];
-    //int top;
 
     auto sb = p; // string begin
     const char *se = nullptr; // string end
-    String basic;
 
     %%{
-        machine VersionExtra;
+        machine EscapedSettingPart;
 	    write data;
 
         action return { fret; }
@@ -54,17 +54,73 @@ SettingPath parseSettingPath1(const String &s)
             'U' xdigit{8} %{ basic += *p; }
         ;
 
-        basic_character =
-            ('\\' escaped_character) |
-            (extend -- cntrl) %{ basic += *p; }
+        basic_character = ('\\' escaped_character) |
+            any %{ basic += *p; }
         ;
 
-        # basic2 := basic_character* | '"' @return;
-        # basic = '"' @{ fcall basic2; };
-        basic = '"' ((basic_character* - (^'\\' '"')) >SB %SE) '"';
+        main := basic_character %OK;
+
+		write init;
+		write exec;
+    }%%
+
+    if (!ok)
+        throw std::runtime_error("Bad setting path part: " + s);
+
+    return basic;
+}
+
+SettingPath parseSettingPath1(const String &s)
+{
+    SettingPath setting_path;
+
+    bool ok = false;
+	int cs = 0;
+	auto p = s.data();
+    auto pe = p + s.size();
+    auto eof = pe;
+
+    auto sb = p; // string begin
+    const char *se = nullptr; // string end
+    bool escaped = false;
+
+    %%{
+        machine SettingPath;
+	    write data;
+
+        action return { fret; }
+
+        action SB { sb = p; }
+        action SE { se = p; }
+        action OK { ok = p == pe; }
+        action ADD
+        {
+            setting_path.emplace_back(sb, sb > se ? p : se);
+            if (escaped)
+            {
+                setting_path.back() = unescapeSettingPart(setting_path.back());
+                escaped = false;
+            }
+        }
+
+        escaped_character =
+            'b'  |
+            't'  |
+            'n'  |
+            'f'  |
+            'r'  |
+            '"'  |
+            '\\' |
+            'u' xdigit{4} |
+            'U' xdigit{8}
+        ;
+
+        basic_character = ('\\' escaped_character %{ escaped = true; }) |
+        (extend -- cntrl -- '\\');
 
         alnum_ = alnum | '_' | '-';
         bare = alnum_* >SB %SE;
+        basic = '"' (extend -- cntrl)* >SB %SE :>> (^'\\' '"') '"';
         literal = '\'' [^']* >SB %SE '\'';
         part = space* (bare | basic | literal) space* %ADD;
         main := (part ('.' part)*)? %OK;

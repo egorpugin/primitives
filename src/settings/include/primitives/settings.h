@@ -156,7 +156,10 @@ private:
     }
 };
 
-}
-
+/// Users may want to define their own getSettings()
+/// with some initial setup.
+/// 'settings_auto' package will also provide tuned global getSettings() to use.
 PRIMITIVES_SETTINGS_API
 primitives::SettingStorage<primitives::Settings> &getSettings();
+
+}

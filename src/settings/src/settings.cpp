@@ -6,16 +6,14 @@
 
 #include <primitives/settings.h>
 
+#include <path_parser.h>
+#include <settings_parser.h>
+
 namespace primitives
 {
 
 namespace detail
 {
-
-String unescapeSettingPart(const String &s)
-{
-    return s;
-}
 
 String escapeSettingPart(const String &s)
 {
@@ -34,10 +32,29 @@ void Settings::save(const path &fn)
 
 }
 
+SettingPath parseSettingPath(const String &s)
+{
+    PathParserDriver d;
+    d.bb.error_msg = "";
+    /*auto r = d.parse(s);
+    auto error = d.bb.error_msg;
+    /*if (r == 0)
+    {
+        if (auto res = d.bb.getResult<VersionRange>(); res)
+        {
+            vr = res.value();
+            return {};
+        }
+        else
+            error = "parser error: empty result";
+    }*/
+    return {};
 }
 
 primitives::SettingStorage<primitives::Settings> &getSettings()
 {
     static primitives::SettingStorage<primitives::Settings> settings;
     return settings;
+}
+
 }

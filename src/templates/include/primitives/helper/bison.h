@@ -33,6 +33,8 @@
 #define PARSER_NAME(v) CONCATENATE(THIS_PARSER, v)
 #define PARSER_NAME_UP(v) CONCATENATE(THIS_PARSER_UP, v)
 
+#define MY_PARSER_DRIVER CONCATENATE(MY_PARSER, Driver)
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Global setup
@@ -48,6 +50,12 @@
 #define BISON_PARSER_ERROR_FUNCTION                                                          \
     inline void THIS_PARSER::parser::error(const location_type &loc, const std::string &msg) \
     {                                                                                        \
+        std::ostringstream ss;                                                               \
+        ss << loc << " " << msg << "\n";                                                     \
+        auto self = (primitives::bison::base_parser<THIS_PARSER::parser> *)(this);           \
+        self->bb.error_msg = ss.str();                                                       \
+        if (self->bb.can_throw)                                                              \
+            throw std::runtime_error("Error during parse: " + ss.str());                     \
     }
 
 #define MY_PARSER_PARSER_DECLARATIONS             \
@@ -214,15 +222,6 @@ template <class BaseParser>
 struct base_parser : BaseParser
 {
     basic_block bb;
-
-    void error(const typename BaseParser::location_type &loc, const std::string& msg) override
-    {
-        std::ostringstream ss;
-        ss << loc << " " << msg << "\n";
-        bb.error_msg = ss.str();
-        if (bb.can_throw)
-            throw std::runtime_error("Error during parse: " + ss.str());
-    }
 };
 
 }
@@ -254,9 +253,11 @@ struct base_parser : BaseParser
 #define yylex() ((MY_PARSER*)this)->lex()
 
 // lexer
-#define LEXER_FUNCTION THIS_PARSER::parser::symbol_type LEXER_NAME(lex)(void *yyscanner, THIS_PARSER::location &loc)
+#define LEXER_FUNCTION THIS_PARSER::parser::symbol_type LEXER_NAME(lex)(void *yyscanner, THIS_PARSER::parser::location_type &loc)
 #define MAKE(x) THIS_PARSER::parser::make_ ## x(loc)
 #define MAKE_VALUE(x, v) THIS_PARSER::parser::make_ ## x((v), loc)
+
+struct CONCATENATE(MY_PARSER, Driver);
 
 namespace primitives::bison
 {
@@ -272,15 +273,17 @@ template <class BaseParser>
 struct base_parser : BaseParser
 {
     basic_block bb;
-    typename BaseParser::location_type location;
+    typename BaseParser::location_type loc;
+
+    base_parser() : BaseParser((::MY_PARSER_DRIVER&)*this) {}
 };
 
 }
 
-#define MY_LEXER_FUNCTION                             \
-    THIS_PARSER::parser::symbol_type lex()            \
-    {                                                 \
-        return LEXER_NAME(lex)(bb.scanner, location); \
+#define MY_LEXER_FUNCTION                        \
+    THIS_PARSER::parser::symbol_type lex()       \
+    {                                            \
+        return LEXER_NAME(lex)(bb.scanner, loc); \
     }
 
 #endif
@@ -307,5 +310,30 @@ struct base_parser : BaseParser
 %define api.value.type variant
 %define api.token.constructor // C++ style of handling variants
 %define parse.assert // check C++ variant types
+
+// param to yy::parser() constructor (the parsing context)
+%parse-param { struct MY_PARSER_DRIVER &driver }
+
+*/
+
+/*
+// Other useful stuff.
+
+// prevent duplication of locations (location.hh and position.hh)
+// set name of other parser   vvvvvvvv
+%define api.location.type {yy_settings::location}
+%code requires { #include <location.hh> }
+
+// LALR(1): driver code
+%code provides
+{
+
+struct MY_PARSER_DRIVER : MY_PARSER
+{
+    int result;
+    // ...
+};
+
+}
 
 */

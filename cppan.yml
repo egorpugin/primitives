@@ -270,6 +270,7 @@ projects:
 
         post_target: |
             flex_bison_pair(LALR1_CPP_VARIANT_PARSER src/settings)
+            flex_bison_pair(LALR1_CPP_VARIANT_PARSER src/path)
 
     pack:
         name: pack
