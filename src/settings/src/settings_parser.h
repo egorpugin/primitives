@@ -16,20 +16,20 @@
 
 // 1
 // setup parser
-#define THIS_PARSER_NAME range
-#define THIS_PARSER_NAME_UP RANGE
-#define MY_PARSER RangeParser
+#define THIS_PARSER_NAME settings
+#define THIS_PARSER_NAME_UP SETTINGS
+#define MY_PARSER SettingsParser
 
 // 2
 //      vvvvvvvv change here
-#define yy_rangelex(val,loc) MY_PARSER_CAST.lex(val,loc)
+#define yy_settingslex(val,loc) MY_PARSER_CAST.lex(val,loc)
 
 // 3
-#define GLR_CPP_PARSER
+#define LALR1_CPP_VARIANT_PARSER
 
 // 4, 5
 #include <primitives/helper/bison.h>
-#include <range.yy.hpp>
+#include <settings.yy.hpp>
 
 // 6
 DECLARE_PARSER;

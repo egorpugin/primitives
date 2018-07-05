@@ -6,9 +6,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <range_parser.h>
-
-// C++, make_ is for variants
-#define YY_USER_ACTION loc.columns(yyleng);
 %}
 
 %option nounistd

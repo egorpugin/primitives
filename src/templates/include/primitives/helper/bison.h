@@ -12,21 +12,100 @@
 #include <primitives/preprocessor.h>
 #include <primitives/stdcompat/optional.h>
 
-#include <any>
-#include <list>
 #include <sstream>
 #include <string>
 
+////////////////////////////////////////////////////////////////////////////////
 //
+// names
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// lexer
 #define THIS_LEXER CONCATENATE(ll_, THIS_PARSER_NAME)
 #define THIS_LEXER_UP CONCATENATE(LL_, THIS_PARSER_NAME_UP)
 #define LEXER_NAME(v) CONCATENATE(THIS_LEXER, v)
 #define LEXER_NAME_UP(v) CONCATENATE(THIS_LEXER_UP, v)
 
+// parser
 #define THIS_PARSER CONCATENATE(yy_, THIS_PARSER_NAME)
 #define THIS_PARSER_UP CONCATENATE(YY_, THIS_PARSER_NAME_UP)
 #define PARSER_NAME(v) CONCATENATE(THIS_PARSER, v)
 #define PARSER_NAME_UP(v) CONCATENATE(THIS_PARSER_UP, v)
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// global setup
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// lexer
+#define YY_DECL LEXER_FUNCTION
+
+// parser
+
+#define BISON_PARSER_ERROR_FUNCTION                                                          \
+    inline void THIS_PARSER::parser::error(const location_type &loc, const std::string &msg) \
+    {                                                                                        \
+    }
+
+#define MY_PARSER_PARSER_DECLARATIONS             \
+    LEXER_FUNCTION;                               \
+    BISON_PARSER_ERROR_FUNCTION                   \
+                                                  \
+    int LEXER_NAME(lex_init)(void **scanner);     \
+    int LEXER_NAME(lex_destroy)(void *yyscanner); \
+    struct yy_buffer_state *LEXER_NAME(_scan_string)(const char *yy_str, void *yyscanner);
+
+#define MY_PARSER_PARSE_FUNCTION                              \
+    int parse(const std::string &s)                           \
+    {                                                         \
+        struct raii                                           \
+        {                                                     \
+            primitives::bison::basic_block &bb;               \
+            raii(primitives::bison::basic_block &bb) : bb(bb) \
+            {                                                 \
+                LEXER_NAME(lex_init)                          \
+                (&bb.scanner);                                \
+            }                                                 \
+            ~raii()                                           \
+            {                                                 \
+                LEXER_NAME(lex_destroy)                       \
+                (bb.scanner);                                 \
+            }                                                 \
+        };                                                    \
+                                                              \
+        bb = primitives::bison::basic_block{};                \
+        raii holder(bb);                                      \
+        LEXER_NAME(_scan_string)                              \
+        (s.c_str(), bb.scanner);                              \
+        auto r = base::parse();                               \
+                                                              \
+        return r;                                             \
+    }
+
+#define DECLARE_PARSER                                                     \
+    MY_PARSER_PARSER_DECLARATIONS                                          \
+                                                                           \
+    struct MY_PARSER : primitives::bison::base_parser<THIS_PARSER::parser> \
+    {                                                                      \
+        using base = THIS_PARSER::parser;                                  \
+                                                                           \
+        MY_PARSER_PARSE_FUNCTION                                           \
+        MY_LEXER_FUNCTION                                                  \
+    }
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// GLR parser in C++ with custom storage based on std::any
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// glr
+#ifdef GLR_CPP_PARSER
+
+#include <any>
+#include <list>
 
 #define MY_PARSER_CAST ((MY_PARSER &)yyparser)
 #define MY_PARSER_CAST_BB (((MY_PARSER &)yyparser).bb)
@@ -53,9 +132,10 @@
 
 // lexer
 #define LEXER_FUNCTION std::tuple<int, std::any> LEXER_NAME(lex)(void *yyscanner, THIS_PARSER::parser::location_type &loc)
-#define YY_DECL LEXER_FUNCTION
 #define MAKE(x) {THIS_PARSER::parser::token::x, {}}
 #define MAKE_VALUE(x, v) {THIS_PARSER::parser::token::x, v}
+
+#define YY_USER_ACTION loc.columns(yyleng);
 
 namespace primitives::bison
 {
@@ -146,52 +226,59 @@ struct base_parser : BaseParser
 // for parse()
 // set_debug_level(bb.debug);
 
-#define DECLARE_PARSER                                                                       \
-    LEXER_FUNCTION;                                                                          \
-                                                                                             \
-    int LEXER_NAME(lex_init)(void **scanner);                                                \
-    int LEXER_NAME(lex_destroy)(void *yyscanner);                                            \
-    struct yy_buffer_state *LEXER_NAME(_scan_string)(const char *yy_str, void *yyscanner);   \
-                                                                                             \
-    inline void THIS_PARSER::parser::error(const location_type &loc, const std::string &msg) \
-    {                                                                                        \
-    }                                                                                        \
-                                                                                             \
-    struct MY_PARSER : primitives::bison::base_parser<THIS_PARSER::parser>                   \
-    {                                                                                        \
-        using base = THIS_PARSER::parser;                                                    \
-                                                                                             \
-        int lex(PARSER_NAME_UP(STYPE) * val, location_type *loc)                             \
-        {                                                                                    \
-            auto ret = LEXER_NAME(lex)(bb.scanner, *loc);                                    \
-            if (std::get<1>(ret).has_value())                                                \
-                val->v = bb.add_data(std::get<1>(ret));                                      \
-            return std::get<0>(ret);                                                         \
-        }                                                                                    \
-                                                                                             \
-        int parse(const std::string &s)                                                      \
-        {                                                                                    \
-            struct raii                                                                      \
-            {                                                                                \
-                primitives::bison::basic_block &bb;                                          \
-                raii(primitives::bison::basic_block &bb) : bb(bb)                            \
-                {                                                                            \
-                    LEXER_NAME(lex_init)                                                     \
-                    (&bb.scanner);                                                           \
-                }                                                                            \
-                ~raii()                                                                      \
-                {                                                                            \
-                    LEXER_NAME(lex_destroy)                                                  \
-                    (bb.scanner);                                                            \
-                }                                                                            \
-            };                                                                               \
-                                                                                             \
-            bb = primitives::bison::basic_block{};                                           \
-            raii holder(bb);                                                                 \
-            LEXER_NAME(_scan_string)                                                         \
-            (s.c_str(), bb.scanner);                                                         \
-            auto r = base::parse();                                                          \
-                                                                                             \
-            return r;                                                                        \
-        }                                                                                    \
+#define MY_LEXER_FUNCTION                                     \
+    int lex(PARSER_NAME_UP(STYPE) * val, location_type * loc) \
+    {                                                         \
+        auto ret = LEXER_NAME(lex)(bb.scanner, *loc);         \
+        if (std::get<1>(ret).has_value())                     \
+            val->v = bb.add_data(std::get<1>(ret));           \
+        return std::get<0>(ret);                              \
     }
+
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// LALR(1) parser in C++ with bison variants
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// lalr1
+#ifdef LALR1_CPP_VARIANT_PARSER
+
+// parser
+#define yylex() ((MY_PARSER*)this)->lex()
+
+// lexer
+#define LEXER_FUNCTION THIS_PARSER::parser::symbol_type LEXER_NAME(lex)(void *yyscanner, THIS_PARSER::location &loc)
+#define MAKE(x) THIS_PARSER::parser::make_ ## x(loc)
+#define MAKE_VALUE(x, v) THIS_PARSER::parser::make_ ## x((v), loc)
+
+namespace primitives::bison
+{
+
+struct basic_block
+{
+    void *scanner = nullptr;
+    bool can_throw = false;
+    std::string error_msg;
+};
+
+template <class BaseParser>
+struct base_parser : BaseParser
+{
+    basic_block bb;
+    typename BaseParser::location_type location;
+};
+
+}
+
+#define MY_LEXER_FUNCTION                             \
+    THIS_PARSER::parser::symbol_type lex()            \
+    {                                                 \
+        return LEXER_NAME(lex)(bb.scanner, location); \
+    }
+
+#endif
+
+////////////////////////////////////////////////////////////////////////////////

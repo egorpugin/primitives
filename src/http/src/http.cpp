@@ -82,6 +82,11 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
     {
         curl_easy_setopt(curl, CURLOPT_PROXY, httpSettings.proxy.host.c_str());
         curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+        if (httpSettings.proxy.host.find("socks5") == 0)
+        {
+            curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
+            curl_easy_setopt(curl, CURLOPT_SOCKS5_AUTH, CURLAUTH_BASIC);
+        }
         if (!httpSettings.proxy.user.empty())
             curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, httpSettings.proxy.user.c_str());
     }
@@ -151,14 +156,37 @@ HttpResponse url_request(const HttpRequest &request)
     {
         curl_easy_setopt(curl, CURLOPT_PROXY, request.proxy.host.c_str());
         curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+        if (request.proxy.host.find("socks5") == 0)
+        {
+            curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
+            curl_easy_setopt(curl, CURLOPT_SOCKS5_AUTH, CURLAUTH_BASIC);
+        }
         if (!request.proxy.user.empty())
             curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, request.proxy.user.c_str());
     }
 
+    std::string data;
+    std::vector<char *> escaped;
     switch (request.type)
     {
     case HttpRequest::Post:
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.data.c_str());
+        if (!request.data_kv.empty())
+        {
+            for (auto &a : request.data_kv)
+            {
+                escaped.push_back(curl_easy_escape(curl, a.first.c_str(), a.first.size()));
+                data += escaped.back() + std::string("=");
+                escaped.push_back(curl_easy_escape(curl, a.second.c_str(), a.second.size()));
+                data += escaped.back() + std::string("&");
+            }
+            data.resize(data.size() - 1);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)data.size());
+        }
+        else
+        {
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.data.c_str());
+        }
         break;
     case HttpRequest::Delete:
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
@@ -194,6 +222,9 @@ HttpResponse url_request(const HttpRequest &request)
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response.http_code);
     curl_slist_free_all(list);
     curl_easy_cleanup(curl);
+
+    for (auto &e : escaped)
+        curl_free(e);
 
     if (res != CURLE_OK)
         throw std::runtime_error("curl error: "s + curl_easy_strerror(res));

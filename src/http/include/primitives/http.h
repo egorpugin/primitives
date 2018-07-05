@@ -43,6 +43,7 @@ struct HttpRequest : public HttpSettings
     int type = Get;
     String content_type;
     String data;
+    std::unordered_map<String, String> data_kv;
     int timeout = -1;
     int connect_timeout = -1;
 

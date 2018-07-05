@@ -174,6 +174,12 @@ projects:
                     version: master
                 pvt.cppan.demo.libuv:
                     version: 1
+
+    guarded_main:
+        type: library
+        static_only: true
+        root_directory: src/guarded_main
+
     hash:
         name: hash
         type: library
@@ -235,6 +241,87 @@ projects:
                     win32:
                         public:
                             -   dbghelp
+
+    settings:
+        type: library
+        root_directory: src/settings
+
+        dependencies:
+            public:
+                filesystem:
+                    version: "*"
+                templates:
+                    version: "*"
+                pvt.cppan.demo.ragel:
+                    version: 6
+                pvt.cppan.demo.lexxmark.winflexbison.flex:
+                    version: master
+                    ref: flex
+                    condition:
+                        - WIN32
+                pvt.cppan.demo.lexxmark.winflexbison.bison:
+                    version: master
+                    ref: bison
+                    condition:
+                        - WIN32
+
+        post_sources: |
+            macro(ragel f)
+                set(i ${SDIR}/src/${f}.rl)
+                set(o ${f}.rl.cpp)
+                add_custom_command(OUTPUT ${BDIR}/${o}
+                    COMMAND pvt.cppan.demo.ragel ${i} -o ${BDIR}/${o}
+                    DEPENDS ${i}
+                )
+                set(src ${src} ${BDIR}/${o})
+            endmacro(ragel)
+
+            ragel(path)
+
+        post_target: |
+            macro(flex_bison lexer parser)
+                set(bdir ${BDIR_PRIVATE}/fb)
+
+                if (NOT WIN32)
+                    set(flex flex)
+                    set(bison bison)
+                endif()
+
+                get_filename_component(d ${parser} DIRECTORY)
+                execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
+
+                add_custom_command(OUTPUT
+                        ${bdir}/${parser}.cpp
+                        ${bdir}/${parser}.hpp
+                    COMMAND ${bison} -o ${bdir}/${parser}.cpp --defines=${bdir}/${parser}.hpp ${SDIR}/${parser}
+                    DEPENDS ${bison} ${SDIR}/${parser}
+                    WORKING_DIRECTORY ${bdir}/${d}
+                )
+                target_include_directories(${this} PRIVATE ${bdir}/${d})
+
+                get_filename_component(d ${lexer} DIRECTORY)
+                execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${bdir}/${d})
+
+                add_custom_command(OUTPUT
+                        ${bdir}/${lexer}.cpp
+                        #${bdir}/${lexer}.h
+                    #COMMAND ${flex} -o ${bdir}/${lexer}.cpp --header-file=${lexer}.h ${SDIR}/${lexer}
+                    COMMAND ${flex} -o ${bdir}/${lexer}.cpp ${SDIR}/${lexer}
+                    DEPENDS ${flex} ${SDIR}/${lexer} ${bdir}/${parser}.hpp
+                    WORKING_DIRECTORY ${bdir}
+                )
+                target_include_directories(${this} PRIVATE ${bdir}/${d})
+
+                target_sources(${this} PRIVATE
+                    ${bdir}/${parser}.cpp
+                    ${bdir}/${parser}.hpp
+                    ${bdir}/${lexer}.cpp
+                    #${bdir}/${lexer}.h
+                )
+            endmacro()
+
+            flex_bison(src/settings.ll src/settings.yy)
+
     pack:
         name: pack
         type: library
@@ -440,6 +527,18 @@ projects:
 
 
 
+    test.settings:
+        skip_on_server: true
+        files:
+            -   src/settings.cpp
+        dependencies:
+            public:
+                pvt.cppan.demo.llvm_project.llvm.option:
+                    version: master
+                pvt.cppan.demo.catchorg.catch2:
+                    version: 2
+                settings:
+                    version: "*"
     test.version:
         skip_on_server: true
         files:

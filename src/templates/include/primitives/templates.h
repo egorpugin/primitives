@@ -2,6 +2,7 @@
 
 #include "preprocessor.h"
 
+#include <atomic>
 #include <functional>
 #include <mutex>
 #include <utility>
@@ -23,10 +24,11 @@
     ::detail::ScopeGuardOnExit() + [&]()
 
 #define RUN_ONCE_IMPL(kv) \
-    kv std::once_flag ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG); ScopeGuard(&ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG)) + [&]()
+    for (kv std::atomic<int> ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG){0}; !ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG).fetch_or(1); )
 
 #define RUN_ONCE              RUN_ONCE_IMPL(static)
 #define RUN_ONCE_THREAD_LOCAL RUN_ONCE_IMPL(thread_local)
+#define RUN_ONCE_FOR_THREAD   RUN_ONCE_THREAD_LOCAL
 
 class ScopeGuard
 {

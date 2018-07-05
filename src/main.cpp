@@ -549,6 +549,54 @@ TEST_CASE("Checking executor: test fast wait", "[executor]")
     CHECK(i == 1);
 }
 
+TEST_CASE("Checking templates", "[templates]")
+{
+    {
+        int i = 0;
+        auto f = [&]()
+        {
+            RUN_ONCE
+            {
+                i++;
+            }
+        };
+
+        CHECK(i == 0);
+        f();
+        CHECK(i == 1);
+        f();
+        CHECK(i == 1);
+        f();
+        CHECK(i == 1);
+    }
+
+    {
+        int i = 0;
+        auto f = [&]()
+        {
+            RUN_ONCE_FOR_THREAD
+            {
+                i++;
+            }
+        };
+
+        CHECK(i == 0);
+        f();
+        CHECK(i == 1);
+        f();
+        CHECK(i == 1);
+        f();
+        CHECK(i == 1);
+
+        std::thread([&] {f(); f(); f(); }).join();
+        CHECK(i == 2);
+        std::thread([&] {f(); f(); f(); }).join();
+        CHECK(i == 3);
+        std::thread([&] {f(); f(); f(); }).join();
+        CHECK(i == 4);
+    }
+}
+
 int main(int argc, char **argv)
 try
 {
