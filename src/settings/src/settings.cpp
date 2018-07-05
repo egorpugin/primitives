@@ -9,6 +9,21 @@
 namespace primitives
 {
 
+namespace detail
+{
+
+String unescapeSettingPart(const String &s)
+{
+    return s;
+}
+
+String escapeSettingPart(const String &s)
+{
+    return s;
+}
+
+}
+
 void Settings::load(const path &fn, SettingsType type)
 {
 

@@ -44,6 +44,20 @@ struct opt
 
 }
 
+namespace detail
+{
+
+String unescapeSettingChar(const String &s);
+
+String escapeSettingPart(const String &s);
+
+}
+
+using SettingPath = Strings;
+
+PRIMITIVES_SETTINGS_API
+SettingPath parseSettingPath(const String &s);
+
 struct PRIMITIVES_SETTINGS_API Setting
 {
 
