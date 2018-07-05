@@ -22,7 +22,7 @@
 ////////////////////////////////////////
 
 %glr-parser
-%skeleton "glr.cc" // c++ skeleton
+%skeleton "glr.cc" // C++ skeleton
 %define api.value.type {MY_STORAGE}
 %define api.prefix {yy_range}
 
