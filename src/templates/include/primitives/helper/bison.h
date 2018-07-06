@@ -4,7 +4,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#pragma once
+////////////////////////////////////////////////////////////////////////////////
+//
+// Protected
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// manual guard
+#ifndef PRIMITIVES_HELPER_BISON
+#define PRIMITIVES_HELPER_BISON
 
 #pragma warning(disable: 4005)
 #pragma warning(disable: 4065)
@@ -15,10 +23,126 @@
 #include <sstream>
 #include <string>
 
+namespace primitives::bison
+{
+
+struct basic_block
+{
+    void *scanner = nullptr;
+    bool can_throw = false;
+    std::string error_msg;
+};
+
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// GLR parser in C++ with custom storage based on std::any
+////////////////////////////////////////////////////////////////////////////////
+
+// glr
+#ifdef GLR_CPP_PARSER
+
+#include <any>
+#include <list>
+
+namespace primitives::bison
+{
+
+struct basic_block1;
+
+struct any_storage
+{
+    std::any *v;
+
+    template <class U>
+    bool checkType(basic_block1 &bb) const
+    {
+        auto &t1 = v->type();
+        auto &t2 = typeid(U);
+        if (t1 != t2)
+            bb.error_msg = std::string("Incorrect type: ") + t1.name() + ", wanted type: " + t2.name();
+        return t1 == t2;
+    }
+
+    template <class U>
+    bool hasType(basic_block1 &bb) const
+    {
+        return checkType<U>(bb);
+    }
+
+    template <class U>
+    void setValue(basic_block1 &bb, const U &v2)
+    {
+        v = bb.add_data(v2);
+    }
+
+    template <class U>
+    U getValue() const
+    {
+        return std::any_cast<U>(*v);
+    }
+};
+
+struct basic_block1 : basic_block
+{
+    // data storage, list iterators are not invalidated
+    std::list<std::any> data;
+
+    template <class U>
+    auto add_data(U &&u)
+    {
+        data.emplace_back(std::forward<U>(u));
+        return &data.back();
+    }
+
+    template <class T>
+    void setResult(const T &v)
+    {
+        return data.push_back(v);
+    }
+
+    template <class T>
+    optional<T> getResult() const
+    {
+        if (data.empty())
+            return {};
+        return std::any_cast<T>(data.back());
+    }
+};
+
+template <class BaseParser>
+struct base_parser : BaseParser
+{
+    using basic_block_type = basic_block1;
+
+    basic_block_type bb;
+};
+
+}
+
+#endif // GLR_CPP_PARSER
+
+////////////////////////////////////////////////////////////////////////////////
+// LALR(1) parser in C++ with bison variants
+////////////////////////////////////////////////////////////////////////////////
+
+// lalr1
+#ifdef LALR1_CPP_VARIANT_PARSER
+
+// empty
+
+#endif // LALR1_CPP_VARIANT_PARSER
+
+#endif // PRIMITIVES_HELPER_BISON
+
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Names
+// Unprotected
 //
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// Names
 ////////////////////////////////////////////////////////////////////////////////
 
 // lexer
@@ -33,12 +157,8 @@
 #define PARSER_NAME(v) CONCATENATE(THIS_PARSER, v)
 #define PARSER_NAME_UP(v) CONCATENATE(THIS_PARSER_UP, v)
 
-#define MY_PARSER_DRIVER CONCATENATE(MY_PARSER, Driver)
-
 ////////////////////////////////////////////////////////////////////////////////
-//
 // Global setup
-//
 ////////////////////////////////////////////////////////////////////////////////
 
 // lexer
@@ -52,7 +172,7 @@
     {                                                                                        \
         std::ostringstream ss;                                                               \
         ss << loc << " " << msg << "\n";                                                     \
-        auto self = (primitives::bison::base_parser<THIS_PARSER::parser> *)(this);           \
+        auto self = (primitives::bison::BASE_PARSER_NAME<THIS_PARSER::parser> *)(this);      \
         self->bb.error_msg = ss.str();                                                       \
         if (self->bb.can_throw)                                                              \
             throw std::runtime_error("Error during parse: " + ss.str());                     \
@@ -66,48 +186,44 @@
     int LEXER_NAME(lex_destroy)(void *yyscanner); \
     struct yy_buffer_state *LEXER_NAME(_scan_string)(const char *yy_str, void *yyscanner);
 
-#define MY_PARSER_PARSE_FUNCTION                              \
-    int parse(const std::string &s)                           \
-    {                                                         \
-        struct raii                                           \
-        {                                                     \
-            primitives::bison::basic_block &bb;               \
-            raii(primitives::bison::basic_block &bb) : bb(bb) \
-            {                                                 \
-                LEXER_NAME(lex_init)                          \
-                (&bb.scanner);                                \
-            }                                                 \
-            ~raii()                                           \
-            {                                                 \
-                LEXER_NAME(lex_destroy)                       \
-                (bb.scanner);                                 \
-            }                                                 \
-        };                                                    \
-                                                              \
-        bb = primitives::bison::basic_block{};                \
-        raii holder(bb);                                      \
-        LEXER_NAME(_scan_string)                              \
-        (s.c_str(), bb.scanner);                              \
-        auto r = base::parse();                               \
-                                                              \
-        return r;                                             \
+#define MY_PARSER_PARSE_FUNCTION                \
+    int parse(const std::string &s)             \
+    {                                           \
+        struct raii                             \
+        {                                       \
+            basic_block_type &bb;               \
+            raii(basic_block_type &bb) : bb(bb) \
+            {                                   \
+                LEXER_NAME(lex_init)            \
+                (&bb.scanner);                  \
+            }                                   \
+            ~raii()                             \
+            {                                   \
+                LEXER_NAME(lex_destroy)         \
+                (bb.scanner);                   \
+            }                                   \
+        };                                      \
+                                                \
+        bb = basic_block_type{};                \
+        raii holder(bb);                        \
+        LEXER_NAME(_scan_string)                \
+        (s.c_str(), bb.scanner);                \
+        auto r = THIS_PARSER::parser::parse();  \
+                                                \
+        return r;                               \
     }
 
-#define DECLARE_PARSER                                                     \
-    MY_PARSER_PARSER_DECLARATIONS                                          \
-                                                                           \
-    struct MY_PARSER : primitives::bison::base_parser<THIS_PARSER::parser> \
-    {                                                                      \
-        using base = THIS_PARSER::parser;                                  \
-                                                                           \
-        MY_PARSER_PARSE_FUNCTION                                           \
-        MY_LEXER_FUNCTION                                                  \
+#define DECLARE_PARSER                                                          \
+    MY_PARSER_PARSER_DECLARATIONS                                               \
+                                                                                \
+    struct MY_PARSER : primitives::bison::BASE_PARSER_NAME<THIS_PARSER::parser> \
+    {                                                                           \
+        MY_PARSER_PARSE_FUNCTION                                                \
+        MY_LEXER_FUNCTION                                                       \
     }
 
 ////////////////////////////////////////////////////////////////////////////////
-//
 // GLR parser in C++ with custom storage based on std::any
-//
 ////////////////////////////////////////////////////////////////////////////////
 
 // glr
@@ -118,6 +234,8 @@
 
 // parser
 #define yylex(val, loc) MY_PARSER_CAST.lex(val, loc)
+
+#define BASE_PARSER_NAME base_parser
 
 #define MY_PARSER_CAST ((MY_PARSER &)yyparser)
 #define MY_PARSER_CAST_BB (((MY_PARSER &)yyparser).bb)
@@ -149,83 +267,6 @@
 
 #define YY_USER_ACTION loc.columns(yyleng);
 
-namespace primitives::bison
-{
-
-struct basic_block;
-
-struct any_storage
-{
-    std::any *v;
-
-    template <class U>
-    bool checkType(basic_block &bb) const
-    {
-        auto &t1 = v->type();
-        auto &t2 = typeid(U);
-        if (t1 != t2)
-            bb.error_msg = std::string("Incorrect type: ") + t1.name() + ", wanted type: " + t2.name();
-        return t1 == t2;
-    }
-
-    template <class U>
-    bool hasType(basic_block &bb) const
-    {
-        return checkType<U>(bb);
-    }
-
-    template <class U>
-    void setValue(basic_block &bb, const U &v2)
-    {
-        v = bb.add_data(v2);
-    }
-
-    template <class U>
-    U getValue() const
-    {
-        return std::any_cast<U>(*v);
-    }
-};
-
-struct basic_block
-{
-    void *scanner = nullptr;
-    bool can_throw = false;
-    std::string error_msg;
-
-    // data storage, list iterators are not invalidated
-    std::list<std::any> data;
-
-    template <class U>
-    auto add_data(U &&u)
-    {
-        data.emplace_back(std::forward<U>(u));
-        return &data.back();
-    }
-
-    template <class T>
-    void setResult(const T &v)
-    {
-        return data.push_back(v);
-    }
-
-    template <class T>
-    optional<T> getResult() const
-    {
-        if (data.empty())
-            return {};
-        return std::any_cast<T>(data.back());
-    }
-};
-
-template <class BaseParser>
-struct base_parser : BaseParser
-{
-    basic_block bb;
-};
-
-}
-
 // for parse()
 // set_debug_level(bb.debug);
 
@@ -241,9 +282,7 @@ struct base_parser : BaseParser
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
-//
 // LALR(1) parser in C++ with bison variants
-//
 ////////////////////////////////////////////////////////////////////////////////
 
 // lalr1
@@ -257,25 +296,23 @@ struct base_parser : BaseParser
 #define MAKE(x) THIS_PARSER::parser::make_ ## x(loc)
 #define MAKE_VALUE(x, v) THIS_PARSER::parser::make_ ## x((v), loc)
 
-struct CONCATENATE(MY_PARSER, Driver);
+#define MY_PARSER_DRIVER CONCATENATE(MY_PARSER, Driver)
+struct MY_PARSER_DRIVER;
+
+#define BASE_PARSER_NAME CONCATENATE(base_parser_, MY_PARSER)
 
 namespace primitives::bison
 {
 
-struct basic_block
-{
-    void *scanner = nullptr;
-    bool can_throw = false;
-    std::string error_msg;
-};
-
 template <class BaseParser>
-struct base_parser : BaseParser
+struct BASE_PARSER_NAME : BaseParser
 {
-    basic_block bb;
     typename BaseParser::location_type loc;
+    using basic_block_type = basic_block;
 
-    base_parser() : BaseParser((::MY_PARSER_DRIVER&)*this) {}
+    basic_block_type bb;
+
+    BASE_PARSER_NAME() : BaseParser((MY_PARSER_DRIVER&)*this) {}
 };
 
 }
@@ -300,6 +337,7 @@ struct base_parser : BaseParser
 %glr-parser
 %skeleton "glr.cc" // C++ skeleton
 %define api.value.type {MY_STORAGE}
+%code provides{ DECLARE_PARSER; } // declare parser in provides section
 
 */
 
@@ -310,9 +348,8 @@ struct base_parser : BaseParser
 %define api.value.type variant
 %define api.token.constructor // C++ style of handling variants
 %define parse.assert // check C++ variant types
-
-// param to yy::parser() constructor (the parsing context)
-%parse-param { struct MY_PARSER_DRIVER &driver }
+%code provides { DECLARE_PARSER; } // declare parser in provides section
+%parse-param { MY_PARSER_DRIVER &driver } // param to yy::parser() constructor (the parsing context)
 
 */
 

@@ -35,8 +35,7 @@ void Settings::save(const path &fn)
 SettingPath parseSettingPath(const String &s)
 {
     PathParserDriver d;
-    d.bb.error_msg = "";
-    /*auto r = d.parse(s);
+    auto r = d.parse(s);
     auto error = d.bb.error_msg;
     /*if (r == 0)
     {

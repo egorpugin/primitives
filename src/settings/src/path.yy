@@ -25,28 +25,20 @@
 %define api.value.type variant
 %define api.token.constructor // C++ style of handling variants
 %define parse.assert // check C++ variant types
-
-// param to yy::parser() constructor (the parsing context)
-%parse-param { struct ::MY_PARSER_DRIVER &driver }
+%code provides { DECLARE_PARSER; } // declare parser in provides section
+%parse-param { MY_PARSER_DRIVER &driver } // param to yy::parser() constructor (the parsing context)
 
 // prevent duplication of locations
 %define api.location.type {yy_settings::location}
 %code requires{ #include <location.hh> }
 
-%{
-#include <primitives/settings.h>
-%}
-
 %code provides
 {
-
-#include <path_parser.h>
-
-DECLARE_PARSER;
+#include <primitives/settings.h>
 
 struct MY_PARSER_DRIVER : MY_PARSER
 {
-    int result;
+    primitives::SettingPath sp;
 };
 
 }
@@ -65,7 +57,6 @@ struct MY_PARSER_DRIVER : MY_PARSER
 
 file: EOQ
     {
-        driver.result = 5;
     }
     ;
 

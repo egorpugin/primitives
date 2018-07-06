@@ -24,6 +24,7 @@
 %glr-parser
 %skeleton "glr.cc" // C++ skeleton
 %define api.value.type {MY_STORAGE}
+%code provides{ DECLARE_PARSER; }
 
 %{
 #include <primitives/version.h>

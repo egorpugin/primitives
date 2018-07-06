@@ -25,10 +25,19 @@
 %define api.value.type variant
 %define api.token.constructor // C++ style of handling variants
 %define parse.assert // check C++ variant types
+%code provides { DECLARE_PARSER; } // declare parser in provides section
+%parse-param { MY_PARSER_DRIVER &driver } // param to yy::parser() constructor (the parsing context)
 
-%{
+%code provides
+{
 #include <primitives/settings.h>
-%}
+
+struct MY_PARSER_DRIVER : MY_PARSER
+{
+    int result;
+};
+
+}
 
 ////////////////////////////////////////
 
