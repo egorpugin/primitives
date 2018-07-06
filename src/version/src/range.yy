@@ -23,8 +23,8 @@
 
 %glr-parser
 %skeleton "glr.cc" // C++ skeleton
-%define api.value.type {MY_STORAGE}
-%code provides{ DECLARE_PARSER; }
+%define api.value.type { MY_STORAGE }
+%code provides { #include <primitives/helper/bison_yy.h> }
 
 %{
 #include <primitives/version.h>

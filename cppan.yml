@@ -265,12 +265,9 @@ projects:
                     condition:
                         - WIN32
 
-        post_sources: |
-            ragel(src/path.rl)
-
         post_target: |
-            flex_bison_pair(LALR1_CPP_VARIANT_PARSER src/settings)
-            flex_bison_pair(LALR1_CPP_VARIANT_PARSER src/path)
+            cppan_flex_bison_pair(LALR1_CPP_VARIANT_PARSER src/settings)
+            cppan_flex_bison_pair(LALR1_CPP_VARIANT_PARSER src/path)
 
     pack:
         name: pack
@@ -332,10 +329,10 @@ projects:
                 pvt.cppan.demo.imageworks.pystring:
                     version: 1
         post_sources: |
-            ragel(src/version.rl)
+            cppan_ragel(src/version.rl)
 
         post_target: |
-            flex_bison_pair(GLR_CPP_PARSER src/range)
+            cppan_flex_bison_pair(GLR_CPP_PARSER src/range)
             target_sources(${this} PUBLIC ${SDIR}/src/version.natvis)
 
 

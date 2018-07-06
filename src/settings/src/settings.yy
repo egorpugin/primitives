@@ -25,18 +25,21 @@
 %define api.value.type variant
 %define api.token.constructor // C++ style of handling variants
 %define parse.assert // check C++ variant types
-%code provides { DECLARE_PARSER; } // declare parser in provides section
+%code provides { #include <primitives/helper/bison_yy.h> }
 %parse-param { MY_PARSER_DRIVER &driver } // param to yy::parser() constructor (the parsing context)
+
+%code requires
+{
+#include <primitives/settings.h>
+}
 
 %code provides
 {
-#include <primitives/settings.h>
-
 struct MY_PARSER_DRIVER : MY_PARSER
 {
-    int result;
+    primitives::SettingPath::Parts sp;
+    std::string str;
 };
-
 }
 
 ////////////////////////////////////////
@@ -45,16 +48,53 @@ struct MY_PARSER_DRIVER : MY_PARSER
 %token EOQ 0 "end of file"
 %token ERROR_SYMBOL
 
-%type <int> file
+%token POINT
+
+%token <std::string> BARE_STRING BASIC_STRING LITERAL_STRING
+%token START_BASIC_STRING START_LITERAL_STRING
+
+%type <std::string> part
+%type <primitives::SettingPath::Parts> file path parts
 
 ////////////////////////////////////////
 
 %%
 
-file: EOQ
+file: path EOQ
     {
-        $$ = 5;
+        driver.sp = $1;
     }
+    ;
+
+path: /* empty */
+    {
+        primitives::SettingPath::Parts sp;
+        sp.push_back("");
+        $$ = sp;
+    }
+    | parts
+    { $$ = $1; }
+    ;
+
+parts: part
+    {
+        primitives::SettingPath::Parts sp;
+        sp.push_back($1);
+        $$ = sp;
+    }
+    | parts POINT part
+    {
+        $1.push_back($3);
+        $$ = $1;
+    }
+    ;
+
+part: BARE_STRING
+    { $$ = $1; }
+    | START_BASIC_STRING BASIC_STRING
+    { $$ = $2; }
+    | START_LITERAL_STRING LITERAL_STRING
+    { $$ = $2; }
     ;
 
 %%

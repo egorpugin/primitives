@@ -146,8 +146,8 @@ struct base_parser : BaseParser
 ////////////////////////////////////////////////////////////////////////////////
 
 // lexer
-#define THIS_LEXER CONCATENATE(ll_, THIS_PARSER_NAME)
-#define THIS_LEXER_UP CONCATENATE(LL_, THIS_PARSER_NAME_UP)
+#define THIS_LEXER CONCATENATE(ll_, THIS_LEXER_NAME)
+#define THIS_LEXER_UP CONCATENATE(LL_, THIS_LEXER_NAME_UP)
 #define LEXER_NAME(v) CONCATENATE(THIS_LEXER, v)
 #define LEXER_NAME_UP(v) CONCATENATE(THIS_LEXER_UP, v)
 
@@ -164,6 +164,8 @@ struct base_parser : BaseParser
 // lexer
 #define YY_DECL LEXER_FUNCTION
 
+#define YY_USER_ACTION loc.columns(yyleng);
+
 // parser
 
 // bison is missing this definition
@@ -177,6 +179,9 @@ struct base_parser : BaseParser
         if (self->bb.can_throw)                                                              \
             throw std::runtime_error("Error during parse: " + ss.str());                     \
     }
+
+// debug level
+#define SET_DEBUG_LEVEL
 
 #define MY_PARSER_PARSER_DECLARATIONS             \
     LEXER_FUNCTION;                               \
@@ -208,6 +213,7 @@ struct base_parser : BaseParser
         raii holder(bb);                        \
         LEXER_NAME(_scan_string)                \
         (s.c_str(), bb.scanner);                \
+        SET_DEBUG_LEVEL;                        \
         auto r = THIS_PARSER::parser::parse();  \
                                                 \
         return r;                               \
@@ -265,8 +271,6 @@ struct base_parser : BaseParser
 #define MAKE(x) {THIS_PARSER::parser::token::x, {}}
 #define MAKE_VALUE(x, v) {THIS_PARSER::parser::token::x, v}
 
-#define YY_USER_ACTION loc.columns(yyleng);
-
 // for parse()
 // set_debug_level(bb.debug);
 
@@ -292,7 +296,7 @@ struct base_parser : BaseParser
 #define yylex() ((MY_PARSER*)this)->lex()
 
 // lexer
-#define LEXER_FUNCTION THIS_PARSER::parser::symbol_type LEXER_NAME(lex)(void *yyscanner, THIS_PARSER::parser::location_type &loc)
+#define LEXER_FUNCTION THIS_PARSER::parser::symbol_type LEXER_NAME(lex)(void *yyscanner, THIS_PARSER::parser::location_type &loc, MY_PARSER_DRIVER &driver)
 #define MAKE(x) THIS_PARSER::parser::make_ ## x(loc)
 #define MAKE_VALUE(x, v) THIS_PARSER::parser::make_ ## x((v), loc)
 
@@ -317,10 +321,10 @@ struct BASE_PARSER_NAME : BaseParser
 
 }
 
-#define MY_LEXER_FUNCTION                        \
-    THIS_PARSER::parser::symbol_type lex()       \
-    {                                            \
-        return LEXER_NAME(lex)(bb.scanner, loc); \
+#define MY_LEXER_FUNCTION                                                   \
+    THIS_PARSER::parser::symbol_type lex()                                  \
+    {                                                                       \
+        return LEXER_NAME(lex)(bb.scanner, loc, (MY_PARSER_DRIVER &)*this); \
     }
 
 #endif
@@ -336,8 +340,8 @@ struct BASE_PARSER_NAME : BaseParser
 
 %glr-parser
 %skeleton "glr.cc" // C++ skeleton
-%define api.value.type {MY_STORAGE}
-%code provides{ DECLARE_PARSER; } // declare parser in provides section
+%define api.value.type { MY_STORAGE }
+%code provides { #include <primitives/helper/bison_yy.h> }
 
 */
 
@@ -348,7 +352,7 @@ struct BASE_PARSER_NAME : BaseParser
 %define api.value.type variant
 %define api.token.constructor // C++ style of handling variants
 %define parse.assert // check C++ variant types
-%code provides { DECLARE_PARSER; } // declare parser in provides section
+%code provides { #include <primitives/helper/bison_yy.h> }
 %parse-param { MY_PARSER_DRIVER &driver } // param to yy::parser() constructor (the parsing context)
 
 */
@@ -358,7 +362,7 @@ struct BASE_PARSER_NAME : BaseParser
 
 // prevent duplication of locations (location.hh and position.hh)
 // set name of other parser   vvvvvvvv
-%define api.location.type {yy_settings::location}
+%define api.location.type { yy_settings::location }
 %code requires { #include <location.hh> }
 
 // LALR(1): driver code

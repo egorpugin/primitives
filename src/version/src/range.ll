@@ -9,6 +9,7 @@
 %}
 
 %option nounistd
+%option nonoline
 %option yylineno
 %option nounput
 %option batch
@@ -59,7 +60,7 @@ branch [_a-zA-Z][_a-zA-Z0-9]*
 {branch}                return MAKE_VALUE(BRANCH, std::string(yytext));
 {extra}                 return MAKE_VALUE(EXTRA, std::string(yytext));
 
-.                       { /*printf("err = %s\n", yytext);*/ return MAKE(ERROR_SYMBOL); }
-<<EOF>>                 return MAKE(EOQ);
+<*>(?s:.)               { return MAKE(ERROR_SYMBOL); }
+<*><<EOF>>              return MAKE(EOQ);
 
 %%

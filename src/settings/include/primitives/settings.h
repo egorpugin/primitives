@@ -47,16 +47,31 @@ struct opt
 namespace detail
 {
 
-String unescapeSettingChar(const String &s);
+//String unescapeSettingChar(const String &s);
 
 String escapeSettingPart(const String &s);
 
-}
+std::string cp2utf8(int cp);
 
-using SettingPath = Strings;
+} // detail
 
-PRIMITIVES_SETTINGS_API
-SettingPath parseSettingPath(const String &s);
+struct PRIMITIVES_SETTINGS_API SettingPath
+{
+    using Parts = Strings;
+
+    SettingPath();
+    SettingPath(const String &s);
+
+    String toString() const;
+
+    const String &operator[](int i) const { return parts[i]; }
+
+private:
+    Parts parts;
+
+    static bool isBasic(const String &part);
+    void parse(const String &s);
+};
 
 struct PRIMITIVES_SETTINGS_API Setting
 {
