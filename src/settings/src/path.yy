@@ -71,21 +71,13 @@ file: path EOQ
     ;
 
 path: /* empty */
-    {
-        primitives::SettingPath::Parts sp;
-        sp.push_back("");
-        $$ = sp;
-    }
+    {}
     | parts
     { $$ = $1; }
     ;
 
 parts: part
-    {
-        primitives::SettingPath::Parts sp;
-        sp.push_back($1);
-        $$ = sp;
-    }
+    { $$.push_back($1); }
     | parts POINT part
     {
         $1.push_back($3);

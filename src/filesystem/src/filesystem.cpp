@@ -461,6 +461,13 @@ FILE *fopen(const path &p, const char *mode)
 #endif
 }
 
+FILE *fopen_checked(const path &p, const char *mode)
+{
+    auto f = fopen(p, mode);
+    if (!f)
+        throw std::runtime_error("Cannot open file: " + p.u8string() + ", mode = " + mode + ", errno = " + std::to_string(errno));
+}
+
 void create(const path &p)
 {
     // probably this is fixed in MS STL
@@ -481,9 +488,7 @@ void create(const path &p)
 
 ScopedFile::ScopedFile(const path &p, const char *mode)
 {
-    f = primitives::filesystem::fopen(p, mode);
-    if (!f)
-        throw std::runtime_error("Cannot open file: " + p.u8string() + ", errno = " + std::to_string(errno));
+    f = primitives::filesystem::fopen_checked(p, mode);
 }
 
 ScopedFile::~ScopedFile()

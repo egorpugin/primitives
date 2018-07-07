@@ -36,25 +36,10 @@ bare [a-zA-Z0-9_-]*
 \"                      { BEGIN(LL_BASIC); driver.str.clear(); return MAKE(START_BASIC_STRING); }
 <LL_BASIC>[\x00-\xFF]{-}[[:cntrl:]]{-}[\"] { driver.str += *yytext; }
 <LL_BASIC>\\[^uU] {
-    auto c = *(yytext + 1);
-    switch (c)
-    {
-#define M(f, t)          \
-    case f:              \
-        driver.str += t; \
-        break
-
-    M('n', '\n');
-    M('\"', '\"');
-    M('\\', '\\');
-    M('r', '\r');
-    M('t', '\t');
-    M('f', '\f');
-    M('b', '\b');
-
-    default:
+    auto c = primitives::detail::unescapeSettingChar(*(yytext + 1));
+    if (c == 0)
         return MAKE(ERROR_SYMBOL);
-    }
+    driver.str += c;
 }
 <LL_BASIC>\\u[[:xdigit:]]{4} {
     int num = 0;

@@ -183,47 +183,56 @@ struct base_parser : BaseParser
 // debug level
 #define SET_DEBUG_LEVEL
 
-#define MY_PARSER_PARSER_DECLARATIONS             \
-    LEXER_FUNCTION;                               \
-    BISON_PARSER_ERROR_FUNCTION                   \
-                                                  \
-    int LEXER_NAME(lex_init)(void **scanner);     \
-    int LEXER_NAME(lex_destroy)(void *yyscanner); \
-    struct yy_buffer_state *LEXER_NAME(_scan_string)(const char *yy_str, void *yyscanner);
+#define MY_PARSER_PARSER_DECLARATIONS                                                      \
+    LEXER_FUNCTION;                                                                        \
+    BISON_PARSER_ERROR_FUNCTION                                                            \
+                                                                                           \
+    int LEXER_NAME(lex_init)(void **scanner);                                              \
+    int LEXER_NAME(lex_destroy)(void *yyscanner);                                          \
+    struct yy_buffer_state *LEXER_NAME(_scan_string)(const char *yy_str, void *yyscanner); \
+    void LEXER_NAME(set_in)(FILE * f, void *yyscanner)
 
-#define MY_PARSER_PARSE_FUNCTION                \
-    int parse(const std::string &s)             \
-    {                                           \
-        struct raii                             \
-        {                                       \
-            basic_block_type &bb;               \
-            raii(basic_block_type &bb) : bb(bb) \
-            {                                   \
-                LEXER_NAME(lex_init)            \
-                (&bb.scanner);                  \
-            }                                   \
-            ~raii()                             \
-            {                                   \
-                LEXER_NAME(lex_destroy)         \
-                (bb.scanner);                   \
-            }                                   \
-        };                                      \
-                                                \
-        bb = basic_block_type{};                \
-        raii holder(bb);                        \
-        LEXER_NAME(_scan_string)                \
-        (s.c_str(), bb.scanner);                \
-        SET_DEBUG_LEVEL;                        \
-        auto r = THIS_PARSER::parser::parse();  \
-                                                \
-        return r;                               \
+#define MY_PARSER_PARSE_FUNCTION             \
+    int parse(const std::string &s)          \
+    {                                        \
+        bb = basic_block_type{};             \
+        raii holder(bb);                     \
+        LEXER_NAME(_scan_string)             \
+        (s.c_str(), bb.scanner);             \
+        SET_DEBUG_LEVEL;                     \
+        return THIS_PARSER::parser::parse(); \
+    }                                        \
+                                             \
+    int parse(FILE *f)                       \
+    {                                        \
+        bb = basic_block_type{};             \
+        raii holder(bb);                     \
+        LEXER_NAME(set_in)                   \
+        (f, bb.scanner);                     \
+        SET_DEBUG_LEVEL;                     \
+        return THIS_PARSER::parser::parse(); \
     }
 
 #define DECLARE_PARSER                                                          \
-    MY_PARSER_PARSER_DECLARATIONS                                               \
+    MY_PARSER_PARSER_DECLARATIONS;                                              \
                                                                                 \
     struct MY_PARSER : primitives::bison::BASE_PARSER_NAME<THIS_PARSER::parser> \
     {                                                                           \
+        struct raii                                                             \
+        {                                                                       \
+            basic_block_type &bb;                                               \
+            raii(basic_block_type &bb) : bb(bb)                                 \
+            {                                                                   \
+                LEXER_NAME(lex_init)                                            \
+                (&bb.scanner);                                                  \
+            }                                                                   \
+            ~raii()                                                             \
+            {                                                                   \
+                LEXER_NAME(lex_destroy)                                         \
+                (bb.scanner);                                                   \
+            }                                                                   \
+        };                                                                      \
+                                                                                \
         MY_PARSER_PARSE_FUNCTION                                                \
         MY_LEXER_FUNCTION                                                       \
     }

@@ -15,6 +15,23 @@ namespace primitives
 namespace detail
 {
 
+char unescapeSettingChar(char c)
+{
+    switch (c)
+    {
+#define M(f, t) case f: return t
+        M('n', '\n');
+        M('\"', '\"');
+        M('\\', '\\');
+        M('r', '\r');
+        M('t', '\t');
+        M('f', '\f');
+        M('b', '\b');
+#undef M
+    }
+    return 0;
+}
+
 String escapeSettingPart(const String &s)
 {
     String s2;
@@ -48,7 +65,6 @@ std::string cp2utf8(int cp)
 
 SettingPath::SettingPath()
 {
-    parts.push_back({});
 }
 
 SettingPath::SettingPath(const String &s)
@@ -61,7 +77,6 @@ void SettingPath::parse(const String &s)
     if (s.empty())
     {
         parts.clear();
-        parts.push_back({});
         return;
     }
 
@@ -98,14 +113,55 @@ String SettingPath::toString() const
     return s;
 }
 
-void Settings::load(const path &fn, SettingsType type)
+SettingPath SettingPath::operator/(const SettingPath &rhs) const
 {
-
+    SettingPath tmp(*this);
+    tmp.parts.insert(tmp.parts.end(), rhs.parts.begin(), rhs.parts.end());
+    return tmp;
 }
 
-void Settings::save(const path &fn)
+void Settings::load(const path &fn, SettingsType type)
 {
+    auto f = primitives::filesystem::fopen_checked(fn);
 
+    SettingsParserDriver d;
+    auto r = d.parse(f);
+    if (!d.bb.error_msg.empty())
+        throw std::runtime_error(d.bb.error_msg);
+    settings = d.sm;
+}
+
+void Settings::load(const String &s, SettingsType type)
+{
+    SettingsParserDriver d;
+    auto r = d.parse(s);
+    if (!d.bb.error_msg.empty())
+        throw std::runtime_error(d.bb.error_msg);
+    settings = d.sm;
+}
+
+void Settings::save(const path &fn) const
+{
+    write_file(fn, save());
+}
+
+String Settings::save() const
+{
+    String s;
+    return s;
+}
+
+Setting &Settings::operator[](const String &k)
+{
+    return settings[k];
+}
+
+const Setting &Settings::operator[](const String &k) const
+{
+    auto i = settings.find(k);
+    if (i == settings.end())
+        throw std::runtime_error("No such setting: " + k);
+    return i->second;
 }
 
 primitives::SettingStorage<primitives::Settings> &getSettings()

@@ -18,8 +18,10 @@
 %option noyywrap
 
 bare [a-zA-Z0-9_-]*
+newline \r?\n
 
 %x LL_BASIC LL_LITERAL
+%x LL_MULTILINE_BASIC LL_MULTILINE_LITERAL
 
 %%
 
@@ -28,40 +30,29 @@ bare [a-zA-Z0-9_-]*
     loc.step();
 %}
 
-[[:space:]]             ;
+([[:space:]]{-}[\n])+   ;
+[[:space:]]+            { return MAKE(NEWLINE); }
 
-"."                     { return MAKE(POINT); }
+"["                     { return MAKE(LEFT_SQUARE_BRACKET); }
+"]"                     { return MAKE(RIGHT_SQUARE_BRACKET); }
+\=                      { return MAKE(EQUALS); }
+\.                      { return MAKE(POINT); }
 {bare}                  { return MAKE_VALUE(BARE_STRING, yytext); }
 
 \"                      { BEGIN(LL_BASIC); driver.str.clear(); return MAKE(START_BASIC_STRING); }
-<LL_BASIC>[\x00-\xFF]{-}[[:cntrl:]]{-}[\"] { driver.str += *yytext; }
-<LL_BASIC>\\[^uU] {
-    auto c = *(yytext + 1);
-    switch (c)
-    {
-#define M(f, t)          \
-    case f:              \
-        driver.str += t; \
-        break
-
-    M('n', '\n');
-    M('\"', '\"');
-    M('\\', '\\');
-    M('r', '\r');
-    M('t', '\t');
-    M('f', '\f');
-    M('b', '\b');
-
-    default:
+<LL_BASIC,LL_MULTILINE_BASIC>[\x00-\xFF]{-}[[:cntrl:]]{-}[\"] { driver.str += *yytext; }
+<LL_BASIC,LL_MULTILINE_BASIC>\\[^uU\r\n] {
+    auto c = primitives::detail::unescapeSettingChar(*(yytext + 1));
+    if (c == 0)
         return MAKE(ERROR_SYMBOL);
-    }
+    driver.str += c;
 }
-<LL_BASIC>\\u[[:xdigit:]]{4} {
+<LL_BASIC,LL_MULTILINE_BASIC>\\u[[:xdigit:]]{4} {
     int num = 0;
     sscanf(yytext + 2, "%04x", &num);
     driver.str += primitives::detail::cp2utf8(num);
 }
-<LL_BASIC>\\U[[:xdigit:]]{8} {
+<LL_BASIC,LL_MULTILINE_BASIC>\\U[[:xdigit:]]{8} {
     int num = 0;
     sscanf(yytext + 2, "%08x", &num);
     driver.str += primitives::detail::cp2utf8(num);
@@ -71,10 +62,24 @@ bare [a-zA-Z0-9_-]*
     return MAKE_VALUE(BASIC_STRING, driver.str);
 }
 
-\'                      { BEGIN(LL_LITERAL); driver.str.clear(); return MAKE(START_BASIC_STRING); }
-<LL_LITERAL>([\x00-\xFF]{-}[[:cntrl:]]{-}['])* { driver.str += yytext; }
-<LL_LITERAL>\t          { driver.str += *yytext; }
-<LL_LITERAL>\'          { BEGIN(0); return MAKE_VALUE(BASIC_STRING, driver.str); }
+\"\"\"{newline}?        { BEGIN(LL_MULTILINE_BASIC); driver.str.clear(); return MAKE(START_MULTILINE_BASIC_STRING); }
+<LL_MULTILINE_BASIC>{newline} { driver.str += '\n'; }
+<LL_MULTILINE_BASIC>\"  { driver.str += *yytext; }
+<LL_MULTILINE_BASIC>\\{newline}([[:space:]]*) ;
+<LL_MULTILINE_BASIC>\"\"\" {
+    BEGIN(0);
+    return MAKE_VALUE(MULTILINE_BASIC_STRING, driver.str);
+}
+
+\'                      { BEGIN(LL_LITERAL); driver.str.clear(); return MAKE(START_LITERAL_STRING); }
+<LL_LITERAL,LL_MULTILINE_LITERAL>([\x00-\xFF]{-}[[:cntrl:]]{-}['])* { driver.str += yytext; }
+<LL_LITERAL,LL_MULTILINE_LITERAL>\t { driver.str += *yytext; }
+<LL_LITERAL>\'          { BEGIN(0); return MAKE_VALUE(LITERAL_STRING, driver.str); }
+
+\'\'\'{newline}?        { BEGIN(LL_MULTILINE_LITERAL); driver.str.clear(); return MAKE(START_MULTILINE_LITERAL_STRING); }
+<LL_MULTILINE_LITERAL>{newline} { driver.str += '\n'; }
+<LL_MULTILINE_LITERAL>\' { driver.str += *yytext; }
+<LL_MULTILINE_LITERAL>\'\'\' { BEGIN(0); return MAKE_VALUE(MULTILINE_LITERAL_STRING, driver.str); }
 
 <*>(?s:.)               { return MAKE(ERROR_SYMBOL); }
 <*><<EOF>>              return MAKE(EOQ);

@@ -54,7 +54,7 @@ struct PRIMITIVES_VERSION_API GenericNumericVersion
 
     static const Level minimum_level = 3;
 
-#ifndef BISON_PARSER
+#ifndef HAVE_BISON_RANGE_PARSER
 protected:
 #endif
     struct empty_tag {};
@@ -170,7 +170,7 @@ public:
     /// extended version parsing, e.g. =v1.2
     //static Version coerce();
 
-#ifndef BISON_PARSER
+#ifndef HAVE_BISON_RANGE_PARSER
 private:
 #endif
     Extra extra;
@@ -234,7 +234,7 @@ public:
     /// returns empty set
     static VersionRange empty();
 
-#ifndef BISON_PARSER
+#ifndef HAVE_BISON_RANGE_PARSER
 private:
 #endif
     struct RangePair : std::pair<Version, Version>

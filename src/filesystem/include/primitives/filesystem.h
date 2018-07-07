@@ -199,7 +199,10 @@ namespace primitives::filesystem
 {
 
 PRIMITIVES_FILESYSTEM_API
-FILE *fopen(const path &p, const char *mode);
+FILE *fopen(const path &p, const char *mode = "rb");
+
+PRIMITIVES_FILESYSTEM_API
+FILE *fopen_checked(const path &p, const char *mode = "rb");
 
 PRIMITIVES_FILESYSTEM_API
 void create(const path &p);
@@ -209,7 +212,7 @@ void create(const path &p);
 class PRIMITIVES_FILESYSTEM_API ScopedFile
 {
 public:
-    ScopedFile(const path &p, const char *mode);
+    ScopedFile(const path &p, const char *mode = "rb");
     ~ScopedFile();
 
     FILE *getHandle() const { return f; }

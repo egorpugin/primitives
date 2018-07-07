@@ -37,8 +37,9 @@
 {
 struct MY_PARSER_DRIVER : MY_PARSER
 {
-    primitives::SettingPath::Parts sp;
     std::string str;
+    primitives::SettingPath key;
+    primitives::Settings::SettingsMap sm;
 };
 }
 
@@ -48,31 +49,75 @@ struct MY_PARSER_DRIVER : MY_PARSER
 %token EOQ 0 "end of file"
 %token ERROR_SYMBOL
 
-%token POINT
+%token POINT EQUALS NEWLINE
+%token LEFT_SQUARE_BRACKET RIGHT_SQUARE_BRACKET
 
 %token <std::string> BARE_STRING BASIC_STRING LITERAL_STRING
+%token <std::string> MULTILINE_BASIC_STRING MULTILINE_LITERAL_STRING
 %token START_BASIC_STRING START_LITERAL_STRING
+%token START_MULTILINE_BASIC_STRING START_MULTILINE_LITERAL_STRING
 
 %type <std::string> part
-%type <primitives::SettingPath::Parts> file path parts
+%type <primitives::Settings> file
+%type <primitives::Settings::SettingsMap> settings
+%type <std::pair<primitives::SettingPath, primitives::Setting>> setting
+%type <primitives::SettingPath> key
+%type <std::string> value multiline_part
+%type <primitives::SettingPath::Parts> path parts
 
 ////////////////////////////////////////
 
 %%
 
-file: path EOQ
+file: newline_optional
+    {}
+    | newline_optional settings newline_optional EOQ
     {
-        driver.sp = $1;
+        driver.sm = $2;
     }
     ;
 
-path: /* empty */
+settings: setting
     {
-        primitives::SettingPath::Parts sp;
-        sp.push_back("");
-        $$ = sp;
+        $$.insert($1);
     }
-    | parts
+    | settings newline setting
+    {
+        $1.insert($3);
+        $$ = $1;
+    }
+    | table
+    {}
+    ;
+
+table: LEFT_SQUARE_BRACKET key RIGHT_SQUARE_BRACKET
+    { driver.key = $2; }
+    ;
+
+setting: key EQUALS value
+    {
+        $$.first = driver.key / $1;
+        $$.second = $3;
+    }
+    ;
+
+key: path
+    { $$.parts = $1; }
+    ;
+
+value: multiline_part
+    { $$ = $1; }
+    ;
+
+multiline_part: part
+    { $$ = $1; }
+    | START_MULTILINE_BASIC_STRING MULTILINE_BASIC_STRING
+    { $$ = $2; }
+    | START_MULTILINE_LITERAL_STRING MULTILINE_LITERAL_STRING
+    { $$ = $2; }
+    ;
+
+path: parts
     { $$ = $1; }
     ;
 
@@ -95,6 +140,13 @@ part: BARE_STRING
     { $$ = $2; }
     | START_LITERAL_STRING LITERAL_STRING
     { $$ = $2; }
+    ;
+
+newline: NEWLINE
+    ;
+
+newline_optional: /* empty */
+    | newline
     ;
 
 %%

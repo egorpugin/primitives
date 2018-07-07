@@ -300,12 +300,6 @@ projects:
         type: library
         root_directory: src/version
 
-        options:
-            any:
-                definitions:
-                    private:
-                        - BISON_PARSER
-
         dependencies:
             public:
                 hash:

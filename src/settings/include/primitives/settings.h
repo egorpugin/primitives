@@ -47,10 +47,8 @@ struct opt
 namespace detail
 {
 
-//String unescapeSettingChar(const String &s);
-
+char unescapeSettingChar(char c);
 String escapeSettingPart(const String &s);
-
 std::string cp2utf8(int cp);
 
 } // detail
@@ -61,35 +59,60 @@ struct PRIMITIVES_SETTINGS_API SettingPath
 
     SettingPath();
     SettingPath(const String &s);
+    SettingPath(const SettingPath &s) = default;
+    SettingPath &operator=(const SettingPath &s) = default;
 
     String toString() const;
 
-    const String &operator[](int i) const { return parts[i]; }
+    const String &at(size_t i) const { return parts.at(i); }
+    const String &operator[](size_t i) const { return parts[i]; }
+    bool operator<(const SettingPath &rhs) const { return parts < rhs.parts; }
+    bool operator==(const SettingPath &rhs) const { return parts == rhs.parts; }
 
+    SettingPath operator/(const SettingPath &rhs) const;
+
+#ifndef HAVE_BISON_SETTINGS_PARSER
 private:
+#endif
     Parts parts;
 
     static bool isBasic(const String &part);
     void parse(const String &s);
 };
 
-struct PRIMITIVES_SETTINGS_API Setting
-{
-
-};
+using Setting = String;
 
 struct PRIMITIVES_SETTINGS_API Settings
 {
-    std::map<String, String> settings;
+    using SettingsMap = std::map<SettingPath, Setting>;
 
-    void load(const path &fn, SettingsType type);
-    void save(const path &fn);
+    Settings(const Settings &s) = default;
+    Settings &operator=(const Settings &s) = default;
+
+    // remove type parameter?
+    void load(const path &fn, SettingsType type = SettingsType::Default);
+    void load(const String &s, SettingsType type = SettingsType::Default);
+    void save(const path &fn) const;
+    String save() const;
+
+    Setting &operator[](const String &k);
+    const Setting &operator[](const String &k) const;
+
+#ifndef HAVE_BISON_SETTINGS_PARSER
+private:
+#endif
+    SettingsMap settings;
+
+    Settings() = default;
+
+    template <class T>
+    friend struct SettingStorage;
 };
 
 struct SettingStorageBase
 {
-    path configRoot;
-    path configFilename;
+    path systemConfigFilename;
+    path userConfigFilename;
 };
 
 template <class T>
@@ -140,17 +163,20 @@ private:
             {
                 s = get(SettingsType::System);
 
-                auto fn = configFilename;
-                if (!fs::exists(fn))
+                auto fn = userConfigFilename;
+                if (!fn.empty())
                 {
-                    error_code ec;
-                    fs::create_directories(fn.parent_path(), ec);
-                    if (ec)
-                        throw std::runtime_error(ec.message());
-                    auto ss = get(SettingsType::System);
-                    ss.save(fn);
+                    if (!fs::exists(fn))
+                    {
+                        error_code ec;
+                        fs::create_directories(fn.parent_path(), ec);
+                        if (ec)
+                            throw std::runtime_error(ec.message());
+                        auto ss = get(SettingsType::System);
+                        ss.save(fn);
+                    }
+                    s.load(fn, SettingsType::User);
                 }
-                s.load(fn, SettingsType::User);
             }
         }
             break;
@@ -158,7 +184,7 @@ private:
         {
             RUN_ONCE
             {
-                auto fn = configRoot;
+                auto fn = systemConfigFilename;
                 if (fs::exists(fn))
                     s.load(fn, SettingsType::System);
             }
