@@ -104,26 +104,65 @@ TEST_CASE("Checking setting paths", "[setting_path]")
     CHECK(SettingPath(" ' \"'")[0] == " \"");
 }
 
+TEST_CASE("Checking setting", "[setting]")
+{
+    // setting
+    {
+        primitives::Setting p(1);
+        std::vector<primitives::Setting> v;
+        v.push_back(1);
+        v.push_back(1.5);
+        p = v;
+        p = 1;
+    }
+
+    {
+        std::vector<primitives::Setting> v;
+        v.push_back(1);
+        v.push_back(1.5);
+        primitives::Setting p(v);
+        p = v;
+        p = 1;
+    }
+}
+
 TEST_CASE("Checking settings", "[settings]")
 {
     using namespace primitives;
 
-    // basic
+    // strings
+
+    // bare and basic
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a=b"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=b\n"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=b\r\n"s));
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a = b"s));
     CHECK_NOTHROW(getSettings().getLocalSettings().load(" a = b "s));
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a = \"\"\"b\"\"\""s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a = \"b\""s));
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a = \"\"\" b \n \"\"\""s));
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a = \"\"\" b \r\n \"\"\""s));
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a = \"\"\" b \" \r\n \"\"\""s));
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a = \"\"\" b \"\" \r\n \"\"\""s));
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a = \"\"\" b \"\" ''' \r\n \"\"\""s));
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a = \"\"\" b \"\" ' '' \r\n \"\"\""s));
-    CHECK_NOTHROW(getSettings().getLocalSettings().load("\r\n\v\t\f  a = \"\"\" b \"\" ' '' \r\n \"\"\"  "s));
-    CHECK_NOTHROW(getSettings().getLocalSettings().load("\r\n\v\t\f  a = \"\"\" b \"\" ' '' \r\n \"\"\"  \r\n\v\t\f  "s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("\r\n\t  a = \"\"\" b \"\" ' '' \r\n \"\"\"  "s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("\r\n\t  a = \"\"\" b \"\" ' '' \r\n \"\"\"  \r\n\t  "s));
     CHECK_THROWS(getSettings().getLocalSettings().load("a = \"\"\" b \"\"\" \r\n \"\"\""s));
     CHECK_THROWS(getSettings().getLocalSettings().load("a = \"\"\" b \r \"\"\""s));
     CHECK_THROWS(getSettings().getLocalSettings().load("a = \"\"\"\rb\"\"\""s));
+    CHECK_THROWS(getSettings().getLocalSettings().load("a\n.b=b"s));
+    CHECK_THROWS(getSettings().getLocalSettings().load("a.\nb=b"s));
+    CHECK_THROWS(getSettings().getLocalSettings().load("a.b\n=b"s));
+    CHECK_THROWS(getSettings().getLocalSettings().load("a.b=\nb"s));
+    CHECK_THROWS(getSettings().getLocalSettings().load("a=b\r"s));
+    CHECK_THROWS(getSettings().getLocalSettings().load("\r"s));
+    CHECK_THROWS(getSettings().getLocalSettings().load("\v"s));
+    CHECK_THROWS(getSettings().getLocalSettings().load("\f"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load(" "s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("\t"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("\n"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("\r\n"s));
     {
         CHECK_NOTHROW(getSettings().getLocalSettings().load("a = \"\"\"\r\nb\"\"\""s));
         CHECK(getSettings().getLocalSettings()["a"] == "b");
@@ -257,6 +296,29 @@ bc\
         CHECK(getSettings().getLocalSettings()["a"] == "bc d");
 
         cfg = R"(
+            a = """\
+
+
+                    bc\ \
+
+
+                \d\
+""")";
+        CHECK_THROWS(getSettings().getLocalSettings().load(cfg));
+
+        cfg = R"(
+            a = """\
+
+
+                    bc\\ \
+
+
+                \\d\
+""")";
+        CHECK_NOTHROW(getSettings().getLocalSettings().load(cfg));
+        CHECK(getSettings().getLocalSettings()["a"] == "bc\\ \\d");
+
+        cfg = R"(
             a = """ \
 
 
@@ -279,8 +341,8 @@ bc\
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a = ''' b ' \r\n '''"s));
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a = ''' b '' \r\n '''"s));
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a = ''' b \"\" \"\"\" \r\n '''"s));
-    CHECK_NOTHROW(getSettings().getLocalSettings().load("\r\n\v\t\f  a = ''' b \"\" \" \"\" \r\n '''  "s));
-    CHECK_NOTHROW(getSettings().getLocalSettings().load("\r\n\v\t\f  a = ''' b \"\" \" \"\" \r\n '''  \r\n\v\t\f  "s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("\r\n\t  a = ''' b \"\" \" \"\" \r\n '''  "s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("\r\n\t  a = ''' b \"\" \" \"\" \r\n '''  \r\n\t  "s));
     CHECK_THROWS(getSettings().getLocalSettings().load("a = ''' b ''' \r\n '''"s));
     CHECK_THROWS(getSettings().getLocalSettings().load("a = ''' b \r '''"s));
     CHECK_THROWS(getSettings().getLocalSettings().load("a = '''\rb'''"s));
@@ -295,12 +357,12 @@ bc\
 
     {
         String cfg =
-            "\r\n\v\t\f  e.b.c = \"\"\" b \"\" ' '' \r\n \"\"\"  \r\n\v\t\f  "
+            "\r\n\t  e.b.c = \"\"\" b \"\" ' '' \r\n \"\"\"  \r\n\t  "
             "a=b\n"
             "b=a\r\n"
             "b.c.d=a\r\n"
             "b . c . d . e=abc\r\n"
-            "\r\n\v\t\f  a.b.c.d = ''' b \"\" \" \"\" \r\n '''  \r\n\v\t\f  "
+            "\r\n\t  a.b.c.d = ''' b \"\" \" \"\" \r\n '''  \r\n\t  "
         ;
         CHECK_NOTHROW(getSettings().getLocalSettings().load(cfg));
         CHECK(getSettings().getLocalSettings()["a"] == "b");
@@ -310,6 +372,10 @@ bc\
     }
 
     // table
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("[a]"s));
+    CHECK_THROWS(getSettings().getLocalSettings().load("[a][b]"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("[a]\n[b]"s));
+
     {
         CHECK_THROWS(getSettings().getLocalSettings().load("[a]b=c"s));
         CHECK_NOTHROW(getSettings().getLocalSettings().load("[a]\nb=c"s));
@@ -324,11 +390,127 @@ bc\
     }
 
     {
-        String cfg = R"settings_config(
-
-)settings_config";
+        String cfg =
+            "#\n"
+            "[a]\n"
+            "[b]\n"
+            "b=c\n"
+            "[b.b]\n"
+            "b=d\n"
+            "[a.b.c]\n"
+            "d=e\n"
+            "#"
+            ;
         CHECK_NOTHROW(getSettings().getLocalSettings().load(cfg));
+        CHECK(getSettings().getLocalSettings()["b.b"] == "c");
+        CHECK(getSettings().getLocalSettings()["b.b.b"] == "d");
+        CHECK(getSettings().getLocalSettings()["a.b.c.d"] == "e");
     }
+
+    {
+        String cfg =
+            "[a]\n"
+            "[b][a]\n"
+            "b=c\n"
+            "[b.b]\n"
+            "b=d\n"
+            "[a.b.c] # comment\n"
+            "d=e\n"
+            ;
+        CHECK_THROWS(getSettings().getLocalSettings().load(cfg));
+    }
+
+    // non-string values
+
+    // rhs bare!
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=5-"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=5+"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=5a"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=5x"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0x"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=00x"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=-0xg"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=-0x0"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=08"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b2"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=-0xf"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=+0xf"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b_"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b0_"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b_0"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b_0_"s));
+
+    // bin
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b0"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b000"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b1"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b01"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b01010110011010010"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b0_0"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b1"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b01"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b01010110011010010"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0b0''1"s));
+
+    // hex
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0xf"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=0x0"s));
+
+    {
+        String cfg =
+            "a=5\n"
+            //"b=5.5\n"
+            "c=false\n"
+            "d=true\n"
+            "e=-5\n"
+            "f=01_0  \n"
+            "ff=  0_1_0  \n"
+            "ff2=  0  1_0 * \n"
+            "ff3=  0o_1_0  \n"
+            "ff4=  00_1_0  \n"
+            "ff5=  0o0_1_0  \n"
+            "g=0b0_1'0   \n"
+            "h= 0xF'F \n"
+            "i= 1'000'000'000 \n"
+            "j= 1'0'0'0'0'0'0'0'0'0 \n"
+            "k=a=0X1.BC70A3D70A3D7P+6\n"
+            "l:0X1.BC70A3D70A3D7P+6\n"
+            ;
+        CHECK_NOTHROW(getSettings().getLocalSettings().load(cfg));
+        CHECK(getSettings().getLocalSettings()["a"] == 5);
+        //CHECK(getSettings().getLocalSettings()["b"] == 5.5);
+        CHECK(getSettings().getLocalSettings()["c"] == false);
+        CHECK(getSettings().getLocalSettings()["d"] == true);
+        CHECK(getSettings().getLocalSettings()["e"] == -5);
+        CHECK(getSettings().getLocalSettings()["ff"] == 10);
+        CHECK(getSettings().getLocalSettings()["ff2"] == "0  1_0 *");
+        CHECK(getSettings().getLocalSettings()["ff3"] == "0o_1_0");
+        CHECK(getSettings().getLocalSettings()["ff4"] == 8);
+        CHECK(getSettings().getLocalSettings()["ff5"] == 8);
+        CHECK(getSettings().getLocalSettings()["f"] == 8);
+        CHECK(getSettings().getLocalSettings()["g"] == 2);
+        CHECK(getSettings().getLocalSettings()["h"] == 255);
+        CHECK(getSettings().getLocalSettings()["i"] == 1000000000);
+        CHECK(getSettings().getLocalSettings()["j"] == 1000000000);
+        CHECK(getSettings().getLocalSettings()["k"] == "a=0X1.BC70A3D70A3D7P+6");
+        CHECK(getSettings().getLocalSettings()["l"] == 111.11);
+        CHECK_THROWS(getSettings().getLocalSettings()["a"] == "x");
+    }
+
+    // float
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=111.11"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=-2.22"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=1.18973e+49"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=1.18973e+4932zzz"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=inf"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=-inf"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=+infinity"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=nan"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=-nAN"s));
+    CHECK_NOTHROW(getSettings().getLocalSettings().load("a=+nan(2)"s));
+
+    // from file
+    CHECK_NOTHROW(getSettings().getLocalSettings().load(path(__FILE__).parent_path() / "test.cfg"));
 }
 
 primitives::SettingStorage<primitives::Settings> &getSettings()
@@ -345,6 +527,16 @@ primitives::SettingStorage<primitives::Settings> &getSettings()
 int main(int argc, char **argv)
 try
 {
+    String cfg = R"(
+            a = """\
+    array5 = [
+        "Whitespace", "is", "ignored"
+    ]
+""")";
+    getSettings().getLocalSettings().load(cfg);
+
+    getSettings().getLocalSettings().load(path(__FILE__).parent_path() / "test.cfg");
+
     Catch::Session s;
     //while (1)
     s.run(argc, argv);

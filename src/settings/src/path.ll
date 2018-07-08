@@ -18,6 +18,7 @@
 %option noyywrap
 
 bare [a-zA-Z0-9_-]*
+space [[:blank:]]
 
 %x LL_BASIC LL_LITERAL
 
@@ -28,9 +29,9 @@ bare [a-zA-Z0-9_-]*
     loc.step();
 %}
 
-[[:space:]]             ;
+{space}+                ;
 
-"."                     { return MAKE(POINT); }
+\.                      { return MAKE(POINT); }
 {bare}                  { return MAKE_VALUE(BARE_STRING, yytext); }
 
 \"                      { BEGIN(LL_BASIC); driver.str.clear(); return MAKE(START_BASIC_STRING); }

@@ -8,15 +8,23 @@
 
 #include <primitives/enums.h>
 #include <primitives/filesystem.h>
+#include <primitives/stdcompat/variant.h>
 #include <primitives/templates.h>
+
+#include <boost/variant.hpp>
 
 namespace primitives
 {
 
 enum class SettingsType
 {
+    // File or Document? // per document settings!
+    // Project
+    // Other levels below? Or third one here
+
     Local,  // in current dir
     User,   // in user's home
+    // Group?
     System, // in OS
 
     Max,
@@ -80,7 +88,95 @@ private:
     void parse(const String &s);
 };
 
-using Setting = String;
+//using SettingBase = variant<std::string, int64_t, double, bool>;
+//#define SettingGet std::get
+using SettingBase = boost::make_recursive_variant<
+    std::string, int64_t, double, bool,
+    std::vector<boost::recursive_variant_>>::type;
+#define SettingGet boost::get
+
+// rename to value?
+struct Setting : SettingBase
+{
+    using base = SettingBase;
+
+    using base::base;
+    using base::operator=;
+
+    Setting() = default;
+    Setting(const Setting &) = default;
+    Setting &operator=(const Setting &) = default;
+
+    Setting(int v)
+        : base((int64_t)v)
+    {
+    }
+
+    Setting(const std::vector<Setting> &v)
+        : base((const std::vector<SettingBase> &)v)
+    {
+    }
+
+    Setting &operator=(int v)
+    {
+        base::operator=((int64_t)v);
+        return *this;
+    }
+
+    Setting &operator=(const std::vector<Setting> &v)
+    {
+        base::operator=((const std::vector<SettingBase> &)v);
+        return *this;
+    }
+
+    /*template <class U, typename std::enable_if_t<std::is_integral_v<U>> = 0>
+    Setting &operator=(U v)
+    {
+        base::operator=((int64_t)v);
+        return *this;
+    }*/
+
+    /*
+    template <class U>
+    Setting &operator=(const U &v)
+    {
+        if constexpr (std::is_integral_v<U>)
+            base::operator=((int64_t)v);
+        else if constexpr (std::is_floating_point_v<U>)
+            base::operator=((double)v);
+        else
+            base::operator=(v);
+        return *this;
+    }*/
+
+    bool operator==(const std::string &s) const
+    {
+        return SettingGet<std::string>(*this) == s;
+    }
+
+    template <class U>
+    bool operator==(const U &v) const
+    {
+        if constexpr (std::is_same_v<U, bool>)
+            return SettingGet<bool>(*this) == v;
+        else if constexpr (
+            std::is_same_v<U, std::string> ||
+            std::is_same_v<U, std::string_view> ||
+            std::is_same_v<U, const char *> ||
+            std::is_same_v<U, const char[]> ||
+            std::is_same_v<U, char[]> ||
+            std::is_array_v<U>
+            )
+            return SettingGet<std::string>(*this) == v;
+        else if constexpr (std::is_integral_v<U>)
+            return SettingGet<int64_t>(*this) == v;
+        else if constexpr (std::is_floating_point_v<U>)
+            return SettingGet<double>(*this) == v;
+    }
+
+};
+
+#undef SettingGet
 
 struct PRIMITIVES_SETTINGS_API Settings
 {
@@ -97,6 +193,12 @@ struct PRIMITIVES_SETTINGS_API Settings
 
     Setting &operator[](const String &k);
     const Setting &operator[](const String &k) const;
+
+    SettingsMap::iterator begin() { return settings.begin(); }
+    SettingsMap::iterator end() { return settings.end(); }
+
+    SettingsMap::const_iterator begin() const { return settings.begin(); }
+    SettingsMap::const_iterator end() const { return settings.end(); }
 
 #ifndef HAVE_BISON_SETTINGS_PARSER
 private:
@@ -203,4 +305,10 @@ private:
 PRIMITIVES_SETTINGS_API
 primitives::SettingStorage<primitives::Settings> &getSettings();
 
+}
+
+// request by boost
+inline std::ostream &operator<<(std::ostream &o, const primitives::SettingBase &)
+{
+    return o;
 }

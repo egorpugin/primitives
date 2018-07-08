@@ -31,6 +31,7 @@ struct basic_block
     void *scanner = nullptr;
     bool can_throw = false;
     std::string error_msg;
+    std::string bad_symbol;
 };
 
 }
@@ -173,9 +174,12 @@ struct base_parser : BaseParser
     inline void THIS_PARSER::parser::error(const location_type &loc, const std::string &msg) \
     {                                                                                        \
         std::ostringstream ss;                                                               \
-        ss << loc << " " << msg << "\n";                                                     \
+        ss << loc << " " << msg;                                                             \
         auto self = (primitives::bison::BASE_PARSER_NAME<THIS_PARSER::parser> *)(this);      \
         self->bb.error_msg = ss.str();                                                       \
+        if (!self->bb.bad_symbol.empty())                                                    \
+            self->bb.error_msg += ", bad symbol = '" + self->bb.bad_symbol + "'";            \
+        self->bb.error_msg += "\n";                                                          \
         if (self->bb.can_throw)                                                              \
             throw std::runtime_error("Error during parse: " + ss.str());                     \
     }
