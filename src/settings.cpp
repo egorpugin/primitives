@@ -4,15 +4,20 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#include <primitives/main.h>
 #include <primitives/settings.h>
+#include <primitives/sw/settings.h>
 
-#include <llvm/Support/CommandLine.h>
+//#include <llvm/Support/CommandLine.h>
 
 #include <chrono>
 #include <iostream>
 
 #define CATCH_CONFIG_RUNNER
 #include <catch.hpp>
+
+int argc;
+char **argv;
 
 TEST_CASE("Checking setting paths", "[setting_path]")
 {
@@ -128,7 +133,7 @@ TEST_CASE("Checking setting", "[setting]")
 
 TEST_CASE("Checking settings", "[settings]")
 {
-    using namespace primitives;
+    //using namespace primitives;
 
     // strings
 
@@ -358,7 +363,7 @@ bc\
     {
         String cfg =
             "\r\n\t  e.b.c = \"\"\" b \"\" ' '' \r\n \"\"\"  \r\n\t  "
-            "a=b\n"
+            " a=b\n"
             "b=a\r\n"
             "b.c.d=a\r\n"
             "b . c . d . e=abc\r\n"
@@ -509,56 +514,64 @@ bc\
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a=-nAN"s));
     CHECK_NOTHROW(getSettings().getLocalSettings().load("a=+nan(2)"s));
 
-    // from file
-    CHECK_NOTHROW(getSettings().getLocalSettings().load(path(__FILE__).parent_path() / "test.cfg"));
-}
-
-primitives::SettingStorage<primitives::Settings> &getSettings()
-{
-    static primitives::SettingStorage<primitives::Settings> &settings = []() -> decltype(auto)
     {
-        auto &s = primitives::getSettings();
-        //s.configFilename = "";
-        return s;
-    }();
-    return settings;
-}
-
-int main(int argc, char **argv)
-try
-{
-    String cfg = R"(
-            a = """\
+        String cfg = R"(
     array5 = [
         "Whitespace", "is", "ignored"
     ]
-""")";
-    getSettings().getLocalSettings().load(cfg);
+)";
+        getSettings().getLocalSettings().load(cfg);
+    }
 
-    getSettings().getLocalSettings().load(path(__FILE__).parent_path() / "test.cfg");
+    // from file
+    //CHECK_NOTHROW(getSettings().getLocalSettings().load(path(__FILE__).parent_path() / "test.cfg"));
+
+    getSettings().getLocalSettings().clear();
+    getSettings().getLocalSettings().load(path(__FILE__).parent_path() / "test.yml");
+    getSettings().getLocalSettings().save("test2.yml");
+    // TODO: add more setting checks
+}
+
+TEST_CASE("Checking command line", "[cl]")
+{
+    using namespace primitives;
+
+    cl::option<int> a{};
+
+    Strings args = {
+        "prog",
+        "1",
+        "@@" + (path(__FILE__).parent_path() / "test.yml").string(),
+        "@" + (path(__FILE__).parent_path() / "test.rsp").string(),
+        "2",
+    };
+
+    ::primitives::cl::parseCommandLineOptions(args);
+}
+
+int main(int argc, char **argv)
+{
+    /*using namespace llvm;
+
+    cl::opt<std::string> OutputFilename("o", cl::desc("Specify output filename"), cl::value_desc("filename"));
+    cl::opt<bool> b1{"b"};
+    cl::SubCommand test("test");
+    cl::opt<bool> b2{ "d", cl::sub(test) };
+    cl::ParseCommandLineOptions(argc, argv);
+
+    //std::ofstream Output(OutputFilename.c_str());
+
+    return 0;*/
+
+    //setting<int> myval("myval");
+    auto ssss = getSettings().getLocalSettings()["myval"].as<int64_t>();
+
+    ::argc = argc;
+    ::argv = argv;
 
     Catch::Session s;
     //while (1)
     s.run(argc, argv);
 
-    using namespace llvm;
-
-
-    cl::opt<std::string> OutputFilename("o", cl::desc("Specify output filename"), cl::value_desc("filename"));
-
-    cl::ParseCommandLineOptions(argc, argv);
-
-    std::ofstream Output(OutputFilename.c_str());
-
     return 0;
-}
-catch (std::exception &e)
-{
-    std::cerr << e.what() << "\n";
-    return 1;
-}
-catch (...)
-{
-    std::cerr << "unknown exception" << "\n";
-    return 1;
 }

@@ -12,7 +12,7 @@
 
 // general settings
 %require "3.0"
-%debug
+//%debug
 %start file
 %locations
 %verbose
@@ -47,9 +47,9 @@ struct MY_PARSER_DRIVER : MY_PARSER
 
 // tokens and types
 %token EOQ 0 "end of file"
-%token ERROR_SYMBOL
+%token ERROR_SYMBOL LL_FATAL_ERROR
 
-%token POINT COMMA KV_DELIMETER NEWLINE
+%token POINT COMMA KV_DELIMETER
 %token LEFT_SQUARE_BRACKET RIGHT_SQUARE_BRACKET LEFT_CURLY_BRACKET RIGHT_CURLY_BRACKET
 %token <bool> VALUE_BOOL
 %token <double> VALUE_DOUBLE
@@ -63,6 +63,7 @@ struct MY_PARSER_DRIVER : MY_PARSER
 %type <bool> bool
 %type <int64_t> integer
 %type <double> float
+%type <std::vector<primitives::Setting>> array values values1
 %type <std::string> part_string bare_string line_string multiline_string
 %type <primitives::Settings> file
 %type <primitives::Settings::SettingsMap> setting settings inline_settings inline_settings1 inline_table
@@ -74,11 +75,11 @@ struct MY_PARSER_DRIVER : MY_PARSER
 
 %%
 
-file: newline_optional
+file: /* empty */
     {}
-    | newline_optional settings newline_optional EOQ
+    | settings EOQ
     {
-        driver.sm = $2;
+        driver.sm = $1;
     }
     ;
 
@@ -86,9 +87,9 @@ settings: setting
     {
         $$.insert($1.begin(), $1.end());
     }
-    | settings newline setting
+    | settings setting
     {
-        $1.insert($3.begin(), $3.end());
+        $1.insert($2.begin(), $2.end());
         $$ = $1;
     }
     ;
@@ -122,7 +123,7 @@ inline_settings1: /* empty */
 
 inline_settings: setting
     {
-        $1.insert($1.begin(), $1.end());
+        $$.insert($1.begin(), $1.end());
     }
     | inline_settings comma setting
     {
@@ -143,6 +144,29 @@ value: multiline_string
     { $$ = $1; }
     | float
     { $$ = $1; }
+    | array
+    { $$ = $1; }
+    ;
+
+array: LEFT_SQUARE_BRACKET values1 RIGHT_SQUARE_BRACKET
+    { $$ = $2; }
+    ;
+
+values1: /* empty */
+    {}
+    | values comma_optional
+    { $$ = $1; }
+    ;
+
+values: value
+    {
+        $$.push_back($1);
+    }
+    | values comma value
+    {
+        $1.push_back($3);
+        $$ = $1;
+    }
     ;
 
 path: parts
@@ -198,14 +222,6 @@ line_string: START_BASIC_STRING BASIC_STRING
 
 bare_string: BARE_STRING
     { $$ = $1; }
-    ;
-
-newline: NEWLINE
-    | newline NEWLINE
-    ;
-
-newline_optional: /* empty */
-    | newline
     ;
 
 comma: COMMA

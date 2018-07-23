@@ -466,6 +466,7 @@ FILE *fopen_checked(const path &p, const char *mode)
     auto f = fopen(p, mode);
     if (!f)
         throw std::runtime_error("Cannot open file: " + p.u8string() + ", mode = " + mode + ", errno = " + std::to_string(errno));
+    return f;
 }
 
 void create(const path &p)

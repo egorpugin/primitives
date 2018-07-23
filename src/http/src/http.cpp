@@ -174,9 +174,9 @@ HttpResponse url_request(const HttpRequest &request)
         {
             for (auto &a : request.data_kv)
             {
-                escaped.push_back(curl_easy_escape(curl, a.first.c_str(), a.first.size()));
+                escaped.push_back(curl_easy_escape(curl, a.first.c_str(), (int)a.first.size()));
                 data += escaped.back() + std::string("=");
-                escaped.push_back(curl_easy_escape(curl, a.second.c_str(), a.second.size()));
+                escaped.push_back(curl_easy_escape(curl, a.second.c_str(), (int)a.second.size()));
                 data += escaped.back() + std::string("&");
             }
             data.resize(data.size() - 1);

@@ -164,8 +164,24 @@ struct base_parser : BaseParser
 
 // lexer
 #define YY_DECL LEXER_FUNCTION
+#define YY_USER_ACTION loc.step(); loc.columns(yyleng);
 
-#define YY_USER_ACTION loc.columns(yyleng);
+#if YY_DEBUG_STATE
+#define YY_DEBUG_LEXER_STATE(x, msg) YY_PRINT_STATE(x, msg)
+#else
+#define YY_DEBUG_LEXER_STATE(x, msg)
+#endif
+
+#define YY_PRINT_STATE(x, msg)                            \
+    do                                                    \
+    {                                                     \
+        printf(msg " state: %d, current stack = ", (x));  \
+        for (int i = 0; i < yyg->yy_start_stack_ptr; i++) \
+            printf("%d ", yyg->yy_start_stack[i]);        \
+    } while (0)
+#define YY_PUSH_STATE(x) do { yy_push_state((x), yyscanner); YY_DEBUG_LEXER_STATE(x, "entering"); } while (0)
+#define YY_POP_STATE() do { yy_pop_state(yyscanner); YY_DEBUG_LEXER_STATE(YYSTATE, "entering"); } while (0)
+#define YY_TOP_STATE() (((struct yyguts_t*)yyscanner)->yy_start_stack ? yy_top_state(yyscanner) : YYSTATE)
 
 // parser
 
@@ -284,9 +300,6 @@ struct base_parser : BaseParser
 #define MAKE(x) {THIS_PARSER::parser::token::x, {}}
 #define MAKE_VALUE(x, v) {THIS_PARSER::parser::token::x, v}
 
-// for parse()
-// set_debug_level(bb.debug);
-
 #define MY_LEXER_FUNCTION                                     \
     int lex(PARSER_NAME_UP(STYPE) * val, location_type * loc) \
     {                                                         \
@@ -312,6 +325,8 @@ struct base_parser : BaseParser
 #define LEXER_FUNCTION THIS_PARSER::parser::symbol_type LEXER_NAME(lex)(void *yyscanner, THIS_PARSER::parser::location_type &loc, MY_PARSER_DRIVER &driver)
 #define MAKE(x) THIS_PARSER::parser::make_ ## x(loc)
 #define MAKE_VALUE(x, v) THIS_PARSER::parser::make_ ## x((v), loc)
+
+#define YY_FATAL_ERROR(msg) throw std::logic_error(msg)
 
 #define MY_PARSER_DRIVER CONCATENATE(MY_PARSER, Driver)
 struct MY_PARSER_DRIVER;
