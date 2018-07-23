@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+// Some parts of this code are taken from LLVM.Support.CommandLine.
+
 #pragma once
 
 #include <primitives/enums.h>
@@ -16,6 +18,8 @@
 
 namespace primitives
 {
+
+struct Setting;
 
 enum class SettingsType
 {
@@ -32,6 +36,48 @@ enum class SettingsType
 
     Default = User
 };
+
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+
+// applicator class - This class is used because we must use partial
+// specialization to handle literal string arguments specially (const char* does
+// not correctly respond to the apply method).  Because the syntax to use this
+// is a pain, we have the 'apply' method below to handle the nastiness...
+//
+template <class Mod> struct applicator {
+    template <class Opt> static void opt(const Mod &M, Opt &O) { M.apply(O); }
+};
+
+// Handle const char* as a special case...
+template <unsigned n> struct applicator<char[n]> {
+    template <class Opt> static void opt(const String &Str, Opt &O) {
+        O.setArgStr(Str);
+    }
+};
+template <unsigned n> struct applicator<const char[n]> {
+    template <class Opt> static void opt(const String &Str, Opt &O) {
+        O.setArgStr(Str);
+    }
+};
+template <> struct applicator<String> {
+    template <class Opt> static void opt(const String &Str, Opt &O) {
+        O.setArgStr(Str);
+    }
+};
+
+template <class Opt, class Mod, class... Mods>
+void apply(Opt *O, const Mod &M, const Mods &... Ms) {
+    applicator<Mod>::opt(M, *O);
+    if constexpr (sizeof...(Ms) > 0)
+        apply(O, Ms...);
+}
+
+} // namespace detail
+
+////////////////////////////////////////////////////////////////////////////////
 
 namespace cl
 {
@@ -50,6 +96,16 @@ template <class T>
 struct option
 {
     String cmd_name;
+
+    template <class... Mods>
+    explicit option(const Mods &... Ms)
+        //: Option(Optional, NotHidden), Parser(*this)
+    {
+        detail::apply(this, Ms...);
+        //done();
+    }
+
+    void setArgStr(const String &s) { cmd_name = s; }
 };
 
 template <class T>
@@ -61,7 +117,9 @@ void parseCommandLineOptions(int argc, char **argv);
 PRIMITIVES_SETTINGS_API
 void parseCommandLineOptions(const Strings &args);
 
-}
+} // namespace cl
+
+////////////////////////////////////////////////////////////////////////////////
 
 namespace detail
 {
@@ -70,7 +128,9 @@ char unescapeSettingChar(char c);
 String escapeSettingPart(const String &s);
 std::string cp2utf8(int cp);
 
-} // detail
+} // namespace detail
+
+////////////////////////////////////////////////////////////////////////////////
 
 struct PRIMITIVES_SETTINGS_API SettingPath
 {
@@ -121,6 +181,10 @@ using SettingBase = boost::make_recursive_variant<
 struct Setting : SettingBase
 {
     using base = SettingBase;
+
+    // scope = local, user, thread
+    // read only
+    //bool saveable = true;
 
     using base::base;
     using base::operator=;
@@ -225,7 +289,6 @@ struct Setting : SettingBase
         return SettingGet<U>(*this);
     }
 };
-
 #undef SettingGet
 
 struct PRIMITIVES_SETTINGS_API Settings
@@ -275,6 +338,8 @@ private:
     friend struct SettingStorage;
 };
 
+////////////////////////////////////////////////////////////////////////////////
+
 struct SettingStorageBase
 {
     path systemConfigFilename;
@@ -311,16 +376,20 @@ template struct PRIMITIVES_SETTINGS_API SettingStorage<primitives::Settings>;
 #pragma warning(pop)
 #endif
 
+////////////////////////////////////////////////////////////////////////////////
+
 /// Users may want to define their own getSettings()
 /// with some initial setup.
 /// 'settings_auto' package will also provide tuned global getSettings() to use.
 PRIMITIVES_SETTINGS_API
-primitives::SettingStorage<primitives::Settings> &getSettings();
+primitives::SettingStorage<primitives::Settings> &getSettings(primitives::SettingStorage<primitives::Settings> * = nullptr);
 
 PRIMITIVES_SETTINGS_API
-primitives::Settings &getSettings(SettingsType type);
+primitives::Settings &getSettings(SettingsType type, primitives::SettingStorage<primitives::Settings> * = nullptr);
 
-}
+////////////////////////////////////////////////////////////////////////////////
+
+} // namespace primitives
 
 using primitives::SettingsType;
 

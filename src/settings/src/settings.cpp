@@ -296,7 +296,10 @@ String Settings::dump() const
 void Settings::dump(yaml &root) const
 {
     for (auto &[k, v] : settings)
-        root[k.toString()] = v.toString();
+    {
+        //if (v.saveable)
+            root[k.toString()] = v.toString();
+    }
 }
 
 Setting &Settings::operator[](const String &k)
@@ -407,15 +410,17 @@ T &SettingStorage<T>::get(SettingsType type)
 
 template struct SettingStorage<primitives::Settings>;
 
-primitives::SettingStorage<primitives::Settings> &getSettings()
+primitives::SettingStorage<primitives::Settings> &getSettings(primitives::SettingStorage<primitives::Settings> *v)
 {
-    static primitives::SettingStorage<primitives::Settings> settings;
-    return settings;
+    static primitives::SettingStorage<primitives::Settings> *settings = nullptr;
+    if (!settings && v)
+        settings = v;
+    return *settings;
 }
 
-primitives::Settings &getSettings(SettingsType type)
+primitives::Settings &getSettings(SettingsType type, primitives::SettingStorage<primitives::Settings> *v)
 {
-    return getSettings().get(type);
+    return getSettings(v).get(type);
 }
 
 }

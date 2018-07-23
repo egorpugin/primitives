@@ -8,8 +8,6 @@
 #include <primitives/settings.h>
 #include <primitives/sw/settings.h>
 
-//#include <llvm/Support/CommandLine.h>
-
 #include <chrono>
 #include <iostream>
 
@@ -536,7 +534,7 @@ TEST_CASE("Checking command line", "[cl]")
 {
     using namespace primitives;
 
-    cl::option<int> a{};
+    cl::option<int> a{"x"};
 
     Strings args = {
         "prog",
@@ -549,22 +547,40 @@ TEST_CASE("Checking command line", "[cl]")
     ::primitives::cl::parseCommandLineOptions(args);
 }
 
+#include <llvm/Support/CommandLine.h>
+
+#include <any>
+
 int main(int argc, char **argv)
 {
-    /*using namespace llvm;
+    {
+        using namespace llvm;
 
-    cl::opt<std::string> OutputFilename("o", cl::desc("Specify output filename"), cl::value_desc("filename"));
-    cl::opt<bool> b1{"b"};
-    cl::SubCommand test("test");
-    cl::opt<bool> b2{ "d", cl::sub(test) };
-    cl::ParseCommandLineOptions(argc, argv);
+        cl::opt<std::string> OutputFilename("o", cl::desc("Specify output filename"), cl::value_desc("filename"));
+        cl::opt<bool> b1{ "b" };
+        cl::SubCommand test("test");
+        cl::opt<bool> b2{ "d", cl::sub(test) };
+        cl::ParseCommandLineOptions(argc, argv);
 
-    //std::ofstream Output(OutputFilename.c_str());
+        //std::ofstream Output(OutputFilename.c_str());
 
-    return 0;*/
+        //return 0;
+    }
 
-    //setting<int> myval("myval");
-    auto ssss = getSettings().getLocalSettings()["myval"].as<int64_t>();
+    namespace st = sw::settings;
+
+    st::setting<int> myval("myval", st::do_not_save{});
+    auto &ssss = getSettings().getLocalSettings()["myval"].as<int64_t>();
+    ssss = 2;
+
+    std::any x;
+    x = 5;
+    auto x2 = std::any_cast<int>(x);
+    x = 5LL;
+    auto x3 = std::any_cast<long long>(x);
+
+
+
 
     ::argc = argc;
     ::argv = argv;
