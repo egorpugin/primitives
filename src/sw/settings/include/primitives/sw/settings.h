@@ -74,23 +74,42 @@ struct PRIMITIVES_SW_SETTINGS_API BaseSetting
 template <class DataType>
 struct setting_storage : BaseSetting
 {
+    DataType Default;
+
     template <class T> void setValue(const T &V, bool initial = false) {
-        *S = V;
+        *s = V;
         if (initial)
             Default = V;
     }
 
+    void setInitialValue(const DataType &V) { this->setValue(V, true); }
+
     DataType &getValue() {
-        return *S;
+        return *s;
     }
     const DataType &getValue() const {
-        return *S;
+        return *s;
     }
 
     operator DataType() const { return this->getValue(); }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+
+// init - Specify a default (initial) value for the command line argument, if
+// the default constructor for the argument type does not give you what you
+// want.  This is only valid on "opt" arguments, not on "list" arguments.
+//
+template <class Ty> struct initializer {
+    const Ty &Init;
+    initializer(const Ty &Val) : Init(Val) {}
+
+    template <class Opt> void apply(Opt &O) const { O.setInitialValue(Init); }
+};
+
+template <class Ty> initializer<Ty> init(const Ty &Val) {
+    return initializer<Ty>(Val);
+}
 
 namespace detail
 {
@@ -125,14 +144,13 @@ template <> struct applicator<do_not_save> {
     static void opt(const do_not_save &, settings::BaseSetting &O) { O.setNonSaveable(); }
 };
 
-template <class Opt, class Mod> void apply(Opt *O, const Mod &M) {
-    applicator<Mod>::opt(M, *O);
-}
+//
 
 template <class Opt, class Mod, class... Mods>
 void apply(Opt *O, const Mod &M, const Mods &... Ms) {
     applicator<Mod>::opt(M, *O);
-    apply(O, Ms...);
+    if constexpr (sizeof...(Ms) > 0)
+        apply(O, Ms...);
 }
 
 } // namespace detail
@@ -146,6 +164,12 @@ struct setting : setting_storage<T>
     explicit setting(const Mods &... Ms)
     {
         detail::apply(this, Ms...);
+    }
+
+    // Some options may take their value from a different data type.
+    template <class DT> setting<T> &operator=(const DT &V) {
+        this->setValue(V);
+        return *this;
     }
 };
 

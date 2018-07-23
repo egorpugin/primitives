@@ -569,18 +569,28 @@ int main(int argc, char **argv)
 
     namespace st = sw::settings;
 
-    st::setting<int> myval("myval", st::do_not_save{});
+    st::setting<int> myval("myval", st::do_not_save(), st::init(5));
+    myval = 10;
+    int a = myval;
     auto &ssss = getSettings().getLocalSettings()["myval"].as<int64_t>();
     ssss = 2;
 
     std::any x;
     x = 5;
     auto x2 = std::any_cast<int>(x);
+    auto &t3 = x.type();
     x = 5LL;
     auto x3 = std::any_cast<long long>(x);
+    auto &t4 = x.type();
 
 
+    auto &t1 = typeid(int);
+    t1.hash_code();
+    auto &t2 = typeid(long long);
 
+    t1 == t2;
+    t1 == t3;
+    t3 == t4;
 
     ::argc = argc;
     ::argv = argv;

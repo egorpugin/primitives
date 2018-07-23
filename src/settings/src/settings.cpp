@@ -412,10 +412,8 @@ template struct SettingStorage<primitives::Settings>;
 
 primitives::SettingStorage<primitives::Settings> &getSettings(primitives::SettingStorage<primitives::Settings> *v)
 {
-    static primitives::SettingStorage<primitives::Settings> *settings = nullptr;
-    if (!settings && v)
-        settings = v;
-    return *settings;
+    static StaticValueOrRef<primitives::SettingStorage<primitives::Settings>> settings(v);
+    return settings;
 }
 
 primitives::Settings &getSettings(SettingsType type, primitives::SettingStorage<primitives::Settings> *v)

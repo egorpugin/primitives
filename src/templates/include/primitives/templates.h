@@ -7,7 +7,8 @@
 #include <mutex>
 #include <utility>
 
-// scope guard
+////////////////////////////////////////////////////////////////////////////////
+
 #define ANONYMOUS_VARIABLE_COUNTER(s) CONCATENATE(s, __COUNTER__)
 #define ANONYMOUS_VARIABLE_LINE(s) CONCATENATE(s, __LINE__)
 
@@ -17,11 +18,7 @@
 #define ANONYMOUS_VARIABLE(s) ANONYMOUS_VARIABLE_LINE(s)
 #endif
 
-#define SCOPE_EXIT \
-    auto ANONYMOUS_VARIABLE(SCOPE_EXIT_STATE) = SCOPE_EXIT_NAMED
-
-#define SCOPE_EXIT_NAMED \
-    ::detail::ScopeGuardOnExit() + [&]()
+////////////////////////////////////////////////////////////////////////////////
 
 #define RUN_ONCE_IMPL(kv) \
     for (kv std::atomic<int> ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG){0}; !ANONYMOUS_VARIABLE_LINE(RUN_ONCE_FLAG).fetch_or(1); )
@@ -29,6 +26,14 @@
 #define RUN_ONCE              RUN_ONCE_IMPL(static)
 #define RUN_ONCE_THREAD_LOCAL RUN_ONCE_IMPL(thread_local)
 #define RUN_ONCE_FOR_THREAD   RUN_ONCE_THREAD_LOCAL
+
+////////////////////////////////////////////////////////////////////////////////
+
+#define SCOPE_EXIT \
+    auto ANONYMOUS_VARIABLE(SCOPE_EXIT_STATE) = SCOPE_EXIT_NAMED
+
+#define SCOPE_EXIT_NAMED \
+    ::detail::ScopeGuardOnExit() + [&]()
 
 class ScopeGuard
 {
@@ -99,6 +104,8 @@ namespace detail
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 // tuple for_each
 template <typename Tuple, typename F, std::size_t ...Indices>
 constexpr void for_each_impl(Tuple&& tuple, F&& f, std::index_sequence<Indices...>)
@@ -117,3 +124,28 @@ constexpr void for_each(Tuple&& tuple, F&& f)
     for_each_impl(std::forward<Tuple>(tuple), std::forward<F>(f),
         std::make_index_sequence<N>{});
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+/// Initialises static object from outside or creates it itself.
+template <class T>
+struct StaticValueOrRef
+{
+    StaticValueOrRef(T *p)
+    {
+        if (p)
+            ptr = p;
+        else
+        {
+            static T t;
+            ptr = &t;
+        }
+    }
+
+    operator T&() { return *ptr; }
+
+private:
+    T *ptr;
+};
+
+////////////////////////////////////////////////////////////////////////////////
