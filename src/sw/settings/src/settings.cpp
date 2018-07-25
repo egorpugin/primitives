@@ -8,7 +8,7 @@
 
 #define YAML_SETTINGS_FILENAME "settings.yml"
 
-#ifdef _WIN32
+#if defined(_WIN32) && defined(CPPAN_SHARED_BUILD)
 #include <Windows.h>
 static String getProgramName()
 {
@@ -29,11 +29,19 @@ path getSettingsDir()
     return get_home_directory() / ".sw_settings" / getProgramName();
 }
 
+template <class T>
+SettingStorage<T>::~SettingStorage()
+{
+    base::getUserSettings().save(base::userConfigFilename);
+}
+
+template struct PRIMITIVES_SETTINGS_API SettingStorage<::primitives::Settings>;
+
 primitives::SettingStorage<primitives::Settings> &getSettings()
 {
-    static auto settings = []() -> decltype(auto)
+    static auto &settings = []() -> primitives::SettingStorage<primitives::Settings> &
     {
-        SettingStorage<primitives::Settings> s;
+        static SettingStorage<primitives::Settings> s;
         //auto &s = primitives::getSettings();
         s.userConfigFilename = getSettingsDir() / YAML_SETTINGS_FILENAME;
         path local_name = getProgramName() + ".settings";

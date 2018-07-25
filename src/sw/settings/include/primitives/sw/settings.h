@@ -36,11 +36,11 @@ struct SettingStorage : public ::primitives::SettingStorage<T>
 {
     using base = ::primitives::SettingStorage<T>;
 
-    ~SettingStorage()
-    {
-        base::getUserSettings().save(userConfigFilename);
-    }
+    ~SettingStorage();
 };
+
+PRIMITIVES_SW_SETTINGS_API_EXTERN
+template struct PRIMITIVES_SW_SETTINGS_API SettingStorage<::primitives::Settings>;
 
 PRIMITIVES_SW_SETTINGS_API
 primitives::SettingStorage<primitives::Settings> &getSettings();
@@ -48,96 +48,27 @@ primitives::SettingStorage<primitives::Settings> &getSettings();
 PRIMITIVES_SW_SETTINGS_API
 primitives::Settings &getSettings(SettingsType type);
 
-////////////////////////////////////////////////////////////////////////////////
+using ::primitives::init;
+using ::primitives::do_not_save;
+using ::primitives::must_not_be;
 
-namespace settings
+template <class DataType>
+struct setting : ::primitives::setting<DataType>
 {
+    using base = ::primitives::setting<DataType>;
 
-// tags
-
-// if data type is changed
-struct discard_malformed_on_load {};
-
-// if data is critical
-struct do_not_save {};
-
-struct PRIMITIVES_SW_SETTINGS_API BaseSetting
-{
-    ::primitives::Setting *s = nullptr;
-
-    void setSettingPath(const String &name) { s = &::sw::getSettings(SettingsType::Default)[name]; }
-    void setNonSaveable() { /*s->saveable = false;*/ }
-};
-
-////////////////////////////////////////////////////////////////////////////////
-
-
-////////////////////////////////////////////////////////////////////////////////
-
-
-namespace detail
-{
-
-// applicator class - This class is used because we must use partial
-// specialization to handle literal string arguments specially (const char* does
-// not correctly respond to the apply method).  Because the syntax to use this
-// is a pain, we have the 'apply' method below to handle the nastiness...
-//
-template <class Mod> struct applicator {
-    template <class Opt> static void opt(const Mod &M, Opt &O) { M.apply(O); }
-};
-
-// Handle const char* as a special case...
-template <unsigned n> struct applicator<char[n]> {
-    template <class Opt> static void opt(const String &Str, Opt &O) {
-        O.setSettingPath(Str);
-    }
-};
-template <unsigned n> struct applicator<const char[n]> {
-    template <class Opt> static void opt(const String &Str, Opt &O) {
-        O.setSettingPath(Str);
-    }
-};
-template <> struct applicator<String> {
-    template <class Opt> static void opt(const String &Str, Opt &O) {
-        O.setSettingPath(Str);
-    }
-};
-
-//
-
-template <class Opt, class Mod, class... Mods>
-void apply(Opt *O, const Mod &M, const Mods &... Ms) {
-    applicator<Mod>::opt(M, *O);
-    if constexpr (sizeof...(Ms) > 0)
-        apply(O, Ms...);
-}
-
-} // namespace detail
-
-////////////////////////////////////////////////////////////////////////////////
-
-/*template <class T>
-struct setting : setting_storage<T>
-{
     template <class... Mods>
     explicit setting(const Mods &... Ms)
+        : base()
     {
-        detail::apply(this, Ms...);
+        base::setSettings(sw::getSettings().getLocalSettings());
+        base::init(Ms...);
     }
-
-    // Some options may take their value from a different data type.
-    template <class DT> setting<T> &operator=(const DT &V) {
-        this->setValue(V);
-        return *this;
-    }
-};*/
-
-} // namespace settings
-
-////////////////////////////////////////////////////////////////////////////////
+};
 
 } // namespace sw
+
+////////////////////////////////////////////////////////////////////////////////
 
 inline primitives::SettingStorage<primitives::Settings> &getSettings()
 {

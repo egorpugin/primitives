@@ -91,15 +91,26 @@ template <> struct applicator<String> {
     }
 };
 
+template <class Ty> struct storeable {
+    const Ty &V;
+    storeable(const Ty &Val) : V(Val) {}
+};
+
 // init - Specify a default (initial) value for the command line argument, if
 // the default constructor for the argument type does not give you what you
 // want.  This is only valid on "opt" arguments, not on "list" arguments.
 //
-template <class Ty> struct initializer {
-    const Ty &Init;
-    initializer(const Ty &Val) : Init(Val) {}
+template <class Ty> struct initializer : storeable<Ty> {
+    using base = storeable<Ty>;
+    using base::base;
+    template <class Opt> void apply(Opt &O) const { O.setInitialValue(base::V); }
+};
 
-    template <class Opt> void apply(Opt &O) const { O.setInitialValue(Init); }
+//
+struct must_not_be : storeable<std::string> {
+    using base = storeable<std::string>;
+    using base::base;
+    template <class Opt> void apply(Opt &O) const { O.addExcludedValue(V); }
 };
 
 template <> struct applicator<do_not_save> {
@@ -121,6 +132,14 @@ void apply(Opt *O, const Mod &M, const Mods &... Ms) {
 
 template <class Ty> detail::initializer<Ty> init(const Ty &Val) {
     return detail::initializer<Ty>(Val);
+}
+
+// check if default value is changed
+// this can be used to explicitly state dummy passwords
+// in default config files
+
+inline detail::must_not_be must_not_be(const std::string &Val) {
+    return detail::must_not_be(Val);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -288,6 +307,7 @@ parser_base *getParser()
 // rename to value?
 struct Setting
 {
+    // add setting path?
     mutable std::string representation;
     mutable detail::parser_base *parser;
     std::any value;
@@ -296,6 +316,7 @@ struct Setting
     // scope = local, user, thread
     // read only
     bool saveable = true;
+    std::unordered_set<String> excludedValues;
 
     Setting() = default;
     Setting(const Setting &) = default;
@@ -350,33 +371,39 @@ struct Setting
     }
 
     template <class U>
+    bool operator!=(const U &v) const
+    {
+        return !operator==(v);
+    }
+
+    template <class U>
     U &as()
     {
-        if (representation.empty())
-        {
-            if (auto p = std::any_cast<U>(&value); p)
-                return *p;
-            throw std::runtime_error("Bad any_cast");
-        }
-        setType<U>();
-        value = parser->fromString(representation);
-        representation.clear();
-        return as<U>();
+        convert<U>();
+        if (auto p = std::any_cast<U>(&value); p)
+            return *p;
+        throw std::runtime_error("Bad any_cast");
     }
 
     template <class U>
     const U &as() const
     {
+        convert<U>();
+        if (auto p = std::any_cast<U>(&value); p)
+            return *p;
+        throw std::runtime_error("Bad any_cast");
+    }
+
+    template <class U>
+    void convert()
+    {
         if (representation.empty())
-        {
-            if (auto p = std::any_cast<U>(&value); p)
-                return *p;
-            throw std::runtime_error("Bad any_cast");
-        }
+            return;
+        if (excludedValues.find(representation) != excludedValues.end())
+            throw std::runtime_error("Setting value is prohibited: '" + representation + "'");
         setType<U>();
         value = parser->fromString(representation);
         representation.clear();
-        return as<U>();
     }
 };
 
@@ -411,10 +438,22 @@ struct base_setting
 template <class DataType>
 struct setting : base_setting
 {
+    using base = base_setting;
+    using base::setSettings;
+
+    setting() = default;
+
     template <class... Mods>
     explicit setting(const Mods &... Ms)
     {
+        init(Ms...);
+    }
+
+    template <class... Mods>
+    void init(const Mods &... Ms)
+    {
         detail::apply(this, Ms...);
+        s->convert<DataType>();
     }
 
     void setArgStr(const String &name)
@@ -429,9 +468,14 @@ struct setting : base_setting
         s->defaultValue = v;
     }
 
+    void addExcludedValue(const String &repr)
+    {
+        s->excludedValues.insert(repr);
+    }
+
     DataType &getValue()
     {
-        return s->value;
+        return s->as<DataType>();
     }
     DataType getValue() const
     {
@@ -451,7 +495,7 @@ struct setting : base_setting
     // If the datatype is a pointer, support -> on it.
     DataType operator->() const
     {
-        return s->value;
+        return s->as<DataType>();
     }
 
     template <class U>
@@ -459,6 +503,18 @@ struct setting : base_setting
     {
         *s = v;
         return *this;
+    }
+
+    template <class U>
+    bool operator==(const U &v) const
+    {
+        return s->operator==(v);
+    }
+
+    template <class U>
+    bool operator!=(const U &v) const
+    {
+        return !operator==(v);
     }
 };
 
@@ -487,6 +543,7 @@ struct PRIMITIVES_SETTINGS_API Settings
     // save to file (default storage)
     void save(const path &fn = {}) const;
     // also from yaml, json, registry
+    bool hasSaveableItems() const;
 
     Setting &operator[](const String &k);
     const Setting &operator[](const String &k) const;
@@ -522,6 +579,8 @@ struct SettingStorageBase
 template <class T>
 struct SettingStorage : SettingStorageBase
 {
+    SettingStorage();
+
     T &getSystemSettings();
     T &getUserSettings();
     T &getLocalSettings();
@@ -543,7 +602,7 @@ private:
 #endif
 
 PRIMITIVES_SETTINGS_API_EXTERN
-template struct PRIMITIVES_SETTINGS_API SettingStorage<primitives::Settings>;
+template struct PRIMITIVES_SETTINGS_API SettingStorage<::primitives::Settings>;
 
 #ifdef _MSC_VER
 #pragma warning(pop)

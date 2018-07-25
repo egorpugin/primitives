@@ -60,6 +60,11 @@ struct MY_PARSER_DRIVER : MY_PARSER
 %token START_BASIC_STRING START_LITERAL_STRING
 %token START_MULTILINE_BASIC_STRING START_MULTILINE_LITERAL_STRING
 
+// TODO:
+// WE MUST NOT PARSE int, float types here!
+// only check them and return as string.
+// caller will choose expected type and convert to it!!!
+
 %type <bool> bool
 %type <int64_t> integer
 %type <double> float

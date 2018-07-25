@@ -84,7 +84,7 @@ parser_base *getParser(const std::type_info &t)
 
 parser_base *addParser(const std::type_info &t, std::unique_ptr<parser_base> p)
 {
-    std::mutex m;
+    static std::mutex m;
     std::unique_lock lk(m);
     auto &parsers = getParserStorage();
     auto ptr = p.get();
@@ -289,8 +289,22 @@ String Setting::toString() const
     return parser->toString(value);
 }
 
+bool Settings::hasSaveableItems() const
+{
+    int n_saveable = 0;
+    for (auto &[k, v] : settings)
+    {
+        if (v.saveable)
+            n_saveable++;
+    }
+    return n_saveable != 0;
+}
+
 void Settings::save(const path &fn) const
 {
+    if (!hasSaveableItems())
+        return;
+
     if (!fn.empty())
     {
         if (fn.extension() == ".yml" || fn.extension() == ".yaml" || fn.extension() == ".settings")
@@ -317,7 +331,7 @@ void Settings::dump(yaml &root) const
 {
     for (auto &[k, v] : settings)
     {
-        //if (v.saveable)
+        if (v.saveable)
             root[k.toString()] = v.toString();
     }
 }
@@ -346,6 +360,13 @@ const Setting &Settings::operator[](const SettingPath &k) const
     if (i == settings.end())
         throw std::runtime_error("No such setting: " + k.toString());
     return i->second;
+}
+
+template <class T>
+SettingStorage<T>::SettingStorage()
+{
+    // to overlive setting storage
+    detail::getParserStorage();
 }
 
 template <class T>
@@ -400,14 +421,18 @@ T &SettingStorage<T>::get(SettingsType type)
             {
                 if (!fs::exists(fn))
                 {
-                    error_code ec;
-                    fs::create_directories(fn.parent_path(), ec);
-                    if (ec)
-                        throw std::runtime_error(ec.message());
                     auto ss = get(SettingsType::System);
-                    ss.save(fn);
+                    if (ss.hasSaveableItems())
+                    {
+                        error_code ec;
+                        fs::create_directories(fn.parent_path(), ec);
+                        if (ec)
+                            throw std::runtime_error(ec.message());
+                        ss.save(fn);
+                    }
                 }
-                s.load(fn, SettingsType::User);
+                else
+                    s.load(fn, SettingsType::User);
             }
         }
     }
