@@ -175,11 +175,6 @@ projects:
                 pvt.cppan.demo.libuv:
                     version: 1
 
-    guarded_main:
-        type: library
-        static_only: true
-        root_directory: src/guarded_main
-
     hash:
         name: hash
         type: library
