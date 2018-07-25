@@ -141,11 +141,19 @@ value: multiline_string
     | bool
     { $$ = $1; }
     | integer
-    { $$ = $1; }
+    {
+        if ($1 > INT_MAX || $1 < INT_MIN)
+            $$ = $1;
+        else
+            $$ = (int)$1;
+    }
     | float
     { $$ = $1; }
     | array
-    { $$ = $1; }
+    {
+        // TODO: implement
+        // $$ = $1;
+    }
     ;
 
 array: LEFT_SQUARE_BRACKET values1 RIGHT_SQUARE_BRACKET

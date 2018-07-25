@@ -14,12 +14,27 @@
 #include <primitives/templates.h>
 #include <primitives/yaml.h>
 
-#include <boost/variant.hpp>
+#include <any>
 
 namespace primitives
 {
 
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+
+char unescapeSettingChar(char c);
+std::string escapeSettingPart(const std::string &s);
+std::string cp2utf8(int cp);
+
+} // namespace detail
+
+////////////////////////////////////////////////////////////////////////////////
+
+
 struct Setting;
+struct Settings;
 
 enum class SettingsType
 {
@@ -38,6 +53,14 @@ enum class SettingsType
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+
+// tags
+
+// if data type is changed
+//struct discard_malformed_on_load {};
+
+// if data is critical
+struct do_not_save {};
 
 namespace detail
 {
@@ -68,6 +91,25 @@ template <> struct applicator<String> {
     }
 };
 
+// init - Specify a default (initial) value for the command line argument, if
+// the default constructor for the argument type does not give you what you
+// want.  This is only valid on "opt" arguments, not on "list" arguments.
+//
+template <class Ty> struct initializer {
+    const Ty &Init;
+    initializer(const Ty &Val) : Init(Val) {}
+
+    template <class Opt> void apply(Opt &O) const { O.setInitialValue(Init); }
+};
+
+template <> struct applicator<do_not_save> {
+    template <class Opt> static void opt(const do_not_save &, Opt &O) { O.setNonSaveable(); }
+};
+
+template <> struct applicator<Settings> {
+    template <class Opt> static void opt(const Settings &s, Opt &O) { O.setSettings(s); }
+};
+
 template <class Opt, class Mod, class... Mods>
 void apply(Opt *O, const Mod &M, const Mods &... Ms) {
     applicator<Mod>::opt(M, *O);
@@ -76,6 +118,10 @@ void apply(Opt *O, const Mod &M, const Mods &... Ms) {
 }
 
 } // namespace detail
+
+template <class Ty> detail::initializer<Ty> init(const Ty &Val) {
+    return detail::initializer<Ty>(Val);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -121,17 +167,6 @@ void parseCommandLineOptions(const Strings &args);
 
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace detail
-{
-
-char unescapeSettingChar(char c);
-String escapeSettingPart(const String &s);
-std::string cp2utf8(int cp);
-
-} // namespace detail
-
-////////////////////////////////////////////////////////////////////////////////
-
 struct PRIMITIVES_SETTINGS_API SettingPath
 {
     using Parts = Strings;
@@ -162,134 +197,272 @@ private:
     void parse(const String &s);
 };
 
-struct not_converted : std::string {};
+////////////////////////////////////////////////////////////////////////////////
 
-//using SettingBase = variant<std::string, int64_t, double, bool>;
-//#define SettingGet std::get
-using SettingBase = boost::make_recursive_variant<
-    not_converted,
-    std::string,
-    //int, // ?
-    int64_t,
-    //float, // ?
-    double,
-    bool,
-    std::vector<boost::recursive_variant_>>::type;
-#define SettingGet boost::get
+namespace detail
+{
+
+struct parser_base
+{
+    virtual ~parser_base() = default;
+
+    virtual std::any fromString(const String &value) const = 0;
+    virtual String toString(const std::any &value) const = 0;
+};
+
+template <class T>
+struct parser_to_string_converter : parser_base
+{
+    String toString(const std::any &value) const override
+    {
+        return std::to_string(std::any_cast<T>(value));
+    }
+};
+
+template <class T, typename Enable = void>
+struct parser;
+
+#define PARSER_SPECIALIZATION(t, f)                             \
+    template <>                                                 \
+    struct parser<t, void> : parser_to_string_converter<t>      \
+    {                                                           \
+        std::any fromString(const String &value) const override \
+        {                                                       \
+            return f(value);                                    \
+        }                                                       \
+    }
+
+PARSER_SPECIALIZATION(int, std::stoi);
+PARSER_SPECIALIZATION(int64_t, std::stoll);
+PARSER_SPECIALIZATION(float, std::stof);
+PARSER_SPECIALIZATION(double, std::stod);
+
+// bool
+template <>
+struct parser<bool, void> : parser_to_string_converter<bool>
+{
+    std::any fromString(const String &value) const override
+    {
+        bool b;
+        b = value == "true" || value == "1";
+        return b;
+    }
+};
+
+// std::string
+template <>
+struct parser<std::string, void> : parser_base
+{
+    String toString(const std::any &value) const override
+    {
+        return std::any_cast<std::string>(value);
+    }
+
+    std::any fromString(const String &value) const override
+    {
+        return value;
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
+PRIMITIVES_SETTINGS_API
+parser_base *getParser(const std::type_info &);
+
+PRIMITIVES_SETTINGS_API
+parser_base *addParser(const std::type_info &, std::unique_ptr<parser_base>);
+
+template <class U>
+parser_base *getParser()
+{
+    auto &ti = typeid(U);
+    if (auto p = getParser(ti); p)
+        return p;
+    return addParser(ti, std::unique_ptr<parser_base>(new parser<U>));
+}
+
+} // namespace detail
+
+///////////////////////////////////////////////////////////////////////////////
 
 // rename to value?
-struct Setting : SettingBase
+struct Setting
 {
-    using base = SettingBase;
-
+    mutable std::string representation;
+    mutable detail::parser_base *parser;
+    std::any value;
+    std::any defaultValue;
+    // store typeid to provide type safety?
     // scope = local, user, thread
     // read only
-    //bool saveable = true;
-
-    using base::base;
-    using base::operator=;
+    bool saveable = true;
 
     Setting() = default;
     Setting(const Setting &) = default;
     Setting &operator=(const Setting &) = default;
 
-    Setting(int v)
-        : base((int64_t)v)
+    explicit Setting(const std::any &v)
     {
-    }
-
-    Setting(const std::vector<Setting> &v)
-        : base((const std::vector<SettingBase> &)v)
-    {
-    }
-
-    Setting &operator=(int v)
-    {
-        base::operator=((int64_t)v);
-        return *this;
-    }
-
-    Setting &operator=(const std::vector<Setting> &v)
-    {
-        base::operator=((const std::vector<SettingBase> &)v);
-        return *this;
-    }
-
-    /*template <class U, typename std::enable_if_t<std::is_integral_v<U>> = 0>
-    Setting &operator=(U v)
-    {
-        base::operator=((int64_t)v);
-        return *this;
-    }*/
-
-    /*
-    template <class U>
-    Setting &operator=(const U &v)
-    {
-        if constexpr (std::is_integral_v<U>)
-            base::operator=((int64_t)v);
-        else if constexpr (std::is_floating_point_v<U>)
-            base::operator=((double)v);
-        else
-            base::operator=(v);
-        return *this;
-    }*/
-
-    bool operator==(const std::string &s) const
-    {
-        return SettingGet<std::string>(*this) == s;
-    }
-
-    template <class U>
-    bool operator==(const U &v) const
-    {
-        if constexpr (std::is_same_v<U, bool>)
-            return SettingGet<bool>(*this) == v;
-        else if constexpr (
-            std::is_same_v<U, not_converted> ||
-            std::is_same_v<U, std::string> ||
-            std::is_same_v<U, std::string_view> ||
-            std::is_same_v<U, const char *> ||
-            std::is_same_v<U, const char[]> ||
-            std::is_same_v<U, char[]> ||
-            std::is_array_v<U>
-            )
-            return SettingGet<std::string>(*this) == v;
-        else if constexpr (std::is_integral_v<U>)
-            return SettingGet<int64_t>(*this) == v;
-        else if constexpr (std::is_floating_point_v<U>)
-            return SettingGet<double>(*this) == v;
+        value = v;
+        defaultValue = v;
     }
 
     String toString() const;
 
     template <class U>
+    void setType() const
+    {
+        parser = detail::getParser<U>();
+    }
+
+    template <class U>
+    Setting &operator=(const U &v)
+    {
+        if (!representation.empty())
+            representation.clear();
+        if constexpr (std::is_same_v<char[], U>)
+            return operator=(std::string(v));
+        else if constexpr (std::is_same_v<const char[], U>)
+            return operator=(std::string(v));
+        value = v;
+        setType<U>();
+        return *this;
+    }
+
+    bool operator==(char v[]) const
+    {
+        return std::any_cast<std::string>(value) == v;
+    }
+
+    bool operator==(const char v[]) const
+    {
+        return std::any_cast<std::string>(value) == v;
+    }
+
+    template <class U>
+    bool operator==(const U &v) const
+    {
+        if constexpr (std::is_same_v<char[], U>)
+            return std::any_cast<std::string>(value) == v;
+        else if constexpr (std::is_same_v<const char[], U>)
+            return std::any_cast<std::string>(value) == v;
+        return std::any_cast<U>(value) == v;
+    }
+
+    template <class U>
     U &as()
     {
-        if (which() == 0)
+        if (representation.empty())
         {
-            auto s = SettingGet<not_converted>(*this);
-            if constexpr (std::is_same_v<U, bool>)
-                *this = s == "true";
-            else if constexpr (std::is_same_v<U, std::string>)
-                *this = s;
-            else if constexpr (std::is_integral_v<U>)
-                *this = std::stoll(s);
-            else if constexpr (std::is_floating_point_v<U>)
-                *this = std::stod(s);
+            if (auto p = std::any_cast<U>(&value); p)
+                return *p;
+            throw std::runtime_error("Bad any_cast");
         }
-        return SettingGet<U>(*this);
+        setType<U>();
+        value = parser->fromString(representation);
+        representation.clear();
+        return as<U>();
     }
 
     template <class U>
     const U &as() const
     {
-        if (which() == 0)
-            return const_cast<Setting*>(this)->as<U>();
-        return SettingGet<U>(*this);
+        if (representation.empty())
+        {
+            if (auto p = std::any_cast<U>(&value); p)
+                return *p;
+            throw std::runtime_error("Bad any_cast");
+        }
+        setType<U>();
+        value = parser->fromString(representation);
+        representation.clear();
+        return as<U>();
     }
 };
-#undef SettingGet
+
+////////////////////////////////////////////////////////////////////////////////
+
+struct Settings;
+
+struct base_setting
+{
+    Settings *settings;
+    Setting *s;
+
+    template <class T>
+    void setValue(const T &V, bool initial = false)
+    {
+        *s = V;
+        if (initial)
+            s->defaultValue = V;
+    }
+
+    void setNonSaveable()
+    {
+        s->saveable = false;
+    }
+
+    void setSettings(const Settings &s)
+    {
+        settings = (Settings *)&s;
+    }
+};
+
+template <class DataType>
+struct setting : base_setting
+{
+    template <class... Mods>
+    explicit setting(const Mods &... Ms)
+    {
+        detail::apply(this, Ms...);
+    }
+
+    void setArgStr(const String &name)
+    {
+        s = &(*settings)[name];
+        s->setType<DataType>();
+    }
+
+    void setInitialValue(const DataType &v)
+    {
+        s->value = v;
+        s->defaultValue = v;
+    }
+
+    DataType &getValue()
+    {
+        return s->value;
+    }
+    DataType getValue() const
+    {
+        return s->as<DataType>();
+    }
+
+    const DataType &getDefault() const
+    {
+        return s->defaultValue;
+    }
+
+    operator DataType() const
+    {
+        return getValue();
+    }
+
+    // If the datatype is a pointer, support -> on it.
+    DataType operator->() const
+    {
+        return s->value;
+    }
+
+    template <class U>
+    setting &operator=(const U &v)
+    {
+        *s = v;
+        return *this;
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
 
 struct PRIMITIVES_SETTINGS_API Settings
 {
@@ -392,9 +565,3 @@ primitives::Settings &getSettings(SettingsType type, primitives::SettingStorage<
 } // namespace primitives
 
 using primitives::SettingsType;
-
-// request by boost
-inline std::ostream &operator<<(std::ostream &o, const primitives::SettingBase &)
-{
-    return o;
-}

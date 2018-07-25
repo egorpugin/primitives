@@ -110,7 +110,7 @@ TEST_CASE("Checking setting paths", "[setting_path]")
 TEST_CASE("Checking setting", "[setting]")
 {
     // setting
-    {
+    /*{
         primitives::Setting p(1);
         std::vector<primitives::Setting> v;
         v.push_back(1);
@@ -126,7 +126,7 @@ TEST_CASE("Checking setting", "[setting]")
         primitives::Setting p(v);
         p = v;
         p = 1;
-    }
+    }*/
 }
 
 TEST_CASE("Checking settings", "[settings]")
@@ -547,6 +547,20 @@ TEST_CASE("Checking command line", "[cl]")
     ::primitives::cl::parseCommandLineOptions(args);
 }
 
+TEST_CASE("New settings", "[settings2]")
+{
+    namespace st = primitives;
+
+    st::setting<int> myval(getSettings().getLocalSettings(), "myval", st::do_not_save(), st::init(5));
+    CHECK(myval == 5);
+    myval = 10;
+    int a = myval;
+    CHECK(a == 10);
+    CHECK(myval.s->saveable == false);
+
+    CHECK_THROWS(getSettings().getLocalSettings()["myval"].as<int64_t>());
+}
+
 #include <llvm/Support/CommandLine.h>
 
 #include <any>
@@ -556,7 +570,8 @@ int main(int argc, char **argv)
     {
         using namespace llvm;
 
-        cl::opt<std::string> OutputFilename("o", cl::desc("Specify output filename"), cl::value_desc("filename"));
+        std::string s;
+        cl::opt<std::string, true> OutputFilename("o", cl::desc("Specify output filename"), cl::value_desc("filename"), cl::location(s));
         cl::opt<bool> b1{ "b" };
         cl::SubCommand test("test");
         cl::opt<bool> b2{ "d", cl::sub(test) };
@@ -566,31 +581,6 @@ int main(int argc, char **argv)
 
         //return 0;
     }
-
-    namespace st = sw::settings;
-
-    st::setting<int> myval("myval", st::do_not_save(), st::init(5));
-    myval = 10;
-    int a = myval;
-    auto &ssss = getSettings().getLocalSettings()["myval"].as<int64_t>();
-    ssss = 2;
-
-    std::any x;
-    x = 5;
-    auto x2 = std::any_cast<int>(x);
-    auto &t3 = x.type();
-    x = 5LL;
-    auto x3 = std::any_cast<long long>(x);
-    auto &t4 = x.type();
-
-
-    auto &t1 = typeid(int);
-    t1.hash_code();
-    auto &t2 = typeid(long long);
-
-    t1 == t2;
-    t1 == t3;
-    t3 == t4;
 
     ::argc = argc;
     ::argv = argv;

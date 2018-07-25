@@ -13,6 +13,8 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <mutex>
+
 namespace primitives
 {
 
@@ -65,7 +67,32 @@ std::string cp2utf8(int cp)
     return std::string(c);
 }
 
+auto &getParserStorage()
+{
+    static std::map<size_t, std::unique_ptr<parser_base>> parsers;
+    return parsers;
 }
+
+parser_base *getParser(const std::type_info &t)
+{
+    auto &parsers = getParserStorage();
+    auto i = parsers.find(t.hash_code());
+    if (i == parsers.end())
+        return nullptr;
+    return i->second.get();
+}
+
+parser_base *addParser(const std::type_info &t, std::unique_ptr<parser_base> p)
+{
+    std::mutex m;
+    std::unique_lock lk(m);
+    auto &parsers = getParserStorage();
+    auto ptr = p.get();
+    parsers[t.hash_code()] = std::move(p);
+    return ptr;
+}
+
+} // namespace detail
 
 namespace cl
 {
@@ -247,7 +274,7 @@ void Settings::load(const yaml &root, const SettingPath &prefix)
     for (auto kv : root)
     {
         if (kv.second.IsScalar())
-            operator[](prefix / SettingPath::fromRawString(kv.first.as<String>())) = not_converted{ kv.second.as<String>() };
+            operator[](prefix / SettingPath::fromRawString(kv.first.as<String>())).representation = kv.second.as<String>();
         else if (kv.second.IsMap())
             load(kv.second, SettingPath::fromRawString(kv.first.as<String>()));
         else
@@ -257,16 +284,9 @@ void Settings::load(const yaml &root, const SettingPath &prefix)
 
 String Setting::toString() const
 {
-    auto v = overload(
-        [](const std::string &s) { return s; },
-        //[](int s) { return std::to_string(s); },
-        [](int64_t s) { return std::to_string(s); },
-        //[](float s) { return std::to_string(s); },
-        [](double s) { return std::to_string(s); },
-        [](bool s) { return std::to_string(s); },
-        [](const auto &) { return ""s; }
-    );
-    return boost::apply_visitor(v, *this);
+    if (!representation.empty())
+        return representation;
+    return parser->toString(value);
 }
 
 void Settings::save(const path &fn) const
