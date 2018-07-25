@@ -10,7 +10,7 @@
 
 #include "primitives/settings.h"
 
-#ifdef CPPAN_EXECUTABLE
+#if defined(CPPAN_EXECUTABLE) && defined(CPPAN_SHARED_BUILD)
 #ifdef _WIN32
 extern "C" __declspec(dllexport)
 #else
