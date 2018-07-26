@@ -53,9 +53,9 @@ PRIMITIVES_STRING_API
 std::wstring normalize_string_windows_copy(std::wstring s);
 #else
 #define normalize_string(s) (void)(s)
-#define normalize_string_copy(s) (void)(s)
+#define normalize_string_copy(s) (s)
 #define normalize_string_windows(s) (void)(s)
-#define normalize_string_windows_copy(s) (void)(s)
+#define normalize_string_windows_copy(s) (s)
 #endif
 
 PRIMITIVES_STRING_API

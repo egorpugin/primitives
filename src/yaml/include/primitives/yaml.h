@@ -8,10 +8,14 @@
 
 #include <primitives/string.h>
 
+#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4275)
+#endif
 #include <yaml-cpp/yaml.h>
+#ifdef _MSC_VER
 #pragma warning(pop)
+#endif
 
 #include <set>
 #include <unordered_set>

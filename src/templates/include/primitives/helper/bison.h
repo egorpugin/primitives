@@ -14,8 +14,10 @@
 #ifndef PRIMITIVES_HELPER_BISON
 #define PRIMITIVES_HELPER_BISON
 
-#pragma warning(disable: 4005)
-#pragma warning(disable: 4065)
+#ifdef _MSC_VER
+#pragma warning(disable : 4005)
+#pragma warning(disable : 4065)
+#endif
 
 #include <primitives/preprocessor.h>
 #include <primitives/stdcompat/optional.h>
