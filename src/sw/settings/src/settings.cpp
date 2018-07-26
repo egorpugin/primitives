@@ -35,7 +35,7 @@ SettingStorage<T>::~SettingStorage()
     base::getUserSettings().save(base::userConfigFilename);
 }
 
-template struct PRIMITIVES_SW_SETTINGS_API SettingStorage<::primitives::Settings>;
+template struct SettingStorage<::primitives::Settings>;
 
 primitives::SettingStorage<primitives::Settings> &getSettings()
 {

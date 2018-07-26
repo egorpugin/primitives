@@ -464,11 +464,7 @@ struct setting : base_setting
             setInitialValue(DataType());
     }
 
-    void setArgStr(const String &name)
-    {
-        s = &(*settings)[name];
-        s->setType<DataType>();
-    }
+    void setArgStr(const String &name);
 
     void setInitialValue(const DataType &v, bool initialValue = true)
     {
@@ -576,6 +572,13 @@ private:
     template <class T>
     friend struct SettingStorage;
 };
+
+template <class T>
+void setting<T>::setArgStr(const String &name)
+{
+    s = &(*settings)[name];
+    s->setType<T>();
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
