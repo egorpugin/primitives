@@ -454,6 +454,8 @@ struct setting : base_setting
     {
         detail::apply(this, Ms...);
         s->convert<DataType>();
+        if (!s->value.has_value())
+            setInitialValue(DataType());
     }
 
     void setArgStr(const String &name)
@@ -462,10 +464,11 @@ struct setting : base_setting
         s->setType<DataType>();
     }
 
-    void setInitialValue(const DataType &v)
+    void setInitialValue(const DataType &v, bool initialValue = true)
     {
         s->value = v;
-        s->defaultValue = v;
+        if (initialValue)
+            s->defaultValue = v;
     }
 
     void addExcludedValue(const String &repr)

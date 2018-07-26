@@ -551,14 +551,27 @@ TEST_CASE("New settings", "[settings2]")
 {
     namespace st = primitives;
 
-    st::setting<int> myval(getSettings().getLocalSettings(), "myval", st::do_not_save(), st::init(5));
-    CHECK(myval == 5);
-    myval = 10;
-    int a = myval;
-    CHECK(a == 10);
-    CHECK(myval.s->saveable == false);
+    {
+        st::setting<int> myval(getSettings().getLocalSettings(), "myval", st::do_not_save(), st::init(5));
+        CHECK(myval == 5);
+        myval = 10;
+        int a = myval;
+        CHECK(a == 10);
+        CHECK(myval.s->saveable == false);
 
-    CHECK_THROWS(getSettings().getLocalSettings()["myval"].as<int64_t>());
+        CHECK_THROWS(getSettings().getLocalSettings()["myval"].as<int64_t>());
+    }
+
+    {
+        sw::setting<int> myval("x");
+        CHECK(myval == 0);
+        sw::setting<std::string> myval2("s");
+        CHECK(myval2.getValue() == "");
+        CHECK(myval2.getValue().empty());
+        sw::setting<std::string> myval3("s2", sw::init("123"));
+        CHECK(myval3.getValue() == "123");
+        CHECK_FALSE(myval3.getValue().empty());
+    }
 }
 
 #include <llvm/Support/CommandLine.h>
