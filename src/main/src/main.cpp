@@ -17,13 +17,16 @@ int main1(int argc, char *argv[])
     catch (const std::exception &e)
     {
         std::cerr << e.what() << std::endl;
-        return 1;
     }
     catch (...)
     {
         std::cerr << "unknown exception" << std::endl;
-        return 1;
     }
+#ifdef _MSC_VER
+    if (IsDebuggerPresent())
+        DebugBreak();
+#endif
+    return 1;
 }
 
 int main(int argc, char *argv[])

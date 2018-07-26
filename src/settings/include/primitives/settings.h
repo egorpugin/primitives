@@ -251,8 +251,14 @@ struct parser;
         }                                                       \
     }
 
+PARSER_SPECIALIZATION(char, std::stoi);
+PARSER_SPECIALIZATION(unsigned char, std::stoi);
+PARSER_SPECIALIZATION(short, std::stoi);
+PARSER_SPECIALIZATION(unsigned short, std::stoi);
 PARSER_SPECIALIZATION(int, std::stoi);
+PARSER_SPECIALIZATION(unsigned int, std::stoi);
 PARSER_SPECIALIZATION(int64_t, std::stoll);
+PARSER_SPECIALIZATION(uint64_t, std::stoull);
 PARSER_SPECIALIZATION(float, std::stof);
 PARSER_SPECIALIZATION(double, std::stod);
 
