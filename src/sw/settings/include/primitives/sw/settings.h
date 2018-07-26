@@ -64,6 +64,8 @@ struct setting : ::primitives::setting<DataType>
         base::setSettings(sw::getSettings().getLocalSettings());
         base::init(Ms...);
     }
+
+    using base::operator=;
 };
 
 } // namespace sw

@@ -570,7 +570,18 @@ TEST_CASE("New settings", "[settings2]")
         CHECK(myval2.getValue().empty());
         sw::setting<std::string> myval3("s2", sw::init("123"));
         CHECK(myval3.getValue() == "123");
+        CHECK(myval3 == "123");
         CHECK_FALSE(myval3.getValue().empty());
+
+        sw::setting<bool> myval4("s4");
+        CHECK(myval4.getValue() == false);
+        CHECK_FALSE(myval4.getValue());
+        CHECK(myval4 == false);
+        CHECK_FALSE(myval4);
+        myval4 = true;
+        CHECK(myval4.getValue());
+        CHECK(myval4 == true);
+        CHECK(myval4);
     }
 }
 
