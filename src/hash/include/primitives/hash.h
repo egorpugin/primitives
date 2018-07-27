@@ -72,19 +72,6 @@ String strong_file_hash(const String &data);
 PRIMITIVES_HASH_API
 String strong_file_hash(const path &fn);
 
-/// calculate strong_file_hash of data and compare with procided hash
-/// returns true if equal
-template <class T>
-bool check_strong_file_hash(const T &data, const String &hash)
-{
-    auto [f,s] = load_strong_hash_prefix(hash);
-    if (f == HashType::sha3_256 && s == HashType::sha2_256)
-        return hash == strong_file_hash_sha3_sha2(data);
-    if (f == HashType::blake2b_512 && s == HashType::sha3_256)
-        return hash == strong_file_hash_blake2b_sha3(data);
-    throw std::runtime_error("Unknown hash type(s)");
-}
-
 /// sha3_256(sha2(data+sz) + sha3_256(data+sz) + sz)
 PRIMITIVES_HASH_API
 String strong_file_hash_sha3_sha2(const String &data);
@@ -103,6 +90,19 @@ String strong_file_hash_blake2b_sha3(const path &fn);
 
 PRIMITIVES_HASH_API
 String shorten_hash(const String &data, size_t size);
+
+/// calculate strong_file_hash of data and compare with procided hash
+/// returns true if equal
+template <class T>
+bool check_strong_file_hash(const T &data, const String &hash)
+{
+    auto[f, s] = load_strong_hash_prefix(hash);
+    if (f == HashType::sha3_256 && s == HashType::sha2_256)
+        return hash == strong_file_hash_sha3_sha2(data);
+    if (f == HashType::blake2b_512 && s == HashType::sha3_256)
+        return hash == strong_file_hash_blake2b_sha3(data);
+    throw std::runtime_error("Unknown hash type(s)");
+}
 
 template <class T>
 inline size_t hash_combine(size_t &hash, const T &v)

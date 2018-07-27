@@ -18,11 +18,6 @@
 #define CATCH_CONFIG_RUNNER
 #include <catch.hpp>
 
-#ifdef __clang__
-#define REQUIRE_TIME(e, t)
-#define REQUIRE_NOTHROW_TIME(e, t)
-#define REQUIRE_NOTHROW_TIME_MORE(e, t)
-#else
 #define REQUIRE_TIME(e, t)                                                                         \
     do                                                                                             \
     {                                                                                              \
@@ -30,18 +25,17 @@
         if (t1 > t)                                                                                \
         {                                                                                          \
             auto d = std::chrono::duration_cast<std::chrono::duration<float>>(t1 - t).count();     \
-            REQUIRE_NOTHROW(throw std::runtime_error("time exceed on "## #e + std::to_string(d))); \
+            REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " #e + std::to_string(d))); \
         }                                                                                          \
     } while (0)
 
 #define REQUIRE_NOTHROW_TIME(e, t)                 \
     if (get_time([&] { (e); }) > t) \
-        REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " ## #e))
+        REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " #e))
 
 #define REQUIRE_NOTHROW_TIME_MORE(e, t)                 \
     if (get_time([&] { (e); }) <= t) \
-        REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " ## #e))
-#endif
+        REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " #e))
 
 TEST_CASE("Checking hashes", "[hash]")
 {

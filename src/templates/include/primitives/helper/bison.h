@@ -24,6 +24,7 @@
 
 #include <sstream>
 #include <string>
+#include <tuple>
 
 namespace primitives::bison
 {
@@ -51,7 +52,32 @@ struct basic_block
 namespace primitives::bison
 {
 
-struct basic_block1;
+struct basic_block1 : basic_block
+{
+    // data storage, list iterators are not invalidated
+    std::list<std::any> data;
+
+    template <class U>
+    auto add_data(U &&u)
+    {
+        data.emplace_back(std::forward<U>(u));
+        return &data.back();
+    }
+
+    template <class T>
+    void setResult(const T &v)
+    {
+        return data.push_back(v);
+    }
+
+    template <class T>
+    optional<T> getResult() const
+    {
+        if (data.empty())
+            return {};
+        return std::any_cast<T>(data.back());
+    }
+};
 
 struct any_storage
 {
@@ -83,33 +109,6 @@ struct any_storage
     U getValue() const
     {
         return std::any_cast<U>(*v);
-    }
-};
-
-struct basic_block1 : basic_block
-{
-    // data storage, list iterators are not invalidated
-    std::list<std::any> data;
-
-    template <class U>
-    auto add_data(U &&u)
-    {
-        data.emplace_back(std::forward<U>(u));
-        return &data.back();
-    }
-
-    template <class T>
-    void setResult(const T &v)
-    {
-        return data.push_back(v);
-    }
-
-    template <class T>
-    optional<T> getResult() const
-    {
-        if (data.empty())
-            return {};
-        return std::any_cast<T>(data.back());
     }
 };
 
