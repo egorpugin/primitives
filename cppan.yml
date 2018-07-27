@@ -11,9 +11,10 @@ local_settings:
             c_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
             cxx_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
             cxx_flags: /std:c++17
-        gcc7:
-            c_compiler: gcc-7
-            cxx_compiler: g++-7
+        gcc8:
+            c_compiler: gcc-8
+            cxx_compiler: g++-8
+            #generator: Ninja
         macos:
             c_compiler: clang
             cxx_compiler: clang++
@@ -440,8 +441,8 @@ projects:
             -   src/settings.cpp
         dependencies:
             public:
-                pvt.cppan.demo.llvm_project.llvm.support:
-                    version: master
+                #pvt.cppan.demo.llvm_project.llvm.support:
+                    #version: master
                 pvt.cppan.demo.catchorg.catch2:
                     version: 2
 

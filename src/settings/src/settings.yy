@@ -6,6 +6,8 @@
 
 %{
 #include <settings_parser.h>
+
+#include <limits.h> // for int max/min
 %}
 
 ////////////////////////////////////////
@@ -101,12 +103,12 @@ settings: setting
 
 setting: key KV_DELIMETER value
     {
-        $$.insert({driver.table_key / $1, $3});
+        $$.emplace(driver.table_key / $1, $3);
     }
     | key KV_DELIMETER inline_table
     {
         for (auto &[k, v] : $3)
-            $$.insert({driver.table_key / $1 / k, v});
+            $$.emplace(driver.table_key / $1 / k, v);
     }
     | table
     {}

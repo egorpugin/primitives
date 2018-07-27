@@ -165,6 +165,8 @@ struct base_parser : BaseParser
 ////////////////////////////////////////////////////////////////////////////////
 
 // lexer
+#undef yylex
+
 #define YY_DECL LEXER_FUNCTION
 #define YY_USER_ACTION loc.step(); loc.columns(yyleng);
 

@@ -610,13 +610,9 @@ private:
 
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable:4661)
-#endif
-
+#pragma warning(disable : 4661)
 PRIMITIVES_SETTINGS_API_EXTERN
 template struct PRIMITIVES_SETTINGS_API SettingStorage<::primitives::Settings>;
-
-#ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 

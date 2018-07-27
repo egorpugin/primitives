@@ -585,13 +585,13 @@ TEST_CASE("New settings", "[settings2]")
     }
 }
 
-#include <llvm/Support/CommandLine.h>
+//#include <llvm/Support/CommandLine.h>
 
-#include <any>
+//#include <any>
 
 int main(int argc, char **argv)
 {
-    {
+    /*{
         using namespace llvm;
 
         std::string s;
@@ -604,7 +604,7 @@ int main(int argc, char **argv)
         //std::ofstream Output(OutputFilename.c_str());
 
         //return 0;
-    }
+    }*/
 
     ::argc = argc;
     ::argv = argv;

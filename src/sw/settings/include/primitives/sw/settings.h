@@ -39,8 +39,10 @@ struct SettingStorage : public ::primitives::SettingStorage<T>
     ~SettingStorage();
 };
 
+#ifdef _MSC_VER
 PRIMITIVES_SW_SETTINGS_API_EXTERN
 template struct PRIMITIVES_SW_SETTINGS_API SettingStorage<::primitives::Settings>;
+#endif
 
 PRIMITIVES_SW_SETTINGS_API
 primitives::SettingStorage<primitives::Settings> &getSettings();
