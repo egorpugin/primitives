@@ -29,7 +29,7 @@ struct PRIMITIVES_DB_COMMON_API LiteDatabase
             return {};
         if constexpr (std::is_same_v<T, int>)
             return std::stoi(v.value());
-        else if constexpr (std::is_same_v<T, int64_t>)
+        else if constexpr (std::is_same_v<T, long long int>)
             return std::stoll(v.value());
         else if constexpr (std::is_same_v<T, double>)
             return std::stod(v.value());
@@ -49,7 +49,7 @@ struct PRIMITIVES_DB_COMMON_API LiteDatabase
         }
         if constexpr (std::is_same_v<T, int>)
             return std::stoi(v.value());
-        else if constexpr (std::is_same_v<T, int64_t>)
+        else if constexpr (std::is_same_v<T, long long int>)
             return std::stoll(v.value());
         else if constexpr (std::is_same_v<T, double>)
             return std::stod(v.value());

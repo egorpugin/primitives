@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#include <primitives/main.h>
 #include <primitives/version.h>
 
 #include <chrono>
@@ -1278,20 +1279,9 @@ TEST_CASE("Checking version ranges", "[range]")
 }
 
 int main(int argc, char **argv)
-try
 {
     Catch::Session s;
     s.run(argc, argv);
 
     return 0;
-}
-catch (std::exception &e)
-{
-    std::cerr << e.what() << "\n";
-    return 1;
-}
-catch (...)
-{
-    std::cerr << "unknown exception" << "\n";
-    return 1;
 }

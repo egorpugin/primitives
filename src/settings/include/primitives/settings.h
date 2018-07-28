@@ -15,6 +15,7 @@
 #include <primitives/yaml.h>
 
 #include <any>
+#include <iostream>
 
 namespace primitives
 {
@@ -51,6 +52,189 @@ enum class SettingsType
 
     Default = User
 };
+
+namespace cl
+{
+
+// Flags permitted to be passed to command line arguments
+//
+
+enum NumOccurrencesFlag { // Flags for the number of occurrences allowed
+    Optional = 0x00,        // Zero or One occurrence
+    ZeroOrMore = 0x01,      // Zero or more occurrences allowed
+    Required = 0x02,        // One occurrence required
+    OneOrMore = 0x03,       // One or more occurrences required
+
+                            // ConsumeAfter - Indicates that this option is fed anything that follows the
+                            // last positional argument required by the application (it is an error if
+                            // there are zero positional arguments, and a ConsumeAfter option is used).
+                            // Thus, for example, all arguments to LLI are processed until a filename is
+                            // found.  Once a filename is found, all of the succeeding arguments are
+                            // passed, unprocessed, to the ConsumeAfter option.
+                            //
+                            ConsumeAfter = 0x04
+};
+
+enum ValueExpected { // Is a value required for the option?
+                     // zero reserved for the unspecified value
+    ValueOptional = 0x01,  // The value can appear... or not
+    ValueRequired = 0x02,  // The value is required to appear!
+    ValueDisallowed = 0x03 // A value may not be specified (for flags)
+};
+
+enum OptionHidden {   // Control whether -help shows this option
+    NotHidden = 0x00,   // Option included in -help & -help-hidden
+    Hidden = 0x01,      // -help doesn't, but -help-hidden does
+    ReallyHidden = 0x02 // Neither -help nor -help-hidden show this arg
+};
+
+// Formatting flags - This controls special features that the option might have
+// that cause it to be parsed differently...
+//
+// Prefix - This option allows arguments that are otherwise unrecognized to be
+// matched by options that are a prefix of the actual value.  This is useful for
+// cases like a linker, where options are typically of the form '-lfoo' or
+// '-L../../include' where -l or -L are the actual flags.  When prefix is
+// enabled, and used, the value for the flag comes from the suffix of the
+// argument.
+//
+// Grouping - With this option enabled, multiple letter options are allowed to
+// bunch together with only a single hyphen for the whole group.  This allows
+// emulation of the behavior that ls uses for example: ls -la === ls -l -a
+//
+
+enum FormattingFlags {
+    NormalFormatting = 0x00, // Nothing special
+    Positional = 0x01,       // Is a positional argument, no '-' required
+    Prefix = 0x02,           // Can this option directly prefix its value?
+    Grouping = 0x03          // Can this option group with other options?
+};
+
+enum MiscFlags {             // Miscellaneous flags to adjust argument
+    CommaSeparated = 0x01,     // Should this cl::list split between commas?
+    PositionalEatsArgs = 0x02, // Should this positional cl::list eat -args?
+    Sink = 0x04                // Should this cl::list eat all unknown options?
+};
+
+class SubCommand;
+
+class OptionCategory
+{
+private:
+    String const Name;
+    String const Description;
+
+    void registerCategory();
+
+public:
+    OptionCategory(const String &Name,
+                   const String &Description = "")
+        : Name(Name), Description(Description)
+    {
+        registerCategory();
+    }
+
+    String getName() const
+    {
+        return Name;
+    }
+    String getDescription() const
+    {
+        return Description;
+    }
+};
+
+struct Option
+{
+    String ArgStr;   // The argument string itself (ex: "help", "o")
+    String HelpStr;  // The descriptive text message for -help
+    String ValueStr; // String describing what the value of this option is
+    OptionCategory *Category; // The Category this option belongs to
+    std::vector<SubCommand *> Subs; // The subcommands this option belongs to.
+    bool FullyInitialized = false; // Has addArgument been called?
+
+    int NumOccurrences = 0; // The number of times specified
+                            // Occurrences, HiddenFlag, and Formatting are all enum types but to avoid
+                            // problems with signed enums in bitfields.
+    unsigned Occurrences : 3; // enum NumOccurrencesFlag
+                              // not using the enum type for 'Value' because zero is an implementation
+                              // detail representing the non-value
+    unsigned Value : 2;
+    unsigned HiddenFlag : 2; // enum OptionHidden
+    unsigned Formatting : 2; // enum FormattingFlags
+    unsigned Misc : 3;
+    unsigned Position = 0;       // Position of last occurrence of the option
+    unsigned AdditionalVals = 0; // Greater than 0 for multi-valued option.
+
+    virtual ~Option() = default;
+
+    inline enum NumOccurrencesFlag getNumOccurrencesFlag() const {
+        return (enum NumOccurrencesFlag)Occurrences;
+    }
+
+    /*inline enum ValueExpected getValueExpectedFlag() const {
+        return Value ? ((enum ValueExpected)Value) : getValueExpectedFlagDefault();
+    }*/
+
+    inline enum OptionHidden getOptionHiddenFlag() const {
+        return (enum OptionHidden)HiddenFlag;
+    }
+
+    inline enum FormattingFlags getFormattingFlag() const {
+        return (enum FormattingFlags)Formatting;
+    }
+
+    inline unsigned getMiscFlags() const { return Misc; }
+    inline unsigned getPosition() const { return Position; }
+    inline unsigned getNumAdditionalVals() const { return AdditionalVals; }
+
+    // hasArgStr - Return true if the argstr != ""
+    bool hasArgStr() const { return !ArgStr.empty(); }
+    bool isPositional() const { return getFormattingFlag() == cl::Positional; }
+    bool isSink() const { return getMiscFlags() & cl::Sink; }
+
+    bool isConsumeAfter() const {
+        return getNumOccurrencesFlag() == cl::ConsumeAfter;
+    }
+
+    bool isInAllSubCommands() const;
+
+    //-------------------------------------------------------------------------===
+    // Accessor functions set by OptionModifiers
+    //
+    void setArgStr(const String &S);
+    void setDescription(const String &S) { HelpStr = S; }
+    void setValueStr(const String &S) { ValueStr = S; }
+    void setNumOccurrencesFlag(enum NumOccurrencesFlag Val) { Occurrences = Val; }
+    void setValueExpectedFlag(enum ValueExpected Val) { Value = Val; }
+    void setHiddenFlag(enum OptionHidden Val) { HiddenFlag = Val; }
+    void setFormattingFlag(enum FormattingFlags V) { Formatting = V; }
+    void setMiscFlag(enum MiscFlags M) { Misc |= M; }
+    void setPosition(unsigned pos) { Position = pos; }
+    void setCategory(OptionCategory &C) { Category = &C; }
+    void addSubCommand(SubCommand &S) { Subs.push_back(&S); }
+
+    //
+
+    virtual void getExtraOptionNames(Strings &) {}
+
+    // Prints option name followed by message.  Always returns true.
+    bool error(const String &Message, String ArgName = {}, std::ostream &Errs = std::cerr);
+    bool error(const String &Message, std::ostream &Errs) {
+        return error(Message, {}, Errs);
+    }
+
+protected:
+    explicit Option(enum NumOccurrencesFlag OccurrencesFlag,
+                         enum OptionHidden Hidden)
+        : Occurrences(OccurrencesFlag), Value(0), HiddenFlag(Hidden),
+          Formatting(NormalFormatting), Misc(0)
+        //, Category(&GeneralCategory)
+    {
+    }
+};
+
+} // namespace cl
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -121,6 +305,16 @@ template <> struct applicator<Settings> {
     template <class Opt> static void opt(const Settings &s, Opt &O) { O.setSettings(s); }
 };
 
+template <> struct applicator<cl::NumOccurrencesFlag> {
+    static void opt(cl::NumOccurrencesFlag N, cl::Option &O) {
+        O.setNumOccurrencesFlag(N);
+    }
+};
+
+template <> struct applicator<cl::FormattingFlags> {
+    static void opt(cl::FormattingFlags FF, cl::Option &O) { O.setFormattingFlag(FF); }
+};
+
 template <class Opt, class Mod, class... Mods>
 void apply(Opt *O, const Mod &M, const Mods &... Ms) {
     applicator<Mod>::opt(M, *O);
@@ -147,9 +341,51 @@ inline detail::must_not_be must_not_be(const std::string &Val) {
 namespace cl
 {
 
+class SubCommand
+{
+private:
+    String Name;
+    String Description;
+
+protected:
+    void registerSubCommand();
+    void unregisterSubCommand();
+
+public:
+    SubCommand(const String &Name, const String &Description = "")
+        : Name(Name), Description(Description)
+    {
+        registerSubCommand();
+    }
+    SubCommand() = default;
+
+    void reset();
+
+    explicit operator bool() const;
+
+    String getName() const
+    {
+        return Name;
+    }
+    String getDescription() const
+    {
+        return Description;
+    }
+
+    std::vector<Option *> PositionalOpts;
+    std::vector<Option *> SinkOpts;
+    StringHashMap<Option *> OptionsMap;
+
+    Option *ConsumeAfterOpt = nullptr; // The ConsumeAfter option if it exists.
+};
+
 struct desc
 {
     String description;
+
+    desc(const String &Str) : description(Str) {}
+
+    void apply(Option &O) const { O.setDescription(description); }
 };
 
 struct value_desc
@@ -158,29 +394,27 @@ struct value_desc
 };
 
 template <class T>
-struct option
+struct option : Option
 {
-    String cmd_name;
 
     template <class... Mods>
     explicit option(const Mods &... Ms)
-        //: Option(Optional, NotHidden), Parser(*this)
+        : Option(Optional, NotHidden)
+        //, Parser(*this)
     {
         detail::apply(this, Ms...);
         //done();
     }
-
-    void setArgStr(const String &s) { cmd_name = s; }
 };
 
 template <class T>
 using opt = option<T>;
 
 PRIMITIVES_SETTINGS_API
-void parseCommandLineOptions(int argc, char **argv);
+void parseCommandLineOptions(int argc, char **argv, const String &overview = {});
 
 PRIMITIVES_SETTINGS_API
-void parseCommandLineOptions(const Strings &args);
+void parseCommandLineOptions(const Strings &args, const String &overview = {});
 
 } // namespace cl
 

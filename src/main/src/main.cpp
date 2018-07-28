@@ -1,5 +1,7 @@
 #define PRIMITIVES_MAIN_IMPL
-#include "primitives/main.h"
+#include <primitives/main.h>
+
+#include <primitives/error_handling.h>
 
 #include <iostream>
 #include <exception>
@@ -22,10 +24,7 @@ int main1(int argc, char *argv[])
     {
         std::cerr << "unknown exception" << std::endl;
     }
-#ifdef _MSC_VER
-    if (IsDebuggerPresent())
-        DebugBreak();
-#endif
+    debug_break_if_debugger_attached();
     return 1;
 }
 

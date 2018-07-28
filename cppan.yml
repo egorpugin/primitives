@@ -129,8 +129,17 @@ projects:
         root_directory: src/embedder
         dependencies:
             public:
+                sw.settings:
+                    version: "*"
+                main:
+                    version: "*"
                 filesystem:
                     version: "*"
+    error_handling:
+        name: error_handling
+        type: library
+        root_directory: src/error_handling
+
     executor:
         name: executor
         type: library
@@ -231,6 +240,11 @@ projects:
         type: library
         static_only: true
         root_directory: src/main
+        dependencies:
+            public:
+                error_handling:
+                    version: "*"
+
 
     minidump:
         name: minidump
@@ -250,6 +264,8 @@ projects:
 
         dependencies:
             public:
+                error_handling:
+                    version: "*"
                 templates:
                     version: "*"
                 yaml:
@@ -392,6 +408,8 @@ projects:
                             - /bigobj
         dependencies:
             public:
+                main:
+                    version: "*"
                 command:
                     version: "*"
                 date_time:
@@ -416,6 +434,8 @@ projects:
                             - /bigobj
         dependencies:
             public:
+                main:
+                    version: "*"
                 command:
                     version: "*"
                 db.sqlite3:
@@ -464,6 +484,8 @@ projects:
                             - /bigobj
         dependencies:
             public:
+                main:
+                    version: "*"
                 pvt.cppan.demo.catchorg.catch2:
                     version: 2
                 version:

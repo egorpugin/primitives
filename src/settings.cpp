@@ -532,8 +532,6 @@ bc\
 
 TEST_CASE("Checking command line", "[cl]")
 {
-    using namespace primitives;
-
     cl::option<int> a{"x"};
 
     Strings args = {
@@ -544,7 +542,7 @@ TEST_CASE("Checking command line", "[cl]")
         "2",
     };
 
-    ::primitives::cl::parseCommandLineOptions(args);
+    cl::parseCommandLineOptions(args);
 }
 
 TEST_CASE("New settings", "[settings2]")

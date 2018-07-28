@@ -13,6 +13,7 @@
 #include <primitives/executor.h>
 #include <primitives/filesystem.h>
 #include <primitives/hash.h>
+#include <primitives/main.h>
 
 #include <chrono>
 #include <iostream>
@@ -20,30 +21,24 @@
 #define CATCH_CONFIG_RUNNER
 #include <catch.hpp>
 
-#ifdef __clang__
-#define REQUIRE_TIME(e, t)
-#define REQUIRE_NOTHROW_TIME(e, t)
-#define REQUIRE_NOTHROW_TIME_MORE(e, t)
-#else
-#define REQUIRE_TIME(e, t)                                                                         \
-    do                                                                                             \
-    {                                                                                              \
-        auto t1 = get_time([&] { REQUIRE(e); });                                                   \
-        if (t1 > t)                                                                                \
-        {                                                                                          \
-            auto d = std::chrono::duration_cast<std::chrono::duration<float>>(t1 - t).count();     \
-            REQUIRE_NOTHROW(throw std::runtime_error("time exceed on "## #e + std::to_string(d))); \
-        }                                                                                          \
+#define REQUIRE_TIME(e, t)                                                                       \
+    do                                                                                           \
+    {                                                                                            \
+        auto t1 = get_time([&] { REQUIRE(e); });                                                 \
+        if (t1 > t)                                                                              \
+        {                                                                                        \
+            auto d = std::chrono::duration_cast<std::chrono::duration<float>>(t1 - t).count();   \
+            REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " #e + std::to_string(d))); \
+        }                                                                                        \
     } while (0)
 
-#define REQUIRE_NOTHROW_TIME(e, t)                 \
+#define REQUIRE_NOTHROW_TIME(e, t)  \
     if (get_time([&] { (e); }) > t) \
-        REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " ## #e))
+    REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " #e))
 
-#define REQUIRE_NOTHROW_TIME_MORE(e, t)                 \
-    if (get_time([&] { (e); }) <= t) \
-        REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " ## #e))
-#endif
+#define REQUIRE_NOTHROW_TIME_MORE(e, t) \
+    if (get_time([&] { (e); }) <= t)    \
+    REQUIRE_NOTHROW(throw std::runtime_error("time exceed on " #e))
 
 TEST_CASE("Checking db", "[db]")
 {
@@ -279,19 +274,8 @@ CREATE TABLE d (d )xxx" + type + R"xxx();
 }
 
 int main(int argc, char **argv)
-try
 {
     Catch::Session().run(argc, argv);
 
     return 0;
-}
-catch (std::exception &e)
-{
-    std::cerr << e.what() << "\n";
-    return 1;
-}
-catch (...)
-{
-    std::cerr << "unknown exception" << "\n";
-    return 1;
 }

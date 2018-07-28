@@ -10,11 +10,18 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 using String = std::string;
 using Strings = std::vector<String>;
-using StringMap = std::map<String, String>;
+//using StringMap = std::map<String, String>;
 using StringSet = std::set<String>;
+
+template <class T>
+using StringMap = std::map<String, T>;
+
+template <class T>
+using StringHashMap = std::unordered_map<String, T>;
 
 using namespace std::literals;
 

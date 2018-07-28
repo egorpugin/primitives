@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "primitives/settings.h"
+#include <primitives/settings.h>
 
 #if defined(CPPAN_EXECUTABLE) && defined(CPPAN_SHARED_BUILD)
 #ifdef _WIN32
@@ -25,6 +25,13 @@ String getProgramName();
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+
+namespace cl
+{
+
+using namespace ::primitives::cl;
+
+}
 
 namespace sw
 {

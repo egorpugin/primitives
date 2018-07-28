@@ -5,6 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <primitives/filesystem.h>
+#include <primitives/main.h>
+#include <primitives/sw/settings.h>
 
 #include <iostream>
 #include <regex>
@@ -33,10 +35,11 @@ String preprocess_file(const String &s)
 }
 
 int main(int argc, char *argv[])
-try
 {
-    if (argc != 3)
-        return 1;
+    cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"), cl::Required);
+    cl::opt<std::string> OutputFilename(cl::Positional, cl::desc("<input file>"), cl::Required);
+
+    cl::parseCommandLineOptions(argc, argv);
 
     path p = argv[1];
     if (!fs::exists(p))
@@ -66,14 +69,4 @@ try
     write_file(argv[2], s);
 
     return 0;
-}
-catch (const std::exception &e)
-{
-    std::cerr << e.what() << "\n";
-    return 10;
-}
-catch (...)
-{
-    std::cerr << "Unhandled unknown exception" << "\n";
-    return 11;
 }

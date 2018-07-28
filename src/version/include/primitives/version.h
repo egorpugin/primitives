@@ -52,7 +52,7 @@ struct PRIMITIVES_VERSION_API GenericNumericVersion
     explicit GenericNumericVersion(Level level);
     explicit GenericNumericVersion(const std::initializer_list<Number> &, Level level = 0);
 
-    static const Level minimum_level = 3;
+    static inline const Level minimum_level = 3;
 
 #ifndef HAVE_BISON_RANGE_PARSER
 protected:
