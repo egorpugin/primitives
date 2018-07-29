@@ -20,172 +20,30 @@
 #ifndef LLVM_SUPPORT_COMMANDLINE_H
 #define LLVM_SUPPORT_COMMANDLINE_H
 
-#include <gsl/span>
-
-#include <primitives/error_handling.h>
-#include <primitives/string.h>
-
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <climits>
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
-#include <iostream> // cerr
 #include <string>
-#include <string_view>
 #include <type_traits>
 #include <vector>
 
 namespace llvm {
 
-/// Determine the edit distance between two sequences.
-///
-/// \param FromArray the first sequence to compare.
-///
-/// \param ToArray the second sequence to compare.
-///
-/// \param AllowReplacements whether to allow element replacements (change one
-/// element into another) as a single operation, rather than as two operations
-/// (an insertion and a removal).
-///
-/// \param MaxEditDistance If non-zero, the maximum edit distance that this
-/// routine is allowed to compute. If the edit distance will exceed that
-/// maximum, returns \c MaxEditDistance+1.
-///
-/// \returns the minimum number of element insertions, removals, or (if
-/// \p AllowReplacements is \c true) replacements needed to transform one of
-/// the given sequences into the other. If zero, the sequences are identical.
-template<typename T>
-unsigned ComputeEditDistance(gsl::span<T> FromArray, gsl::span<T> ToArray,
-    bool AllowReplacements = true,
-    unsigned MaxEditDistance = 0) {
-    // The algorithm implemented below is the "classic"
-    // dynamic-programming algorithm for computing the Levenshtein
-    // distance, which is described here:
-    //
-    //   http://en.wikipedia.org/wiki/Levenshtein_distance
-    //
-    // Although the algorithm is typically described using an m x n
-    // array, only one row plus one element are used at a time, so this
-    // implementation just keeps one vector for the row.  To update one entry,
-    // only the entries to the left, top, and top-left are needed.  The left
-    // entry is in Row[x-1], the top entry is what's in Row[x] from the last
-    // iteration, and the top-left entry is stored in Previous.
-    typename gsl::span<T>::size_type m = FromArray.size();
-    typename gsl::span<T>::size_type n = ToArray.size();
-
-    const unsigned SmallBufferSize = 64;
-    unsigned SmallBuffer[SmallBufferSize];
-    std::unique_ptr<unsigned[]> Allocated;
-    unsigned *Row = SmallBuffer;
-    if (n + 1 > SmallBufferSize) {
-        Row = new unsigned[n + 1];
-        Allocated.reset(Row);
-    }
-
-    for (unsigned i = 1; i <= n; ++i)
-        Row[i] = i;
-
-    for (typename gsl::span<T>::size_type y = 1; y <= m; ++y) {
-        Row[0] = y;
-        unsigned BestThisRow = Row[0];
-
-        unsigned Previous = y - 1;
-        for (typename gsl::span<T>::size_type x = 1; x <= n; ++x) {
-            int OldRow = Row[x];
-            if (AllowReplacements) {
-                Row[x] = std::min(
-                    Previous + (FromArray[y - 1] == ToArray[x - 1] ? 0u : 1u),
-                    std::min(Row[x - 1], Row[x]) + 1);
-            }
-            else {
-                if (FromArray[y - 1] == ToArray[x - 1]) Row[x] = Previous;
-                else Row[x] = std::min(Row[x - 1], Row[x]) + 1;
-            }
-            Previous = OldRow;
-            BestThisRow = std::min(BestThisRow, Row[x]);
-        }
-
-        if (MaxEditDistance && BestThisRow > MaxEditDistance)
-            return MaxEditDistance + 1;
-    }
-
-    unsigned Result = Row[n];
-    return Result;
-}
-
-} // namespace llvm
-
-struct string_view : std::string_view
-{
-    using base = std::string_view;
-
-    using base::base;
-
-    string_view() = default;
-
-    string_view(std::string_view sv)
-        : base(sv)
-    {
-    }
-
-    string_view(const std::string &s)
-        : base(s)
-    {
-    }
-
-    std::pair<string_view, string_view> split(char Separator) const
-    {
-        return split(string_view(&Separator, 1));
-    }
-
-    std::pair<string_view, string_view> split(string_view Separator) const
-    {
-        auto Idx = find(Separator);
-        if (Idx == npos)
-            return std::make_pair(*this, string_view());
-        return std::make_pair(substr(0, Idx), substr(Idx + Separator.size(), npos));
-    }
-
-    // Compute the edit distance between the two given strings.
-    unsigned edit_distance(string_view Other,
-                           bool AllowReplacements,
-                           unsigned MaxEditDistance) const
-    {
-        return llvm::ComputeEditDistance(
-            gsl::span(data(), size()),
-            gsl::span(Other.data(), Other.size()),
-            AllowReplacements, MaxEditDistance);
-    }
-
-    std::string str() const
-    {
-        return std::string(*this);
-    }
-};
-
-namespace llvm {
-
-/// Saves strings in the provided stable storage and returns a
-/// StringRef with a stable character pointer.
-class StringSaver final {
-    std::string s;
-
-public:
-    StringSaver() {}//(BumpPtrAllocator &Alloc) : Alloc(Alloc) {}
-
-    // All returned strings are null-terminated: *save(S).end() == 0.
-    string_view save(const char *S) { return save(string_view(S)); }
-    string_view save(string_view S)
-    {
-        s.resize(S.size() + 1);
-        char *P = s.data();
-        memcpy(P, S.data(), S.size());
-        P[S.size()] = '\0';
-        return string_view(P, S.size());
-    }
-    string_view save(const std::string &S) { return save(string_view(S)); }
-};
+class StringSaver;
+class raw_ostream;
 
 /// cl Namespace - This namespace contains all of the command line option
 /// processing machinery.  It is intentionally a short name to make qualified
@@ -199,8 +57,8 @@ namespace cl {
 // stderr and exit if \p Errs is not set (nullptr by default), or print the
 // error message to \p Errs and return false if \p Errs is provided.
 bool ParseCommandLineOptions(int argc, const char *const *argv,
-                             string_view Overview = "",
-                             std::ostream *Errs = nullptr);
+                             StringRef Overview = "",
+                             raw_ostream *Errs = nullptr);
 
 //===----------------------------------------------------------------------===//
 // ParseEnvironmentOptions - Environment variable option processing alternate
@@ -210,7 +68,7 @@ void ParseEnvironmentOptions(const char *progName, const char *envvar,
                              const char *Overview = "");
 
 // Function pointer type for printing version information.
-using VersionPrinterTy = std::function<void(std::ostream &)>;
+using VersionPrinterTy = std::function<void(raw_ostream &)>;
 
 ///===---------------------------------------------------------------------===//
 /// SetVersionPrinter - Override the default (LLVM specific) version printer
@@ -244,7 +102,7 @@ class Option;
 ///
 /// Literal options are used by some parsers to register special option values.
 /// This is how the PassNameParser registers pass names for opt.
-void AddLiteralOption(Option &O, string_view Name);
+void AddLiteralOption(Option &O, StringRef Name);
 
 //===----------------------------------------------------------------------===//
 // Flags permitted to be passed to command line arguments
@@ -312,20 +170,20 @@ enum MiscFlags {             // Miscellaneous flags to adjust argument
 //
 class OptionCategory {
 private:
-  string_view const Name;
-  string_view const Description;
+  StringRef const Name;
+  StringRef const Description;
 
   void registerCategory();
 
 public:
-  OptionCategory(string_view const Name,
-                 string_view const Description = "")
+  OptionCategory(StringRef const Name,
+                 StringRef const Description = "")
       : Name(Name), Description(Description) {
     registerCategory();
   }
 
-  string_view getName() const { return Name; }
-  string_view getDescription() const { return Description; }
+  StringRef getName() const { return Name; }
+  StringRef getDescription() const { return Description; }
 };
 
 // The general Option Category (used as default category).
@@ -336,15 +194,15 @@ extern OptionCategory GeneralCategory;
 //
 class SubCommand {
 private:
-  string_view Name;
-  string_view Description;
+  StringRef Name;
+  StringRef Description;
 
 protected:
   void registerSubCommand();
   void unregisterSubCommand();
 
 public:
-  SubCommand(string_view Name, string_view Description = "")
+  SubCommand(StringRef Name, StringRef Description = "")
       : Name(Name), Description(Description) {
         registerSubCommand();
   }
@@ -354,21 +212,21 @@ public:
 
   explicit operator bool() const;
 
-  string_view getName() const { return Name; }
-  string_view getDescription() const { return Description; }
+  StringRef getName() const { return Name; }
+  StringRef getDescription() const { return Description; }
 
-  std::vector<Option *> PositionalOpts;
-  std::vector<Option *> SinkOpts;
-  StringHashMap<Option *> OptionsMap;
+  SmallVector<Option *, 4> PositionalOpts;
+  SmallVector<Option *, 4> SinkOpts;
+  StringMap<Option *> OptionsMap;
 
   Option *ConsumeAfterOpt = nullptr; // The ConsumeAfter option if it exists.
 };
 
 // A special subcommand representing no subcommand
-extern SubCommand TopLevelSubCommand;
+extern ManagedStatic<SubCommand> TopLevelSubCommand;
 
 // A special subcommand that can be used to put an option into all subcommands.
-extern SubCommand AllSubCommands;
+extern ManagedStatic<SubCommand> AllSubCommands;
 
 //===----------------------------------------------------------------------===//
 // Option Base class
@@ -380,8 +238,8 @@ class Option {
   // an argument.  Should return true if there was an error processing the
   // argument and the program should exit.
   //
-  virtual bool handleOccurrence(unsigned pos, string_view ArgName,
-                                string_view Arg) = 0;
+  virtual bool handleOccurrence(unsigned pos, StringRef ArgName,
+                                StringRef Arg) = 0;
 
   virtual enum ValueExpected getValueExpectedFlagDefault() const {
     return ValueOptional;
@@ -404,11 +262,11 @@ class Option {
   unsigned AdditionalVals = 0; // Greater than 0 for multi-valued option.
 
 public:
-  string_view ArgStr;   // The argument string itself (ex: "help", "o")
-  string_view HelpStr;  // The descriptive text message for -help
-  string_view ValueStr; // String describing what the value of this option is
+  StringRef ArgStr;   // The argument string itself (ex: "help", "o")
+  StringRef HelpStr;  // The descriptive text message for -help
+  StringRef ValueStr; // String describing what the value of this option is
   OptionCategory *Category; // The Category this option belongs to
-  std::set<SubCommand *> Subs; // The subcommands this option belongs to.
+  SmallPtrSet<SubCommand *, 4> Subs; // The subcommands this option belongs to.
   bool FullyInitialized = false; // Has addArgument been called?
 
   inline enum NumOccurrencesFlag getNumOccurrencesFlag() const {
@@ -440,14 +298,18 @@ public:
     return getNumOccurrencesFlag() == cl::ConsumeAfter;
   }
 
-  bool isInAllSubCommands() const;
+  bool isInAllSubCommands() const {
+    return any_of(Subs, [](const SubCommand *SC) {
+      return SC == &*AllSubCommands;
+    });
+  }
 
   //-------------------------------------------------------------------------===
   // Accessor functions set by OptionModifiers
   //
-  void setArgStr(string_view S);
-  void setDescription(string_view S) { HelpStr = S; }
-  void setValueStr(string_view S) { ValueStr = S; }
+  void setArgStr(StringRef S);
+  void setDescription(StringRef S) { HelpStr = S; }
+  void setValueStr(StringRef S) { ValueStr = S; }
   void setNumOccurrencesFlag(enum NumOccurrencesFlag Val) { Occurrences = Val; }
   void setValueExpectedFlag(enum ValueExpected Val) { Value = Val; }
   void setHiddenFlag(enum OptionHidden Val) { HiddenFlag = Val; }
@@ -490,20 +352,20 @@ public:
 
   virtual void setDefault() = 0;
 
-  static void printHelpStr(string_view HelpStr, size_t Indent,
+  static void printHelpStr(StringRef HelpStr, size_t Indent,
                            size_t FirstLineIndentedBy);
 
-  virtual void getExtraOptionNames(std::vector<string_view> &) {}
+  virtual void getExtraOptionNames(SmallVectorImpl<StringRef> &) {}
 
   // addOccurrence - Wrapper around handleOccurrence that enforces Flags.
   //
-  virtual bool addOccurrence(unsigned pos, string_view ArgName, string_view Value,
+  virtual bool addOccurrence(unsigned pos, StringRef ArgName, StringRef Value,
                              bool MultiArg = false);
 
   // Prints option name followed by message.  Always returns true.
-  bool error(const String &Message, string_view ArgName = {}, std::ostream &Errs = std::cerr);
-  bool error(const String &Message, std::ostream &Errs) {
-    return error(Message, string_view(), Errs);
+  bool error(const Twine &Message, StringRef ArgName = StringRef(), raw_ostream &Errs = llvm::errs());
+  bool error(const Twine &Message, raw_ostream &Errs) {
+    return error(Message, StringRef(), Errs);
   }
 
   inline int getNumOccurrences() const { return NumOccurrences; }
@@ -517,9 +379,9 @@ public:
 
 // desc - Modifier to set the description shown in the -help output...
 struct desc {
-  string_view Desc;
+  StringRef Desc;
 
-  desc(string_view Str) : Desc(Str) {}
+  desc(StringRef Str) : Desc(Str) {}
 
   void apply(Option &O) const { O.setDescription(Desc); }
 };
@@ -527,9 +389,9 @@ struct desc {
 // value_desc - Modifier to set the value description shown in the -help
 // output...
 struct value_desc {
-  string_view Desc;
+  StringRef Desc;
 
-  value_desc(string_view Str) : Desc(Str) {}
+  value_desc(StringRef Str) : Desc(Str) {}
 
   void apply(Option &O) const { O.setValueStr(Desc); }
 };
@@ -612,7 +474,7 @@ struct OptionValueBase : public GenericOptionValue {
 
   bool hasValue() const { return false; }
 
-  const DataType &getValue() const { sw_unreachable("no default value"); }
+  const DataType &getValue() const { llvm_unreachable("no default value"); }
 
   // Some options may take their value from a different data type.
   template <class DT> void setValue(const DT & /*V*/) {}
@@ -712,7 +574,7 @@ private:
 
 template <>
 struct OptionValue<std::string> final : OptionValueCopy<std::string> {
-  using WrapperType = string_view;
+  using WrapperType = StringRef;
 
   OptionValue() = default;
 
@@ -733,9 +595,9 @@ private:
 
 // This represents a single enum value, using "int" as the underlying type.
 struct OptionEnumValue {
-  string_view Name;
+  StringRef Name;
   int Value;
-  string_view Description;
+  StringRef Description;
 };
 
 #define clEnumVal(ENUMVAL, DESC)                                               \
@@ -750,7 +612,7 @@ class ValuesClass {
   // Use a vector instead of a map, because the lists should be short,
   // the overhead is less, and most importantly, it keeps them in the order
   // inserted so we can print our option out nicely.
-  std::vector<OptionEnumValue> Values;
+  SmallVector<OptionEnumValue, 4> Values;
 
 public:
   ValuesClass(std::initializer_list<OptionEnumValue> Options)
@@ -785,10 +647,10 @@ class generic_parser_base {
 protected:
   class GenericOptionInfo {
   public:
-    GenericOptionInfo(string_view name, string_view helpStr)
+    GenericOptionInfo(StringRef name, StringRef helpStr)
         : Name(name), HelpStr(helpStr) {}
-    string_view Name;
-    string_view HelpStr;
+    StringRef Name;
+    StringRef HelpStr;
   };
 
 public:
@@ -803,10 +665,10 @@ public:
   virtual unsigned getNumOptions() const = 0;
 
   // getOption - Return option name N.
-  virtual string_view getOption(unsigned N) const = 0;
+  virtual StringRef getOption(unsigned N) const = 0;
 
   // getDescription - Return description N
-  virtual string_view getDescription(unsigned N) const = 0;
+  virtual StringRef getDescription(unsigned N) const = 0;
 
   // Return the width of the option tag for printing...
   virtual size_t getOptionWidth(const Option &O) const;
@@ -835,7 +697,7 @@ public:
 
   void initialize() {}
 
-  void getExtraOptionNames(std::vector<string_view> &OptionNames) {
+  void getExtraOptionNames(SmallVectorImpl<StringRef> &OptionNames) {
     // If there has been no argstr specified, that means that we need to add an
     // argument for every possible option.  This ensures that our options are
     // vectored to us.
@@ -865,7 +727,7 @@ public:
   // findOption - Return the option number corresponding to the specified
   // argument string.  If the option is not found, getNumOptions() is returned.
   //
-  unsigned findOption(string_view Name);
+  unsigned findOption(StringRef Name);
 
 protected:
   Option &Owner;
@@ -881,12 +743,12 @@ template <class DataType> class parser : public generic_parser_base {
 protected:
   class OptionInfo : public GenericOptionInfo {
   public:
-    OptionInfo(string_view name, DataType v, string_view helpStr)
+    OptionInfo(StringRef name, DataType v, StringRef helpStr)
         : GenericOptionInfo(name, helpStr), V(v) {}
 
     OptionValue<DataType> V;
   };
-  std::vector<OptionInfo> Values;
+  SmallVector<OptionInfo, 8> Values;
 
 public:
   parser(Option &O) : generic_parser_base(O) {}
@@ -895,8 +757,8 @@ public:
 
   // Implement virtual functions needed by generic_parser_base
   unsigned getNumOptions() const override { return unsigned(Values.size()); }
-  string_view getOption(unsigned N) const override { return Values[N].Name; }
-  string_view getDescription(unsigned N) const override {
+  StringRef getOption(unsigned N) const override { return Values[N].Name; }
+  StringRef getDescription(unsigned N) const override {
     return Values[N].HelpStr;
   }
 
@@ -906,8 +768,8 @@ public:
   }
 
   // parse - Return true on error.
-  bool parse(Option &O, string_view ArgName, string_view Arg, DataType &V) {
-    string_view ArgVal;
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, DataType &V) {
+    StringRef ArgVal;
     if (Owner.hasArgStr())
       ArgVal = Arg;
     else
@@ -925,7 +787,7 @@ public:
   /// addLiteralOption - Add an entry to the mapping table.
   ///
   template <class DT>
-  void addLiteralOption(string_view Name, const DT &V, string_view HelpStr) {
+  void addLiteralOption(StringRef Name, const DT &V, StringRef HelpStr) {
     assert(findOption(Name) == Values.size() && "Option already exists!");
     OptionInfo X(Name, static_cast<DataType>(V), HelpStr);
     Values.push_back(X);
@@ -934,7 +796,7 @@ public:
 
   /// removeLiteralOption - Remove the specified option.
   ///
-  void removeLiteralOption(string_view Name) {
+  void removeLiteralOption(StringRef Name) {
     unsigned N = findOption(Name);
     assert(N != Values.size() && "Option not found!");
     Values.erase(Values.begin() + N);
@@ -952,7 +814,7 @@ public:
     return ValueRequired;
   }
 
-  void getExtraOptionNames(std::vector<string_view> &) {}
+  void getExtraOptionNames(SmallVectorImpl<StringRef> &) {}
 
   void initialize() {}
 
@@ -969,7 +831,7 @@ public:
   void printOptionNoValue(const Option &O, size_t GlobalWidth) const;
 
   // getValueName - Overload in subclass to provide a better default value.
-  virtual string_view getValueName() const { return "value"; }
+  virtual StringRef getValueName() const { return "value"; }
 
   // An out-of-line virtual method to provide a 'home' for this class.
   virtual void anchor();
@@ -1003,7 +865,7 @@ public:
   parser(Option &O) : basic_parser(O) {}
 
   // parse - Return true on error.
-  bool parse(Option &O, string_view ArgName, string_view Arg, bool &Val);
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, bool &Val);
 
   void initialize() {}
 
@@ -1012,7 +874,7 @@ public:
   }
 
   // getValueName - Do not print =<value> at all.
-  string_view getValueName() const override { return string_view(); }
+  StringRef getValueName() const override { return StringRef(); }
 
   void printOptionDiff(const Option &O, bool V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -1031,14 +893,14 @@ public:
   parser(Option &O) : basic_parser(O) {}
 
   // parse - Return true on error.
-  bool parse(Option &O, string_view ArgName, string_view Arg, boolOrDefault &Val);
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, boolOrDefault &Val);
 
   enum ValueExpected getValueExpectedFlagDefault() const {
     return ValueOptional;
   }
 
   // getValueName - Do not print =<value> at all.
-  string_view getValueName() const override { return string_view(); }
+  StringRef getValueName() const override { return StringRef(); }
 
   void printOptionDiff(const Option &O, boolOrDefault V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -1057,10 +919,10 @@ public:
   parser(Option &O) : basic_parser(O) {}
 
   // parse - Return true on error.
-  bool parse(Option &O, string_view ArgName, string_view Arg, int &Val);
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, int &Val);
 
   // getValueName - Overload in subclass to provide a better default value.
-  string_view getValueName() const override { return "int"; }
+  StringRef getValueName() const override { return "int"; }
 
   void printOptionDiff(const Option &O, int V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -1079,10 +941,10 @@ public:
   parser(Option &O) : basic_parser(O) {}
 
   // parse - Return true on error.
-  bool parse(Option &O, string_view ArgName, string_view Arg, unsigned &Val);
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, unsigned &Val);
 
   // getValueName - Overload in subclass to provide a better default value.
-  string_view getValueName() const override { return "uint"; }
+  StringRef getValueName() const override { return "uint"; }
 
   void printOptionDiff(const Option &O, unsigned V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -1103,11 +965,11 @@ public:
   parser(Option &O) : basic_parser(O) {}
 
   // parse - Return true on error.
-  bool parse(Option &O, string_view ArgName, string_view Arg,
+  bool parse(Option &O, StringRef ArgName, StringRef Arg,
              unsigned long long &Val);
 
   // getValueName - Overload in subclass to provide a better default value.
-  string_view getValueName() const override { return "uint"; }
+  StringRef getValueName() const override { return "uint"; }
 
   void printOptionDiff(const Option &O, unsigned long long V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -1126,10 +988,10 @@ public:
   parser(Option &O) : basic_parser(O) {}
 
   // parse - Return true on error.
-  bool parse(Option &O, string_view ArgName, string_view Arg, double &Val);
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, double &Val);
 
   // getValueName - Overload in subclass to provide a better default value.
-  string_view getValueName() const override { return "number"; }
+  StringRef getValueName() const override { return "number"; }
 
   void printOptionDiff(const Option &O, double V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -1148,10 +1010,10 @@ public:
   parser(Option &O) : basic_parser(O) {}
 
   // parse - Return true on error.
-  bool parse(Option &O, string_view ArgName, string_view Arg, float &Val);
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, float &Val);
 
   // getValueName - Overload in subclass to provide a better default value.
-  string_view getValueName() const override { return "number"; }
+  StringRef getValueName() const override { return "number"; }
 
   void printOptionDiff(const Option &O, float V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -1170,15 +1032,15 @@ public:
   parser(Option &O) : basic_parser(O) {}
 
   // parse - Return true on error.
-  bool parse(Option &, string_view, string_view Arg, std::string &Value) {
-    Value = std::string(Arg);
+  bool parse(Option &, StringRef, StringRef Arg, std::string &Value) {
+    Value = Arg.str();
     return false;
   }
 
   // getValueName - Overload in subclass to provide a better default value.
-  string_view getValueName() const override { return "string"; }
+  StringRef getValueName() const override { return "string"; }
 
-  void printOptionDiff(const Option &O, string_view V, const OptVal &Default,
+  void printOptionDiff(const Option &O, StringRef V, const OptVal &Default,
                        size_t GlobalWidth) const;
 
   // An out-of-line virtual method to provide a 'home' for this class.
@@ -1195,13 +1057,13 @@ public:
   parser(Option &O) : basic_parser(O) {}
 
   // parse - Return true on error.
-  bool parse(Option &, string_view, string_view Arg, char &Value) {
+  bool parse(Option &, StringRef, StringRef Arg, char &Value) {
     Value = Arg[0];
     return false;
   }
 
   // getValueName - Overload in subclass to provide a better default value.
-  string_view getValueName() const override { return "char"; }
+  StringRef getValueName() const override { return "char"; }
 
   void printOptionDiff(const Option &O, char V, OptVal Default,
                        size_t GlobalWidth) const;
@@ -1269,17 +1131,17 @@ template <class Mod> struct applicator {
 
 // Handle const char* as a special case...
 template <unsigned n> struct applicator<char[n]> {
-  template <class Opt> static void opt(string_view Str, Opt &O) {
+  template <class Opt> static void opt(StringRef Str, Opt &O) {
     O.setArgStr(Str);
   }
 };
 template <unsigned n> struct applicator<const char[n]> {
-  template <class Opt> static void opt(string_view Str, Opt &O) {
+  template <class Opt> static void opt(StringRef Str, Opt &O) {
     O.setArgStr(Str);
   }
 };
-template <> struct applicator<string_view > {
-  template <class Opt> static void opt(string_view Str, Opt &O) {
+template <> struct applicator<StringRef > {
+  template <class Opt> static void opt(StringRef Str, Opt &O) {
     O.setArgStr(Str);
   }
 };
@@ -1427,8 +1289,8 @@ class opt : public Option,
                                std::is_class<DataType>::value> {
   ParserClass Parser;
 
-  bool handleOccurrence(unsigned pos, string_view ArgName,
-                        string_view Arg) override {
+  bool handleOccurrence(unsigned pos, StringRef ArgName,
+                        StringRef Arg) override {
     typename ParserClass::parser_data_type Val =
         typename ParserClass::parser_data_type();
     if (Parser.parse(*this, ArgName, Arg, Val))
@@ -1442,7 +1304,7 @@ class opt : public Option,
     return Parser.getValueExpectedFlagDefault();
   }
 
-  void getExtraOptionNames(std::vector<string_view> &OptionNames) override {
+  void getExtraOptionNames(SmallVectorImpl<StringRef> &OptionNames) override {
     return Parser.getExtraOptionNames(OptionNames);
   }
 
@@ -1602,7 +1464,7 @@ public:
   const_reference front() const { return Storage.front(); }
 
   operator std::vector<DataType>&() { return Storage; }
-  operator gsl::span<DataType>() { return Storage; }
+  operator ArrayRef<DataType>() { return Storage; }
   std::vector<DataType> *operator&() { return &Storage; }
   const std::vector<DataType> *operator&() const { return &Storage; }
 
@@ -1622,12 +1484,12 @@ class list : public Option, public list_storage<DataType, StorageClass> {
     return Parser.getValueExpectedFlagDefault();
   }
 
-  void getExtraOptionNames(std::vector<string_view> &OptionNames) override {
+  void getExtraOptionNames(SmallVectorImpl<StringRef> &OptionNames) override {
     return Parser.getExtraOptionNames(OptionNames);
   }
 
-  bool handleOccurrence(unsigned pos, string_view ArgName,
-                        string_view Arg) override {
+  bool handleOccurrence(unsigned pos, StringRef ArgName,
+                        StringRef Arg) override {
     typename ParserClass::parser_data_type Val =
         typename ParserClass::parser_data_type();
     if (Parser.parse(*this, ArgName, Arg, Val))
@@ -1765,12 +1627,12 @@ class bits : public Option, public bits_storage<DataType, Storage> {
     return Parser.getValueExpectedFlagDefault();
   }
 
-  void getExtraOptionNames(std::vector<string_view> &OptionNames) override {
+  void getExtraOptionNames(SmallVectorImpl<StringRef> &OptionNames) override {
     return Parser.getExtraOptionNames(OptionNames);
   }
 
-  bool handleOccurrence(unsigned pos, string_view ArgName,
-                        string_view Arg) override {
+  bool handleOccurrence(unsigned pos, StringRef ArgName,
+                        StringRef Arg) override {
     typename ParserClass::parser_data_type Val =
         typename ParserClass::parser_data_type();
     if (Parser.parse(*this, ArgName, Arg, Val))
@@ -1828,12 +1690,12 @@ public:
 class alias : public Option {
   Option *AliasFor;
 
-  bool handleOccurrence(unsigned pos, string_view /*ArgName*/,
-                        string_view Arg) override {
+  bool handleOccurrence(unsigned pos, StringRef /*ArgName*/,
+                        StringRef Arg) override {
     return AliasFor->handleOccurrence(pos, AliasFor->ArgStr, Arg);
   }
 
-  bool addOccurrence(unsigned pos, string_view /*ArgName*/, string_view Value,
+  bool addOccurrence(unsigned pos, StringRef /*ArgName*/, StringRef Value,
                      bool MultiArg = false) override {
     return AliasFor->addOccurrence(pos, AliasFor->ArgStr, Value, MultiArg);
   }
@@ -1894,9 +1756,9 @@ struct aliasopt {
 // printed to stderr at the end of the regular help, just before
 // exit is called.
 struct extrahelp {
-  string_view morehelp;
+  StringRef morehelp;
 
-  explicit extrahelp(string_view help);
+  explicit extrahelp(StringRef help);
 };
 
 void PrintVersionMessage();
@@ -1912,10 +1774,10 @@ void PrintHelpMessage(bool Hidden = false, bool Categorized = false);
 // Public interface for accessing registered options.
 //
 
-/// Use this to get a StringHashMap to all registered named options
-/// (e.g. -help). Note \p Map Should be an empty StringHashMap.
+/// Use this to get a StringMap to all registered named options
+/// (e.g. -help). Note \p Map Should be an empty StringMap.
 ///
-/// \return A reference to the StringHashMap used by the cl APIs to parse options.
+/// \return A reference to the StringMap used by the cl APIs to parse options.
 ///
 /// Access to unnamed arguments (i.e. positional) are not provided because
 /// it is expected that the client already has access to these.
@@ -1923,7 +1785,7 @@ void PrintHelpMessage(bool Hidden = false, bool Categorized = false);
 /// Typical usage:
 /// \code
 /// main(int argc,char* argv[]) {
-/// StringHashMap<llvm::cl::Option*> &opts = llvm::cl::getRegisteredOptions();
+/// StringMap<llvm::cl::Option*> &opts = llvm::cl::getRegisteredOptions();
 /// assert(opts.count("help") == 1)
 /// opts["help"]->setDescription("Show alphabetical help information")
 /// // More code
@@ -1939,7 +1801,7 @@ void PrintHelpMessage(bool Hidden = false, bool Categorized = false);
 /// Hopefully this API can be deprecated soon. Any situation where options need
 /// to be modified by tools or libraries should be handled by sane APIs rather
 /// than just handing around a global list.
-StringHashMap<Option *> &getRegisteredOptions(SubCommand &Sub = TopLevelSubCommand);
+StringMap<Option *> &getRegisteredOptions(SubCommand &Sub = *TopLevelSubCommand);
 
 /// Use this to get all registered SubCommands from the provided parser.
 ///
@@ -1960,8 +1822,8 @@ StringHashMap<Option *> &getRegisteredOptions(SubCommand &Sub = TopLevelSubComma
 ///
 /// This interface is useful for defining subcommands in libraries and
 /// the dispatch from a single point (like in the main function).
-//iterator_range<typename std::set<SubCommand *>::iterator>
-//getRegisteredSubcommands();
+iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+getRegisteredSubcommands();
 
 //===----------------------------------------------------------------------===//
 // Standalone command line processing utilities.
@@ -1979,8 +1841,8 @@ StringHashMap<Option *> &getRegisteredOptions(SubCommand &Sub = TopLevelSubComma
 /// \param [in] MarkEOLs true if tokenizing a response file and you want end of
 /// lines and end of the response file to be marked with a nullptr string.
 /// \param [out] NewArgv All parsed strings are appended to NewArgv.
-void TokenizeGNUCommandLine(string_view Source, StringSaver &Saver,
-                            std::vector<const char *> &NewArgv,
+void TokenizeGNUCommandLine(StringRef Source, StringSaver &Saver,
+                            SmallVectorImpl<const char *> &NewArgv,
                             bool MarkEOLs = false);
 
 /// Tokenizes a Windows command line which may contain quotes and escaped
@@ -1994,14 +1856,14 @@ void TokenizeGNUCommandLine(string_view Source, StringSaver &Saver,
 /// \param [in] MarkEOLs true if tokenizing a response file and you want end of
 /// lines and end of the response file to be marked with a nullptr string.
 /// \param [out] NewArgv All parsed strings are appended to NewArgv.
-void TokenizeWindowsCommandLine(string_view Source, StringSaver &Saver,
-                                std::vector<const char *> &NewArgv,
+void TokenizeWindowsCommandLine(StringRef Source, StringSaver &Saver,
+                                SmallVectorImpl<const char *> &NewArgv,
                                 bool MarkEOLs = false);
 
 /// String tokenization function type.  Should be compatible with either
 /// Windows or Unix command line tokenizers.
-using TokenizerCallback = void (*)(string_view Source, StringSaver &Saver,
-                                   std::vector<const char *> &NewArgv,
+using TokenizerCallback = void (*)(StringRef Source, StringSaver &Saver,
+                                   SmallVectorImpl<const char *> &NewArgv,
                                    bool MarkEOLs);
 
 /// Tokenizes content of configuration file.
@@ -2013,8 +1875,8 @@ using TokenizerCallback = void (*)(string_view Source, StringSaver &Saver,
 ///
 /// It works like TokenizeGNUCommandLine with ability to skip comment lines.
 ///
-void tokenizeConfigFile(string_view Source, StringSaver &Saver,
-                        std::vector<const char *> &NewArgv,
+void tokenizeConfigFile(StringRef Source, StringSaver &Saver,
+                        SmallVectorImpl<const char *> &NewArgv,
                         bool MarkEOLs = false);
 
 /// Reads command line options from the given configuration file.
@@ -2028,8 +1890,8 @@ void tokenizeConfigFile(string_view Source, StringSaver &Saver,
 /// commands resolving file names in them relative to the directory where
 /// CfgFilename resides.
 ///
-bool readConfigFile(string_view CfgFileName, StringSaver &Saver,
-                    std::vector<const char *> &Argv);
+bool readConfigFile(StringRef CfgFileName, StringSaver &Saver,
+                    SmallVectorImpl<const char *> &Argv);
 
 /// Expand response files on a command line recursively using the given
 /// StringSaver and tokenization strategy.  Argv should contain the command line
@@ -2048,7 +1910,7 @@ bool readConfigFile(string_view CfgFileName, StringSaver &Saver,
 /// resolved relative to including file.
 /// \return true if all @files were expanded successfully or there were none.
 bool ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
-                         std::vector<const char *> &Argv,
+                         SmallVectorImpl<const char *> &Argv,
                          bool MarkEOLs = false, bool RelativeNames = false);
 
 /// Mark all options not part of this category as cl::ReallyHidden.
@@ -2059,7 +1921,7 @@ bool ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
 /// not specific to the tool. This function allows a tool to specify a single
 /// option category to display in the -help output.
 void HideUnrelatedOptions(cl::OptionCategory &Category,
-                          SubCommand &Sub = TopLevelSubCommand);
+                          SubCommand &Sub = *TopLevelSubCommand);
 
 /// Mark all options not part of the categories as cl::ReallyHidden.
 ///
@@ -2068,8 +1930,8 @@ void HideUnrelatedOptions(cl::OptionCategory &Category,
 /// Some tools (like clang-format) like to be able to hide all options that are
 /// not specific to the tool. This function allows a tool to specify a single
 /// option category to display in the -help output.
-void HideUnrelatedOptions(gsl::span<const cl::OptionCategory *> Categories,
-                          SubCommand &Sub = TopLevelSubCommand);
+void HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
+                          SubCommand &Sub = *TopLevelSubCommand);
 
 /// Reset all command line options to a state that looks as if they have
 /// never appeared on the command line.  This is useful for being able to parse

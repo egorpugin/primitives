@@ -264,10 +264,8 @@ projects:
 
         dependencies:
             public:
-                pvt.cppan.demo.microsoft.gsl:
+                pvt.egorpugin.llvm.support_lite:
                     version: master
-                error_handling:
-                    version: "*"
                 templates:
                     version: "*"
                 yaml:

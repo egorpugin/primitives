@@ -37,7 +37,7 @@ struct PRIMITIVES_COMMAND_API Command
     // input
     path program;
     Strings args;
-    StringMap environment;
+    StringMap<String> environment;
     path working_directory;
 
     // output

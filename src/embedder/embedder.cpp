@@ -36,19 +36,18 @@ String preprocess_file(const String &s)
 
 int main(int argc, char *argv[])
 {
-    cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"), cl::Required);
-    cl::opt<std::string> OutputFilename(cl::Positional, cl::desc("<input file>"), cl::Required);
+    cl::opt<path> InputFilename(cl::Positional, cl::desc("<input file>"), cl::Required);
+    cl::opt<path> OutputFilename(cl::Positional, cl::desc("<output file>"), cl::Required);
 
     cl::parseCommandLineOptions(argc, argv);
 
-    path p = argv[1];
-    if (!fs::exists(p))
+    if (!fs::exists(InputFilename))
     {
-        std::cerr << "no such file: " << p.string() << "\n";
+        std::cerr << "no such file: " << InputFilename.string() << "\n";
         return 2;
     }
 
-    auto s = read_file(p);
+    auto s = read_file(InputFilename);
     std::regex r("EMBED<(.*?)>");
     std::smatch m;
     while (std::regex_search(s, m, r))
@@ -66,7 +65,7 @@ int main(int argc, char *argv[])
         s = str;
     }
 
-    write_file(argv[2], s);
+    write_file(OutputFilename, s);
 
     return 0;
 }

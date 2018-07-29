@@ -532,7 +532,7 @@ bc\
 
 TEST_CASE("Checking command line", "[cl]")
 {
-    cl::option<int> a{"x"};
+    /*cl::option<int> a{"x"};
 
     Strings args = {
         "prog",
@@ -542,7 +542,7 @@ TEST_CASE("Checking command line", "[cl]")
         "2",
     };
 
-    cl::parseCommandLineOptions(args);
+    cl::parseCommandLineOptions(args);*/
 }
 
 TEST_CASE("New settings", "[settings2]")
