@@ -10,11 +10,20 @@
 #include <Windows.h>
 #endif
 
+static int error = 1;
+
+void exit_handler()
+{
+    if (error)
+        debug_break_if_debugger_attached();
+}
+
 int main1(int argc, char *argv[])
 {
+    atexit(exit_handler);
     try
     {
-        return PRIMITIVES_MAIN(argc, argv);
+        return error = PRIMITIVES_MAIN(argc, argv);
     }
     catch (const std::exception &e)
     {
@@ -24,8 +33,7 @@ int main1(int argc, char *argv[])
     {
         std::cerr << "unknown exception" << std::endl;
     }
-    debug_break_if_debugger_attached();
-    return 1;
+    return 2;
 }
 
 int main(int argc, char *argv[])
@@ -41,7 +49,7 @@ int main(int argc, char *argv[])
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
         std::cerr << "unknown SEH exception" << std::endl;
-        return 1;
     }
 #endif
+    return 1;
 }

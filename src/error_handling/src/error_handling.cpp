@@ -6,6 +6,8 @@
 
 #include <primitives/error_handling.h>
 
+#include <iostream>
+
 #ifdef _MSC_VER
 #include <Windows.h>
 #endif
@@ -20,6 +22,25 @@ void debug_break_if_debugger_attached()
 
 void report_fatal_error(const std::string &s)
 {
-    debug_break_if_debugger_attached();
+    std::cerr << "fatal error: " << s << "!" << std::endl;
     exit(1);
+}
+
+namespace sw
+{
+
+void unreachable_internal(const char *msg, const char *file, unsigned line)
+{
+    // This code intentionally doesn't call the ErrorHandler callback, because
+    // llvm_unreachable is intended to be used to indicate "impossible"
+    // situations, and not legitimate runtime errors.
+    if (msg)
+        std::cerr << msg << "\n";
+    std::cerr << "UNREACHABLE executed";
+    if (file)
+        std::cerr << " at " << file << ":" << line;
+    std::cerr << "!\n";
+    abort();
+}
+
 }

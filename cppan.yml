@@ -264,6 +264,8 @@ projects:
 
         dependencies:
             public:
+                pvt.cppan.demo.microsoft.gsl:
+                    version: master
                 error_handling:
                     version: "*"
                 templates:
