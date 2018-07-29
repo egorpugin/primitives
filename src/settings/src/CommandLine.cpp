@@ -16,7 +16,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/CommandLine.h"
+#include <primitives/CommandLine.h>
+
 #include "llvm-c/Support.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -42,14 +43,15 @@
 #include <cstdlib>
 #include <map>
 using namespace llvm;
-using namespace cl;
+using namespace primitives;
+using namespace primitives::cl;
 
 #define DEBUG_TYPE "commandline"
 
 //===----------------------------------------------------------------------===//
 // Template instantiations and anchors.
 //
-namespace llvm {
+namespace primitives {
 namespace cl {
 template class basic_parser<bool>;
 template class basic_parser<boolOrDefault>;
@@ -61,13 +63,16 @@ template class basic_parser<float>;
 template class basic_parser<std::string>;
 template class basic_parser<char>;
 
+// own types
+//template class basic_parser<path>;
+
 template class opt<unsigned>;
 template class opt<int>;
 template class opt<std::string>;
 template class opt<char>;
 template class opt<bool>;
 }
-} // end namespace llvm::cl
+} // end namespace primitives::cl
 
 // Pin the vtables to this file.
 void GenericOptionValue::anchor() {}
@@ -84,6 +89,9 @@ void parser<double>::anchor() {}
 void parser<float>::anchor() {}
 void parser<std::string>::anchor() {}
 void parser<char>::anchor() {}
+
+// own types
+void parser<path>::anchor() {}
 
 //===----------------------------------------------------------------------===//
 
@@ -368,17 +376,17 @@ void Option::setArgStr(StringRef S) {
 }
 
 // Initialise the general option category.
-OptionCategory llvm::cl::GeneralCategory("General options");
+OptionCategory cl::GeneralCategory("General options");
 
 void OptionCategory::registerCategory() {
   GlobalParser->registerCategory(this);
 }
 
 // A special subcommand representing no subcommand
-ManagedStatic<SubCommand> llvm::cl::TopLevelSubCommand;
+ManagedStatic<SubCommand> cl::TopLevelSubCommand;
 
 // A special subcommand that can be used to put an option into all subcommands.
-ManagedStatic<SubCommand> llvm::cl::AllSubCommands;
+ManagedStatic<SubCommand> cl::AllSubCommands;
 
 void SubCommand::registerSubCommand() {
   GlobalParser->registerSubCommand(this);
@@ -457,7 +465,7 @@ SubCommand *CommandLineParser::LookupSubCommand(StringRef Name) {
 /// (after an equal sign) return that as well.  This assumes that leading dashes
 /// have already been stripped.
 static Option *LookupNearestOption(StringRef Arg,
-                                   const StringMap<Option *> &OptionsMap,
+                                   const llvm::StringMap<Option *> &OptionsMap,
                                    std::string &NearestString) {
   // Reject all dashes.
   if (Arg.empty())
@@ -471,7 +479,7 @@ static Option *LookupNearestOption(StringRef Arg,
   // Find the closest match.
   Option *Best = nullptr;
   unsigned BestDistance = 0;
-  for (StringMap<Option *>::const_iterator it = OptionsMap.begin(),
+  for (auto it = OptionsMap.begin(),
                                            ie = OptionsMap.end();
        it != ie; ++it) {
     Option *O = it->second;
@@ -608,9 +616,9 @@ static inline bool isPrefixedOrGrouping(const Option *O) {
 //
 static Option *getOptionPred(StringRef Name, size_t &Length,
                              bool (*Pred)(const Option *),
-                             const StringMap<Option *> &OptionsMap) {
+                             const llvm::StringMap<Option *> &OptionsMap) {
 
-  StringMap<Option *>::const_iterator OMI = OptionsMap.find(Name);
+  auto OMI = OptionsMap.find(Name);
 
   // Loop while we haven't found an option and Name still has at least two
   // characters in it (so that the next iteration will not be the empty
@@ -634,7 +642,7 @@ static Option *getOptionPred(StringRef Name, size_t &Length,
 static Option *
 HandlePrefixedOrGroupedOption(StringRef &Arg, StringRef &Value,
                               bool &ErrorParsing,
-                              const StringMap<Option *> &OptionsMap) {
+                              const llvm::StringMap<Option *> &OptionsMap) {
   if (Arg.size() == 1)
     return nullptr;
 
@@ -1737,6 +1745,27 @@ void parser<std::string>::printOptionDiff(const Option &O, StringRef V,
   outs() << ")\n";
 }
 
+// own types
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const path &p)
+{
+    o << p.u8string();
+    return o;
+}
+
+void parser<path>::printOptionDiff(const Option &O, path V,
+    const OptionValue<path> &D,
+    size_t GlobalWidth) const {
+    printOptionName(O, GlobalWidth);
+    outs() << "= " << V;
+    size_t NumSpaces = MaxOptWidth > V.u8string().size() ? MaxOptWidth - V.u8string().size() : 0;
+    outs().indent(NumSpaces) << " (default: ";
+    if (D.hasValue())
+        outs() << D.getValue();
+    else
+        outs() << "*no default*";
+    outs() << ")\n";
+}
+
 // Print a placeholder for options that don't yet support printOptionDiff().
 void basic_parser_impl::printOptionNoValue(const Option &O,
                                            size_t GlobalWidth) const {
@@ -1759,12 +1788,12 @@ static int SubNameCompare(const std::pair<const char *, SubCommand *> *LHS,
 }
 
 // Copy Options into a vector so we can sort them as we like.
-static void sortOpts(StringMap<Option *> &OptMap,
+static void sortOpts(llvm::StringMap<Option *> &OptMap,
                      SmallVectorImpl<std::pair<const char *, Option *>> &Opts,
                      bool ShowHidden) {
   SmallPtrSet<Option *, 32> OptionSet; // Duplicate option detection.
 
-  for (StringMap<Option *>::iterator I = OptMap.begin(), E = OptMap.end();
+  for (auto I = OptMap.begin(), E = OptMap.end();
        I != E; ++I) {
     // Ignore really-hidden options.
     if (I->second->getOptionHiddenFlag() == ReallyHidden)
@@ -2196,7 +2225,7 @@ void cl::AddExtraVersionPrinter(VersionPrinterTy func) {
   ExtraVersionPrinters->push_back(func);
 }
 
-StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
+llvm::StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
   auto &Subs = GlobalParser->RegisteredSubCommands;
   (void)Subs;
   assert(is_contained(Subs, &Sub));
@@ -2231,10 +2260,4 @@ void cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
 void cl::ResetCommandLineParser() { GlobalParser->reset(); }
 void cl::ResetAllOptionOccurrences() {
   GlobalParser->ResetAllOptionOccurrences();
-}
-
-void LLVMParseCommandLineOptions(int argc, const char *const *argv,
-                                 const char *Overview) {
-  llvm::cl::ParseCommandLineOptions(argc, argv, StringRef(Overview),
-                                    &llvm::nulls());
 }

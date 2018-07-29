@@ -36,5 +36,5 @@ void unreachable_internal(const char *msg = nullptr, const char *file = nullptr,
 #define sw_unreachable(msg) \
   ::sw::unreachable_internal(msg, __FILE__, __LINE__)
 #else
-#define llvm_unreachable(msg) ::llvm::llvm_unreachable_internal()
+#define sw_unreachable(msg) ::sw::unreachable_internal()
 #endif

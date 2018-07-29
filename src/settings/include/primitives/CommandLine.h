@@ -17,8 +17,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_COMMANDLINE_H
-#define LLVM_SUPPORT_COMMANDLINE_H
+// last sync as of 29.07.2018
+
+#pragma once
+
+#include <primitives/filesystem.h>
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -45,10 +48,17 @@ namespace llvm {
 class StringSaver;
 class raw_ostream;
 
+}
+
+namespace primitives {
+
 /// cl Namespace - This namespace contains all of the command line option
 /// processing machinery.  It is intentionally a short name to make qualified
 /// usage concise.
 namespace cl {
+
+using namespace llvm;
+using llvm::StringMap;
 
 //===----------------------------------------------------------------------===//
 // ParseCommandLineOptions - Command line option processing entry point.
@@ -56,6 +66,7 @@ namespace cl {
 // Returns true on success. Otherwise, this will print the error message to
 // stderr and exit if \p Errs is not set (nullptr by default), or print the
 // error message to \p Errs and return false if \p Errs is provided.
+PRIMITIVES_SETTINGS_API
 bool ParseCommandLineOptions(int argc, const char *const *argv,
                              StringRef Overview = "",
                              raw_ostream *Errs = nullptr);
@@ -231,7 +242,7 @@ extern ManagedStatic<SubCommand> AllSubCommands;
 //===----------------------------------------------------------------------===//
 // Option Base class
 //
-class Option {
+class PRIMITIVES_SETTINGS_API Option {
   friend class alias;
 
   // handleOccurrences - Overriden by subclasses to handle the value passed into
@@ -450,7 +461,7 @@ struct sub {
 // OptionValue class
 
 // Support value comparison outside the template.
-struct GenericOptionValue {
+struct PRIMITIVES_SETTINGS_API GenericOptionValue {
   virtual bool compare(const GenericOptionValue &V) const = 0;
 
 protected:
@@ -806,7 +817,7 @@ public:
 //--------------------------------------------------
 // basic_parser - Super class of parsers to provide boilerplate code
 //
-class basic_parser_impl { // non-template implementation of basic_parser<t>
+class PRIMITIVES_SETTINGS_API basic_parser_impl { // non-template implementation of basic_parser<t>
 public:
   basic_parser_impl(Option &) {}
 
@@ -857,6 +868,16 @@ protected:
   ~basic_parser() = default;
 };
 
+#ifdef _MSC_VER
+#define EXTERN_PARSER_TEMPLATE(type) \
+    PRIMITIVES_SETTINGS_API_EXTERN template class PRIMITIVES_SETTINGS_API basic_parser<type>; \
+    PRIMITIVES_SETTINGS_API_EXTERN template class PRIMITIVES_SETTINGS_API parser<type>
+#else
+#define EXTERN_PARSER_TEMPLATE(type) \
+    extern template class basic_parser<type>; \
+    extern template class parser<type>
+#endif
+
 //--------------------------------------------------
 // parser<bool>
 //
@@ -883,7 +904,7 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<bool>;
+EXTERN_PARSER_TEMPLATE(bool);
 
 //--------------------------------------------------
 // parser<boolOrDefault>
@@ -909,7 +930,7 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<boolOrDefault>;
+EXTERN_PARSER_TEMPLATE(boolOrDefault);
 
 //--------------------------------------------------
 // parser<int>
@@ -931,7 +952,7 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<int>;
+EXTERN_PARSER_TEMPLATE(int);
 
 //--------------------------------------------------
 // parser<unsigned>
@@ -953,7 +974,7 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<unsigned>;
+EXTERN_PARSER_TEMPLATE(unsigned);
 
 //--------------------------------------------------
 // parser<unsigned long long>
@@ -978,7 +999,7 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<unsigned long long>;
+EXTERN_PARSER_TEMPLATE(unsigned long long);
 
 //--------------------------------------------------
 // parser<double>
@@ -1000,7 +1021,7 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<double>;
+EXTERN_PARSER_TEMPLATE(double);
 
 //--------------------------------------------------
 // parser<float>
@@ -1022,7 +1043,7 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<float>;
+EXTERN_PARSER_TEMPLATE(float);
 
 //--------------------------------------------------
 // parser<std::string>
@@ -1047,7 +1068,7 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<std::string>;
+EXTERN_PARSER_TEMPLATE(std::string);
 
 //--------------------------------------------------
 // parser<char>
@@ -1072,7 +1093,34 @@ public:
   void anchor() override;
 };
 
-extern template class basic_parser<char>;
+EXTERN_PARSER_TEMPLATE(char);
+
+//--------------------------------------------------
+// parser<path>
+//
+template <> class parser<path> final : public basic_parser<path> {
+public:
+    parser(Option &O) : basic_parser(O) {}
+
+    // parse - Return true on error.
+    bool parse(Option &, StringRef, StringRef Arg, path &Value) {
+        Value = Arg.str();
+        return false;
+    }
+
+    // getValueName - Overload in subclass to provide a better default value.
+    StringRef getValueName() const override { return "path"; }
+
+    void printOptionDiff(const Option &O, path V, const OptVal &Default,
+        size_t GlobalWidth) const;
+
+    // An out-of-line virtual method to provide a 'home' for this class.
+    void anchor() override;
+};
+
+EXTERN_PARSER_TEMPLATE(path);
+
+#undef EXTERN_PARSER_TEMPLATE
 
 //--------------------------------------------------
 // PrintOptionDiff
@@ -1947,5 +1995,3 @@ void ResetCommandLineParser();
 } // end namespace cl
 
 } // end namespace llvm
-
-#endif // LLVM_SUPPORT_COMMANDLINE_H

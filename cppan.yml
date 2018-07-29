@@ -461,8 +461,6 @@ projects:
             -   src/settings.cpp
         dependencies:
             public:
-                #pvt.cppan.demo.llvm_project.llvm.support:
-                    #version: master
                 pvt.cppan.demo.catchorg.catch2:
                     version: 2
 

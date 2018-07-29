@@ -9,7 +9,7 @@
 #pragma once
 
 #include <primitives/settings.h>
-#include <llvm/Support/CommandLine.h>
+#include <primitives/CommandLine.h>
 
 #if defined(CPPAN_EXECUTABLE) && defined(CPPAN_SHARED_BUILD)
 #ifdef _WIN32
@@ -30,7 +30,7 @@ String getProgramName();
 namespace cl
 {
 
-using namespace ::llvm::cl;
+using namespace ::primitives::cl;
 
 inline bool parseCommandLineOptions(int argc, const char *const *argv,
     llvm::StringRef Overview = "",
