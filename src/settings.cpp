@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <primitives/main.h>
+#include <primitives/sw/main.h>
 #include <primitives/settings.h>
 #include <primitives/sw/settings.h>
 
@@ -532,8 +532,14 @@ bc\
 
 TEST_CASE("Checking command line", "[cl]")
 {
-    /*cl::option<int> a{"x"};
+    cl::opt<int> a{ cl::Positional };
+    cl::opt<int> b{ cl::Positional };
+    cl::opt<int> c{ cl::Positional };
+    cl::opt<int> d{ cl::Positional };
+    cl::opt<int> e{ cl::Positional }; // skipped in favor of f
+    cl::opt<int> f{ cl::Positional, cl::Required };
 
+    // we have 5 args here
     Strings args = {
         "prog",
         "1",
@@ -542,7 +548,7 @@ TEST_CASE("Checking command line", "[cl]")
         "2",
     };
 
-    cl::parseCommandLineOptions(args);*/
+    cl::parseCommandLineOptions(args);
 }
 
 TEST_CASE("New settings", "[settings2]")
@@ -583,26 +589,9 @@ TEST_CASE("New settings", "[settings2]")
     }
 }
 
-//#include <llvm/Support/CommandLine.h>
-
-//#include <any>
-
 int main(int argc, char **argv)
 {
-    /*{
-        using namespace llvm;
-
-        std::string s;
-        cl::opt<std::string, true> OutputFilename("o", cl::desc("Specify output filename"), cl::value_desc("filename"), cl::location(s));
-        cl::opt<bool> b1{ "b" };
-        cl::SubCommand test("test");
-        cl::opt<bool> b2{ "d", cl::sub(test) };
-        cl::ParseCommandLineOptions(argc, argv);
-
-        //std::ofstream Output(OutputFilename.c_str());
-
-        //return 0;
-    }*/
+    getSettings();
 
     ::argc = argc;
     ::argv = argv;

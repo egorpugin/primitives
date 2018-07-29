@@ -18,6 +18,8 @@
 
 #include <primitives/CommandLine.h>
 
+#include <primitives/settings.h>
+
 #include "llvm-c/Support.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -1001,6 +1003,13 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
     if (Arg[0] != '@') {
       ++I;
       continue;
+    }
+
+    // expand settings file
+    if (Arg[1] == '@') {
+        getSettings().getLocalSettings().load(path(Arg + 2));
+        Argv.erase(Argv.begin() + I);
+        continue;
     }
 
     // If we have too many response files, leave some unexpanded.  This avoids

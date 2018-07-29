@@ -20,7 +20,7 @@ extern "C" __declspec(dllexport)
 #endif
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable:4190)
+#pragma warning(disable : 4190)
 #endif
 String getProgramName();
 #ifdef _MSC_VER
@@ -39,6 +39,16 @@ inline bool parseCommandLineOptions(int argc, const char *const *argv,
     return ParseCommandLineOptions(argc, argv, Overview, Errs);
 }
 
+inline bool parseCommandLineOptions(const Strings &args,
+    llvm::StringRef Overview = "",
+    llvm::raw_ostream *Errs = nullptr)
+{
+    std::vector<const char *> argv;
+    for (auto &a : args)
+        argv.push_back(a.data());
+    return ParseCommandLineOptions(args.size(), argv.data(), Overview, Errs);
+}
+
 }
 
 namespace sw
@@ -55,8 +65,11 @@ struct SettingStorage : public ::primitives::SettingStorage<T>
 };
 
 #ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4661)
 PRIMITIVES_SW_SETTINGS_API_EXTERN
 template struct PRIMITIVES_SW_SETTINGS_API SettingStorage<::primitives::Settings>;
+#pragma warning(pop)
 #endif
 
 PRIMITIVES_SW_SETTINGS_API

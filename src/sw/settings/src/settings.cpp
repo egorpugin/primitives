@@ -42,7 +42,7 @@ primitives::SettingStorage<primitives::Settings> &getSettings()
     static auto &settings = []() -> primitives::SettingStorage<primitives::Settings> &
     {
         static SettingStorage<primitives::Settings> s;
-        //auto &s = primitives::getSettings();
+        primitives::getSettings(&s); // save to common storage
         s.userConfigFilename = getSettingsDir() / YAML_SETTINGS_FILENAME;
         path local_name = getProgramName() + ".settings";
         if (fs::exists(local_name))

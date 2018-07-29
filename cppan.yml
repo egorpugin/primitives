@@ -129,9 +129,7 @@ projects:
         root_directory: src/embedder
         dependencies:
             public:
-                sw.settings:
-                    version: "*"
-                main:
+                sw.main:
                     version: "*"
                 filesystem:
                     version: "*"
@@ -292,9 +290,20 @@ projects:
             cppan_flex_bison_pair(LALR1_CPP_VARIANT_PARSER src/path)
             target_sources(${this} PUBLIC ${SDIR}/src/settings.natvis)
 
+    sw.main:
+        type: library
+        static_only: true
+        root_directory: src/sw/main
+        dependencies:
+            public:
+                sw.settings:
+                    version: "*"
+            private:
+                main:
+                    version: "*"
+
     sw.settings:
         type: library
-        #static_only: true
         root_directory: src/sw/settings
         exclude_from_build:
             - src/sw_program_name.cpp
@@ -303,7 +312,7 @@ projects:
                 settings:
                     version: "*"
         post_target: |
-            target_sources(${this} INTERFACE ${SDIR}/src/sw_program_name.cpp)
+            target_sources(${this} INTERFACE ${SDIR}/src/sw.settings.program_name.cpp)
 
 
     pack:
@@ -408,7 +417,7 @@ projects:
                             - /bigobj
         dependencies:
             public:
-                main:
+                sw.main:
                     version: "*"
                 command:
                     version: "*"
@@ -434,7 +443,7 @@ projects:
                             - /bigobj
         dependencies:
             public:
-                main:
+                sw.main:
                     version: "*"
                 command:
                     version: "*"
@@ -466,9 +475,7 @@ projects:
 
                 settings:
                     version: "*"
-                sw.settings:
-                    version: "*"
-                main:
+                sw.main:
                     version: "*"
     test.version:
         skip_on_server: true
@@ -482,7 +489,7 @@ projects:
                             - /bigobj
         dependencies:
             public:
-                main:
+                sw.main:
                     version: "*"
                 pvt.cppan.demo.catchorg.catch2:
                     version: 2
