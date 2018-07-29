@@ -549,6 +549,8 @@ TEST_CASE("Checking command line", "[cl]")
     };
 
     cl::parseCommandLineOptions(args);
+
+    CHECK(getProgramName() != "unk");
 }
 
 TEST_CASE("New settings", "[settings2]")
