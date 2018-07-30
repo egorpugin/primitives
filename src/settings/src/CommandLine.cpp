@@ -50,6 +50,20 @@ using namespace primitives::cl;
 
 #define DEBUG_TYPE "commandline"
 
+#if defined(_WIN32) && defined(CPPAN_SHARED_BUILD)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+static String getVersionString()
+{
+    auto h = GetModuleHandle(0);
+    auto f = (String(*)())GetProcAddress(h, "getVersionString");
+    if (!f)
+        return "version information is missing";
+    return f();
+}
+#endif
+
 //===----------------------------------------------------------------------===//
 // Template instantiations and anchors.
 //
@@ -2168,32 +2182,38 @@ class VersionPrinter {
 public:
   void print() {
     raw_ostream &OS = outs();
+    auto v = getVersionString();
+    if (!v.empty())
+        OS << v;
+    else
+    {
 #ifdef PACKAGE_VENDOR
-    OS << PACKAGE_VENDOR << " ";
+        //OS << PACKAGE_VENDOR << " ";
 #else
-    OS << "LLVM (http://llvm.org/):\n  ";
+        //OS << "LLVM (http://llvm.org/):\n  ";
 #endif
-    OS << PACKAGE_NAME << " version " << PACKAGE_VERSION;
+        OS << PACKAGE_NAME << " version " << PACKAGE_VERSION;
 #ifdef LLVM_VERSION_INFO
-    OS << " " << LLVM_VERSION_INFO;
+        OS << " " << LLVM_VERSION_INFO;
 #endif
-    OS << "\n  ";
+        OS << "\n  ";
 #ifndef __OPTIMIZE__
-    OS << "DEBUG build";
+        OS << "DEBUG build";
 #else
-    OS << "Optimized build";
+        OS << "Optimized build";
 #endif
 #ifndef NDEBUG
-    OS << " with assertions";
+        OS << " with assertions";
 #endif
 #if LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
-    std::string CPU = sys::getHostCPUName();
-    if (CPU == "generic")
-      CPU = "(unknown)";
-    OS << ".\n"
-       << "  Default target: " << sys::getDefaultTargetTriple() << '\n'
-       << "  Host CPU: " << CPU;
+        std::string CPU = sys::getHostCPUName();
+        if (CPU == "generic")
+            CPU = "(unknown)";
+        OS << ".\n"
+            << "  Default target: " << sys::getDefaultTargetTriple() << '\n'
+            << "  Host CPU: " << CPU;
 #endif
+    }
     OS << '\n';
   }
   void operator=(bool OptionWasSpecified) {

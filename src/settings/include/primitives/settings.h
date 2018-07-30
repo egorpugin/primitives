@@ -17,6 +17,25 @@
 #include <any>
 #include <iostream>
 
+#if defined(CPPAN_EXECUTABLE) && defined(CPPAN_SHARED_BUILD)
+#ifdef _WIN32
+#define CPPAN_STATIC_SHARED_FUNCTION extern "C" __declspec(dllexport)
+#else
+// visibility default
+#endif
+#endif
+
+#ifndef CPPAN_STATIC_SHARED_FUNCTION
+#define CPPAN_STATIC_SHARED_FUNCTION
+#endif
+
+#ifdef _MSC_VER
+#pragma warning(disable : 4190) // function with C-linkage returns UDT
+#endif
+
+CPPAN_STATIC_SHARED_FUNCTION
+String getVersionString();
+
 namespace primitives
 {
 

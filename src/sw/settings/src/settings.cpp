@@ -9,15 +9,16 @@
 #define YAML_SETTINGS_FILENAME "settings.yml"
 
 #if defined(_WIN32) && defined(CPPAN_SHARED_BUILD)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <Windows.h>
 static String getProgramName()
 {
     auto h = GetModuleHandle(0);
-    auto gpn = (String(*)())GetProcAddress(h, "getProgramName");
-    if (!gpn)
-        // Unknown program name: missing getProgramName() symbol.
+    auto f = (String(*)())GetProcAddress(h, "getProgramName");
+    if (!f)
         return "unk";
-    return gpn();
+    return f();
 }
 #endif
 

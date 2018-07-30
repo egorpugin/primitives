@@ -11,21 +11,8 @@
 #include <primitives/settings.h>
 #include <primitives/CommandLine.h>
 
-#if defined(CPPAN_EXECUTABLE) && defined(CPPAN_SHARED_BUILD)
-#ifdef _WIN32
-extern "C" __declspec(dllexport)
-#else
-// visibility default
-#endif
-#endif
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4190)
-#endif
+CPPAN_STATIC_SHARED_FUNCTION
 String getProgramName();
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 namespace cl
 {
