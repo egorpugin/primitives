@@ -566,7 +566,7 @@ struct OptionValue final
 // Other safe-to-copy-by-value common option types.
 enum boolOrDefault { BOU_UNSET, BOU_TRUE, BOU_FALSE };
 template <>
-struct OptionValue<cl::boolOrDefault> final
+struct PRIMITIVES_SETTINGS_API OptionValue<cl::boolOrDefault> final
     : OptionValueCopy<cl::boolOrDefault> {
   using WrapperType = cl::boolOrDefault;
 
@@ -584,7 +584,7 @@ private:
 };
 
 template <>
-struct OptionValue<std::string> final : OptionValueCopy<std::string> {
+struct PRIMITIVES_SETTINGS_API OptionValue<std::string> final : OptionValueCopy<std::string> {
   using WrapperType = StringRef;
 
   OptionValue() = default;

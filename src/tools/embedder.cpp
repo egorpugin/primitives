@@ -41,12 +41,6 @@ int main(int argc, char *argv[])
 
     cl::parseCommandLineOptions(argc, argv);
 
-    if (!fs::exists(InputFilename))
-    {
-        std::cerr << "no such file: " << InputFilename.string() << "\n";
-        return 2;
-    }
-
     auto s = read_file(InputFilename);
     std::regex r("EMBED<(.*?)>");
     std::smatch m;
@@ -54,13 +48,7 @@ int main(int argc, char *argv[])
     {
         String str;
         str = m.prefix();
-        path f = m[1].str();
-        if (!fs::exists(f))
-        {
-            std::cerr << "no such include file: " << f.string() << "\n";
-            return 3;
-        }
-        str += preprocess_file(read_file(f));
+        str += preprocess_file(read_file(m[1].str()));
         str += m.suffix();
         s = str;
     }

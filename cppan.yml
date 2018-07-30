@@ -124,15 +124,7 @@ projects:
                     version: 1
                 string:
                     version: "*"
-    embedder:
-        name: embedder
-        root_directory: src/embedder
-        dependencies:
-            public:
-                sw.main:
-                    version: "*"
-                filesystem:
-                    version: "*"
+
     error_handling:
         name: error_handling
         type: library
@@ -495,3 +487,51 @@ projects:
                     version: 2
                 version:
                     version: "*"
+
+    tools.embedder:
+        files: src/tools/embedder.cpp
+        dependencies:
+            public:
+                sw.main:
+                    version: "*"
+                filesystem:
+                    version: "*"
+
+        include_script: |
+            macro(embed template)
+                get_filename_component(n ${template} NAME_WE)
+                get_filename_component(d ${template} DIRECTORY)
+                set(output ${BDIR_PRIVATE}/${n}.cpp)
+                add_custom_command(OUTPUT ${output}
+                    COMMAND ${embedder} ${template} ${output}
+                    DEPENDS ${embedder} ${ARGN}
+                    WORKING_DIRECTORY ${d}
+                )
+                set(src ${src} ${output} ${template} ${ARGN})
+            endmacro()
+
+    tools.sqlpp11.sqlite2cpp:
+        files: src/tools/sqlpp11.sqlite2cpp.cpp
+
+        dependencies:
+            filesystem:
+                version: "*"
+            context:
+                version: "*"
+            sw.main:
+                version: "*"
+            pvt.cppan.demo.sqlite3: 3
+
+        include_script: |
+            macro(sqlite2cpp_gen_sql f out ns)
+                get_filename_component(d ${f} DIRECTORY)
+                set(o ${BDIR_PRIVATE}/${out})
+                add_custom_command(OUTPUT ${o}
+                    COMMAND ${sqlite2cpp} ${f} ${o} ${ns}
+                    DEPENDS ${sqlite2cpp} ${f}
+                )
+                set(src ${src} ${f} ${o})
+            endmacro()
+
+
+
