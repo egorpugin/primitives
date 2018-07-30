@@ -279,7 +279,7 @@ int main(int argc, char **argv)
     cl::opt<path> sdir("sdir", cl::desc("source dir"), cl::Required);
     cl::opt<path> bdir("bdir", cl::desc("binary dir"), cl::Required);
     cl::list<std::string> selected_modules_cl("modules", cl::desc("modules"), cl::Required);
-    cl::opt<std::string> version("version", cl::desc("version"), cl::Required);
+    cl::opt<std::string> version("qt_version", cl::desc("version"), cl::Required);
 
     cl::alias sdirA("s", cl::desc("Alias for -sdir"), cl::aliasopt(sdir));
     cl::alias bdirA("b", cl::desc("Alias for -bdir"), cl::aliasopt(bdir));
