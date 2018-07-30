@@ -66,7 +66,7 @@ template class basic_parser<std::string>;
 template class basic_parser<char>;
 
 // own types
-//template class basic_parser<path>;
+template class basic_parser<path>;
 
 template class opt<unsigned>;
 template class opt<int>;
