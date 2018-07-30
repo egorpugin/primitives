@@ -39,6 +39,10 @@ struct basic_block
 
 }
 
+// lexer
+#define PUSH_STATE(x) BEGIN(x)
+#define POP_STATE() BEGIN(0)
+
 ////////////////////////////////////////////////////////////////////////////////
 // GLR parser in C++ with custom storage based on std::any
 ////////////////////////////////////////////////////////////////////////////////
@@ -322,7 +326,7 @@ struct base_parser : BaseParser
 #ifdef LALR1_CPP_VARIANT_PARSER
 
 // parser
-#define yylex() ((MY_PARSER*)this)->lex()
+#define yylex() ((MY_PARSER_DRIVER*)this)->lex()
 
 // lexer
 #define LEXER_FUNCTION THIS_PARSER::parser::symbol_type LEXER_NAME(lex)(void *yyscanner, THIS_PARSER::parser::location_type &loc, MY_PARSER_DRIVER &driver)
