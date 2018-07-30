@@ -137,7 +137,7 @@ int main(int argc, char **argv)
     cl::opt<path> target(cl::Positional, cl::desc("<output .cpp file>"), cl::Required);
     cl::opt<std::string> ns(cl::Positional, cl::desc("<namespace>"), cl::Required);
 
-    cl::parseCommandLineOptions(argc, argv);
+    cl::ParseCommandLineOptions(argc, argv);
 
     sqlite3_open(":memory:", &db);
     execute(read_file(ddl).c_str());

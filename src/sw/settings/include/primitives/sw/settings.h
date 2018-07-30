@@ -32,14 +32,9 @@ namespace cl
 
 using namespace ::primitives::cl;
 
-inline bool parseCommandLineOptions(int argc, const char *const *argv,
-    llvm::StringRef Overview = "",
-    llvm::raw_ostream *Errs = nullptr)
-{
-    return ParseCommandLineOptions(argc, argv, Overview, Errs);
-}
+using ::primitives::cl::ParseCommandLineOptions;
 
-inline bool parseCommandLineOptions(const Strings &args,
+inline bool ParseCommandLineOptions(const Strings &args,
     llvm::StringRef Overview = "",
     llvm::raw_ostream *Errs = nullptr)
 {

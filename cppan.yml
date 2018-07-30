@@ -522,23 +522,25 @@ projects:
                     version: "*"
 
         include_script: |
-            macro(syncqt module)
-                create_directory(${BDIR}/include/${module}/${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}/${module})
-                add_custom_command(OUTPUT ${BDIR}/include/${module}/${module}
-                    COMMAND $<CPPAN_THIS_PACKAGE>
-                        -s ${SDIR}
-                        -b ${BDIR}
-                        -m ${module}
-                        -v ${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}
-                )
-                set(src ${src} ${BDIR}/include/${module}/${module})
+            macro(syncqt)
+                foreach(module ${ARGN})
+                    create_directory(${BDIR}/include/${module}/${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}/${module})
+                    add_custom_command(OUTPUT ${BDIR}/include/${module}/${module}
+                        COMMAND $<CPPAN_THIS_PACKAGE>
+                            -s ${SDIR}
+                            -b ${BDIR}
+                            -m ${module}
+                            -v ${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}
+                    )
+                    set(src ${src} ${BDIR}/include/${module}/${module})
 
-                target_include_directories(${this} PUBLIC
-                    ${BDIR}/include
-                    ${BDIR}/include/${module}
-                    ${BDIR}/include/${module}/${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}
-                    ${BDIR}/include/${module}/${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}/${module}
-                )
+                    target_include_directories(${this} PUBLIC
+                        ${BDIR}/include
+                        ${BDIR}/include/${module}
+                        ${BDIR}/include/${module}/${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}
+                        ${BDIR}/include/${module}/${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}/${module}
+                    )
+                endforeach()
             endmacro()
 
     tools.sqlpp11.sqlite2cpp:

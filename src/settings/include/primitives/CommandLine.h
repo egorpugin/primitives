@@ -75,6 +75,7 @@ bool ParseCommandLineOptions(int argc, const char *const *argv,
 // ParseEnvironmentOptions - Environment variable option processing alternate
 //                           entry point.
 //
+PRIMITIVES_SETTINGS_API
 void ParseEnvironmentOptions(const char *progName, const char *envvar,
                              const char *Overview = "");
 
@@ -173,7 +174,10 @@ enum FormattingFlags {
 enum MiscFlags {             // Miscellaneous flags to adjust argument
   CommaSeparated = 0x01,     // Should this cl::list split between commas?
   PositionalEatsArgs = 0x02, // Should this positional cl::list eat -args?
-  Sink = 0x04                // Should this cl::list eat all unknown options?
+  Sink = 0x04,               // Should this cl::list eat all unknown options?
+
+  //
+  SpaceSeparated = 0x08,     // Eat args until next option started with '-'.
 };
 
 //===----------------------------------------------------------------------===//
@@ -268,7 +272,7 @@ class PRIMITIVES_SETTINGS_API Option {
   unsigned Value : 2;
   unsigned HiddenFlag : 2; // enum OptionHidden
   unsigned Formatting : 2; // enum FormattingFlags
-  unsigned Misc : 3;
+  unsigned Misc : 4;
   unsigned Position = 0;       // Position of last occurrence of the option
   unsigned AdditionalVals = 0; // Greater than 0 for multi-valued option.
 
@@ -1781,6 +1785,8 @@ public:
     if (AliasFor)
       error("cl::alias must only have one cl::aliasopt(...) specified!");
     AliasFor = &O;
+    // copy some basic flags
+    Misc = O.Misc;
   }
 
   template <class... Mods>
@@ -1985,12 +1991,14 @@ void HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
 /// Reset all command line options to a state that looks as if they have
 /// never appeared on the command line.  This is useful for being able to parse
 /// a command line multiple times (especially useful for writing tests).
+PRIMITIVES_SETTINGS_API
 void ResetAllOptionOccurrences();
 
 /// Reset the command line parser back to its initial state.  This
 /// removes
 /// all options, categories, and subcommands and returns the parser to a state
 /// where no options are supported.
+PRIMITIVES_SETTINGS_API
 void ResetCommandLineParser();
 
 } // end namespace cl

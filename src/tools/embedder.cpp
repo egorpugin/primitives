@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     cl::opt<path> InputFilename(cl::Positional, cl::desc("<input file>"), cl::Required);
     cl::opt<path> OutputFilename(cl::Positional, cl::desc("<output file>"), cl::Required);
 
-    cl::parseCommandLineOptions(argc, argv);
+    cl::ParseCommandLineOptions(argc, argv);
 
     auto s = read_file(InputFilename);
     std::regex r("EMBED<(.*?)>");

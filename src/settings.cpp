@@ -8,6 +8,8 @@
 #include <primitives/settings.h>
 #include <primitives/sw/settings.h>
 
+#include <boost/algorithm/string.hpp>
+
 #include <chrono>
 #include <iostream>
 
@@ -532,25 +534,72 @@ bc\
 
 TEST_CASE("Checking command line", "[cl]")
 {
-    cl::opt<int> a{ cl::Positional };
-    cl::opt<int> b{ cl::Positional };
-    cl::opt<int> c{ cl::Positional };
-    cl::opt<int> d{ cl::Positional };
-    cl::opt<int> e{ cl::Positional }; // skipped in favor of f
-    cl::opt<int> f{ cl::Positional, cl::Required };
+    {
+        cl::ResetCommandLineParser();
 
-    // we have 5 args here
-    Strings args = {
-        "prog",
-        "1",
-        "@@" + (path(__FILE__).parent_path() / "test.yml").string(),
-        "@" + (path(__FILE__).parent_path() / "test.rsp").string(),
-        "2",
-    };
+        cl::opt<int> a{ cl::Positional };
+        cl::opt<int> b{ cl::Positional };
+        cl::opt<int> c{ cl::Positional };
+        cl::opt<int> d{ cl::Positional };
+        cl::opt<int> e{ cl::Positional }; // skipped in favor of f
+        cl::opt<int> f{ cl::Positional, cl::Required };
 
-    cl::parseCommandLineOptions(args);
+        // we have 5 args here
+        Strings args = {
+            "prog",
+            "1",
+            "@@" + (path(__FILE__).parent_path() / "test.yml").string(),
+            "@" + (path(__FILE__).parent_path() / "test.rsp").string(),
+            "2",
+        };
 
-    CHECK(getProgramName() != "unk");
+        cl::ParseCommandLineOptions(args);
+
+        CHECK(getProgramName() != "unk");
+    }
+
+    {
+        cl::ResetCommandLineParser();
+
+        Strings args;
+        boost::split(args, "argv0 -s 1 -b 2 -v 3 -m a b c -x a -m d", boost::is_any_of(" "));
+
+        cl::opt<path> sdir("sdir", cl::desc("source dir"), cl::Required);
+        cl::opt<path> bdir("bdir", cl::desc("binary dir"), cl::Required);
+        cl::list<std::string> selected_modules_cl("modules", cl::desc("modules"), cl::SpaceSeparated);
+        cl::opt<std::string> version("qt_version", cl::desc("version"), cl::Required);
+        cl::opt<std::string> x("x", cl::desc("version"));
+
+        cl::alias sdirA("s", cl::desc("Alias for -sdir"), cl::aliasopt(sdir));
+        cl::alias bdirA("b", cl::desc("Alias for -bdir"), cl::aliasopt(bdir));
+        cl::alias modulesA("m", cl::desc("Alias for -modules"), cl::aliasopt(selected_modules_cl));
+        cl::alias versionA("v", cl::desc("Alias for -version"), cl::aliasopt(version));
+
+        CHECK(cl::ParseCommandLineOptions(args));
+        CHECK(selected_modules_cl.size() == 4);
+    }
+
+    {
+        cl::ResetCommandLineParser();
+
+        Strings args;
+        boost::split(args, "argv0 -s 1 -b 2 -v 3 -m a b c -x a b -m d", boost::is_any_of(" "));
+
+        cl::opt<path> sdir("sdir", cl::desc("source dir"), cl::Required);
+        cl::opt<path> bdir("bdir", cl::desc("binary dir"), cl::Required);
+        cl::list<std::string> selected_modules_cl("modules", cl::desc("modules"), cl::SpaceSeparated);
+        cl::opt<std::string> version("qt_version", cl::desc("version"), cl::Required);
+        cl::opt<std::string> x("x", cl::desc("version"));
+
+        cl::alias sdirA("s", cl::desc("Alias for -sdir"), cl::aliasopt(sdir));
+        cl::alias bdirA("b", cl::desc("Alias for -bdir"), cl::aliasopt(bdir));
+        cl::alias modulesA("m", cl::desc("Alias for -modules"), cl::aliasopt(selected_modules_cl));
+        cl::alias versionA("v", cl::desc("Alias for -version"), cl::aliasopt(version));
+
+        std::string s;
+        llvm::raw_string_ostream ss(s);
+        CHECK_FALSE(cl::ParseCommandLineOptions(args, {}, &ss));
+    }
 }
 
 TEST_CASE("New settings", "[settings2]")

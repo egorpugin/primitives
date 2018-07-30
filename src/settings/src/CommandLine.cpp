@@ -571,7 +571,22 @@ static inline bool ProvideOption(Option *Handler, StringRef ArgName,
 
   // If this isn't a multi-arg option, just run the handler.
   if (NumAdditionalVals == 0)
-    return CommaSeparateAndAddOccurrence(Handler, i, ArgName, Value);
+  {
+      if (Handler->getMiscFlags() & cl::SpaceSeparated)
+      {
+          bool handle = false;
+          do
+          {
+              handle |= Handler->addOccurrence(i, ArgName, argv[i]);
+              i++;
+          }
+          while (argc != i && argv[i][0] != '-');
+          i--;
+          return handle;
+      }
+      else
+        return CommaSeparateAndAddOccurrence(Handler, i, ArgName, Value);
+  }
 
   // If it is, run the handle several times.
   bool MultiArg = false;
