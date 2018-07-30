@@ -290,8 +290,12 @@ projects:
             public:
                 sw.settings:
                     version: "*"
+                    ref: sw_settings
                 main:
                     version: "*"
+                    ref: main
+        post_target: |
+            target_link_libraries(${this} INTERFACE $<TARGET_FILE:${main}> ${this} $<TARGET_FILE:${sw_settings}>)
 
     sw.settings:
         type: library
