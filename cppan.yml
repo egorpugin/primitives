@@ -512,6 +512,28 @@ projects:
                 set(src ${src} ${output} ${template} ${ARGN})
             endmacro()
 
+    tools.syncqt:
+        files: src/tools/syncqt.cpp
+        dependencies:
+            public:
+                sw.main:
+                    version: "*"
+                filesystem:
+                    version: "*"
+
+        include_script: |
+            macro(syncqt module)
+                create_directory(${BDIR}/include/${module}/${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}/${module})
+                add_custom_command(OUTPUT ${BDIR}/include/${module}/${module}
+                    COMMAND $<CPPAN_THIS_PACKAGE>
+                        -s ${SDIR}
+                        -b ${BDIR}
+                        -m ${module}
+                        -v ${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}
+                )
+                set(src ${src} ${BDIR}/include/${module}/${module})
+            endmacro()
+
     tools.sqlpp11.sqlite2cpp:
         files: src/tools/sqlpp11.sqlite2cpp.cpp
 
