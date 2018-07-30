@@ -264,8 +264,6 @@ projects:
                     version: "*"
                 templates:
                     version: "*"
-                pvt.cppan.demo.ragel:
-                    version: 6
                 pvt.cppan.demo.lexxmark.winflexbison.flex:
                     version: master
                     ref: flex
@@ -296,7 +294,7 @@ projects:
                     ref: main
         post_target: |
             # try to fix link order fo ld
-            target_link_libraries(${this} INTERFACE $<TARGET_FILE:${main}> $<TARGET_FILE:${PACKAGE_STRING}> $<TARGET_FILE:${sw_settings}>)
+            target_link_libraries(${this} INTERFACE $<TARGET_LINKER_FILE:${main}> $<TARGET_LINKER_FILE:${PACKAGE_STRING}> $<TARGET_LINKER_FILE:${sw_settings}>)
 
     sw.settings:
         type: library
@@ -365,7 +363,7 @@ projects:
                 pvt.cppan.demo.imageworks.pystring:
                     version: 1
         post_sources: |
-            cppan_ragel(src/version.rl)
+            gen_ragel(src/version.rl)
 
         post_target: |
             cppan_flex_bison_pair(GLR_CPP_PARSER src/range)
@@ -507,8 +505,8 @@ projects:
                 get_filename_component(d ${template} DIRECTORY)
                 set(output ${BDIR_PRIVATE}/${n}.cpp)
                 add_custom_command(OUTPUT ${output}
-                    COMMAND ${embedder} ${template} ${output}
-                    DEPENDS ${embedder} ${ARGN}
+                    COMMAND $<CPPAN_THIS_PACKAGE> ${template} ${output}
+                    DEPENDS ${ARGN}
                     WORKING_DIRECTORY ${d}
                 )
                 set(src ${src} ${output} ${template} ${ARGN})
@@ -531,8 +529,8 @@ projects:
                 get_filename_component(d ${f} DIRECTORY)
                 set(o ${BDIR_PRIVATE}/${out})
                 add_custom_command(OUTPUT ${o}
-                    COMMAND ${sqlite2cpp} ${f} ${o} ${ns}
-                    DEPENDS ${sqlite2cpp} ${f}
+                    COMMAND $<CPPAN_THIS_PACKAGE> ${f} ${o} ${ns}
+                    DEPENDS ${f}
                 )
                 set(src ${src} ${f} ${o})
             endmacro()
