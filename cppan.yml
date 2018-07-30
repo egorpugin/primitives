@@ -532,6 +532,13 @@ projects:
                         -v ${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}
                 )
                 set(src ${src} ${BDIR}/include/${module}/${module})
+
+                target_include_directories(${this} PUBLIC
+                    ${BDIR}/include
+                    ${BDIR}/include/${module}
+                    ${BDIR}/include/${module}/${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}
+                    ${BDIR}/include/${module}/${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_PATCH}/${module}
+                )
             endmacro()
 
     tools.sqlpp11.sqlite2cpp:
