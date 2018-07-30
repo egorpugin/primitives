@@ -295,7 +295,7 @@ projects:
                     version: "*"
                     ref: main
         post_target: |
-            target_link_libraries(${this} INTERFACE $<TARGET_FILE:${main}> ${this} $<TARGET_FILE:${sw_settings}>)
+            target_link_libraries(${this} INTERFACE $<TARGET_FILE:${main}> $<TARGET_FILE:${this}> $<TARGET_FILE:${sw_settings}>)
 
     sw.settings:
         type: library
