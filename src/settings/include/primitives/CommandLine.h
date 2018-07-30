@@ -1735,7 +1735,7 @@ public:
 // Aliased command line option (alias this name to a preexisting name)
 //
 
-class alias : public Option {
+class PRIMITIVES_SETTINGS_API alias : public Option {
   Option *AliasFor;
 
   bool handleOccurrence(unsigned pos, StringRef /*ArgName*/,
@@ -1775,6 +1775,7 @@ public:
   // Command line options should not be copyable
   alias(const alias &) = delete;
   alias &operator=(const alias &) = delete;
+  virtual ~alias();
 
   void setAliasFor(Option &O) {
     if (AliasFor)

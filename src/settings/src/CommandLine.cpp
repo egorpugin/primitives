@@ -1468,6 +1468,8 @@ static StringRef getValueStr(const Option &O, StringRef DefaultMsg) {
 // cl::alias class implementation
 //
 
+cl::alias::~alias() {}
+
 // Return the width of the option tag for printing...
 size_t alias::getOptionWidth() const { return ArgStr.size() + 6; }
 
