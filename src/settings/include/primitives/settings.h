@@ -180,6 +180,11 @@ struct PRIMITIVES_SETTINGS_API SettingPath
     bool operator<(const SettingPath &rhs) const { return parts < rhs.parts; }
     bool operator==(const SettingPath &rhs) const { return parts == rhs.parts; }
 
+    Parts::iterator begin() { return parts.begin(); }
+    Parts::iterator end() { return parts.end(); }
+    Parts::const_iterator begin() const { return parts.begin(); }
+    Parts::const_iterator end() const { return parts.end(); }
+
     SettingPath operator/(const SettingPath &rhs) const;
 
     static SettingPath fromRawString(const String &s);

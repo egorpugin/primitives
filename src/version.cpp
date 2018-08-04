@@ -1187,10 +1187,34 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange(">= 1").toString() == ">=1.0.0");
     CHECK(VersionRange("< 2").toString() == "<2.0.0");
     CHECK(VersionRange("== 1.2.3").toString() == "1.2.3");
+    CHECK(VersionRange("= 1.2.3").toString() == "1.2.3");
     CHECK(VersionRange("== 1.2.3.4").toString() == "1.2.3.4");
 
     CHECK(VersionRange("1.2.3.4.5.6.7").toString() == "1.2.3.4.5.6.7");
     CHECK(VersionRange("1.2.3.4.5.6.7-1").toString() == ">=1.2.3.4.5.6.7-1 <=1.2.3.4.5.6.7");
+
+    // follow
+    // 'and' versions
+    CHECK(VersionRange("1.0.1 1.0.2").toString() == "");
+    CHECK(VersionRange("1.0.1 1.0.2 1.0.3").toString() == "");
+    CHECK(VersionRange("1.0.0 1.0.1 1.0.2 1.0.3").toString() == "");
+    CHECK(VersionRange("1 1.0.1 1.0.2 1.0.3").toString() == "");
+    CHECK(VersionRange("1 1.0.1 1.0.2 1.0.3 - 1.1").toString() == "");
+
+    // 'or' versions
+    CHECK(VersionRange("1.0.1 || 1.0.2").toString() == ">=1.0.1 <=1.0.2");
+    CHECK(VersionRange("1.0.1 || 1.0.2") == VersionRange(">=1.0.1 <=1.0.2"));
+    CHECK(VersionRange("1.0.1 || 1.0.2 || 1.0.3").toString() == ">=1.0.1 <=1.0.3");
+    CHECK(VersionRange("1.0.1 || 1.0.2 || 1.0.3") == VersionRange(">=1.0.1 <=1.0.3"));
+    CHECK(VersionRange("1.0.0 || 1.0.1 || 1.0.2 || 1.0.3").toString() == ">=1.0.0 <=1.0.3");
+    CHECK(VersionRange("1.0.0 || 1.0.1 || 1.0.2 || 1.0.3") == VersionRange(">=1.0.0 <=1.0.3"));
+    CHECK(VersionRange("1 || 1.0.1 || 1.0.2 || 1.0.3").toString() == ">=1.0.0 <2.0.0");
+    CHECK(VersionRange("1 || 1.0.1 || 1.0.2 || 1.0.3 - 2.1").toString() == ">=1.0.0 <2.2.0");
+
+    // complex
+    // at the moment whole range will have level == 4
+    //CHECK(VersionRange("1.1 - 1.3 || 1.3.2.1 - 1.4").toString() == ">1.1.0 <=1.3.2 || >=1.3.2.1 <1.5.0");
+    //CHECK(VersionRange("1.1 - 1.5 || 1.3.2.1 - 1.4").toString() == ">1.1.0 <=1.3.2 || >=1.3.2.1 <1.5.0");
 
     // intervals
     CHECK_THROWS(VersionRange("[1.0]"));

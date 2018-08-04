@@ -678,13 +678,6 @@ void Version::format(std::string &s) const
 #undef VAR_CAP_OPT
 }
 
-bool VersionRange::RangePair::hasVersion(const Version &v) const
-{
-    if (v.getLevel() > std::max(first.getLevel(), second.getLevel()))
-        return false;
-    return first <= v && v <= second;
-}
-
 VersionRange::VersionRange(GenericNumericVersion::Level level)
     : VersionRange(Version::min(level), Version::max(level))
 {
@@ -773,6 +766,13 @@ bool VersionRange::hasVersion(const Version &v) const
         return false;
     return std::any_of(range.begin(), range.end(),
         [&v](const auto &r) { return r.hasVersion(v); });
+}
+
+bool VersionRange::RangePair::hasVersion(const Version &v) const
+{
+    if (v.getLevel() > std::max(first.getLevel(), second.getLevel()))
+        return false;
+    return first <= v && v <= second;
 }
 
 optional<VersionRange::RangePair> VersionRange::RangePair::operator&(const RangePair &rhs) const
@@ -943,7 +943,12 @@ VersionRange &VersionRange::operator|=(const RangePair &p)
         {
             // skip add, p is greater
             if (i->second < p.first)
-                ;
+            {
+                // but if it is greater only on 1, we merge intervals
+                auto v = i->second;
+                if (++v == p.first)
+                    goto merge;
+            }
             // insert as is
             else if (i->first > p.second)
             {
@@ -953,6 +958,7 @@ VersionRange &VersionRange::operator|=(const RangePair &p)
             // merge overlapped
             else
             {
+            merge:
                 i->first = std::min(i->first, p.first);
                 i->second = std::max(i->second, p.second);
                 added = true;

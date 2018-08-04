@@ -267,8 +267,12 @@ void Settings::dump(yaml &root) const
 {
     for (auto &[k, v] : settings)
     {
-        if (v.saveable)
-            root[k.toString()] = v.toString();
+        if (!v.saveable)
+            continue;
+        auto node = root;
+        for (auto &e : k)
+            node = node[e];
+        node = v.toString();
     }
 }
 
