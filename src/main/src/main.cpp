@@ -16,6 +16,7 @@ void exit_handler()
 {
     if (error)
         debug_break_if_debugger_attached();
+    error = 0; // clear flag to prevent double break
 }
 
 int main1(int argc, char *argv[])
@@ -33,6 +34,7 @@ int main1(int argc, char *argv[])
     {
         std::cerr << "unknown exception" << std::endl;
     }
+    exit_handler();
     return 2;
 }
 
