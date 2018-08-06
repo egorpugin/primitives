@@ -19,21 +19,22 @@
 
 #if defined(CPPAN_EXECUTABLE) && defined(CPPAN_SHARED_BUILD)
 #ifdef _WIN32
-#define CPPAN_STATIC_SHARED_FUNCTION extern "C" __declspec(dllexport)
+#define EXPORT_FROM_EXECUTABLE extern "C" __declspec(dllexport)
 #else
 // visibility default
+// set explicit for clang/gcc on *nix
 #endif
 #endif
 
-#ifndef CPPAN_STATIC_SHARED_FUNCTION
-#define CPPAN_STATIC_SHARED_FUNCTION
+#ifndef EXPORT_FROM_EXECUTABLE
+#define EXPORT_FROM_EXECUTABLE
 #endif
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4190) // function with C-linkage returns UDT
 #endif
 
-CPPAN_STATIC_SHARED_FUNCTION
+EXPORT_FROM_EXECUTABLE
 String getVersionString();
 
 namespace primitives
@@ -268,6 +269,21 @@ struct parser<std::string, void> : parser_base
     std::any fromString(const String &value) const override
     {
         return value;
+    }
+};
+
+// std::string
+template <>
+struct parser<path, void> : parser_base
+{
+    String toString(const std::any &value) const override
+    {
+        return std::any_cast<path>(value).u8string();
+    }
+
+    std::any fromString(const String &value) const override
+    {
+        return path(value);
     }
 };
 
@@ -604,7 +620,7 @@ template struct PRIMITIVES_SETTINGS_API SettingStorage<::primitives::Settings>;
 /// with some initial setup.
 /// 'settings_auto' package will also provide tuned global getSettings() to use.
 PRIMITIVES_SETTINGS_API
-primitives::SettingStorage<primitives::Settings> &getSettings(primitives::SettingStorage<primitives::Settings> * = nullptr);
+primitives::SettingStorage<primitives::Settings> &getSettingStorage(primitives::SettingStorage<primitives::Settings> * = nullptr);
 
 PRIMITIVES_SETTINGS_API
 primitives::Settings &getSettings(SettingsType type, primitives::SettingStorage<primitives::Settings> * = nullptr);
@@ -612,5 +628,3 @@ primitives::Settings &getSettings(SettingsType type, primitives::SettingStorage<
 ////////////////////////////////////////////////////////////////////////////////
 
 } // namespace primitives
-
-using primitives::SettingsType;

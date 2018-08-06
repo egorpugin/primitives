@@ -395,7 +395,7 @@ T &SettingStorage<T>::get(SettingsType type)
 
 template struct SettingStorage<primitives::Settings>;
 
-primitives::SettingStorage<primitives::Settings> &getSettings(primitives::SettingStorage<primitives::Settings> *v)
+primitives::SettingStorage<primitives::Settings> &getSettingStorage(primitives::SettingStorage<primitives::Settings> *v)
 {
     static StaticValueOrRef<primitives::SettingStorage<primitives::Settings>> settings(v);
     return settings;
@@ -403,7 +403,7 @@ primitives::SettingStorage<primitives::Settings> &getSettings(primitives::Settin
 
 primitives::Settings &getSettings(SettingsType type, primitives::SettingStorage<primitives::Settings> *v)
 {
-    return getSettings(v).get(type);
+    return getSettingStorage(v).get(type);
 }
 
 }

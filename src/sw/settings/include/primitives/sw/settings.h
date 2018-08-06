@@ -11,7 +11,7 @@
 #include <primitives/settings.h>
 #include <primitives/CommandLine.h>
 
-CPPAN_STATIC_SHARED_FUNCTION
+EXPORT_FROM_EXECUTABLE
 String getProgramName();
 
 namespace cl
@@ -36,7 +36,7 @@ inline bool ParseCommandLineOptions(const Strings &args,
 namespace sw
 {
 
-////////////////////////////////////////////////////////////////////////////////
+using primitives::SettingsType;
 
 template <class T>
 struct SettingStorage : public ::primitives::SettingStorage<T>
@@ -55,7 +55,7 @@ template struct PRIMITIVES_SW_SETTINGS_API SettingStorage<::primitives::Settings
 #endif
 
 PRIMITIVES_SW_SETTINGS_API
-primitives::SettingStorage<primitives::Settings> &getSettings();
+primitives::SettingStorage<primitives::Settings> &getSettingStorage();
 
 PRIMITIVES_SW_SETTINGS_API
 primitives::Settings &getSettings(SettingsType type);
@@ -73,7 +73,7 @@ struct setting : ::primitives::setting<DataType>
     explicit setting(const Mods &... Ms)
         : base()
     {
-        base::setSettings(sw::getSettings().getLocalSettings());
+        base::setSettings(::sw::getSettingStorage().getLocalSettings());
         base::init(Ms...);
     }
 
@@ -82,16 +82,10 @@ struct setting : ::primitives::setting<DataType>
 
 } // namespace sw
 
-////////////////////////////////////////////////////////////////////////////////
-
-inline primitives::SettingStorage<primitives::Settings> &getSettings()
+// consider removal?
+inline primitives::Settings &getSettings(primitives::SettingsType type)
 {
-    return sw::getSettings();
-}
-
-inline primitives::Settings &getSettings(SettingsType type)
-{
-    auto &s = sw::getSettings(type);
+    auto &s = ::sw::getSettings(type);
     // TODO: optimize? return slices?
     // cache slices like
     // static std::map<const char *PACKAGE_NAME_CLEAN, SettingsSlice> slices;

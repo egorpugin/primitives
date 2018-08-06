@@ -1036,7 +1036,7 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
 
     // expand settings file
     if (Arg[1] == '@') {
-        getSettings().getLocalSettings().load(path(Arg + 2));
+        getSettingStorage().getLocalSettings().load(path(Arg + 2));
         Argv.erase(Argv.begin() + I);
         continue;
     }

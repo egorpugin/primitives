@@ -8,6 +8,6 @@ int main(int argc, char *argv[])
 {
     // init settings early
     // e.g. before parsing command line
-    getSettings();
+    sw::getSettingStorage();
     return SW_MAIN(argc, argv);
 }

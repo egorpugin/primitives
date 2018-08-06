@@ -22,9 +22,10 @@ void exit_handler()
 int main1(int argc, char *argv[])
 {
     atexit(exit_handler);
+    int ret = 2;
     try
     {
-        return error = PRIMITIVES_MAIN(argc, argv);
+        ret = error = PRIMITIVES_MAIN(argc, argv);
     }
     catch (const std::exception &e)
     {
@@ -35,7 +36,7 @@ int main1(int argc, char *argv[])
         std::cerr << "unknown exception" << std::endl;
     }
     exit_handler();
-    return 2;
+    return ret;
 }
 
 int main(int argc, char *argv[])

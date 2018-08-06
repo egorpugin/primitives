@@ -38,12 +38,12 @@ SettingStorage<T>::~SettingStorage()
 
 template struct SettingStorage<::primitives::Settings>;
 
-primitives::SettingStorage<primitives::Settings> &getSettings()
+primitives::SettingStorage<primitives::Settings> &getSettingStorage()
 {
     static auto &settings = []() -> primitives::SettingStorage<primitives::Settings> &
     {
         static SettingStorage<primitives::Settings> s;
-        primitives::getSettings(&s); // save to common storage
+        primitives::getSettingStorage(&s); // save to common storage
         s.userConfigFilename = getSettingsDir() / YAML_SETTINGS_FILENAME;
         path local_name = getProgramName() + ".settings";
         if (fs::exists(local_name))
@@ -55,7 +55,7 @@ primitives::SettingStorage<primitives::Settings> &getSettings()
 
 primitives::Settings &getSettings(SettingsType type)
 {
-    return getSettings().get(type);
+    return getSettingStorage().get(type);
 }
 
 }
