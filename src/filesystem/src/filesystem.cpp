@@ -201,11 +201,8 @@ static void write_file1(const path &p, const String &s, const char *mode)
     if (!pp.empty())
         fs::create_directories(pp);
 
-    auto f = primitives::filesystem::fopen(p, mode);
-    if (!f)
-        throw std::runtime_error("Cannot open file '" + p.u8string() + "' for writing");
-    fwrite(s.c_str(), s.size(), 1, f);
-    fclose(f);
+    ScopedFile f(p, mode);
+    fwrite(s.c_str(), s.size(), 1, f.getHandle());
 }
 
 void write_file(const path &p, const String &s)

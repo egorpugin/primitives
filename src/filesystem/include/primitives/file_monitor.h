@@ -8,9 +8,9 @@
 
 #include "filesystem.h"
 
+#include <uv.h>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/lock_types.hpp>
-#include <uv.h>
 
 #include <atomic>
 #include <functional>

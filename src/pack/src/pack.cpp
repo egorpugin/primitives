@@ -51,6 +51,12 @@ bool pack_files(const path &fn, const std::unordered_map<path, path> &files)
 {
     bool result = true;
     auto a = archive_write_new();
+
+    SCOPE_EXIT
+    {
+        archive_write_free(a);
+    };
+
     archive_write_add_filter_gzip(a);
     archive_write_set_format_pax_restricted(a);
     archive_write_open_filename(a, fn.u8string().c_str());
@@ -66,6 +72,7 @@ bool pack_files(const path &fn, const std::unordered_map<path, path> &files)
         if (!fs::is_regular_file(f))
             continue;
 
+        ScopedFile fp(f);
         auto sz = fs::file_size(f);
         auto e = archive_entry_new();
         archive_entry_set_pathname(e, n.u8string().c_str());
@@ -73,21 +80,11 @@ bool pack_files(const path &fn, const std::unordered_map<path, path> &files)
         archive_entry_set_filetype(e, AE_IFREG);
         archive_entry_set_perm(e, 0644);
         archive_write_header(a, e);
-        auto fp = primitives::filesystem::fopen(f, "rb");
-        if (!fp)
-        {
-            archive_entry_free(e);
-            result = false;
-            continue;
-        }
         char buff[BLOCK_SIZE];
-        while (auto len = fread(buff, 1, sizeof(buff), fp))
+        while (auto len = fread(buff, 1, sizeof(buff), fp.getHandle()))
             archive_write_data(a, buff, len);
-        fclose(fp);
         archive_entry_free(e);
     }
-    archive_write_close(a);
-    archive_write_free(a);
     return result;
 }
 
@@ -132,25 +129,7 @@ Files unpack_file(const path &fn, const path &dst)
             continue;
 
         f = fs::absolute(f);
-        auto o = primitives::filesystem::fopen(f, "wb");
-        if (!o)
-        {
-#ifdef _WIN32
-            if (fn.wstring().size() >= MAX_PATH)
-            {
-                fclose(o);
-                continue;
-            }
-#elif defined(__APPLE__)
-#else
-            if (fn.u8string().size() >= PATH_MAX)
-            {
-                fclose(o);
-                continue;
-            }
-#endif
-            throw std::runtime_error("Cannot open file: " + f.u8string() + ", errno = " + std::to_string(errno));
-        }
+        ScopedFile o(f, "wb");
         while (1)
         {
             const void *buff;
@@ -160,15 +139,10 @@ Files unpack_file(const path &fn, const path &dst)
             if (r == ARCHIVE_EOF)
                 break;
             if (r < ARCHIVE_OK)
-            {
-                fclose(o);
                 throw std::runtime_error(archive_error_string(a));
-            }
-            fwrite(buff, size, 1, o);
+            fwrite(buff, size, 1, o.getHandle());
         }
-        fclose(o);
         files.insert(f);
     }
-
     return files;
 }

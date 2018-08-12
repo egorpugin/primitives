@@ -164,7 +164,8 @@ public:
     {
     }
 
-    SwapAndRestore(T &Restore_, T NewVal)
+    template <class U>
+    SwapAndRestore(T &Restore_, U NewVal)
         : Restore(Restore_), OriginalValue(Restore)
     {
         Restore = std::move(NewVal);

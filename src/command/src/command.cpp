@@ -154,7 +154,7 @@ void Command::execute1(std::error_code *ec_in)
     }
 
     if (working_directory.empty())
-        working_directory = current_thread_path();
+        working_directory = fs::current_path();
 
     /*
 #ifdef _WIN32

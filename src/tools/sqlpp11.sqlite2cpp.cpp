@@ -139,8 +139,11 @@ int main(int argc, char **argv)
 
     cl::ParseCommandLineOptions(argc, argv);
 
+    auto sql = read_file(ddl);
+    sql = sql.substr(0, sql.find("%split"));
+
     sqlite3_open(":memory:", &db);
-    execute(read_file(ddl).c_str());
+    execute(sql.c_str());
 
     Context ctx;
 

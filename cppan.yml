@@ -262,8 +262,6 @@ projects:
                     version: "*"
                 filesystem:
                     version: "*"
-                templates:
-                    version: "*"
                 pvt.cppan.demo.lexxmark.winflexbison.flex:
                     version: master
                     ref: flex
