@@ -19,6 +19,7 @@ void gen_sqlite2cpp(NativeExecutedTarget &t, const path &sql_file, const path &o
     c->addInput(sql_file);
     c->addOutput(out);
     t += out;
+    t.Storage.push_back(c);
 }
 
 void embed(NativeExecutedTarget &t, const path &in)
@@ -40,6 +41,7 @@ void embed(NativeExecutedTarget &t, const path &in)
     c->addInput(in);
     c->addOutput(out);
     t += out;
+    t.Storage.push_back(c);
 }
 
 #pragma sw header off
