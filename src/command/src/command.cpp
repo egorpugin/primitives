@@ -487,6 +487,8 @@ void Command::execute1(std::error_code *ec_in)
     if (r = uv_spawn(&loop, &child_req, &options); r)
         errors.push_back("child not started: "s + uv_strerror(r));
 
+    pid = child_req.pid;
+
     // capture callbacks
     auto on_alloc = [](uv_handle_t *s, size_t suggested_size, uv_buf_t *buf)
     {

@@ -1,7 +1,5 @@
-#pragma sw require header org.sw.demo.ragel-6
-#pragma sw require header org.sw.demo.lexxmark.winflexbison.bison-master
-
 #ifdef SW_PRAGMA_HEADER
+#pragma sw header on
 
 void gen_sqlite2cpp(NativeExecutedTarget &t, const path &sql_file, const path &out_file, const String &ns)
 {
@@ -44,7 +42,11 @@ void embed(NativeExecutedTarget &t, const path &in)
     t += out;
 }
 
+#pragma sw header off
 #endif
+
+#pragma sw require header org.sw.demo.ragel-6
+#pragma sw require header org.sw.demo.lexxmark.winflexbison.bison-master
 
 #define ADD_LIBRARY_WITH_NAME(var, name)          \
     auto &var = p.addTarget<LibraryTarget>(name); \
@@ -61,7 +63,7 @@ void configure(Solution &s)
 void build(Solution &s)
 {
     auto &p = s.addProject("primitives", "master");
-    p += Git("https://github.com/egorpugin/primitives", "", "{v}");
+    p += Git("https://github.com/egorpugin/primitives", "", "master");
 
     auto setup_primitives_no_all_sources = [](auto &t)
     {
@@ -73,15 +75,18 @@ void build(Solution &s)
             p /= n.front();
             n = n.slice(1);
         }
-        t.setRootDirectory(p);
         t.ApiName = "PRIMITIVES_" + boost::to_upper_copy(n2.toString("_")) + "_API";
         t.CPPVersion = CPPLanguageStandard::CPP17;
+        return p;
     };
 
     auto setup_primitives = [&setup_primitives_no_all_sources](auto &t)
     {
-        setup_primitives_no_all_sources(t);
-        t += ".*"_rr; // explicit!
+        auto p = setup_primitives_no_all_sources(t);
+        t.setRootDirectory(p);
+        // explicit!
+        t += "include/.*"_rr;
+        t += "src/.*"_rr;
     };
 
     ADD_LIBRARY(templates);
@@ -123,8 +128,12 @@ void build(Solution &s)
         "org.sw.demo.boost.interprocess-1"_dep;
 
     ADD_LIBRARY(log);
-    log.Public +=
-        "org.sw.demo.boost.log-1"_dep;
+    log.Public += "org.sw.demo.boost.log-1"_dep;
+
+#ifndef SW_SELF_BUILD
+    ADD_LIBRARY(cron);
+    cron.Public += executor, log;
+#endif
 
     ADD_LIBRARY(yaml);
     yaml.Public += string,
@@ -160,6 +169,11 @@ void build(Solution &s)
     ADD_LIBRARY_WITH_NAME(db_sqlite3, "db.sqlite3");
     db_sqlite3.Public += db_common, "org.sw.demo.sqlite3"_dep;
 
+#ifndef SW_SELF_BUILD
+    ADD_LIBRARY_WITH_NAME(db_postgresql, "db.postgresql");
+    db_postgresql.Public += db_common, "org.sw.demo.jtv.pqxx-*"_dep;
+#endif
+
     auto &main = p.addTarget<StaticLibraryTarget>("main");
     setup_primitives(main);
     main.Public += error_handling;
@@ -180,14 +194,12 @@ void build(Solution &s)
 
     auto &tools_embedder = p.addTarget<ExecutableTarget>("tools.embedder");
     setup_primitives_no_all_sources(tools_embedder);
-    tools_embedder.SourceDir = s.SourceDir / "src" / "tools";
-    tools_embedder += "embedder.cpp";
+    tools_embedder += "src/tools/embedder.cpp";
     tools_embedder += filesystem, sw_main;
 
     auto &tools_sqlite2cpp = p.addTarget<ExecutableTarget>("tools.sqlite2cpp");
     setup_primitives_no_all_sources(tools_sqlite2cpp);
-    tools_sqlite2cpp.SourceDir = s.SourceDir / "src" / "tools";
-    tools_sqlite2cpp += "sqlpp11.sqlite2cpp.cpp";
+    tools_sqlite2cpp += "src/tools/sqlpp11.sqlite2cpp.cpp";
     tools_sqlite2cpp += filesystem, context, sw_main, "org.sw.demo.sqlite3"_dep;
 
     ADD_LIBRARY(version);

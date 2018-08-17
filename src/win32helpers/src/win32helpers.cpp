@@ -194,12 +194,13 @@ std::string get_last_error()
 
 void message_box(const std::string &s)
 {
-    MessageBoxA(0, s.c_str(), "sw.exe", 0);
+    MessageBoxA(0, s.c_str(), PACKAGE_NAME_CLEAN, 0);
 }
 
 void message_box(const std::wstring &s)
 {
-    MessageBoxW(0, s.c_str(), L"sw.exe", 0);
+    auto ws = to_wstring(PACKAGE_NAME_CLEAN);
+    MessageBoxW(0, s.c_str(), ws.c_str(), 0);
 }
 
 #include <fcntl.h>

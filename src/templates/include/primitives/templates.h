@@ -9,8 +9,8 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#define ANONYMOUS_VARIABLE_COUNTER(s) CONCATENATE(s, __COUNTER__)
-#define ANONYMOUS_VARIABLE_LINE(s) CONCATENATE(s, __LINE__)
+#define ANONYMOUS_VARIABLE_COUNTER(s) CONCATENATE(CONCATENATE(s, _), __COUNTER__)
+#define ANONYMOUS_VARIABLE_LINE(s) CONCATENATE(CONCATENATE(s, _), __LINE__)
 
 #ifdef __COUNTER__
 #define ANONYMOUS_VARIABLE(s) ANONYMOUS_VARIABLE_COUNTER(s)
