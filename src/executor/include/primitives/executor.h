@@ -369,7 +369,6 @@ private:
     std::mutex m;
 
     void run(size_t i, const std::string &name);
-    void run2(size_t i, const std::string &name);
     bool run_task();
     bool run_task(Task &t);
     bool run_task(size_t i);
@@ -770,13 +769,3 @@ void waitAny(Futures && ... futures)
 {
     whenAny(std::forward<Futures>(futures)...).get();
 }
-
-#ifdef _WIN32
-namespace primitives::executor
-{
-
-PRIMITIVES_EXECUTOR_API
-extern bool bExecutorUseSEH;
-
-}
-#endif

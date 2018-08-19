@@ -277,7 +277,7 @@ class PRIMITIVES_SETTINGS_API Option {
   unsigned AdditionalVals = 0; // Greater than 0 for multi-valued option.
 
 public:
-  StringRef ArgStr;   // The argument string itself (ex: "help", "o")
+  String ArgStr;   // The argument string itself (ex: "help", "o")
   StringRef HelpStr;  // The descriptive text message for -help
   StringRef ValueStr; // String describing what the value of this option is
   OptionCategory *Category; // The Category this option belongs to
@@ -1196,6 +1196,14 @@ template <> struct applicator<StringRef > {
   template <class Opt> static void opt(StringRef Str, Opt &O) {
     O.setArgStr(Str);
   }
+};
+
+// special applicator for custom arg strings
+struct arg : ::std::string {};
+template <> struct applicator<arg> {
+    template <class Opt> static void opt(const arg &a, Opt &O) {
+        O.setArgStr(a);
+    }
 };
 
 template <> struct applicator<NumOccurrencesFlag> {

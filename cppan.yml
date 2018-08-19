@@ -147,8 +147,6 @@ projects:
                     version: 1
                 pvt.cppan.demo.boost.system:
                     version: 1
-                minidump:
-                    version: "*"
                 templates:
                     version: "*"
     filesystem:
@@ -235,19 +233,6 @@ projects:
                 error_handling:
                     version: "*"
 
-
-    minidump:
-        name: minidump
-        type: library
-        static_only: true
-        root_directory: src/minidump
-        options:
-            any:
-                link_libraries:
-                    win32:
-                        public:
-                            -   dbghelp
-
     settings:
         type: library
         root_directory: src/settings
@@ -290,6 +275,23 @@ projects:
                 main:
                     version: "*"
                     ref: main
+
+            private:
+                pvt.cppan.demo.google.breakpad.client.windows.handler:
+                    version: master
+                    conditions:
+                        -   WIN32
+                pvt.cppan.demo.google.breakpad.client.windows.crash_generation.client:
+                    version: master
+                    conditions:
+                        -   WIN32
+                pvt.cppan.demo.google.breakpad.client.windows.crash_generation.server:
+                    version: master
+                    conditions:
+                        -   WIN32
+                pvt.cppan.demo.boost.dll:
+                    version: 1
+
         post_target: |
             # try to fix link order fo ld
             target_link_libraries(${this} INTERFACE $<TARGET_LINKER_FILE:${main}> $<TARGET_LINKER_FILE:${PACKAGE_STRING}> $<TARGET_LINKER_FILE:${sw_settings}>)

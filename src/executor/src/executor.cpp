@@ -6,8 +6,6 @@
 
 #include <primitives/executor.h>
 
-#include <primitives/minidump.h>
-
 #include <iostream>
 #include <string>
 
@@ -17,16 +15,6 @@
 
 //#include "log.h"
 //DECLARE_STATIC_LOGGER(logger, "executor");
-
-#ifdef _WIN32
-namespace primitives::executor
-{
-
-bool bExecutorUseSEH = false;
-
-}
-#endif
-
 
 size_t get_max_threads(size_t N)
 {
@@ -96,25 +84,6 @@ bool Executor::try_run_one()
 }
 
 void Executor::run(size_t i, const std::string &name)
-{
-#ifdef _WIN32
-    if (primitives::executor::bExecutorUseSEH)
-    {
-        __try
-        {
-            run2(i, name);
-        }
-        __except (PRIMITIVES_GENERATE_DUMP)
-        {
-        }
-        return;
-    }
-    else
-#endif
-        run2(i, name);
-}
-
-void Executor::run2(size_t i, const std::string &name)
 {
     auto n = name + " " + std::to_string(i);
     set_thread_name(n);

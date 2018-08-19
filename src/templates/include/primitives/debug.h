@@ -8,7 +8,7 @@
         x;                     \
     } while (0)
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && defined(NDEBUG)
 
 #define DEBUG_BREAK_MSVC()                                                \
     static auto ANONYMOUS_VARIABLE_LINE(primitives_debug) = 1;            \

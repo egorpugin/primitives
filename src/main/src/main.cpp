@@ -19,7 +19,7 @@ void exit_handler()
     error = 0; // clear flag to prevent double break
 }
 
-int main1(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     atexit(exit_handler);
     int ret = 2;
@@ -31,28 +31,6 @@ int main1(int argc, char *argv[])
     {
         std::cerr << e.what() << std::endl;
     }
-    catch (...)
-    {
-        std::cerr << "unknown exception" << std::endl;
-    }
     exit_handler();
     return ret;
-}
-
-int main(int argc, char *argv[])
-{
-#ifdef _WIN32
-    __try
-    {
-#endif
-        return main1(argc, argv);
-#ifdef _WIN32
-    }
-    //__except (EXCEPTION_CONTINUE_SEARCH)
-    __except (EXCEPTION_EXECUTE_HANDLER)
-    {
-        std::cerr << "unknown SEH exception" << std::endl;
-    }
-#endif
-    return 1;
 }
