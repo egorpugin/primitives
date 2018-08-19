@@ -6,6 +6,8 @@
 
 #include <primitives/file_monitor.h>
 
+#include <primitives/thread.h>
+
 namespace primitives
 {
 
@@ -104,10 +106,10 @@ void FileMonitor::start()
     if (!started.compare_exchange_strong(e, true))
         return;
 
-    t = std::move(std::thread([this]
+    t = make_thread([this]
     {
         uv_run(&loop, UV_RUN_DEFAULT);
-    }));
+    });
 }
 
 void FileMonitor::addFile(const path &p, record::Callback cb)

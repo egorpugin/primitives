@@ -6,6 +6,8 @@
 
 #include <primitives/executor.h>
 
+#include <primitives/thread.h>
+
 #include <iostream>
 #include <string>
 
@@ -53,7 +55,7 @@ Executor::Executor(size_t nThreads, const std::string &name)
     thread_pool.resize(nThreads);
     for (size_t i = 0; i < nThreads; i++)
     {
-        thread_pool[i].t = std::thread([this, i, name = name]() mutable
+        thread_pool[i].t = make_thread([this, i, name = name]() mutable
         {
             run(i, name);
         });

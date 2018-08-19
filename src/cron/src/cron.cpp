@@ -7,13 +7,14 @@
 #include <primitives/cron.h>
 
 #include <primitives/executor.h>
+#include <primitives/thread.h>
 
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "cron");
 
 Cron::Cron()
 {
-    t = std::move(std::thread([this] { run(); }));
+    t = make_thread([this] { run(); });
 }
 
 Cron::~Cron()

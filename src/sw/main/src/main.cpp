@@ -17,8 +17,6 @@ static path temp_directory_path(const path &subdir)
     return p;
 }
 
-String getProgramName();
-
 static path get_crash_dir()
 {
     auto p = temp_directory_path(getProgramName()) / "dump";
@@ -60,7 +58,7 @@ static std::string get_pipe_name_base()
     return "\\\\.\\pipe\\" + get_object_prefix();
 }
 
-int CrashServerStart(const std::string &id)
+static int CrashServerStart(const std::string &id)
 {
     auto dump_path = get_crash_dir().wstring();
 
@@ -91,7 +89,11 @@ int CrashServerStart(const std::string &id)
             printf("OpenEvent failed: %d\n", GetLastError());
             return 1;
         }
-        SetEvent(ev);
+        if (!SetEvent(ev))
+        {
+            printf("SetEvent failed: %d\n", GetLastError());
+            return 1;
+        }
         Sleep(10000);
         if (client_connected)
             Sleep(INFINITE);
@@ -101,7 +103,7 @@ int CrashServerStart(const std::string &id)
     return !r;
 }
 
-bool filter_cb(void* context, EXCEPTION_POINTERS* exinfo, MDRawAssertionInfo* assertion)
+static bool filter_cb(void* context, EXCEPTION_POINTERS* exinfo, MDRawAssertionInfo* assertion)
 {
     // actually we can't safely start process here, make allocation etc.
     // we can get loader lock and (or) other issues
@@ -156,12 +158,13 @@ bool filter_cb(void* context, EXCEPTION_POINTERS* exinfo, MDRawAssertionInfo* as
     return true;
 }
 
-bool minidump_cb(const wchar_t* dump_path,
-    const wchar_t* minidump_id,
-    void* context,
-    EXCEPTION_POINTERS* exinfo,
-    MDRawAssertionInfo* assertion,
-    bool succeeded)
+// not used at the moment, as we do exit in filter_cb
+static bool minidump_cb(const wchar_t *dump_path,
+                 const wchar_t *minidump_id,
+                 void *context,
+                 EXCEPTION_POINTERS *exinfo,
+                 MDRawAssertionInfo *assertion,
+                 bool succeeded)
 {
     if (handled_on_server)
     {

@@ -164,6 +164,8 @@ projects:
             public:
                 string:
                     version: "*"
+                templates:
+                    version: "*"
                 pvt.cppan.demo.boost.thread:
                     version: 1
                 pvt.cppan.demo.boost.filesystem:

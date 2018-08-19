@@ -34,9 +34,6 @@ String preprocess_file(const String &s)
     return o;
 }
 
-#include <iostream>
-using namespace std;
-
 int main(int argc, char *argv[])
 {
     cl::opt<path> InputFilename(cl::Positional, cl::desc("<input file>"), cl::Required);
