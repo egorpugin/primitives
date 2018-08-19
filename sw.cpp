@@ -3,7 +3,7 @@
 
 void gen_sqlite2cpp(NativeExecutedTarget &t, const path &sql_file, const path &out_file, const String &ns)
 {
-    auto tools_sqlite2cpp = THIS_PREFIX "." "primitives.tools.sqlite2cpp" "-" THIS_VERSION_DEPENDENCY;
+    auto tools_sqlite2cpp = THIS_PREFIX "." "primitives.tools.sqlpp11.sqlite2cpp" "-" THIS_VERSION_DEPENDENCY;
     {
         auto d = t + tools_sqlite2cpp;
         d->Dummy = true;
@@ -99,19 +99,14 @@ void build(Solution &s)
     string.Public += "org.sw.demo.boost.algorithm-1"_dep;
 
     ADD_LIBRARY(filesystem);
-    filesystem.Public += string,
+    filesystem.Public += string, templates,
         "org.sw.demo.libuv-1"_dep,
         "org.sw.demo.boost.filesystem-1"_dep,
         "org.sw.demo.boost.thread-1"_dep,
         "org.sw.demo.grisumbras.enum_flags-master"_dep;
 
-    auto &minidump = p.addTarget<StaticLibraryTarget>("minidump");
-    setup_primitives(minidump);
-    if (s.Settings.TargetOS.Type == OSType::Windows)
-        minidump.Public += "dbghelp.lib"_l;
-
     ADD_LIBRARY(executor);
-    executor.Public += templates, minidump,
+    executor.Public += templates,
         "org.sw.demo.boost.asio-1"_dep,
         "org.sw.demo.boost.system-1"_dep;
 
@@ -192,14 +187,19 @@ void build(Solution &s)
 
     auto &sw_main = p.addTarget<StaticLibraryTarget>("sw.main");
     setup_primitives(sw_main);
-    sw_main.Public += main, sw_settings;
+    sw_main.Public += main, sw_settings,
+        "org.sw.demo.boost.dll-1"_dep,
+        "org.sw.demo.google.breakpad.client.windows.handler-master"_dep,
+        "org.sw.demo.google.breakpad.client.windows.crash_generation.client-master"_dep,
+        "org.sw.demo.google.breakpad.client.windows.crash_generation.server-master"_dep
+        ;
 
     auto &tools_embedder = p.addTarget<ExecutableTarget>("tools.embedder");
     setup_primitives_no_all_sources(tools_embedder);
     tools_embedder += "src/tools/embedder.cpp";
     tools_embedder += filesystem, sw_main;
 
-    auto &tools_sqlite2cpp = p.addTarget<ExecutableTarget>("tools.sqlite2cpp");
+    auto &tools_sqlite2cpp = p.addTarget<ExecutableTarget>("tools.sqlpp11.sqlite2cpp");
     setup_primitives_no_all_sources(tools_sqlite2cpp);
     tools_sqlite2cpp += "src/tools/sqlpp11.sqlite2cpp.cpp";
     tools_sqlite2cpp += filesystem, context, sw_main, "org.sw.demo.sqlite3"_dep;
