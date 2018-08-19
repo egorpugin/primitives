@@ -12,9 +12,7 @@
 
 static path temp_directory_path(const path &subdir)
 {
-    auto p = fs::temp_directory_path() / "sw" / subdir;
-    fs::create_directories(p);
-    return p;
+    return fs::temp_directory_path() / "sw" / subdir;
 }
 
 static path get_crash_dir()

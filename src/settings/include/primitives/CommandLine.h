@@ -207,7 +207,7 @@ extern OptionCategory GeneralCategory;
 //===----------------------------------------------------------------------===//
 // SubCommand class
 //
-class SubCommand {
+class PRIMITIVES_SETTINGS_API SubCommand {
 private:
   StringRef Name;
   StringRef Description;
