@@ -146,6 +146,8 @@ public:
 
   bool ParseCommandLineOptions(int argc, const char *const *argv,
                                StringRef Overview, raw_ostream *Errs = nullptr);
+  bool ParseCommandLineOptions(int argc, const char *const *argv,
+                               StringRef Overview, raw_ostream *Errs, int FirstArg);
 
   void addLiteralOption(Option &Opt, SubCommand *SC, StringRef Name) {
     if (Opt.hasArgStr())
@@ -1126,9 +1128,17 @@ void CommandLineParser::ResetAllOptionOccurrences() {
 }
 
 bool CommandLineParser::ParseCommandLineOptions(int argc,
+    const char *const *argv,
+    StringRef Overview,
+    raw_ostream *Errs) {
+    return ParseCommandLineOptions(argc, argv, Overview, Errs, 1);
+}
+
+bool CommandLineParser::ParseCommandLineOptions(int argc,
                                                 const char *const *argv,
                                                 StringRef Overview,
-                                                raw_ostream *Errs) {
+                                                raw_ostream *Errs,
+                                                int FirstArg) {
   assert(hasOptions() && "No options specified!");
 
   // Expand response files.
@@ -1157,14 +1167,13 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   // Determine whether or not there are an unlimited number of positionals
   bool HasUnlimitedPositionals = false;
 
-  int FirstArg = 1;
   SubCommand *ChosenSubCommand = &*TopLevelSubCommand;
   if (argc >= 2 && argv[FirstArg][0] != '-') {
     // If the first argument specifies a valid subcommand, start processing
     // options from the second argument.
     ChosenSubCommand = LookupSubCommand(StringRef(argv[FirstArg]));
     if (ChosenSubCommand != &*TopLevelSubCommand)
-      FirstArg = 2;
+      FirstArg++;
   }
   GlobalParser->ActiveSubCommand = ChosenSubCommand;
 
@@ -1260,6 +1269,11 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 
         // Delay processing positional arguments until the end...
         continue;
+      }
+
+      if (auto cmd = LookupSubCommand(StringRef(argv[i])); cmd != &*TopLevelSubCommand)
+      {
+          return ParseCommandLineOptions(argc, argv, Overview, Errs, i);
       }
     } else if (argv[i][0] == '-' && argv[i][1] == '-' && argv[i][2] == 0 &&
                !DashDashFound) {
@@ -1512,11 +1526,11 @@ size_t alias::getOptionWidth() const { return ArgStr.size() + 6; }
 
 void print_option_double_dashed(raw_ostream &o, StringRef s)
 {
-    if (s.size() > 1)
-        o << "-";
+    /*if (s.size() > 1)
+        o << "-";*/
     o << s;
-    if (s.size() == 1)
-        o << " ";
+    /*if (s.size() == 1)
+        o << " ";*/
 }
 
 void Option::printHelpStr(StringRef HelpStr, size_t Indent,
@@ -1979,7 +1993,7 @@ public:
       printSubCommands(Subs, MaxSubLen);
       outs() << "\n";
       outs() << "  Type \"" << GlobalParser->ProgramName
-             << " <subcommand> --help\" to get more help on a specific "
+             << " <subcommand> -help\" to get more help on a specific "
                 "subcommand";
     }
 
@@ -2126,7 +2140,7 @@ static cl::OptionCategory GenericCategory("Generic Options");
 // then -help behaves the same as -help-list.
 static cl::opt<HelpPrinter, true, parser<bool>> HLOp(
     "help-list",
-    cl::desc("Display list of available options (--help-list-hidden for more)"),
+    cl::desc("Display list of available options (-help-list-hidden for more)"),
     cl::location(UncategorizedNormalPrinter), cl::Hidden, cl::ValueDisallowed,
     cl::cat(GenericCategory), cl::sub(*AllSubCommands));
 
@@ -2140,7 +2154,7 @@ static cl::opt<HelpPrinter, true, parser<bool>>
 // behaviour at runtime depending on whether one or more Option categories have
 // been declared.
 static cl::opt<HelpPrinterWrapper, true, parser<bool>>
-    HOp("help", cl::desc("Display available options (--help-hidden for more)"),
+    HOp("help", cl::desc("Display available options (-help-hidden for more)"),
         cl::location(WrappedNormalPrinter), cl::ValueDisallowed,
         cl::cat(GenericCategory), cl::sub(*AllSubCommands));
 

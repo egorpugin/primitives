@@ -28,7 +28,7 @@ inline bool ParseCommandLineOptions(const Strings &args,
     std::vector<const char *> argv;
     for (auto &a : args)
         argv.push_back(a.data());
-    return ParseCommandLineOptions(args.size(), argv.data(), Overview, Errs);
+    return ParseCommandLineOptions(argv.size(), argv.data(), Overview, Errs);
 }
 
 }
