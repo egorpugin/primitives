@@ -19,7 +19,7 @@
 
 #if (defined(CPPAN_EXECUTABLE) && defined(CPPAN_SHARED_BUILD)) || defined(PRIMITIVES_STATIC_LIB_VISIBILITY)
 #ifdef _WIN32
-#define EXPORT_FROM_EXECUTABLE extern "C" __declspec(dllexport)
+#define EXPORT_FROM_EXECUTABLE __declspec(dllexport)
 #else
 // visibility default
 // set explicit for clang/gcc on *nix
@@ -34,11 +34,11 @@
 #pragma warning(disable : 4190) // function with C-linkage returns UDT
 #endif
 
-EXPORT_FROM_EXECUTABLE
-String getVersionString();
-
 namespace primitives
 {
+
+EXPORT_FROM_EXECUTABLE
+String getVersionString();
 
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -50,6 +50,9 @@ using namespace primitives::cl;
 
 #define DEBUG_TYPE "commandline"
 
+namespace primitives
+{
+
 #if defined(_WIN32) && defined(CPPAN_SHARED_BUILD)
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -57,12 +60,14 @@ using namespace primitives::cl;
 static String getVersionString()
 {
     auto h = GetModuleHandle(0);
-    auto f = (String(*)())GetProcAddress(h, "getVersionString");
+    auto f = (String(*)())GetProcAddress(h, "?getVersionString@primitives@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
     if (!f)
         return "version information is missing";
     return f();
 }
 #endif
+
+}
 
 //===----------------------------------------------------------------------===//
 // Template instantiations and anchors.

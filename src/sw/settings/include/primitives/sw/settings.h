@@ -11,8 +11,13 @@
 #include <primitives/settings.h>
 #include <primitives/CommandLine.h>
 
+namespace sw
+{
+
 EXPORT_FROM_EXECUTABLE
 String getProgramName();
+
+}
 
 namespace cl
 {

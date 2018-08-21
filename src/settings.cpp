@@ -555,7 +555,7 @@ TEST_CASE("Checking command line", "[cl]")
 
         cl::ParseCommandLineOptions(args);
 
-        CHECK(getProgramName() != "unk");
+        CHECK(::sw::getProgramName() != "unk");
     }
 
     {

@@ -8,6 +8,9 @@
 
 #define YAML_SETTINGS_FILENAME "settings.yml"
 
+namespace sw
+{
+
 #if defined(_WIN32) && defined(CPPAN_SHARED_BUILD)
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -15,15 +18,12 @@
 static String getProgramName()
 {
     auto h = GetModuleHandle(0);
-    auto f = (String(*)())GetProcAddress(h, "getProgramName");
+    auto f = (String(*)())GetProcAddress(h, "?getProgramName@sw@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
     if (!f)
         return "unk";
     return f();
 }
 #endif
-
-namespace sw
-{
 
 path getSettingsDir()
 {

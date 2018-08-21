@@ -1,9 +1,6 @@
 #define SW_MAIN_IMPL
 #include <primitives/sw/main.h>
 
-#ifdef CPPAN_SHARED_BUILD
-#define PRIMITIVES_STATIC_LIB_VISIBILITY
-#endif
 #include <primitives/sw/settings.h>
 #include <primitives/main.h>
 #include <primitives/filesystem.h>
@@ -19,7 +16,7 @@ static path temp_directory_path(const path &subdir)
 
 static path get_crash_dir()
 {
-    auto p = temp_directory_path(getProgramName()) / "dump";
+    auto p = temp_directory_path(::sw::getProgramName()) / "dump";
     fs::create_directories(p);
     return p;
 }
