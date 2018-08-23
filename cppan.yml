@@ -281,16 +281,10 @@ projects:
             private:
                 pvt.cppan.demo.google.breakpad.client.windows.handler:
                     version: master
-                    conditions:
-                        -   WIN32
                 pvt.cppan.demo.google.breakpad.client.windows.crash_generation.client:
                     version: master
-                    conditions:
-                        -   WIN32
                 pvt.cppan.demo.google.breakpad.client.windows.crash_generation.server:
                     version: master
-                    conditions:
-                        -   WIN32
                 pvt.cppan.demo.boost.dll:
                     version: 1
 
