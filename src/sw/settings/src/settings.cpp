@@ -8,13 +8,16 @@
 
 #define YAML_SETTINGS_FILENAME "settings.yml"
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+#endif
+
 namespace sw
 {
 
 #if defined(_WIN32) && defined(CPPAN_SHARED_BUILD)
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
 static String getProgramName()
 {
     auto h = GetModuleHandle(0);

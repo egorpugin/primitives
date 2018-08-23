@@ -210,4 +210,20 @@ void build(Solution &s)
         "org.sw.demo.imageworks.pystring-1"_dep;
     gen_ragel(version, "src/version.rl");
     gen_flex_bison_pair(version, "GLR_CPP_PARSER", "src/range");
+
+    auto &test = p.addDirectory("test");
+    test.Scope = TargetScope::Test;
+
+    /*auto add_test = [](const String &name) -> decltype(auto)
+    {
+        auto &t = test.addTarget<ExecutableTarget>("main");
+        t.CPPVersion = CPPLanguageStandard::CPP17;
+        t += "src/" + name + ".cpp";
+        return t;
+    };
+
+    auto &test_main = add_test("main");
+    auto &test_db = add_test("db");
+    auto &test_settings = add_test("settings");
+    auto &test_version = add_test("version");*/
 }

@@ -16,10 +16,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <primitives/CommandLine.h>
-
-#include <primitives/settings.h>
-
 #include "llvm-c/Support.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -42,8 +38,20 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <primitives/CommandLine.h>
+
+#include <primitives/settings.h>
+
 #include <cstdlib>
 #include <map>
+
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+#endif
+
 using namespace llvm;
 using namespace primitives;
 using namespace primitives::cl;
@@ -54,9 +62,6 @@ namespace primitives
 {
 
 #if defined(_WIN32) && defined(CPPAN_SHARED_BUILD)
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
 static String getVersionString()
 {
     auto h = GetModuleHandle(0);
