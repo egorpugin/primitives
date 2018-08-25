@@ -17,7 +17,7 @@
 #include <any>
 #include <iostream>
 
-#if (defined(CPPAN_EXECUTABLE) && defined(CPPAN_SHARED_BUILD)) || defined(PRIMITIVES_STATIC_LIB_VISIBILITY)
+#if defined(CPPAN_EXECUTABLE)
 #ifdef _WIN32
 #define EXPORT_FROM_EXECUTABLE __declspec(dllexport)
 #else

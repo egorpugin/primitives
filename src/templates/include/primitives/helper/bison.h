@@ -26,6 +26,32 @@
 #include <string>
 #include <tuple>
 
+#ifdef __GNUG__
+#include <cstdlib>
+#include <memory>
+#include <cxxabi.h>
+
+inline std::string demangle(const char* name) {
+
+    int status = -4; // some arbitrary value to eliminate the compiler warning
+
+    // enable c++11 by passing the flag -std=c++11 to g++
+    std::unique_ptr<char, void(*)(void*)> res{
+        abi::__cxa_demangle(name, NULL, NULL, &status),
+        std::free
+    };
+
+    return (status == 0) ? res.get() : name;
+}
+
+#else
+
+// does nothing if not g++
+inline std::string demangle(const char* name) {
+    return name;
+}
+#endif
+
 namespace primitives::bison
 {
 
@@ -93,7 +119,7 @@ struct any_storage
         auto &t1 = v->type();
         auto &t2 = typeid(U);
         if (t1 != t2)
-            bb.error_msg = std::string("Incorrect type: ") + t1.name() + ", wanted type: " + t2.name();
+            bb.error_msg = std::string("Incorrect type: ") + demangle(t1.name()) + ", wanted type: " + demangle(t2.name());
         return t1 == t2;
     }
 

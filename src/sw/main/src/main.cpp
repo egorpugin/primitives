@@ -148,6 +148,9 @@ static bool filter_cb(void* context, EXCEPTION_POINTERS* exinfo, MDRawAssertionI
         printf("CrashGenerationClient::RequestDump failed\n");
         return true;
     }
+
+    printf("Minudump is written using crash server\n");
+
     // dangerous, but we'll try
     exit(1);
 
