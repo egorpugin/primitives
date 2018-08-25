@@ -338,6 +338,21 @@ public:
         return push(pt);
     }
 
+    template <class F>
+    auto push(F &&f, size_t n_jobs)
+    {
+        static_assert(!std::is_lvalue_reference<F>::value, "Argument cannot be an lvalue");
+
+        PackagedTask<F> pt(*this, f);
+        auto fut = pt.getFuture();
+        Task task([pt]() { pt(); });
+        if (n_jobs == 1)
+            task();
+        else
+            push(std::move(task));
+        return fut;
+    }
+
     template <class F, class ... ArgTypes>
     auto push(PackagedTask<F, ArgTypes...> pt)
     {

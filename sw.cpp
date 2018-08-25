@@ -188,11 +188,15 @@ void build(Solution &s)
     auto &sw_main = p.addTarget<StaticLibraryTarget>("sw.main");
     setup_primitives(sw_main);
     sw_main.Public += main, sw_settings,
-        "org.sw.demo.boost.dll-1"_dep,
-        "org.sw.demo.google.breakpad.client.windows.handler-master"_dep,
-        "org.sw.demo.google.breakpad.client.windows.crash_generation.client-master"_dep,
-        "org.sw.demo.google.breakpad.client.windows.crash_generation.server-master"_dep
-        ;
+        "org.sw.demo.boost.dll-1"_dep;
+    if (s.Settings.TargetOS.Type == OSType::Windows)
+    {
+        sw_main.Public +=
+            "org.sw.demo.google.breakpad.client.windows.handler-master"_dep,
+            "org.sw.demo.google.breakpad.client.windows.crash_generation.client-master"_dep,
+            "org.sw.demo.google.breakpad.client.windows.crash_generation.server-master"_dep
+            ;
+    }
 
     auto &tools_embedder = p.addTarget<ExecutableTarget>("tools.embedder");
     setup_primitives_no_all_sources(tools_embedder);
