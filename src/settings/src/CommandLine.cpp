@@ -61,18 +61,16 @@ using namespace primitives::cl;
 namespace primitives
 {
 
+#if defined(_WIN32)
 static String getVersionString()
 {
-#if defined(_WIN32)
     auto h = GetModuleHandle(0);
     auto f = (String(*)())GetProcAddress(h, "?getVersionString@primitives@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
     if (!f)
         return "version information is missing";
     return f();
-#else
-    return {};
-#endif
 }
+#endif
 
 }
 

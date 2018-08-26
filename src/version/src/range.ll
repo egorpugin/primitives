@@ -56,7 +56,13 @@ branch [_a-zA-Z][_a-zA-Z0-9]*
 "&&"                    return MAKE(AND);
 "||"                    return MAKE(OR);
 
-{number}                return MAKE_VALUE(NUMBER, std::stoll(yytext));
+{number}                {
+    return MAKE_VALUE(NUMBER,
+#ifndef _WIN32
+    (long)
+#endif
+    std::stoll(yytext));
+}
 {branch}                return MAKE_VALUE(BRANCH, std::string(yytext));
 {extra}                 return MAKE_VALUE(EXTRA, std::string(yytext));
 
