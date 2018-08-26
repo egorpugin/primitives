@@ -289,7 +289,7 @@ projects:
                     version: 1
 
         post_target: |
-            # try to fix link order fo ld
+            # try to fix link order for ld
             target_link_libraries(${this} INTERFACE $<TARGET_LINKER_FILE:${main}> $<TARGET_LINKER_FILE:${PACKAGE_STRING}> $<TARGET_LINKER_FILE:${sw_settings}>)
 
     sw.settings:

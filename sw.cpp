@@ -189,6 +189,9 @@ void build(Solution &s)
     setup_primitives(sw_main);
     sw_main.Public += main, sw_settings,
         "org.sw.demo.boost.dll-1"_dep;
+    sw_main.Interface.LinkLibraries.push_back(main.getImportLibrary()); // main itself
+    sw_main.Interface.LinkLibraries.push_back(sw_main.getImportLibrary()); // then me (self, sw.main)
+    sw_main.Interface.LinkLibraries.push_back(sw_settings.getImportLibrary()); // then sw.settings
     if (s.Settings.TargetOS.Type == OSType::Windows)
     {
         sw_main.Public +=
