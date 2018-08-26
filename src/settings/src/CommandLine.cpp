@@ -72,7 +72,7 @@ static String getVersionString()
 }
 #endif
 
-}
+} // namespace primitives
 
 //===----------------------------------------------------------------------===//
 // Template instantiations and anchors.
@@ -147,6 +147,8 @@ public:
   // This collects the different subcommands that have been registered.
   SmallPtrSet<SubCommand *, 4> RegisteredSubCommands;
 
+  bool ignoreDuplicateCommandLineOptions = false;
+
   CommandLineParser() : ActiveSubCommand(nullptr) {
     registerSubCommand(&*TopLevelSubCommand);
     registerSubCommand(&*AllSubCommands);
@@ -156,13 +158,15 @@ public:
 
   bool ParseCommandLineOptions(int argc, const char *const *argv,
                                StringRef Overview, raw_ostream *Errs = nullptr);
+private:
   bool ParseCommandLineOptions(int argc, const char *const *argv,
                                StringRef Overview, raw_ostream *Errs, int FirstArg);
+public:
 
   void addLiteralOption(Option &Opt, SubCommand *SC, StringRef Name) {
     if (Opt.hasArgStr())
       return;
-    if (!insert_option(SC->OptionsMap, Name, Opt)) {
+    if (!insert_option(SC->OptionsMap, Name, Opt) && !ignoreDuplicateCommandLineOptions) {
       errs() << ProgramName << ": CommandLine Error: Option '" << Name
              << "' registered more than once!\n";
       report_fatal_error("inconsistency in registered CommandLine options");
@@ -192,7 +196,7 @@ public:
     bool HadErrors = false;
     if (O->hasArgStr()) {
       // Add argument to the argument map!
-      if (!insert_option(SC->OptionsMap, O->ArgStr, *O)) {
+      if (!insert_option(SC->OptionsMap, O->ArgStr, *O) && !ignoreDuplicateCommandLineOptions) {
         errs() << ProgramName << ": CommandLine Error: Option '" << O->ArgStr
                << "' registered more than once!\n";
         HadErrors = true;
@@ -299,7 +303,7 @@ public:
 
   void updateArgStr(Option *O, StringRef NewName, SubCommand *SC) {
     SubCommand &Sub = *SC;
-    if (!insert_option(Sub.OptionsMap, NewName, *O)) {
+    if (!insert_option(Sub.OptionsMap, NewName, *O) && !ignoreDuplicateCommandLineOptions) {
       errs() << ProgramName << ": CommandLine Error: Option '" << O->ArgStr
              << "' registered more than once!\n";
       report_fatal_error("inconsistency in registered CommandLine options");
@@ -1124,8 +1128,10 @@ void cl::ParseEnvironmentOptions(const char *progName, const char *envVar,
 
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                  StringRef Overview, raw_ostream *Errs) {
-  return GlobalParser->ParseCommandLineOptions(argc, argv, Overview,
+  auto r = GlobalParser->ParseCommandLineOptions(argc, argv, Overview,
                                                Errs);
+  GlobalParser->ignoreDuplicateCommandLineOptions = true;
+  return r;
 }
 
 void CommandLineParser::ResetAllOptionOccurrences() {
