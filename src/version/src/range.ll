@@ -6,6 +6,16 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <range_parser.h>
+
+static
+#ifdef _WIN32
+long
+#endif
+long make_long(const char *s)
+{
+    return std::stoll(s);
+}
+
 %}
 
 %option nounistd
@@ -56,13 +66,7 @@ branch [_a-zA-Z][_a-zA-Z0-9]*
 "&&"                    return MAKE(AND);
 "||"                    return MAKE(OR);
 
-{number}                {
-    return MAKE_VALUE(NUMBER,
-#ifndef _WIN32
-    (long)
-#endif
-    std::stoll(yytext));
-}
+{number}                return MAKE_VALUE(NUMBER, make_long(yytext));
 {branch}                return MAKE_VALUE(BRANCH, std::string(yytext));
 {extra}                 return MAKE_VALUE(EXTRA, std::string(yytext));
 

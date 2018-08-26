@@ -2,13 +2,22 @@
 
 #include "templates.h"
 
+namespace primitives
+{
+
+void isDebuggerAttached();
+
+}
+
 #define PRIMITIVES_DO_WHILE(x) \
     do                         \
     {                          \
         x;                     \
     } while (0)
 
-#if defined(_MSC_VER) && defined(NDEBUG)
+#if !defined(NDEBUG)
+
+#if defined(_MSC_VER)
 
 #define DEBUG_BREAK_MSVC()                                                \
     static auto ANONYMOUS_VARIABLE_LINE(primitives_debug) = 1;            \
@@ -16,6 +25,17 @@
     DebugBreak()
 
 #define DEBUG_BREAK PRIMITIVES_DO_WHILE(DEBUG_BREAK_MSVC())
+
+#else
+
+#define DEBUG_BREAK()                                                                    \
+    static auto ANONYMOUS_VARIABLE_LINE(primitives_debug) = 1;                           \
+    if (ANONYMOUS_VARIABLE_LINE(primitives_debug) && ::primitives::isDebuggerAttached()) \
+    __asm__("int3")
+
+#define DEBUG_BREAK PRIMITIVES_DO_WHILE(DEBUG_BREAK())
+
+#endif
 
 #else
 
