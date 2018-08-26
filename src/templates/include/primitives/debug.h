@@ -5,7 +5,7 @@
 namespace primitives
 {
 
-void isDebuggerAttached();
+bool isDebuggerAttached();
 
 }
 
