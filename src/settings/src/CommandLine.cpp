@@ -419,7 +419,12 @@ void Option::setArgStr(StringRef S) {
 }
 
 // Initialise the general option category.
-OptionCategory cl::GeneralCategory("General options");
+OptionCategory GeneralCategory("General options");
+
+Option::Option(enum NumOccurrencesFlag OccurrencesFlag,
+    enum OptionHidden Hidden)
+    : Occurrences(OccurrencesFlag), Value(0), HiddenFlag(Hidden),
+    Formatting(NormalFormatting), Misc(0), Category(&GeneralCategory) {}
 
 void OptionCategory::registerCategory() {
   GlobalParser->registerCategory(this);

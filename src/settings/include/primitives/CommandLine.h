@@ -201,9 +201,6 @@ public:
   StringRef getDescription() const { return Description; }
 };
 
-// The general Option Category (used as default category).
-extern OptionCategory GeneralCategory;
-
 //===----------------------------------------------------------------------===//
 // SubCommand class
 //
@@ -336,9 +333,7 @@ public:
 
 protected:
   explicit Option(enum NumOccurrencesFlag OccurrencesFlag,
-                  enum OptionHidden Hidden)
-      : Occurrences(OccurrencesFlag), Value(0), HiddenFlag(Hidden),
-        Formatting(NormalFormatting), Misc(0), Category(&GeneralCategory) {}
+                  enum OptionHidden Hidden);
 
   inline void setNumAdditionalVals(unsigned n) { AdditionalVals = n; }
 
