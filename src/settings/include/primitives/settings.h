@@ -17,13 +17,12 @@
 #include <any>
 #include <iostream>
 
-#if defined(CPPAN_EXECUTABLE)
 #ifdef _WIN32
-#define EXPORT_FROM_EXECUTABLE __declspec(dllexport)
+    #if defined(CPPAN_EXECUTABLE)
+        #define EXPORT_FROM_EXECUTABLE __declspec(dllexport)
+    #endif
 #else
-// visibility default
-// set explicit for clang/gcc on *nix
-#endif
+    #define EXPORT_FROM_EXECUTABLE __attribute__((visibility ("default")))
 #endif
 
 #ifndef EXPORT_FROM_EXECUTABLE
@@ -612,6 +611,8 @@ private:
 PRIMITIVES_SETTINGS_API_EXTERN
 template struct PRIMITIVES_SETTINGS_API SettingStorage<::primitives::Settings>;
 #pragma warning(pop)
+#else
+template struct PRIMITIVES_SETTINGS_API SettingStorage<::primitives::Settings>;
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////

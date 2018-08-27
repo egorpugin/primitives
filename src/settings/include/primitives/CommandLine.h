@@ -653,7 +653,7 @@ template <typename... OptsTy> ValuesClass values(OptsTy... Options) {
 // not need replicated for every instance of the generic parser.  This also
 // allows us to put stuff into CommandLine.cpp
 //
-class generic_parser_base {
+class PRIMITIVES_SETTINGS_API generic_parser_base {
 protected:
   class GenericOptionInfo {
   public:
@@ -749,7 +749,7 @@ protected:
 // command line option for -help.  Because this is a simple mapping parser, the
 // data type can be any unsupported type.
 //
-template <class DataType> class parser : public generic_parser_base {
+template <class DataType> class PRIMITIVES_SETTINGS_API parser : public generic_parser_base {
 protected:
   class OptionInfo : public GenericOptionInfo {
   public:
@@ -856,7 +856,7 @@ protected:
 // basic_parser - The real basic parser is just a template wrapper that provides
 // a typedef for the provided data type.
 //
-template <class DataType> class basic_parser : public basic_parser_impl {
+template <class DataType> class PRIMITIVES_SETTINGS_API basic_parser : public basic_parser_impl {
 public:
   using parser_data_type = DataType;
   using OptVal = OptionValue<DataType>;
@@ -873,8 +873,8 @@ protected:
     PRIMITIVES_SETTINGS_API_EXTERN template class PRIMITIVES_SETTINGS_API parser<type>
 #else
 #define EXTERN_PARSER_TEMPLATE(type) \
-    extern template class basic_parser<type>; \
-    extern template class parser<type>
+    template class basic_parser<type>; \
+    template class parser<type>
 #endif
 
 //--------------------------------------------------
@@ -1421,11 +1421,19 @@ public:
   }
 };
 
+#ifdef _WIN32
 extern template class opt<unsigned>;
 extern template class opt<int>;
 extern template class opt<std::string>;
 extern template class opt<char>;
 extern template class opt<bool>;
+#else
+template class opt<unsigned>;
+template class opt<int>;
+template class opt<std::string>;
+template class opt<char>;
+template class opt<bool>;
+#endif
 
 //===----------------------------------------------------------------------===//
 // list_storage class
