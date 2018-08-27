@@ -79,6 +79,7 @@ static String getVersionString()
 //
 namespace primitives {
 namespace cl {
+#ifdef _WIN32
 template class basic_parser<bool>;
 template class basic_parser<boolOrDefault>;
 template class basic_parser<int>;
@@ -97,6 +98,7 @@ template class opt<int>;
 template class opt<std::string>;
 template class opt<char>;
 template class opt<bool>;
+#endif
 }
 } // end namespace primitives::cl
 

@@ -393,7 +393,9 @@ T &SettingStorage<T>::get(SettingsType type)
     return s;
 }
 
+#ifdef _WIN32
 template struct SettingStorage<primitives::Settings>;
+#endif
 
 primitives::SettingStorage<primitives::Settings> &getSettingStorage(primitives::SettingStorage<primitives::Settings> *v)
 {
