@@ -155,9 +155,11 @@ void build(Solution &s)
     win32helpers.Public += filesystem,
         "org.sw.demo.boost.dll-1"_dep,
         "org.sw.demo.boost.algorithm-1"_dep;
-    win32helpers += "Shell32.lib"_lib, "Ole32.lib"_lib;
     if (s.Settings.TargetOS.Type == OSType::Windows)
+    {
         win32helpers.Public += "UNICODE"_d;
+        win32helpers += "Shell32.lib"_lib, "Ole32.lib"_lib;
+    }
 
     ADD_LIBRARY_WITH_NAME(db_common, "db.common");
     db_common.Public += filesystem, templates,

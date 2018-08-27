@@ -323,13 +323,16 @@ public:
   void printOptionValues();
 
   void registerCategory(OptionCategory *cat) {
-    assert(count_if(RegisteredOptionCategories,
-                    [cat](const OptionCategory *Category) {
-             return cat->getName() == Category->getName();
-           }) == 0 &&
-           "Duplicate option categories");
-
-    RegisteredOptionCategories.insert(cat);
+      auto cats = count_if(RegisteredOptionCategories,
+          [cat](const OptionCategory *Category) {
+          return cat->getName() == Category->getName();
+      });
+      if (cats && !ignoreDuplicateCommandLineOptions)
+      {
+          assert(cats == 0 && "Duplicate option categories");
+      }
+      if (cats == 0)
+          RegisteredOptionCategories.insert(cat);
   }
 
   void registerSubCommand(SubCommand *sub) {

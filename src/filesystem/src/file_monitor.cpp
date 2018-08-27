@@ -108,7 +108,9 @@ void FileMonitor::start()
 
     t = make_thread([this]
     {
+#ifdef _WIN32
         uv_run(&loop, UV_RUN_DEFAULT);
+#endif
     });
 }
 
