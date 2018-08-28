@@ -93,9 +93,11 @@ void build(Solution &s)
         t += "src/.*"_rr;
     };
 
-    ADD_LIBRARY(templates);
     ADD_LIBRARY(context);
     ADD_LIBRARY(error_handling);
+
+    auto &templates = p.addTarget<StaticLibraryTarget>("templates");
+    setup_primitives(templates);
 
     ADD_LIBRARY(string);
     string.Public += "org.sw.demo.boost.algorithm-1"_dep;

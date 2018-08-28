@@ -15,8 +15,6 @@ bool isDebuggerAttached();
         x;                     \
     } while (0)
 
-#if !defined(NDEBUG)
-
 #if defined(_MSC_VER)
 
 #define DEBUG_BREAK_MSVC()                                                \
@@ -26,16 +24,14 @@ bool isDebuggerAttached();
 
 #define DEBUG_BREAK PRIMITIVES_DO_WHILE(DEBUG_BREAK_MSVC())
 
-#else
+#elif !defined(NDEBUG)
 
-#define DEBUG_BREAK()                                                                    \
+#define DEBUG_BREAK_INT3()                                                               \
     static auto ANONYMOUS_VARIABLE_LINE(primitives_debug) = 1;                           \
     if (ANONYMOUS_VARIABLE_LINE(primitives_debug) && ::primitives::isDebuggerAttached()) \
     __asm__("int3")
 
-#define DEBUG_BREAK PRIMITIVES_DO_WHILE(DEBUG_BREAK())
-
-#endif
+#define DEBUG_BREAK PRIMITIVES_DO_WHILE(DEBUG_BREAK_INT3())
 
 #else
 

@@ -65,3 +65,15 @@ void single_process_job(const path &fn, F && f)
         ScopedFileLock fl2(fn);
     }
 }
+
+template <typename F>
+bool try_single_process_job(const path &fn, F && f)
+{
+    ScopedFileLock fl(fn, std::defer_lock);
+    if (fl.try_lock())
+    {
+        std::forward<F>(f)();
+        return true;
+    }
+    return false;
+}
