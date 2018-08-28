@@ -12,6 +12,7 @@ void gen_sqlite2cpp(NativeExecutedTarget &t, const path &sql_file, const path &o
     auto out = t.BinaryDir / out_file;
 
     auto c = std::make_shared<Command>();
+    c->fs = t.getSolution()->fs;
     c->setProgram(tools_sqlite2cpp);
     c->args.push_back(sql_file.u8string());
     c->args.push_back(out.u8string());
@@ -34,6 +35,7 @@ void embed(NativeExecutedTarget &t, const path &in)
     auto out = t.BinaryDir / in.filename().stem();
 
     auto c = std::make_shared<Command>();
+    c->fs = t.getSolution()->fs;
     c->setProgram(embedder);
     c->working_directory = wdir;
     c->args.push_back(in.u8string());
