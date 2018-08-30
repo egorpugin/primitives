@@ -22,6 +22,10 @@
 #include <iostream>
 #include <mutex>
 
+#ifndef _WIN32
+extern char **environ;
+#endif
+
 auto &get_io_context()
 {
     static boost::asio::io_context io_context;
@@ -114,6 +118,14 @@ path resolve_executable(const std::vector<path> &paths)
     return path();
 }
 
+Command::Command()
+{
+}
+
+Command::~Command()
+{
+}
+
 String Command::print() const
 {
     String s;
@@ -122,6 +134,15 @@ String Command::print() const
         s += "\"" + a + "\" ";
     s.resize(s.size() - 1);
     return s;
+}
+
+path Command::getProgram() const
+{
+    if (!program.empty())
+        return program;
+    if (args.empty())
+        throw std::runtime_error("No program was set");
+    return args[0];
 }
 
 void Command::execute1(std::error_code *ec_in)
@@ -156,260 +177,6 @@ void Command::execute1(std::error_code *ec_in)
     if (working_directory.empty())
         working_directory = fs::current_path();
 
-    /*
-#ifdef _WIN32
-    // widen args
-    std::vector<std::wstring> wargs;
-    for (auto &a : args)
-        wargs.push_back(boost::nowide::widen(a));
-#else
-    const Strings &wargs = args;
-#endif
-
-    // local scope, so we automatically close and destroy everything on exit
-    CommandData d(get_io_context());
-
-    auto async_read = [this, &cv = d.cv, &d](const boost::system::error_code &ec, std::size_t s,
-        auto &out, auto &p, auto &out_buf, auto &&out_cb, auto &out_fs, auto &stream)
-    {
-        if (s)
-        {
-            String str(out_buf.begin(), out_buf.begin() + s);
-            out.text += str;
-            if (inherit || out.inherit)
-            {
-                // ???
-                if (!stream)
-                    stream.clear();
-                stream << str;
-            }
-            if (out.action)
-                out.action(str, !!ec);
-            if (!out.file.empty())
-                fwrite(&str[0], str.size(), 1, out_fs);
-        }
-
-        if (!ec)
-        {
-            p.async_read_some(boost::asio::buffer(out_buf), out_cb);
-        }
-        else
-        {
-            // win32: ec = 109, pipe is ended
-            if (p.is_open())
-            {
-                if (s)
-                {
-                    p.async_close();
-                    p.close();
-                    assert(false && "non zero message with closed pipe");
-                    throw std::runtime_error("primitives.command (" + std::to_string(__LINE__) + "): non zero message with closed pipe");
-                }
-                else
-                    p.close();
-            }
-            // if we somehow hit this w/o p.is_open(),
-            // we still consider pipe as closed and notice users
-            cv.notify_all();
-            d.stopped++;
-        }
-    };
-
-    d.out_cb = [this, &d, &async_read](const boost::system::error_code &ec, std::size_t s)
-    {
-        async_read(ec, s, out, d.pout, d.out_buf, d.out_cb,
-            d.out_fs,
-            std::cout);
-    };
-    d.err_cb = [this, &d, &async_read](const boost::system::error_code &ec, std::size_t s)
-    {
-        async_read(ec, s, err, d.perr, d.err_buf, d.err_cb,
-            out.file != err.file ? d.err_fs : d.out_fs,
-            std::cerr);
-    };
-
-    // setup buffers
-    d.out_buf.resize(buf_size);
-    d.err_buf.resize(buf_size);
-
-    // move this after process start?
-    // make a copy there below?
-    d.pout.async_read_some(boost::asio::buffer(d.out_buf), d.out_cb);
-    d.perr.async_read_some(boost::asio::buffer(d.err_buf), d.err_cb);
-
-    // run
-    auto on_exit = [](int exit, const std::error_code& ec_in)
-    {
-        // must be empty, pipes are closed in async_read_some() funcs
-        //d.pout.async_close();
-        //d.perr.async_close();
-    };
-
-    std::error_code ec;
-    auto error = [this, &ec_in, &ec]()
-    {
-        if (ec_in)
-        {
-            *ec_in = ec;
-            return;
-        }
-        throw std::runtime_error("Last command failed: " + print() + ", ec = " + ec.message());
-    };
-
-    bp::child c;
-    if (!out.file.empty() || !err.file.empty())
-    {
-        if (!out.file.empty() && !err.file.empty())
-        {
-            c = bp::child(
-                program.wstring()
-                , bp::args = wargs
-                , bp::start_dir = working_directory.wstring()
-
-                , bp::std_in < stdin
-                , bp::std_out > out.file
-                , bp::std_err > err.file
-
-                , ec // always use ec
-            );
-            if (ec)
-                error();
-            c.wait();
-            return;
-        }
-        else if (!out.file.empty())
-        {
-            c = bp::child(
-                program.wstring()
-                , bp::args = wargs
-                , bp::start_dir = working_directory.wstring()
-
-                , bp::std_in < stdin
-                , bp::std_out > out.file
-                , bp::std_err > d.perr
-
-                , ec // always use ec
-
-                , d.ios
-                // Without this line boost::process does not work well on linux
-                // in current setup.
-                // It cannot detect empty pipes.
-                , bp::on_exit(on_exit)
-            );
-            d.pout.close();
-            // do not increment d.stopped here,
-            // because asio will still call that callback once
-        }
-        else if (!err.file.empty())
-        {
-            c = bp::child(
-                program.wstring()
-                , bp::args = wargs
-                , bp::start_dir = working_directory.wstring()
-
-                , bp::std_in < stdin
-                , bp::std_out > d.pout
-                , bp::std_err > err.file
-
-                , ec // always use ec
-
-                , d.ios
-                // Without this line boost::process does not work well on linux
-                // in current setup.
-                // It cannot detect empty pipes.
-                , bp::on_exit(on_exit)
-            );
-            d.perr.close();
-            // do not increment d.stopped here,
-            // because asio will still call that callback once
-        }
-    }
-    else
-    {
-        c = bp::child(
-            program.wstring()
-            , bp::args = wargs
-            , bp::start_dir = working_directory.wstring()
-
-            , bp::std_in < stdin
-            , bp::std_out > d.pout
-            , bp::std_err > d.perr
-
-            , ec // always use ec
-
-            , d.ios
-            // Without this line boost::process does not work well on linux
-            // in current setup.
-            // It cannot detect empty pipes.
-            , bp::on_exit(on_exit)
-        );
-    }
-
-    // some critical error during process creation
-    //if (!c || ec)
-    if (ec)
-    {
-        while (c.running())
-            d.ios.poll_one();
-        while (d.pout.is_open() || d.perr.is_open())
-            d.ios.poll_one();
-
-        error();
-    }
-
-    using namespace std::literals::chrono_literals;
-
-    auto delay = 100ms;
-    const auto max = 1s;
-    while (c.running())
-    {
-        // in case we're done or two pipes were closed, we do not wait in cv anymore
-        if (d.ios.poll_one())
-        {
-            delay = 100ms;
-            continue;
-        }
-        // no jobs available, do a small sleep waiting for process
-        delay = delay > max ? max : delay;
-        c.wait_for(delay);
-        delay += 100ms;
-    }
-
-    while (d.pout.is_open() || d.perr.is_open())
-    {
-        // in case we're done or two pipes were closed, we do not wait in cv anymore
-        if (d.ios.poll_one())
-        {
-            delay = 100ms;
-            continue;
-        }
-
-        // no jobs available, do a small sleep waiting for pipes closed
-        std::unique_lock<std::mutex> lk(d.m);
-        delay = delay > max ? max : delay;
-        d.cv.wait_for(lk, delay, [&d] {return !d.pout.is_open() && !d.perr.is_open(); });
-        delay += 100ms;
-    }
-
-    // cv notifcation may hang a bit, so in async handler it will be called on destroyed object
-    while (d.stopped != 2)
-    {
-        // in case we're done or two pipes were closed, we do not wait in cv anymore
-        if (d.ios.poll_one())
-        {
-            delay = 100ms;
-            continue;
-        }
-
-        // no jobs available, do a small sleep waiting for pipes closed
-        std::unique_lock<std::mutex> lk(d.m);
-        delay = delay > max ? max : delay;
-        d.cv.wait_for(lk, delay, [&d] {return d.stopped == 2; });
-        delay += 100ms;
-    }
-
-    exit_code = c.exit_code();*/
-
     // current loop
     uv_loop_t loop;
     uv_loop_init(&loop);
@@ -417,6 +184,7 @@ void Command::execute1(std::error_code *ec_in)
     // data holders, all strings are utf-8
     auto prog = program.u8string();
     auto wdir = working_directory.u8string();
+    auto in_file_s = in.file.u8string();
     auto out_file_s = out.file.u8string();
     auto err_file_s = err.file.u8string();
     int r;
@@ -429,18 +197,18 @@ void Command::execute1(std::error_code *ec_in)
     uv_args.push_back(nullptr); // last null
 
     // setup pipes
-    uv_fs_t out_file_req, err_file_req;
-    uv_pipe_t pout = { 0 }, perr = { 0 };
+    uv_fs_t in_file_req, out_file_req, err_file_req;
+    uv_pipe_t pin = { 0 }, pout = { 0 }, perr = { 0 };
+    pin.data = &this->in;
     pout.data = &this->out;
     perr.data = &this->err;
 
     uv_stdio_container_t child_stdio[3];
-    child_stdio[0].flags = UV_IGNORE;
 
     if (inherit)
         out.inherit = err.inherit = true;
 
-    auto setup_pipe = [&loop, &child_stdio](auto &stream, int fd, auto &pipe, auto &file_req, auto &file)
+    auto setup_pipe = [&loop, &child_stdio](auto &stream, int fd, auto &pipe, auto &file_req, auto &file, bool out = true)
     {
         if (stream.inherit)
         {
@@ -449,18 +217,35 @@ void Command::execute1(std::error_code *ec_in)
         }
         else if (!stream.file.empty())
         {
-            uv_fs_open(&loop, &file_req, file.c_str(), O_CREAT | O_RDWR, 0644, NULL);
-            uv_fs_req_cleanup(&file_req);
-            child_stdio[fd].flags = UV_INHERIT_FD;
-            child_stdio[fd].data.fd = file_req.result;
+            if (out)
+            {
+                uv_fs_open(&loop, &file_req, file.c_str(), O_CREAT | O_RDWR, 0644, NULL);
+                uv_fs_req_cleanup(&file_req);
+                child_stdio[fd].flags = UV_INHERIT_FD;
+                child_stdio[fd].data.fd = file_req.result;
+            }
+            else
+            {
+                //uv_pipe_init(&loop, &pipe, 0);
+                uv_fs_open(&loop, &file_req, file.c_str(), O_RDONLY | O_BINARY, 0644, NULL);
+                uv_fs_req_cleanup(&file_req);
+                child_stdio[fd].flags = UV_INHERIT_FD;//(uv_stdio_flags)(UV_CREATE_PIPE | UV_READABLE_PIPE);
+                child_stdio[fd].data.fd = file_req.result;
+            }
         }
         else
         {
-            uv_pipe_init(&loop, &pipe, 0);
-            child_stdio[fd].flags = (uv_stdio_flags)(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-            child_stdio[fd].data.stream = (uv_stream_t*)&pipe;
+            if (out)
+            {
+                uv_pipe_init(&loop, &pipe, 0);
+                child_stdio[fd].flags = (uv_stdio_flags)(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
+                child_stdio[fd].data.stream = (uv_stream_t*)&pipe;
+            }
+            else
+                child_stdio[0].flags = UV_IGNORE;
         }
     };
+    setup_pipe(in, 0, pin, in_file_req, in_file_s, false);
     setup_pipe(out, 1, pout, out_file_req, out_file_s);
     setup_pipe(err, 2, perr, err_file_req, err_file_s);
 
@@ -479,6 +264,38 @@ void Command::execute1(std::error_code *ec_in)
     options.args = uv_args.data();
     options.stdio = child_stdio;
     options.stdio_count = 3;
+
+    // set env
+    std::vector<char *> env;
+    std::vector<String> env_data;
+    if (!environment.empty())
+    {
+#ifdef _WIN32
+        auto lpvEnv = GetEnvironmentStrings();
+        if (!lpvEnv)
+            throw std::runtime_error("GetEnvironmentStrings failed: " + std::to_string(GetLastError()));
+
+        auto lpszVariable = (LPTSTR)lpvEnv;
+        while (*lpszVariable)
+        {
+            env_data.push_back(lpszVariable);
+            lpszVariable += lstrlen(lpszVariable) + 1;
+        }
+        FreeEnvironmentStrings(lpvEnv);
+#else
+        for (int i = 0; environ[i]; i++)
+            env_data.push_back(environ[i]);
+#endif
+    }
+    for (auto &[k, v] : environment)
+        env_data.push_back(k + "=" + v);
+    for (auto &e : env_data)
+        env.push_back(e.data());
+    if (!env.empty() || !inherit_current_evironment)
+    {
+        env.push_back(0);
+        options.env = env.data();
+    }
 
     // child handle
     uv_process_t child_req = { 0 };
@@ -539,6 +356,8 @@ void Command::execute1(std::error_code *ec_in)
         else if (!stream.file.empty())
             uv_fs_close(&loop, &file_req, file_req.result, 0);
     };
+    if (child_stdio[0].flags != UV_IGNORE)
+        close(in, pin, in_file_req);
     close(out, pout, out_file_req);
     close(err, perr, err_file_req);
 

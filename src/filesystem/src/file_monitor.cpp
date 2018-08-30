@@ -116,6 +116,9 @@ void FileMonitor::start()
 
 void FileMonitor::addFile(const path &p, record::Callback cb)
 {
+    if (p.empty())
+        return;
+
     auto dir = p;
     if (fs::is_regular_file(p))
         dir = p.parent_path();

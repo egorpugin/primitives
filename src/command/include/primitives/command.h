@@ -37,12 +37,13 @@ struct PRIMITIVES_COMMAND_API Command
     // input
     path program;
     Strings args;
+    bool inherit_current_evironment = true;
     StringMap<String> environment;
     path working_directory;
 
     // output
     optional<int64_t> exit_code;
-    //Stream input
+    Stream in;
     Stream out;
     Stream err;
     // more streams
@@ -54,14 +55,16 @@ struct PRIMITIVES_COMMAND_API Command
     //bool capture = true; // by default - we can make redirect to null by default instead
     bool inherit = false;
 
-    Command() = default;
-    virtual ~Command() = default;
+    Command();
+    virtual ~Command();
 
     virtual void execute() { execute1(); }
     virtual void execute(std::error_code &ec) { execute1(&ec); }
     void write(path p) const;
     String print() const;
     String getError() const;
+
+    virtual path getProgram() const;
 
     static void execute(const path &p);
     static void execute(const path &p, std::error_code &ec);

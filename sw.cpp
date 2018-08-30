@@ -11,8 +11,7 @@ void gen_sqlite2cpp(NativeExecutedTarget &t, const path &sql_file, const path &o
 
     auto out = t.BinaryDir / out_file;
 
-    auto c = std::make_shared<Command>();
-    c->fs = t.getSolution()->fs;
+    SW_MAKE_COMMAND_AND_ADD(c, t);
     c->setProgram(tools_sqlite2cpp);
     c->args.push_back(sql_file.u8string());
     c->args.push_back(out.u8string());
@@ -20,7 +19,6 @@ void gen_sqlite2cpp(NativeExecutedTarget &t, const path &sql_file, const path &o
     c->addInput(sql_file);
     c->addOutput(out);
     t += out;
-    t.Storage.push_back(c);
 }
 
 void embed(NativeExecutedTarget &t, const path &in)
@@ -34,8 +32,7 @@ void embed(NativeExecutedTarget &t, const path &in)
     auto wdir = in.parent_path();
     auto out = t.BinaryDir / in.filename().stem();
 
-    auto c = std::make_shared<Command>();
-    c->fs = t.getSolution()->fs;
+    SW_MAKE_COMMAND_AND_ADD(c, t);
     c->setProgram(embedder);
     c->working_directory = wdir;
     c->args.push_back(in.u8string());
@@ -43,7 +40,6 @@ void embed(NativeExecutedTarget &t, const path &in)
     c->addInput(in);
     c->addOutput(out);
     t += out;
-    t.Storage.push_back(c);
 }
 
 #pragma sw header off
@@ -115,7 +111,7 @@ void build(Solution &s)
         "org.sw.demo.boost.system-1"_dep;
 
     ADD_LIBRARY(command);
-    command.Public += templates, filesystem,
+    command.Public += filesystem,
         "org.sw.demo.boost.process-1"_dep;
     if (s.Settings.TargetOS.Type == OSType::Windows)
         command.Public += "Shell32.lib"_l;
@@ -218,7 +214,7 @@ void build(Solution &s)
     tools_sqlite2cpp += filesystem, context, sw_main, "org.sw.demo.sqlite3"_dep;
 
     ADD_LIBRARY(version);
-    version.Public += hash, templates,
+    version.Public += templates,
         "org.sw.demo.fmt-5"_dep,
         "org.sw.demo.imageworks.pystring-1"_dep;
     gen_ragel(version, "src/version.rl");

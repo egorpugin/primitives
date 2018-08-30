@@ -8,8 +8,6 @@
 
 #include <primitives/filesystem.h>
 
-#include <boost/container_hash/hash.hpp>
-
 PRIMITIVES_HASH_API
 String generate_random_alnum_sequence(uint32_t len);
 
@@ -102,11 +100,4 @@ bool check_strong_file_hash(const T &data, const String &hash)
     if (f == HashType::blake2b_512 && s == HashType::sha3_256)
         return hash == strong_file_hash_blake2b_sha3(data);
     throw std::runtime_error("Unknown hash type(s)");
-}
-
-template <class T>
-inline size_t hash_combine(size_t &hash, const T &v)
-{
-    boost::hash_combine(hash, v);
-    return hash;
 }

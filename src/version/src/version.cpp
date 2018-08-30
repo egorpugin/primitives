@@ -5,6 +5,7 @@
 #include <fmt/format.h>
 #include <primitives/constants.h>
 #include <primitives/hash.h>
+#include <primitives/hash_combine.h>
 
 #include <pystring.h>
 

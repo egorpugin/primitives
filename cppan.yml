@@ -339,8 +339,6 @@ projects:
 
         dependencies:
             public:
-                hash:
-                    version: "*"
                 templates:
                     version: "*"
                 pvt.cppan.demo.ragel:
