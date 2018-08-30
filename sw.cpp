@@ -214,7 +214,7 @@ void build(Solution &s)
     tools_sqlite2cpp += filesystem, context, sw_main, "org.sw.demo.sqlite3"_dep;
 
     ADD_LIBRARY(version);
-    version.Public += templates,
+    version.Public += string, templates,
         "org.sw.demo.fmt-5"_dep,
         "org.sw.demo.boost.container_hash-1"_dep,
         "org.sw.demo.imageworks.pystring-1"_dep;

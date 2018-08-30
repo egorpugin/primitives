@@ -339,6 +339,8 @@ projects:
 
         dependencies:
             public:
+                string:
+                    version: "*"
                 templates:
                     version: "*"
                 pvt.cppan.demo.boost.container_hash:
