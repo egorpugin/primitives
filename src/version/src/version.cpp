@@ -4,8 +4,8 @@
 
 #include <fmt/format.h>
 #include <primitives/constants.h>
-#include <primitives/hash.h>
 #include <primitives/hash_combine.h>
+#include <primitives/string.h>
 
 #include <pystring.h>
 
@@ -567,11 +567,11 @@ void Version::format(std::string &s) const
         return {};
     };
 
-    auto get_optional = [this](const auto &n)
+    auto get_optional = [this](const auto &n) -> String
     {
         if (n)
             return "." + std::to_string(n.value());
-        return ""s;
+        return {};
     };
 
 #define VAR(v, l, f) auto v ## l = f(v)
