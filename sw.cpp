@@ -89,7 +89,6 @@ void build(Solution &s)
         t += "src/.*"_rr;
     };
 
-    ADD_LIBRARY(context);
     ADD_LIBRARY(error_handling);
 
     auto &templates = p.addTarget<StaticLibraryTarget>("templates");
@@ -104,6 +103,9 @@ void build(Solution &s)
         "org.sw.demo.boost.filesystem-1"_dep,
         "org.sw.demo.boost.thread-1"_dep,
         "org.sw.demo.grisumbras.enum_flags-master"_dep;
+
+    ADD_LIBRARY(context);
+    context.Public += filesystem;
 
     ADD_LIBRARY(executor);
     executor.Public += templates,

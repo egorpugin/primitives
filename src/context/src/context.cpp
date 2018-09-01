@@ -131,63 +131,6 @@ void Context::decreaseIndent(const Text &s, int n)
     addLine(s);
 }
 
-void Context::beginBlock(const Text &s, bool indent)
-{
-    if (!s.empty())
-        addLine(s);
-    addLine("{");
-    if (indent)
-        increaseIndent();
-}
-
-void Context::endBlock(bool semicolon)
-{
-    decreaseIndent();
-    emptyLines(0);
-    addLine(semicolon ? "};" : "}");
-}
-
-void Context::beginFunction(const Text &s)
-{
-    beginBlock(s);
-}
-
-void Context::endFunction()
-{
-    endBlock();
-    addLine();
-}
-
-void Context::beginNamespace(const Text &s)
-{
-    addLineNoSpace("namespace " + s);
-    addLineNoSpace("{");
-    addLine();
-    namespaces.push(s);
-}
-
-void Context::endNamespace(const Text &ns)
-{
-    Text s = ns;
-    if (!namespaces.empty() && ns.empty())
-    {
-        s = namespaces.top();
-        namespaces.pop();
-    }
-    addLineNoSpace("} // namespace " + s);
-    addLine();
-}
-
-void Context::ifdef(const Text &s)
-{
-    addLineNoSpace("#ifdef " + s);
-}
-
-void Context::endif()
-{
-    addLineNoSpace("#endif");
-}
-
 void Context::trimEnd(size_t n)
 {
     if (lines.empty())
@@ -390,4 +333,202 @@ void Context::addWithRelativeIndent(const Context &rhs)
 void Context::printToFile(FILE* out) const
 {
     fprintf(out, "%s", getText().c_str());
+}
+
+void CppContext::beginBlock(const Text &s, bool indent)
+{
+    if (!s.empty())
+        addLine(s);
+    addLine("{");
+    if (indent)
+        increaseIndent();
+}
+
+void CppContext::endBlock(bool semicolon)
+{
+    decreaseIndent();
+    emptyLines(0);
+    addLine(semicolon ? "};" : "}");
+}
+
+void CppContext::beginFunction(const Text &s)
+{
+    beginBlock(s);
+}
+
+void CppContext::endFunction()
+{
+    endBlock();
+    addLine();
+}
+
+void CppContext::beginNamespace(const Text &s)
+{
+    addLineNoSpace("namespace " + s);
+    addLineNoSpace("{");
+    addLine();
+    namespaces.push(s);
+}
+
+void CppContext::endNamespace(const Text &ns)
+{
+    Text s = ns;
+    if (!namespaces.empty() && ns.empty())
+    {
+        s = namespaces.top();
+        namespaces.pop();
+    }
+    addLineNoSpace("} // namespace " + s);
+    addLine();
+}
+
+void CppContext::ifdef(const Text &s)
+{
+    addLineNoSpace("#ifdef " + s);
+}
+
+void CppContext::endif()
+{
+    addLineNoSpace("#endif");
+}
+
+BinaryContext::BinaryContext()
+{
+}
+
+BinaryContext::BinaryContext(size_t size)
+    : buf_(new std::vector<uint8_t>())
+{
+    buf_->reserve(size);
+    size_ = buf_->size();
+    skip(0);
+}
+
+BinaryContext::BinaryContext(const std::string &s)
+    : buf_(new std::vector<uint8_t>(&s[0], &s[s.size()]))
+{
+    skip(0);
+    size_ = buf_->size();
+    end_ = index_ + size_;
+}
+
+BinaryContext::BinaryContext(const std::vector<uint8_t> &buf, size_t data_offset)
+    : buf_(new std::vector<uint8_t>(buf)), data_offset(data_offset)
+{
+    skip(0);
+    size_ = buf_->size();
+    end_ = index_ + size_;
+}
+
+BinaryContext::BinaryContext(const BinaryContext &rhs, size_t size)
+    : buf_(rhs.buf_)
+{
+    index_ = rhs.index_;
+    data_offset = rhs.data_offset;
+    ptr = rhs.ptr;
+    size_ = size;
+    end_ = index_ + size_;
+    rhs.skip(size);
+}
+
+BinaryContext::BinaryContext(const BinaryContext &rhs, size_t size, size_t offset)
+    : buf_(rhs.buf_)
+{
+    index_ = offset;
+    data_offset = offset;
+    size_ = size;
+    ptr = (uint8_t *)buf_->data() + index_;
+    end_ = index_ + size_;
+}
+
+size_t BinaryContext::_read(void *dst, size_t size, size_t offset) const
+{
+    if (!buf_)
+        throw std::logic_error("BinaryContext: not initialized");
+    if (index_ >= end_)
+        throw std::logic_error("BinaryContext: out of range");
+    if (index_ + offset + size > end_)
+        throw std::logic_error("BinaryContext: too much data");
+    memcpy(dst, buf_->data() + index_ + offset, size);
+    skip(size + offset);
+    return size;
+}
+
+size_t BinaryContext::_write(const void *src, size_t size)
+{
+    if (!buf_)
+    {
+        buf_ = std::make_shared<std::vector<uint8_t>>(size);
+        end_ = size_ = buf_->size();
+    }
+    if (index_ > end_)
+        throw std::logic_error("BinaryContext: out of range");
+    if (index_ + size > end_)
+    {
+        buf_->resize(index_ + size);
+        end_ = size_ = buf_->size();
+    }
+    memcpy((uint8_t *)buf_->data() + index_, src, size);
+    skip(size);
+    return size;
+}
+
+void BinaryContext::skip(int n) const
+{
+    if (!buf_)
+        throw std::logic_error("BinaryContext: not initialized");
+    index_ += n;
+    data_offset += n;
+    ptr = (uint8_t *)buf_->data() + index_;
+}
+
+void BinaryContext::reset() const
+{
+    index_ = 0;
+    data_offset = 0;
+    ptr = (uint8_t *)buf_->data();
+}
+
+void BinaryContext::seek(size_t size) const
+{
+    reset();
+    skip(size);
+}
+
+bool BinaryContext::check(int index) const
+{
+    return index_ == index;
+}
+
+bool BinaryContext::eof() const
+{
+    return index_ == end_;
+}
+
+size_t BinaryContext::index() const
+{
+    return index_;
+}
+
+size_t BinaryContext::size() const
+{
+    return size_;
+}
+
+const std::vector<uint8_t> &BinaryContext::buf() const
+{
+    if (!buf_)
+        throw std::logic_error("BinaryContext: not initialized");
+    return *buf_;
+}
+
+void BinaryContext::load(const path &fn)
+{
+    *this = read_file(fn);
+}
+
+void BinaryContext::save(const path &fn)
+{
+    ScopedFile f(fn, "wb");
+    fwrite(buf_->data(), 1, data_offset, f.getHandle());
 }

@@ -70,6 +70,11 @@ projects:
         type: library
 
         root_directory: src/context
+
+        dependencies:
+            filesystem:
+                version: "*"
+
     cron:
         name: cron
         type: library
@@ -546,8 +551,6 @@ projects:
         files: src/tools/sqlpp11.sqlite2cpp.cpp
 
         dependencies:
-            filesystem:
-                version: "*"
             context:
                 version: "*"
             sw.main:

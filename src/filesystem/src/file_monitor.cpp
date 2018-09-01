@@ -120,8 +120,17 @@ void FileMonitor::addFile(const path &p, record::Callback cb)
         return;
 
     auto dir = p;
-    if (fs::is_regular_file(p))
+    error_code ec;
+    if (fs::is_regular_file(p, ec))
         dir = p.parent_path();
+    if (ec)
+        return;
+
+#ifdef _WIN32
+    dir = normalize_path_windows(dir);
+#else
+    dir = normalize_path(dir);
+#endif
 
     boost::upgrade_lock lk(m);
     auto di = dir_files.find(dir);

@@ -145,7 +145,7 @@ int main(int argc, char **argv)
     sqlite3_open(":memory:", &db);
     execute(sql.c_str());
 
-    Context ctx;
+    CppContext ctx;
 
     // start printing
     ctx.addLine("// generated file, do not edit");
