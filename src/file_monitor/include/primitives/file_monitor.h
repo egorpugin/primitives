@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "filesystem.h"
+#include <primitives/filesystem.h>
 
 #include <uv.h>
 #include <boost/thread/shared_mutex.hpp>
@@ -23,7 +23,7 @@ namespace primitives
 namespace detail
 {
 
-PRIMITIVES_FILESYSTEM_API
+PRIMITIVES_FILE_MONITOR_API
 int uv_loop_close(uv_loop_t &loop, Strings &errors);
 
 }
@@ -31,7 +31,7 @@ int uv_loop_close(uv_loop_t &loop, Strings &errors);
 namespace filesystem
 {
 
-class PRIMITIVES_FILESYSTEM_API FileMonitor
+class PRIMITIVES_FILE_MONITOR_API FileMonitor
 {
     struct record
     {

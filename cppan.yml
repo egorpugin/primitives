@@ -56,7 +56,7 @@ projects:
                             -   _WIN32_WINNT=0x0601
         dependencies:
             public:
-                filesystem:
+                file_monitor:
                     version: "*"
                 templates:
                     version: "*"
@@ -86,6 +86,7 @@ projects:
                     version: "*"
                 executor:
                     version: "*"
+
     db.common:
         type: library
 
@@ -177,6 +178,16 @@ projects:
                     version: 1
                 pvt.cppan.demo.grisumbras.enum_flags:
                     version: master
+
+    file_monitor:
+        name: file_monitor
+        type: library
+
+        root_directory: src/file_monitor
+        dependencies:
+            public:
+                filesystem:
+                    version: "*"
                 pvt.cppan.demo.libuv:
                     version: 1
 

@@ -99,10 +99,13 @@ void build(Solution &s)
 
     ADD_LIBRARY(filesystem);
     filesystem.Public += string, templates,
-        "org.sw.demo.libuv-1"_dep,
         "org.sw.demo.boost.filesystem-1"_dep,
         "org.sw.demo.boost.thread-1"_dep,
         "org.sw.demo.grisumbras.enum_flags-master"_dep;
+
+    ADD_LIBRARY(file_monitor);
+    filesystem.Public += filesystem,
+        "org.sw.demo.libuv-1"_dep;
 
     ADD_LIBRARY(context);
     context.Public += filesystem;
@@ -113,7 +116,7 @@ void build(Solution &s)
         "org.sw.demo.boost.system-1"_dep;
 
     ADD_LIBRARY(command);
-    command.Public += filesystem,
+    command.Public += file_monitor,
         "org.sw.demo.boost.process-1"_dep;
     if (s.Settings.TargetOS.Type == OSType::Windows)
         command.Public += "Shell32.lib"_l;
