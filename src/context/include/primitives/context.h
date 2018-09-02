@@ -157,6 +157,7 @@ struct PRIMITIVES_CONTEXT_API BinaryContext
     {
         return _read(dst, size * sizeof(T), offset);
     }
+    size_t read(std::string &s);
 
     template <typename T>
     size_t write(const T &src)

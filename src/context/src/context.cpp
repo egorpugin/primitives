@@ -473,6 +473,15 @@ size_t BinaryContext::_write(const void *src, size_t size)
     return size;
 }
 
+size_t BinaryContext::read(std::string &s)
+{
+    s.clear();
+    while (*ptr)
+        s += *ptr++;
+    skip(s.size() + 1);
+    return s.size();
+}
+
 void BinaryContext::skip(int n) const
 {
     if (!buf_)
