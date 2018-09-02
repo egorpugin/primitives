@@ -227,5 +227,5 @@ protected:
     mutable uint8_t *ptr = 0;
     mutable size_t data_offset = 0;
     mutable size_t size_ = 0;
-    size_t end_;
+    size_t end_ = 0;
 };
