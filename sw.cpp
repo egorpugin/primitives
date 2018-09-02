@@ -104,7 +104,7 @@ void build(Solution &s)
         "org.sw.demo.grisumbras.enum_flags-master"_dep;
 
     ADD_LIBRARY(file_monitor);
-    filesystem.Public += filesystem,
+    file_monitor.Public += filesystem,
         "org.sw.demo.libuv-1"_dep;
 
     ADD_LIBRARY(context);
