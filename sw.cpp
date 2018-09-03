@@ -42,6 +42,36 @@ void embed(NativeExecutedTarget &t, const path &in)
     t += out;
 }
 
+void syncqt(NativeExecutedTarget &t, const Strings &modules)
+{
+    auto sqt = THIS_PREFIX "." "primitives.tools.syncqt" "-" THIS_VERSION_DEPENDENCY;
+    {
+        auto d = t + sqt;
+        d->Dummy = true;
+    }
+
+    auto v = t.pkg.version.toString();
+    for (auto &m : modules)
+    {
+        fs::create_directories(t.BinaryDir / "include" / m / v / m);
+
+        auto c = t.addCommand();
+        c << cmd::prog(sqt)
+            << "-s" << t.SourceDir
+            << "-b" << t.BinaryDir
+            << "-m" << m
+            << "-v" << v
+            << cmd::end()
+            << cmd::out(t.BinaryDir / "include" / m / m)
+            ;
+
+        t.Public += IncludeDirectory(t.BinaryDir / "include");
+        t.Public += IncludeDirectory(t.BinaryDir / "include" / m);
+        t.Public += IncludeDirectory(t.BinaryDir / "include" / m / v);
+        t.Public += IncludeDirectory(t.BinaryDir / "include" / m / v / m);
+    }
+}
+
 #pragma sw header off
 #endif
 
@@ -163,7 +193,7 @@ void build(Solution &s)
     if (s.Settings.TargetOS.Type == OSType::Windows)
     {
         win32helpers.Public += "UNICODE"_d;
-        win32helpers += "Shell32.lib"_lib, "Ole32.lib"_lib;
+        win32helpers += "Shell32.lib"_lib, "Ole32.lib"_lib, "Advapi32.lib"_lib, "user32.lib"_lib;
     }
 
     ADD_LIBRARY_WITH_NAME(db_common, "db.common");
@@ -217,6 +247,11 @@ void build(Solution &s)
     setup_primitives_no_all_sources(tools_sqlite2cpp);
     tools_sqlite2cpp += "src/tools/sqlpp11.sqlite2cpp.cpp";
     tools_sqlite2cpp += filesystem, context, sw_main, "org.sw.demo.sqlite3"_dep;
+
+    auto &tools_syncqt = p.addTarget<ExecutableTarget>("tools.syncqt");
+    setup_primitives_no_all_sources(tools_syncqt);
+    tools_syncqt += "src/tools/syncqt.cpp";
+    tools_syncqt += filesystem, sw_main;
 
     ADD_LIBRARY(version);
     version.Public += string, templates,
