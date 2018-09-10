@@ -52,6 +52,7 @@ struct PRIMITIVES_COMMAND_API Command
     int32_t pid = -1;
     size_t buf_size = 8192;
     bool use_parent_environment = true;
+    //bool protect_args_with_quotes = true;
     //bool capture = true; // by default - we can make redirect to null by default instead
     bool inherit = false;
 

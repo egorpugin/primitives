@@ -27,6 +27,43 @@
 extern char **environ;
 #endif
 
+#ifdef _WIN32
+// Returns length of resulting string, excluding null-terminator.
+// Use LocalFree() to free the buffer when it is no longer needed.
+// Returns 0 upon failure, use GetLastError() to get error details.
+String FormatNtStatus(NTSTATUS nsCode)
+{
+    // Get handle to ntdll.dll.
+    HMODULE hNtDll = LoadLibrary("NTDLL.DLL");
+
+    // Check for fail, user may use GetLastError() for details.
+    if (hNtDll == NULL) return {};
+
+    TCHAR *ppszMessage;
+
+    typedef LONG NTSTATUS;
+    using RtlNtStatusToDosErrorType = ULONG(*)(NTSTATUS Status);
+
+    auto RtlNtStatusToDosError = (RtlNtStatusToDosErrorType)GetProcAddress(hNtDll, "RtlNtStatusToDosError");
+
+    // Call FormatMessage(), note use of RtlNtStatusToDosError().
+    DWORD dwRes = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_FROM_HMODULE,
+        hNtDll, RtlNtStatusToDosError(nsCode), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR)&ppszMessage, 0, NULL);
+
+    // Free loaded dll module and decrease its reference count.
+    FreeLibrary(hNtDll);
+
+    if (!ppszMessage)
+        return {};
+
+    String s = ppszMessage;
+    LocalFree(ppszMessage);
+
+    return s;
+}
+#endif
+
 auto &get_io_context()
 {
     static boost::asio::io_context io_context;
@@ -132,7 +169,13 @@ String Command::print() const
     String s;
     s += "\"" + program.u8string() + "\" ";
     for (auto &a : args)
-        s += "\"" + a + "\" ";
+    {
+        //if (protect_args_with_quotes)
+            s += "\"" + a + "\"";
+        //else
+            //s += a;
+        s += " ";
+    }
     s.resize(s.size() - 1);
     return s;
 }
@@ -269,6 +312,7 @@ void Command::execute1(std::error_code *ec_in)
     // set env
     std::vector<char *> env;
     std::vector<String> env_data;
+    StringMap<String> env_map;
     if (!environment.empty())
     {
 #ifdef _WIN32
@@ -279,16 +323,22 @@ void Command::execute1(std::error_code *ec_in)
         auto lpszVariable = (LPTSTR)lpvEnv;
         while (*lpszVariable)
         {
-            env_data.push_back(lpszVariable);
+            String s(lpszVariable);
+            env_map[s.substr(0, s.find('='))] = s.substr(s.find('=') + 1);
             lpszVariable += lstrlen(lpszVariable) + 1;
         }
         FreeEnvironmentStrings(lpvEnv);
 #else
         for (int i = 0; environ[i]; i++)
-            env_data.push_back(environ[i]);
+        {
+            String s(environ[i]);
+            env_map[s.substr(0, s.find('='))] = s.substr(s.find('=') + 1);
+        }
 #endif
     }
     for (auto &[k, v] : environment)
+        env_map[k] = v;
+    for (auto &[k, v] : env_map)
         env_data.push_back(k + "=" + v);
     for (auto &e : env_data)
         env.push_back(e.data());
@@ -389,6 +439,17 @@ String Command::getError() const
     auto err = "command failed: " + print();
     if (exit_code)
         err += ", exit code = " + std::to_string(exit_code.value());
+#ifdef _WIN32
+    if (exit_code > 256)
+    {
+        std::ostringstream stream;
+        stream << "0x" << std::hex << std::uppercase << exit_code.value();
+        err += " (" + stream.str() + ")";
+        auto e = FormatNtStatus(exit_code.value());
+        if (!e.empty())
+            err += ": " + e;
+    }
+#endif
     for (auto &e : errors)
         err += ", " + e;
     return err;

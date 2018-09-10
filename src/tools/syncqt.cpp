@@ -280,7 +280,6 @@ int main(int argc, char **argv)
     cl::opt<path> bdir("bdir", cl::desc("binary dir"), cl::Required);
     cl::list<std::string> selected_modules_cl("modules", cl::desc("modules"), cl::SpaceSeparated);
     cl::opt<std::string> version("qt_version", cl::desc("version"), cl::Required);
-    cl::opt<std::string> x("x", cl::desc("version"));
 
     cl::alias sdirA("s", cl::desc("Alias for -sdir"), cl::aliasopt(sdir));
     cl::alias bdirA("b", cl::desc("Alias for -bdir"), cl::aliasopt(bdir));
@@ -327,8 +326,7 @@ int main(int argc, char **argv)
     for (auto &mm : modules)
     {
         auto m = mm.first;
-
-        std::ofstream master(bdir / "include" / m / m);
+        std::ostringstream master;
         master << "#pragma once" << "\n";
         master << "#include <" << m << "/" << m << "Depends>" << "\n";
 
@@ -414,6 +412,9 @@ int main(int argc, char **argv)
 
         std::ofstream v2(bdir / "include" / m / (m + "Version"));
         v2 << "#include \"" << boost::to_lower_copy(m) + "version.h" <<  "\"\n";
+
+        // make last to perform commit
+        std::ofstream(bdir / "include" / m / m) << master.str();
     }
 
     return 0;

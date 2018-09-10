@@ -137,7 +137,7 @@ static bool filter_cb(void* context, EXCEPTION_POINTERS* exinfo, MDRawAssertionI
         return true;
     }
 
-    google_breakpad::CrashGenerationClient c(pipe_name.c_str(), MiniDumpNormal, 0);
+    google_breakpad::CrashGenerationClient c(pipe_name.c_str(), MINIDUMP_TYPE::MiniDumpNormal, nullptr);
     if (!c.Register())
     {
         printf("CrashGenerationClient::Register failed\n");
