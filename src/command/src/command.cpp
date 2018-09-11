@@ -271,7 +271,11 @@ void Command::execute1(std::error_code *ec_in)
             else
             {
                 //uv_pipe_init(&loop, &pipe, 0);
-                uv_fs_open(&loop, &file_req, file.c_str(), O_RDONLY | O_BINARY, 0644, NULL);
+                uv_fs_open(&loop, &file_req, file.c_str(), O_RDONLY
+#ifdef _WIN32
+                           | O_BINARY
+#endif
+                           , 0644, NULL);
                 uv_fs_req_cleanup(&file_req);
                 child_stdio[fd].flags = UV_INHERIT_FD;//(uv_stdio_flags)(UV_CREATE_PIPE | UV_READABLE_PIPE);
                 child_stdio[fd].data.fd = file_req.result;
