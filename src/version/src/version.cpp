@@ -82,10 +82,26 @@ GenericNumericVersion::Number GenericNumericVersion::get(Level level) const
 
 std::string GenericNumericVersion::printVersion() const
 {
+    return printVersion(".");
+}
+
+std::string GenericNumericVersion::printVersion(Level level) const
+{
+    return printVersion(".", level);
+}
+
+std::string GenericNumericVersion::printVersion(const std::string &delimeter) const
+{
+    return printVersion(".", numbers.size());
+}
+
+std::string GenericNumericVersion::printVersion(const String &delimeter, Level level) const
+{
     std::string s;
-    for (auto &n : numbers)
-        s += "." + std::to_string(n);
-    s = s.substr(1);
+    for (Level i = 0; i < level; i++)
+        s += std::to_string(numbers[i]) + delimeter;
+    if (!s.empty())
+        s.resize(s.size() - delimeter.size());
     return s;
 }
 
@@ -251,12 +267,27 @@ std::string Version::getBranch() const
     return branch;
 }
 
+std::string Version::toString() const
+{
+    return toString(std::string("."));
+}
+
 std::string Version::toString(Level level) const
+{
+    return toString(".", level);
+}
+
+std::string Version::toString(const std::string &delimeter) const
+{
+    return toString(delimeter, numbers.size());
+}
+
+std::string Version::toString(const String &delimeter, Level level) const
 {
     if (!branch.empty())
         return branch;
 
-    auto s = printVersion(/*level*/);
+    auto s = printVersion(delimeter, level);
     if (!extra.empty())
         s += "-" + printExtra();
     return s;
@@ -265,6 +296,11 @@ std::string Version::toString(Level level) const
 std::string Version::toString(const Version &v) const
 {
     return toString(v.numbers.size());
+}
+
+std::string Version::toString(const String &delimeter, const Version &v) const
+{
+    return toString(delimeter, v.numbers.size());
 }
 
 size_t Version::getStdHash() const

@@ -7,6 +7,7 @@
 #include <primitives/context.h>
 
 #include <algorithm>
+#include <cstdlib>
 
 Context::Lines &operator+=(Context::Lines &s1, const Context::Lines &s2)
 {

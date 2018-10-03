@@ -65,6 +65,9 @@ protected:
 
     Number get(Level level) const;
     std::string printVersion() const;
+    std::string printVersion(Level level = minimum_level) const;
+    std::string printVersion(const std::string &delimeter) const;
+    std::string printVersion(const std::string &delimeter, Level level) const;
     Level getLevel() const;
     void setLevel(Level level, Number fill = 0);
     void setFirstVersion();
@@ -117,8 +120,12 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     // return as const ref like extra?
     std::string getBranch() const;
 
-    std::string toString(Level level = minimum_level) const;
+    std::string toString() const;
+    std::string toString(Level level) const;
+    std::string toString(const std::string &delimeter) const;
+    std::string toString(const std::string &delimeter, Level level) const;
     std::string toString(const Version &v) const;
+    std::string toString(const std::string &delimeter, const Version &v) const;
 
     size_t getStdHash() const;
 
