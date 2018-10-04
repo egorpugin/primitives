@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 
 Context::Lines &operator+=(Context::Lines &s1, const Context::Lines &s2)
 {

@@ -162,10 +162,8 @@ void build(Solution &s)
     ADD_LIBRARY(log);
     log.Public += "org.sw.demo.boost.log-1"_dep;
 
-#ifndef SW_SELF_BUILD
     ADD_LIBRARY(cron);
     cron.Public += executor, log;
-#endif
 
     ADD_LIBRARY(yaml);
     yaml.Public += string,
@@ -203,10 +201,8 @@ void build(Solution &s)
     ADD_LIBRARY_WITH_NAME(db_sqlite3, "db.sqlite3");
     db_sqlite3.Public += db_common, "org.sw.demo.sqlite3"_dep;
 
-#ifndef SW_SELF_BUILD
     ADD_LIBRARY_WITH_NAME(db_postgresql, "db.postgresql");
     db_postgresql.Public += db_common, "org.sw.demo.jtv.pqxx-*"_dep;
-#endif
 
     auto &main = p.addTarget<StaticLibraryTarget>("main");
     setup_primitives(main);
