@@ -1,10 +1,10 @@
-#include "primitives/sw/settings.h"
+#include <string>
 
 #if defined(CPPAN_EXECUTABLE)
 namespace sw
 {
 
-String getProgramName()
+std::string getProgramName()
 {
     return PACKAGE_NAME_CLEAN;
 }
@@ -14,9 +14,9 @@ String getProgramName()
 namespace primitives
 {
 
-String getVersionString()
+std::string getVersionString()
 {
-    String s;
+    std::string s;
     s += ::sw::getProgramName();
     s += " version ";
     s += PACKAGE_VERSION;
