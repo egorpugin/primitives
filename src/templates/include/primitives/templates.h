@@ -129,7 +129,7 @@ constexpr void for_each(Tuple&& tuple, F&& f)
 
 inline void *getCurrentModuleSymbol()
 {
-    return &getCurrentModuleSymbol;
+    return (void *)&getCurrentModuleSymbol;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
