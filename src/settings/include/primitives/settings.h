@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "settings_version_string.h"
+
 #include <primitives/enums.h>
 #include <primitives/filesystem.h>
 #include <primitives/stdcompat/variant.h>
@@ -17,27 +19,8 @@
 #include <any>
 #include <iostream>
 
-#ifdef _WIN32
-    #if defined(CPPAN_EXECUTABLE)
-        #define EXPORT_FROM_EXECUTABLE __declspec(dllexport)
-    #endif
-#else
-    #define EXPORT_FROM_EXECUTABLE __attribute__((visibility ("default")))
-#endif
-
-#ifndef EXPORT_FROM_EXECUTABLE
-#define EXPORT_FROM_EXECUTABLE
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(disable : 4190) // function with C-linkage returns UDT
-#endif
-
 namespace primitives
 {
-
-EXPORT_FROM_EXECUTABLE
-String getVersionString();
 
 ////////////////////////////////////////////////////////////////////////////////
 

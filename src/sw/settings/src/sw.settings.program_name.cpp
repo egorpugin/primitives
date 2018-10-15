@@ -1,8 +1,4 @@
-#ifndef _MSC_VER
-#include <primitives/sw/settings.h>
-#else
-#include <string>
-#endif
+#include <primitives/sw/settings_program_name.h>
 
 #if defined(CPPAN_EXECUTABLE)
 namespace sw
