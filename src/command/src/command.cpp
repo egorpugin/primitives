@@ -7,8 +7,8 @@
 #include <boost/asio/io_context.hpp>
 
 #include <primitives/command.h>
-
 #include <primitives/file_monitor.h>
+#include <primitives/templates.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/asio/use_future.hpp>
@@ -28,6 +28,10 @@ extern char **environ;
 #endif
 
 #ifdef _WIN32
+#include <fcntl.h>
+#endif
+
+#ifdef _WIN32
 // Returns length of resulting string, excluding null-terminator.
 // Use LocalFree() to free the buffer when it is no longer needed.
 // Returns 0 upon failure, use GetLastError() to get error details.
@@ -37,7 +41,14 @@ String FormatNtStatus(NTSTATUS nsCode)
     HMODULE hNtDll = LoadLibrary("NTDLL.DLL");
 
     // Check for fail, user may use GetLastError() for details.
-    if (hNtDll == NULL) return {};
+    if (hNtDll == NULL)
+        return {};
+
+    SCOPE_EXIT
+    {
+        // Free loaded dll module and decrease its reference count.
+        FreeLibrary(hNtDll);
+    };
 
     TCHAR *ppszMessage;
 
@@ -51,8 +62,8 @@ String FormatNtStatus(NTSTATUS nsCode)
         hNtDll, RtlNtStatusToDosError(nsCode), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (LPTSTR)&ppszMessage, 0, NULL);
 
-    // Free loaded dll module and decrease its reference count.
-    FreeLibrary(hNtDll);
+    if (!dwRes)
+        return {};
 
     if (!ppszMessage)
         return {};
@@ -254,10 +265,19 @@ void Command::execute1(std::error_code *ec_in)
 
     auto setup_pipe = [&loop, &child_stdio](auto &stream, int fd, auto &pipe, auto &file_req, auto &file, bool out = true)
     {
+#if UV_VERSION_MAJOR > 1
+        // FIXME:
+        throw std::logic_error("FIXME: " __FILE__);
+        child_stdio[fd].data.file = uv_get_osfhandle(fd);
+#endif
         if (stream.inherit)
         {
             child_stdio[fd].flags = UV_INHERIT_FD;
+#if UV_VERSION_MAJOR > 1
+            child_stdio[fd].data.file = uv_get_osfhandle(fd);
+#else
             child_stdio[fd].data.fd = fd;
+#endif
         }
         else if (!stream.file.empty())
         {
@@ -266,7 +286,11 @@ void Command::execute1(std::error_code *ec_in)
                 uv_fs_open(&loop, &file_req, file.c_str(), O_CREAT | O_RDWR, 0644, NULL);
                 uv_fs_req_cleanup(&file_req);
                 child_stdio[fd].flags = UV_INHERIT_FD;
+#if UV_VERSION_MAJOR > 1
+                child_stdio[fd].data.file = uv_get_osfhandle(file_req.file);
+#else
                 child_stdio[fd].data.fd = file_req.result;
+#endif
             }
             else
             {
@@ -278,7 +302,11 @@ void Command::execute1(std::error_code *ec_in)
                            , 0644, NULL);
                 uv_fs_req_cleanup(&file_req);
                 child_stdio[fd].flags = UV_INHERIT_FD;//(uv_stdio_flags)(UV_CREATE_PIPE | UV_READABLE_PIPE);
+#if UV_VERSION_MAJOR > 1
+                child_stdio[fd].data.file = uv_get_osfhandle(file_req.result);
+#else
                 child_stdio[fd].data.fd = file_req.result;
+#endif
             }
         }
         else
@@ -298,10 +326,10 @@ void Command::execute1(std::error_code *ec_in)
     setup_pipe(err, 2, perr, err_file_req, err_file_s);
 
     // exit callback
-    auto on_exit = [](uv_process_t *req, int64_t exit_status, int term_signal)
+    auto on_exit = [](uv_process_t *child_req, int64_t exit_status, int term_signal)
     {
-        ((Command*)(req->data))->exit_code = exit_status;
-        uv_close((uv_handle_t*)req, 0);
+        ((Command*)(child_req->data))->exit_code = exit_status;
+        uv_close((uv_handle_t*)child_req, 0);
     };
 
     // options
@@ -312,6 +340,11 @@ void Command::execute1(std::error_code *ec_in)
     options.args = uv_args.data();
     options.stdio = child_stdio;
     options.stdio_count = 3;
+#if UV_VERSION_MAJOR > 1
+    options.attribute_list = attribute_list;
+#endif
+    if (detached)
+        options.flags |= UV_PROCESS_DETACHED;
 
     // set env
     std::vector<char *> env;
@@ -399,6 +432,9 @@ void Command::execute1(std::error_code *ec_in)
     start_capture(out, pout, "out");
     start_capture(err, perr, "err");
 
+    if (detached)
+        uv_unref((uv_handle_t*)&child_req);
+
     // main loop
     if (r = uv_run(&loop, UV_RUN_DEFAULT); r)
         errors.push_back("something goes wrong in the loop: "s + uv_strerror(r));
@@ -409,7 +445,11 @@ void Command::execute1(std::error_code *ec_in)
         if (!stream.inherit && stream.file.empty())
             uv_close((uv_handle_t*)&pipe, NULL);
         else if (!stream.file.empty())
+#if UV_VERSION_MAJOR > 1
+            uv_fs_close(&loop, &file_req, uv_get_osfhandle(file_req.result), 0);
+#else
             uv_fs_close(&loop, &file_req, file_req.result, 0);
+#endif
     };
     if (child_stdio[0].flags != UV_IGNORE)
         close(in, pin, in_file_req);

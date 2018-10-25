@@ -107,6 +107,7 @@ void build(Solution &s)
         }
         t.ApiName = "PRIMITIVES_" + boost::to_upper_copy(n2.toString("_")) + "_API";
         t.CPPVersion = CPPLanguageStandard::CPP17;
+        t.PackageDefinitions = true;
         return p;
     };
 

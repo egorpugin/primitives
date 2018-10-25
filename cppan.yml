@@ -62,8 +62,6 @@ projects:
                     version: "*"
                 pvt.cppan.demo.boost.process:
                     version: 1
-                pvt.cppan.demo.libuv:
-                    version: 1
 
     context:
         name: context
@@ -190,6 +188,8 @@ projects:
                     version: "*"
                 pvt.cppan.demo.libuv:
                     version: 1
+                #pvt.egorpugin.libuv:
+                    #version: master
 
     hash:
         name: hash

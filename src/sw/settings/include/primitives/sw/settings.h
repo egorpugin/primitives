@@ -82,7 +82,7 @@ struct setting : ::primitives::setting<DataType>
 } // namespace sw
 
 // consider removal?
-inline primitives::Settings &getSettings(primitives::SettingsType type)
+/*inline primitives::Settings &getSettings(primitives::SettingsType type)
 {
     auto &s = ::sw::getSettings(type);
     // TODO: optimize? return slices?
@@ -90,4 +90,4 @@ inline primitives::Settings &getSettings(primitives::SettingsType type)
     // static std::map<const char *PACKAGE_NAME_CLEAN, SettingsSlice> slices;
     s.prefix = PACKAGE_NAME_CLEAN;
     return s;
-}
+}*/
