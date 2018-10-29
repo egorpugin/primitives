@@ -120,7 +120,11 @@ Files unpack_file(const path &fn, const path &dst)
         if (type != AE_IFREG)
             continue;
 
-        path f = dst / archive_entry_pathname(entry);
+        auto fn = archive_entry_pathname(entry);
+        if (!fn)
+            continue;
+
+        path f = dst / fn;
         path fdir = f.parent_path();
         if (!fs::exists(fdir))
             fs::create_directories(fdir);

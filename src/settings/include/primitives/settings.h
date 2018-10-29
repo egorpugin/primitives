@@ -588,7 +588,7 @@ private:
     T settings[toIndex(SettingsType::Max)];
 };
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable : 4661)
 PRIMITIVES_SETTINGS_API_EXTERN

@@ -71,9 +71,11 @@ void FileMonitor::record::stop()
 
 void FileMonitor::record::cb(uv_fs_event_t* handle, const char* filename, int events, int status)
 {
+    auto r = (record*)handle->data;
+    if (status < 0)
+        return r->stop();
     if (!filename)
         return;
-    auto r = (record*)handle->data;
     auto fn = fs::u8path(filename);
     if (r->mon->has_file(r->dir, fn) && r->callback)
         r->callback(r->dir / fn);
