@@ -49,12 +49,14 @@ FileMonitor::record::record(FileMonitor *mon, const path &dir, Callback callback
     if (uv_fs_event_init(&mon->loop, &e))
         return;
     e.data = this;
-    if (uv_fs_event_start(&e, cb, dir_holder.c_str(), 0))
+    if (uv_fs_event_start(&e, cb, dir_holder.c_str(),
+        // was 0 = non recursive
+        UV_FS_EVENT_RECURSIVE
+    ) < 0)
     {
         // maybe unconditionally?
         if (uv_is_active((uv_handle_t*)&e))
             uv_close((uv_handle_t*)&e, 0);
-        return;
     }
 }
 
@@ -73,7 +75,11 @@ void FileMonitor::record::cb(uv_fs_event_t* handle, const char* filename, int ev
 {
     auto r = (record*)handle->data;
     if (status < 0)
+    {
+        if (status == UV_EBADF)
+            return;
         return r->stop();
+    }
     if (!filename)
         return;
     auto fn = fs::u8path(filename);
