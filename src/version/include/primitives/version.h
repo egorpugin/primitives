@@ -39,6 +39,14 @@ struct comparable_variant : std::variant<Args...>
     }
 };
 
+// enough numbers, here string goes first
+struct Extra : std::vector<comparable_variant<std::string, Number>>
+{
+    using Base = std::vector<comparable_variant<std::string, Number>>;
+
+    bool operator<(const Extra &) const;
+};
+
 }
 
 //template <3>
@@ -76,8 +84,7 @@ protected:
 
 struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
 {
-    // enough numbers, here string goes first
-    using Extra = std::vector<detail::comparable_variant<std::string, Number>>;
+    using Extra = detail::Extra;
 
     /// default is min()
     Version();
@@ -220,6 +227,7 @@ struct PRIMITIVES_VERSION_API VersionRange
     bool isEmpty() const;
     bool isOutside(const Version &) const;
     bool hasVersion(const Version &) const;
+    size_t size() const;
 
     optional<Version> getMinSatisfyingVersion(const std::set<Version> &) const;
     optional<Version> getMaxSatisfyingVersion(const std::set<Version> &) const;

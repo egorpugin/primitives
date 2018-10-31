@@ -674,6 +674,12 @@ TEST_CASE("Checking versions", "[version]")
     CHECK(Version() < Version("a"));
     CHECK(Version() != Version("a"));
     CHECK(Version("a") < Version("b"));
+
+    CHECK(Version(2, 14, 0, "rc16") != Version(2, 14, 0));
+    CHECK(Version(2, 14, 0, "rc16") < Version(2, 14, 0));
+    CHECK(Version(2, 14, 0, "rc16") <= Version(2, 14, 0));
+    CHECK_FALSE(Version(2, 14, 0, "rc16") > Version(2, 14, 0));
+    CHECK_FALSE(Version(2, 14, 0, "rc16") >= Version(2, 14, 0));
 }
 
 TEST_CASE("Checking version ranges", "[range]")
@@ -1299,6 +1305,28 @@ TEST_CASE("Checking version ranges", "[range]")
     {
         VersionRange v1(Version(1,67,0));
         CHECK(v1.toStringV1() == "1.67.0");
+    }
+
+    {
+        VersionRange v1(Version(2, 14, 0));
+        auto v = v1.getMaxSatisfyingVersion({ "2.14.0-rc16" });
+        CHECK(!v);
+    }
+
+    {
+        VersionRange v1(Version(2, 14, 0, "rc16"), Version(2, 14, 0));
+        CHECK(v1.size() == 1);
+        auto v = v1.getMaxSatisfyingVersion({ "2.14.0-rc16" });
+        CHECK(v);
+        CHECK(v.value() == "2.14.0-rc16");
+    }
+
+    {
+        VersionRange v1(Version(2, 14, 0, "rc16"), Version(2, 14, 0));
+        CHECK(v1.size() == 1);
+        auto v = v1.getMaxSatisfyingVersion({ "2.13.3", "2.14.0-rc16" });
+        CHECK(v);
+        CHECK(v.value() == "2.14.0-rc16");
     }
 }
 

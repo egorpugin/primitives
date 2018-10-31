@@ -40,6 +40,22 @@ static void throw_bad_version_range(const std::string &s)
 namespace primitives::version
 {
 
+namespace detail
+{
+
+bool Extra::operator<(const Extra &rhs) const
+{
+    if (empty() && rhs.empty())
+        return false;
+    if (rhs.empty())
+        return true;
+    if (empty())
+        return false;
+    return ::std::operator<(*this, rhs);
+}
+
+}
+
 GenericNumericVersion::GenericNumericVersion()
     : GenericNumericVersion(minimum_level)
 {
@@ -776,6 +792,11 @@ optional<VersionRange> VersionRange::parse(const std::string &s)
     else if (auto r = parse(vr, in); r)
         return {};
     return vr;
+}
+
+size_t VersionRange::size() const
+{
+    return range.size();
 }
 
 bool VersionRange::isEmpty() const
