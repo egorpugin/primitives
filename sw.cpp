@@ -29,17 +29,18 @@ void embed(NativeExecutedTarget &t, const path &in)
         d->Dummy = true;
     }
 
-    auto wdir = in.parent_path();
-    auto out = t.BinaryDir / in.filename().stem();
+    auto f = t.SourceDir / in;
+    auto wdir = f.parent_path();
+    auto out = t.BinaryDir / in.parent_path() / in.filename().stem();
 
     SW_MAKE_COMMAND_AND_ADD(c, t);
     c->setProgram(embedder);
     c->working_directory = wdir;
-    c->args.push_back(in.u8string());
+    c->args.push_back(f.u8string());
     c->args.push_back(out.u8string());
-    c->addInput(in);
+    c->addInput(f);
     c->addOutput(out);
-    t += out;
+    t += in, out;
 }
 
 void syncqt(NativeExecutedTarget &t, const Strings &modules)
