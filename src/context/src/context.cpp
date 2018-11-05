@@ -10,10 +10,67 @@
 #include <cstdlib>
 #include <cstring>
 
-Context::Lines &operator+=(Context::Lines &s1, const Context::Lines &s2)
+primitives::Context::Lines &operator+=(primitives::Context::Lines &s1, const primitives::Context::Lines &s2)
 {
     s1.insert(s1.end(), s2.begin(), s2.end());
     return s1;
+}
+
+namespace primitives
+{
+
+namespace detail
+{
+
+Line::Line(const Text &t, int n)
+    : text(t), n_indents(n)
+{}
+
+Line::Line(const Context &ctx, int n)
+    : context(&ctx), n_indents(n)
+{
+    context->parent_ = this;
+}
+
+Line::Line(Line &&l)
+{
+    text = std::move(l.text);
+    n_indents = l.n_indents;
+    context = l.context;
+    l.context = nullptr;
+}
+
+Line::~Line()
+{
+    if (context)
+        context->parent_ = nullptr;
+}
+
+Line& Line::operator+=(const Text &t)
+{
+    text += t;
+    return *this;
+}
+
+void Line::setText(const Text &t)
+{
+    text = t;
+}
+
+Line::Text &Line::back()
+{
+    if (context)
+        return context->lines.back().back();
+    return text;
+}
+
+Line::Text Line::getText() const
+{
+    if (context)
+        return context->getText();
+    return text;
+}
+
 }
 
 Context::Context(const Text &indent, const Text &newline)
@@ -32,18 +89,21 @@ Context &Context::operator=(const Context &ctx)
     return *this;
 }
 
+Context::~Context()
+{
+    if (parent_)
+    {
+        parent_->setText(getText());
+        parent_->context = nullptr;
+    }
+}
+
 void Context::copy_from(const Context &ctx)
 {
     lines = ctx.lines;
-    if (ctx.before_)
-        before_ = std::make_shared<Context>(*ctx.before_.get());
-    if (ctx.after_)
-        after_ = std::make_shared<Context>(*ctx.after_.get());
-
     n_indents = ctx.n_indents;
     indent = ctx.indent;
     newline = ctx.newline;
-    namespaces = ctx.namespaces;
 }
 
 void Context::initFromString(const std::string &s)
@@ -51,7 +111,7 @@ void Context::initFromString(const std::string &s)
     size_t p = 0;
     while (1)
     {
-        size_t p2 = s.find('\n', p);
+        size_t p2 = s.find(newline, p);
         if (p2 == s.npos)
             break;
         auto line = s.substr(p, p2 - p);
@@ -84,20 +144,66 @@ void Context::addText(const char* str, int n)
 
 void Context::addNoNewLine(const Text &s)
 {
-    lines.push_back(Line{ s, n_indents });
+    addLineWithIndent(s);
 }
 
-void Context::addLineNoSpace(const Text & s)
+void Context::addLineWithIndent(const Text &s)
 {
-    lines.push_back(Line{ s });
+    addLineWithIndent(s, n_indents);
+}
+
+void Context::addLineWithIndent(const Text &text, int n)
+{
+    auto p = text.find(newline);
+    if (p == text.npos)
+    {
+        addLine(Line{ text, n });
+        return;
+    }
+
+    size_t old_pos = 0;
+    Lines ls;
+    while (1)
+    {
+        ls.push_back(Line{text.substr(old_pos, p - old_pos), n});
+        p++;
+        old_pos = p;
+        p = text.find(newline, p);
+        if (p == text.npos)
+        {
+            ls.push_back(Line{text.substr(old_pos), n});
+            break;
+        }
+    }
+    lines.insert(lines.end(), ls.begin(), ls.end());
+}
+
+void Context::addLineNoSpace(const Text &s)
+{
+    addLineWithIndent(s, 0);
+}
+
+void Context::addLine(Line &&l)
+{
+    lines.emplace_back(std::move(l));
 }
 
 void Context::addLine(const Text &s)
 {
     if (s.empty())
-        lines.push_back(Line{});
+        addLine(Line{});
     else
-        lines.push_back({ s, n_indents });
+        addLineWithIndent(s);
+}
+
+void Context::addLine(const Context &ctx)
+{
+    addContext(ctx);
+}
+
+void Context::addContext(const Context &ctx)
+{
+    addLine(Line{ ctx, n_indents });
 }
 
 void Context::removeLine()
@@ -137,7 +243,7 @@ void Context::trimEnd(size_t n)
 {
     if (lines.empty())
         return;
-    auto &t = lines.back().text;
+    auto &t = lines.back().back();
     auto sz = t.size();
     if (n > sz)
         n = sz;
@@ -151,10 +257,14 @@ Context::Text Context::getText() const
     for (auto &line : lines)
     {
         Text space;
-        if (!line.text.empty())
+        if (!line.getText().empty())
+        {
             for (int i = 0; i < line.n_indents; i++)
                 space += indent;
-        s += space + line.text + newline;
+        }
+        else if (line.context)
+            continue; // we do not add empty line on empty existing context
+        s += space + line.getText() + newline;
     }
     return s;
 }
@@ -162,35 +272,25 @@ Context::Text Context::getText() const
 Context::Lines Context::getLines() const
 {
     Lines lines;
-    if (before_)
-        lines += before_->getLines();
     lines += this->lines;
-    if (after_)
-        lines += after_->getLines();
+    for (auto i = lines.begin(); i != lines.end(); i++)
+    {
+        if (i->context)
+        {
+            auto l2 = i->context->getLines();
+            for (auto &l : l2)
+                l.n_indents += i->n_indents;
+            i = lines.erase(i);
+            i = lines.insert(i, l2.begin(), l2.end());
+            i--;
+        }
+    }
     return lines;
 }
 
 void Context::setLines(const Lines &lines)
 {
-    before_.reset();
-    after_.reset();
     this->lines = lines;
-}
-
-void Context::mergeBeforeAndAfterLines()
-{
-    if (before_)
-    {
-        before_->mergeBeforeAndAfterLines();
-        lines.insert(lines.begin(), before_->getLinesRef().begin(), before_->getLinesRef().end());
-        before_.reset();
-    }
-    if (after_)
-    {
-        after_->mergeBeforeAndAfterLines();
-        lines.insert(lines.end(), after_->getLinesRef().begin(), after_->getLinesRef().end());
-        after_.reset();
-    }
 }
 
 void Context::setMaxEmptyLines(int n)
@@ -202,7 +302,7 @@ void Context::setMaxEmptyLines(int n)
         if (line == lines.end())
             break;
         bool empty = true;
-        for (auto &c : line->text)
+        for (auto &c : line->getText())
         {
             if (!isspace(c))
             {
@@ -220,7 +320,7 @@ void Context::setMaxEmptyLines(int n)
     for (auto line = lines.begin(); line != lines.end(); ++line)
     {
         bool empty = true;
-        for (auto &c : line->text)
+        for (auto &c : line->getText())
         {
             if (!isspace(c))
             {
@@ -240,41 +340,12 @@ void Context::setMaxEmptyLines(int n)
     }
 }
 
-void Context::splitLines()
-{
-    for (auto line = lines.begin(); line != lines.end(); ++line)
-    {
-        auto &text = line->text;
-        auto p = text.find('\n');
-        if (p == text.npos)
-            continue;
-
-        size_t old_pos = 0;
-        Lines ls;
-        while (1)
-        {
-            ls.push_back(Line{ text.substr(old_pos, p - old_pos), line->n_indents });
-            p++;
-            old_pos = p;
-            p = text.find('\n', p);
-            if (p == text.npos)
-            {
-                ls.push_back(Line{ text.substr(old_pos), line->n_indents });
-                break;
-            }
-        }
-        lines.insert(line, ls.begin(), ls.end());
-        line = lines.erase(line);
-        line--;
-    }
-}
-
 void Context::emptyLines(int n)
 {
     int e = 0;
     for (auto i = lines.rbegin(); i != lines.rend(); ++i)
     {
-        if (i->text.empty())
+        if (i->getText().empty())
             e++;
         else
             break;
@@ -292,19 +363,7 @@ void Context::emptyLines(int n)
 
 Context &Context::operator+=(const Context &rhs)
 {
-    if (before_ && rhs.before_)
-        before_->lines += rhs.before_->lines;
-    else if (rhs.before_)
-    {
-        before().lines += rhs.before_->lines;
-    }
     lines += rhs.lines;
-    if (after_ && rhs.after_)
-        after_->lines += rhs.after_->lines;
-    else if (rhs.after_)
-    {
-        after().lines += rhs.after_->lines;
-    }
     return *this;
 }
 
@@ -317,24 +376,7 @@ void Context::addWithRelativeIndent(const Context &rhs)
         l1 += l2;
     };
 
-    if (before_ && rhs.before_)
-        addWithRelativeIndent(before_->lines, rhs.before_->lines);
-    else if (rhs.before_)
-    {
-        addWithRelativeIndent(before().lines, rhs.before_->lines);
-    }
     addWithRelativeIndent(lines, rhs.lines);
-    if (after_ && rhs.after_)
-        addWithRelativeIndent(after_->lines, rhs.after_->lines);
-    else if (rhs.after_)
-    {
-        addWithRelativeIndent(after().lines, rhs.after_->lines);
-    }
-}
-
-void Context::printToFile(FILE* out) const
-{
-    fprintf(out, "%s", getText().c_str());
 }
 
 void CppContext::beginBlock(const Text &s, bool indent)
@@ -430,7 +472,7 @@ BinaryContext::BinaryContext(const BinaryContext &rhs, size_t size)
     ptr = rhs.ptr;
     size_ = size;
     end_ = index_ + size_;
-    rhs.skip(size);
+    rhs.skip((int)size);
 }
 
 BinaryContext::BinaryContext(const BinaryContext &rhs, size_t size, size_t offset)
@@ -452,7 +494,7 @@ size_t BinaryContext::_read(void *dst, size_t size, size_t offset) const
     if (index_ + offset + size > end_)
         throw std::logic_error("BinaryContext: too much data");
     memcpy(dst, buf_->data() + index_ + offset, size);
-    skip(size + offset);
+    skip((int)(size + offset));
     return size;
 }
 
@@ -471,7 +513,7 @@ size_t BinaryContext::_write(const void *src, size_t size)
         end_ = size_ = buf_->size();
     }
     memcpy((uint8_t *)buf_->data() + index_, src, size);
-    skip(size);
+    skip((int)size);
     return size;
 }
 
@@ -480,7 +522,7 @@ size_t BinaryContext::read(std::string &s)
     s.clear();
     while (*ptr)
         s += *ptr++;
-    skip(s.size() + 1);
+    skip((int)(s.size() + 1));
     return s.size();
 }
 
@@ -503,7 +545,7 @@ void BinaryContext::reset() const
 void BinaryContext::seek(size_t size) const
 {
     reset();
-    skip(size);
+    skip((int)size);
 }
 
 bool BinaryContext::check(int index) const
@@ -542,4 +584,6 @@ void BinaryContext::save(const path &fn)
 {
     ScopedFile f(fn, "wb");
     fwrite(buf_->data(), 1, data_offset, f.getHandle());
+}
+
 }

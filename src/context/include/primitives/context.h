@@ -14,44 +14,70 @@
 
 #include <primitives/filesystem.h>
 
-struct PRIMITIVES_CONTEXT_API Context
+namespace primitives
+{
+
+struct Context;
+
+namespace detail
+{
+
+struct Line
 {
     using Text = std::string;
 
-    struct Line
-    {
-        Text text;
-        int n_indents = 0;
+    int n_indents = 0;
+    const Context *context = nullptr;
 
-        Line() {}
-        Line(const Text &t, int n = 0)
-            : text(t), n_indents(n)
-        {}
+    Line() = default;
+    Line(const Line &) = default;
+    Line(Line &&);
+    Line(const Text &t, int n = 0);
+    Line(const Context &ctx, int n = 0);
+    ~Line();
 
-        Line& operator+=(const Text &t)
-        {
-            text += t;
-            return *this;
-        }
-    };
+    Line& operator+=(const Text &t);
 
+    Text &back();
+
+    Text getText() const;
+    void setText(const Text &t);
+
+private:
+    Text text;
+};
+
+}
+
+struct PRIMITIVES_CONTEXT_API Context
+{
+    using Line = detail::Line;
+    using Text = Line::Text;
     using Lines = std::list<Line>;
 
     //
     Context(const Text &indent = "    ", const Text &newline = "\n");
     Context(const Context &ctx);
     Context &operator=(const Context &ctx);
+    virtual ~Context();
 
     void initFromString(const std::string &s);
 
     void addLine(const Text &s = Text());
-    void addNoNewLine(const Text &s);
+    void addNoNewLine(const Text &s); // deprecated, use addLineWithIndent()
+    void addLineWithIndent(const Text &s);
+    void addLineWithIndent(const Text &s, int n);
     void addLineNoSpace(const Text &s);
     void removeLine();
     void removeLines(int n);
 
+    // insertLine()
+
     void addText(const Text &s);
     void addText(const char* str, int n);
+
+    void addLine(const Context &);
+    void addContext(const Context &);
 
     void increaseIndent(int n = 1);
     void decreaseIndent(int n = 1);
@@ -60,29 +86,13 @@ struct PRIMITIVES_CONTEXT_API Context
 
     void trimEnd(size_t n);
 
-    Text getText() const;
+    virtual Text getText() const;
 
     void setLines(const Lines &lines);
     Lines getLines() const;
     Lines &getLinesRef() { return lines; }
-    void mergeBeforeAndAfterLines();
 
-    void splitLines();
     void setMaxEmptyLines(int n);
-
-    Context &before()
-    {
-        if (!before_)
-            before_ = std::make_shared<Context>();
-        return *before_;
-    }
-    Context &after()
-    {
-        if (!after_)
-            after_ = std::make_shared<Context>();
-        return *after_;
-    }
-
     void emptyLines(int n = 1);
 
     // add with "as is" indent
@@ -92,41 +102,34 @@ struct PRIMITIVES_CONTEXT_API Context
 
     bool empty() const
     {
-        bool e = false;
-        if (before_)
-            e |= before_->empty();
-        e |= lines.empty();
-        if (after_)
-            e |= after_->empty();
-        return e;
+        return lines.empty();
     }
 
-    void printToFile(FILE* out) const;
-
-    void clear()
+    virtual void clear()
     {
         lines.clear();
-        before_.reset();
-        after_.reset();
-        while (!namespaces.empty())
-            namespaces.pop();
     }
 
 protected:
-    Lines lines;
-    std::shared_ptr<Context> before_;
-    std::shared_ptr<Context> after_;
+    mutable Lines lines;
+    mutable Line *parent_ = nullptr;
 
     int n_indents = 0;
     Text indent;
     Text newline;
-    std::stack<Text> namespaces;
 
     void copy_from(const Context &ctx);
+
+private:
+    void addLine(Line &&);
+
+    friend struct detail::Line;
 };
 
 struct PRIMITIVES_CONTEXT_API CppContext : Context
 {
+    using Base = Context;
+
     void beginBlock(const Text &s = "", bool indent = true);
     void endBlock(bool semicolon = false);
     void beginFunction(const Text &s = "");
@@ -136,6 +139,15 @@ struct PRIMITIVES_CONTEXT_API CppContext : Context
 
     void ifdef(const Text &s);
     void endif();
+
+    virtual void clear()
+    {
+        namespaces = decltype(namespaces)();
+        Base::clear();
+    }
+
+private:
+    std::stack<Text> namespaces;
 };
 
 struct PRIMITIVES_CONTEXT_API BinaryContext
@@ -229,3 +241,5 @@ protected:
     mutable size_t size_ = 0;
     size_t end_ = 0;
 };
+
+}

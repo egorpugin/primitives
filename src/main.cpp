@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <primitives/command.h>
+#include <primitives/context.h>
 #include <primitives/date_time.h>
 #include <primitives/executor.h>
 #include <primitives/filesystem.h>
@@ -590,6 +591,16 @@ TEST_CASE("Checking templates", "[templates]")
         std::thread([&] {f(); f(); f(); }).join();
         CHECK(i == 4);
     }
+}
+
+TEST_CASE("Checking context", "[context]")
+{
+    using namespace primitives;
+
+    Context ctx;
+    ctx.addLine();
+    ctx.addLine();
+    CHECK(ctx.getText() == "\n\n");
 }
 
 int main(int argc, char **argv)
