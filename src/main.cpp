@@ -18,7 +18,7 @@
 #include <iostream>
 
 #define CATCH_CONFIG_RUNNER
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 #define REQUIRE_TIME(e, t)                                                                       \
     do                                                                                           \
@@ -603,8 +603,15 @@ TEST_CASE("Checking context", "[context]")
     CHECK(ctx.getText() == "\n\n");
 }
 
+#include <primitives/http.h>
+#include <nlohmann/json.hpp>
+
 int main(int argc, char **argv)
 {
+    /*String url = "";
+    auto j = nlohmann::json::parse(download_file(url));
+    double temp = j["main"]["temp"];*/
+
     Catch::Session().run(argc, argv);
 
     return 0;

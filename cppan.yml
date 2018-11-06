@@ -438,10 +438,14 @@ projects:
                     version: "*"
                 hash:
                     version: "*"
+                http:
+                    version: "*"
                 yaml:
                     version: "*"
                 pvt.cppan.demo.catchorg.catch2:
                     version: 2
+                pvt.cppan.demo.nlohmann.json:
+                    version: "*"
     test.db:
         skip_on_server: true
         files:

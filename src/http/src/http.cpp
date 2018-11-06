@@ -232,7 +232,6 @@ HttpResponse url_request(const HttpRequest &request)
     return response;
 }
 
-
 String download_file(const String &url)
 {
     auto fn = fs::temp_directory_path() / unique_path();
