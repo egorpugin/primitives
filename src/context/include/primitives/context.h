@@ -22,7 +22,7 @@ struct Context;
 namespace detail
 {
 
-struct Line
+struct PRIMITIVES_CONTEXT_API Line
 {
     using Text = std::string;
 
