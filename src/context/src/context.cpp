@@ -78,7 +78,7 @@ Context::Context(const Text &indent, const Text &newline)
 {
 }
 
-Context::Context(const Context &ctx)
+/*Context::Context(const Context &ctx)
 {
     copy_from(ctx);
 }
@@ -87,7 +87,7 @@ Context &Context::operator=(const Context &ctx)
 {
     copy_from(ctx);
     return *this;
-}
+}*/
 
 Context::~Context()
 {
@@ -98,13 +98,13 @@ Context::~Context()
     }
 }
 
-void Context::copy_from(const Context &ctx)
+/*void Context::copy_from(const Context &ctx)
 {
     lines = ctx.lines;
     n_indents = ctx.n_indents;
     indent = ctx.indent;
     newline = ctx.newline;
-}
+}*/
 
 void Context::initFromString(const std::string &s)
 {
@@ -288,10 +288,10 @@ Context::Lines Context::getLines() const
     return lines;
 }
 
-void Context::setLines(const Lines &lines)
+/*void Context::setLines(const Lines &lines)
 {
     this->lines = lines;
-}
+}*/
 
 void Context::setMaxEmptyLines(int n)
 {

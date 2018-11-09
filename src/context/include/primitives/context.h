@@ -57,8 +57,8 @@ struct PRIMITIVES_CONTEXT_API Context
 
     //
     Context(const Text &indent = "    ", const Text &newline = "\n");
-    Context(const Context &ctx);
-    Context &operator=(const Context &ctx);
+    //Context(const Context &ctx);
+    //Context &operator=(const Context &ctx);
     virtual ~Context();
 
     void initFromString(const std::string &s);
@@ -88,7 +88,7 @@ struct PRIMITIVES_CONTEXT_API Context
 
     virtual Text getText() const;
 
-    void setLines(const Lines &lines);
+    //void setLines(const Lines &lines);
     Lines getLines() const;
     Lines &getLinesRef() { return lines; }
 
@@ -118,7 +118,7 @@ protected:
     Text indent;
     Text newline;
 
-    void copy_from(const Context &ctx);
+    //void copy_from(const Context &ctx);
 
 private:
     void addLine(Line &&);
