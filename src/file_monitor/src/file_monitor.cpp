@@ -95,7 +95,7 @@ FileMonitor::FileMonitor()
 
 FileMonitor::~FileMonitor()
 {
-    // at first, stop all watchers
+    // first, stop all watchers
     for (auto &d : dir_files)
         d.second.r->stop();
 

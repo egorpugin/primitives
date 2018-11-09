@@ -46,11 +46,17 @@ int curl_transfer_info(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl
     return 0;
 }
 
-size_t curl_write_string(char *ptr, size_t size, size_t nmemb, void *userdata)
+size_t curl_write_string(char *ptr, size_t size, size_t nmemb, String *s)
 {
-    String &s = *(String *)userdata;
     auto read = size * nmemb;
-    s.append(ptr, ptr + read);
+    try
+    {
+        s->append(ptr, ptr + read);
+    }
+    catch (...)
+    {
+        return 0;
+    }
     return read;
 }
 

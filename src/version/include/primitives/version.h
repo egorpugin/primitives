@@ -54,11 +54,18 @@ struct PRIMITIVES_VERSION_API GenericNumericVersion
 {
     using Number = detail::Number;
     using Numbers = std::vector<Number>;
+
+    // level is indexed starting from 1
     using Level = size_t;
 
     GenericNumericVersion();
     explicit GenericNumericVersion(Level level);
     explicit GenericNumericVersion(const std::initializer_list<Number> &, Level level = 0);
+
+    Level getLevel() const;
+
+    Number &operator[](int i) { return numbers[i]; }
+    Number operator[](int i) const { return numbers[i]; }
 
     static inline const Level minimum_level = 3;
 
@@ -71,12 +78,11 @@ protected:
 
     Numbers numbers;
 
-    Number get(Level level) const;
     std::string printVersion() const;
     std::string printVersion(Level level = minimum_level) const;
     std::string printVersion(const std::string &delimeter) const;
     std::string printVersion(const std::string &delimeter, Level level) const;
-    Level getLevel() const;
+    Number get(Level level) const;
     void setLevel(Level level, Number fill = 0);
     void setFirstVersion();
     void fill(Number);
