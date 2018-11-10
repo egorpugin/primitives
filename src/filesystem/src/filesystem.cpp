@@ -7,7 +7,6 @@
 #include <primitives/filesystem.h>
 
 #include <primitives/file_iterator.h>
-#include <primitives/symbol.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
