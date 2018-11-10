@@ -7,7 +7,6 @@
 #include <primitives/filesystem.h>
 
 #include <primitives/file_iterator.h>
-#include <primitives/symbol.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -513,26 +512,4 @@ size_t ScopedFile::read(void *buf, size_t sz)
 void ScopedFile::seek(uintmax_t offset)
 {
     fseek(f, offset, SEEK_SET);
-}
-
-namespace primitives
-{
-
-path getModuleNameForSymbol(void *f)
-{
-#ifdef _WIN32
-    auto lib = getModuleForSymbol(f);
-    const auto sz = 1 << 16;
-    WCHAR n[sz] = { 0 };
-    GetModuleFileNameW((HMODULE)lib, n, sz);
-    path m = n;
-    return m;// .filename();
-#else
-    Dl_info i;
-    if (dladdr(f ? f : getCurrentModuleSymbol(), &i))
-        return fs::absolute(i.dli_fname);
-    return {};
-#endif
-}
-
 }

@@ -217,6 +217,9 @@ void build(Solution &s)
     gen_flex_bison_pair(settings, "LALR1_CPP_VARIANT_PARSER", "src/settings");
     gen_flex_bison_pair(settings, "LALR1_CPP_VARIANT_PARSER", "src/path");
 
+    ADD_LIBRARY(symbol);
+    symbol.Public += filesystem, "org.sw.demo.boost.dll-1"_dep;
+
     ADD_LIBRARY_WITH_NAME(sw_settings, "sw.settings");
     sw_settings.Public += settings;
     sw_settings.Interface += "src/sw.settings.program_name.cpp";

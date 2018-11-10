@@ -281,6 +281,17 @@ projects:
             cppan_flex_bison_pair(LALR1_CPP_VARIANT_PARSER src/path)
             target_sources(${this} PUBLIC ${SDIR}/src/settings.natvis)
 
+    symbol:
+        name: symbol
+        type: library
+        root_directory: src/symbol
+        dependencies:
+            public:
+                filesystem:
+                    version: "*"
+                pvt.cppan.demo.boost.dll:
+                    version: 1
+
     sw.main:
         type: library
         static_only: true
