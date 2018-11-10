@@ -4,6 +4,11 @@
 #include <Windows.h>
 #endif
 
+#ifndef _WIN32
+#define _GNU_SOURCE // for dladdr
+#include <dlfcn.h>
+#endif
+
 namespace primitives
 {
 
