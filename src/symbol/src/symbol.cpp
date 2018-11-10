@@ -41,6 +41,8 @@ path getModuleNameForSymbol(void *f)
     path m = n;
     return m;// .filename();
 #else
+    // on linux i.dli_fname is not full path
+    // fs::absolute also does not give us correct path
     if (!f)
         return boost::dll::program_location().string();
     Dl_info i;

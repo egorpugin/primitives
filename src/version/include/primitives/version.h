@@ -293,15 +293,19 @@ private:
 };
 
 /// Return true if version is greater than all the versions possible in the range.
+PRIMITIVES_VERSION_API
 bool operator<(const VersionRange &, const Version &);
 
 /// Return true if version is less than all the versions possible in the range.
+PRIMITIVES_VERSION_API
 bool operator<(const Version &, const VersionRange &);
 
 /// Return true if version is less than all the versions possible in the range.
+PRIMITIVES_VERSION_API
 bool operator>(const VersionRange &, const Version &);
 
 /// Return true if version is greater than all the versions possible in the range.
+PRIMITIVES_VERSION_API
 bool operator>(const Version &, const VersionRange &);
 
 }
