@@ -111,6 +111,14 @@ bool compare_dirs(const path &dir1, const path &dir2);
 PRIMITIVES_FILESYSTEM_API
 path unique_path(const path &p = "%%%%-%%%%-%%%%-%%%%");
 
+namespace primitives
+{
+
+PRIMITIVES_FILESYSTEM_API
+path getModuleNameForSymbol(void *f = nullptr);
+
+}
+
 namespace std
 {
     template<> struct hash<path>

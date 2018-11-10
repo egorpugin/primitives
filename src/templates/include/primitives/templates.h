@@ -127,13 +127,6 @@ constexpr void for_each(Tuple&& tuple, F&& f)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-inline void *getCurrentModuleSymbol()
-{
-    return (void *)&getCurrentModuleSymbol;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
 /// Initialises static object from outside or creates it itself.
 template <class T>
 struct StaticValueOrRef
