@@ -286,10 +286,10 @@ private:
     /// optional error will be returned
     static optional<std::string> parse(VersionRange &v, const std::string &s);
 
-    friend bool operator<(const VersionRange &, const Version &);
-    friend bool operator<(const Version &, const VersionRange &);
-    friend bool operator>(const VersionRange &, const Version &);
-    friend bool operator>(const Version &, const VersionRange &);
+    friend PRIMITIVES_VERSION_API bool operator<(const VersionRange &, const Version &);
+    friend PRIMITIVES_VERSION_API bool operator<(const Version &, const VersionRange &);
+    friend PRIMITIVES_VERSION_API bool operator>(const VersionRange &, const Version &);
+    friend PRIMITIVES_VERSION_API bool operator>(const Version &, const VersionRange &);
 };
 
 /// Return true if version is greater than all the versions possible in the range.
