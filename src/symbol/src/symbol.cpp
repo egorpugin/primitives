@@ -1,5 +1,7 @@
 #include <primitives/symbol.h>
 
+#include <boost/dll.hpp>
+
 #ifdef _WIN32
 #include <Windows.h>
 #endif
@@ -26,6 +28,25 @@ void *getModuleForSymbol(void *f)
     if (dladdr(f ? f : getCurrentModuleSymbol(), &i))
         return i.dli_fbase;
     return nullptr;
+#endif
+}
+
+path getModuleNameForSymbol(void *f)
+{
+#ifdef _WIN32
+    auto lib = getModuleForSymbol(f);
+    const auto sz = 1 << 16;
+    WCHAR n[sz] = { 0 };
+    GetModuleFileNameW((HMODULE)lib, n, sz);
+    path m = n;
+    return m;// .filename();
+#else
+    if (!f)
+        return boost::dll::program_location().string();
+    Dl_info i;
+    if (dladdr(f ? f : getCurrentModuleSymbol(), &i))
+        return fs::absolute(i.dli_fname);
+    return {};
 #endif
 }
 
