@@ -41,6 +41,7 @@ void embed(NativeExecutedTarget &t, const path &in)
     c->addInput(f);
     c->addOutput(out);
     t += in, out;
+    t += IncludeDirectory(out.parent_path()); // but remove this later
 }
 
 void syncqt(NativeExecutedTarget &t, const Strings &modules)
