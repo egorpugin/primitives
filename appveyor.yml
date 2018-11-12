@@ -5,7 +5,7 @@ platform:
   - Win64
 
 cache:
-  - c:/Users/appveyor/.cppan/storage
+  - c:/Users/appveyor/.sw
 
 configuration:
   - Release
