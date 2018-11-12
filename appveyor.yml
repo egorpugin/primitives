@@ -25,7 +25,8 @@ before_build:
   - set PATH=%PATH%;%cd%
 
 build_script:
-  - client build sw.cpp
+  - tree "C:/Program Files (x86)/Windows Kits/10/include"
+  #- client build sw.cpp
   #- bin\\main.exe
 
 #test_script:
