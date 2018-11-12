@@ -2,7 +2,7 @@ image: Visual Studio 2017
 
 platform:
   - Win32
-  - Win64
+  #- Win64
 
 cache:
   - c:/Users/appveyor/.sw
