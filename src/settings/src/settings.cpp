@@ -212,7 +212,7 @@ void Settings::load(const yaml &root, const SettingPath &prefix)
         if (kv.second.IsScalar())
             operator[](prefix / SettingPath::fromRawString(kv.first.as<String>())).representation = kv.second.as<String>();
         else if (kv.second.IsMap())
-            load(kv.second, SettingPath::fromRawString(kv.first.as<String>()));
+            load(kv.second, prefix / SettingPath::fromRawString(kv.first.as<String>()));
         else
             throw std::runtime_error("sequences are not supported");
     }
