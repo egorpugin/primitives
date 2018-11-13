@@ -2,7 +2,7 @@ image: Visual Studio 2017
 
 platform:
   - Win32
-  - Win64
+  #- Win64
 
 cache:
   - c:/Users/appveyor/.sw
@@ -25,6 +25,7 @@ before_build:
   - set PATH=%PATH%;%cd%
 
 build_script:
+  #- tree "C:/Program Files (x86)/Windows Kits/10/include"
   - client build sw.cpp
   #- bin\\main.exe
 
