@@ -36,14 +36,13 @@ path get_home_directory()
     if (!home)
         std::cerr << "Cannot get user's home directory (%USERPROFILE%)\n";
 #else
+    // prefer this way
+    auto p = getpwuid(getuid());
+    if (p)
+        return p->pw_dir;
     auto home = getenv("HOME");
     if (!home)
-    {
-        auto p = getpwuid(getuid());
-        if (p)
-            return p->pw_dir;
         std::cerr << "Cannot get user's home directory ($HOME)\n";
-    }
 #endif
     if (home == nullptr)
         return "";
