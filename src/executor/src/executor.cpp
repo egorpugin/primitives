@@ -291,3 +291,11 @@ void Executor::set_thread_name(const std::string &name) const
     }
 #endif
 }
+
+bool Executor::empty() const
+{
+    return std::all_of(thread_pool.begin(), thread_pool.end(), [](const auto &t)
+    {
+        return t.empty();
+    });
+}

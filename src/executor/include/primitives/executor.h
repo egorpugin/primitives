@@ -297,6 +297,8 @@ class PRIMITIVES_EXECUTOR_API Executor
 
         Thread() = default;
         Thread(const Thread &) {}
+
+        bool empty() const { return q.empty(); }
     };
 
     using Threads = std::vector<Thread>;
@@ -350,6 +352,7 @@ public:
 
     bool is_in_executor() const;
     bool try_run_one();
+    bool empty() const;
 
 private:
     Threads thread_pool;
