@@ -26,7 +26,7 @@ before_build:
 
 build_script:
   #- tree "C:/Program Files (x86)/Windows Kits/10/include"
-  - client -s build sw.cpp
+  - client -s build sw.cpp || echo 0
   #- bin\\main.exe
 
 #test_script:
