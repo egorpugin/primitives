@@ -46,12 +46,7 @@ public:
     ScopeGuard(std::once_flag *flag)
         : flag(flag)
     {}
-    ~ScopeGuard()
-    {
-        if (!active)
-            return;
-        run();
-    }
+    ~ScopeGuard();
 
     void dismiss()
     {
@@ -81,16 +76,7 @@ private:
     bool active{ true };
     std::once_flag *flag{ nullptr };
 
-    void run()
-    {
-        if (!f)
-            return;
-
-        if (flag)
-            std::call_once(*flag, f);
-        else
-            f();
-    }
+    void run();
 };
 
 namespace detail
