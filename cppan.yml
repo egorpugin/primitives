@@ -322,14 +322,14 @@ projects:
     sw.settings:
         type: library
         root_directory: src/sw/settings
-        exclude_from_build:
-            - src/sw_program_name.cpp
+        #exclude_from_build:
+            #- src/sw.settings.program_name.cpp
         dependencies:
             public:
                 settings:
                     version: "*"
-        post_target: |
-            target_sources(${this} INTERFACE ${SDIR}/src/sw.settings.program_name.cpp)
+        #post_target: |
+            #target_sources(${this} INTERFACE ${SDIR}/src/sw.settings.program_name.cpp)
 
 
     pack:
@@ -574,6 +574,9 @@ projects:
                     )
                 endforeach()
             endmacro()
+
+    tools.stamp_gen:
+        files: src/tools/stamp_gen.cpp
 
     tools.sqlpp11.sqlite2cpp:
         files: src/tools/sqlpp11.sqlite2cpp.cpp

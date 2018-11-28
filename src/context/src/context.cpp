@@ -539,7 +539,9 @@ void BinaryContext::reset() const
 {
     index_ = 0;
     data_offset = 0;
-    ptr = (uint8_t *)buf_->data();
+    ptr = nullptr;
+    if (buf_)
+        ptr = (uint8_t *)buf_->data();
 }
 
 void BinaryContext::seek(size_t size) const

@@ -13,7 +13,8 @@
 namespace sw
 {
 
-EXPORT_FROM_EXECUTABLE
+//EXPORT_FROM_EXECUTABLE
+PRIMITIVES_SW_SETTINGS_API
 std::string getProgramName();
 
 }

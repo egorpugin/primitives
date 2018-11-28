@@ -1,6 +1,24 @@
 #ifdef SW_PRAGMA_HEADER
 #pragma sw header on
 
+void gen_stamp(NativeExecutedTarget &t)
+{
+    auto tools_stamp_gen = THIS_PREFIX "." "primitives.tools.stamp_gen" "-" THIS_VERSION_DEPENDENCY;
+    {
+        auto d = t + tools_stamp_gen;
+        d->Dummy = true;
+    }
+
+    auto out = t.BinaryPrivateDir / "stamp.h.in";
+
+    SW_MAKE_COMMAND_AND_ADD(c, t);
+    c->always = true;
+    c->setProgram(tools_stamp_gen);
+    c->redirectStdout(out);
+    c->addOutput(out);
+    t += out;
+}
+
 void gen_sqlite2cpp(NativeExecutedTarget &t, const path &sql_file, const path &out_file, const String &ns)
 {
     auto tools_sqlite2cpp = THIS_PREFIX "." "primitives.tools.sqlpp11.sqlite2cpp" "-" THIS_VERSION_DEPENDENCY;
@@ -225,7 +243,8 @@ void build(Solution &s)
 
     ADD_LIBRARY_WITH_NAME(sw_settings, "sw.settings");
     sw_settings.Public += settings;
-    sw_settings.Interface += "src/sw.settings.program_name.cpp";
+    sw_settings -= "src/sw.settings.program_name.cpp";
+    //sw_settings.Interface += "src/sw.settings.program_name.cpp";
 
     auto &sw_main = p.addTarget<StaticLibraryTarget>("sw.main");
     setup_primitives(sw_main);
@@ -257,6 +276,10 @@ void build(Solution &s)
     setup_primitives_no_all_sources(tools_syncqt);
     tools_syncqt += "src/tools/syncqt.cpp";
     tools_syncqt += filesystem, sw_main;
+
+    auto &stamp_gen = p.addTarget<ExecutableTarget>("tools.stamp_gen");
+    setup_primitives_no_all_sources(stamp_gen);
+    stamp_gen += "src/tools/stamp_gen.cpp";
 
     ADD_LIBRARY(version);
     version.Public += string, templates,

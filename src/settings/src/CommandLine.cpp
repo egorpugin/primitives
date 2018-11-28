@@ -65,7 +65,8 @@ namespace primitives
 static String getVersionString()
 {
     auto h = GetModuleHandle(0);
-    auto f = (String(*)())GetProcAddress(h, "?getVersionString@primitives@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
+    //auto f = (String(*)())GetProcAddress(h, "?getVersionString@primitives@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
+    auto f = (String(*)())GetProcAddress(h, "?getVersionString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
     if (!f)
         return "version information is missing";
     return f();

@@ -17,11 +17,12 @@
 namespace sw
 {
 
-#if defined(_WIN32) && defined(CPPAN_SHARED_BUILD)
-static String getProgramName()
+#if defined(_WIN32)// && defined(CPPAN_SHARED_BUILD)
+std::string getProgramName()
 {
     auto h = GetModuleHandle(0);
-    auto f = (String(*)())GetProcAddress(h, "?getProgramName@sw@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
+    //auto f = (String(*)())GetProcAddress(h, "?getProgramName@sw@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
+    auto f = (String(*)())GetProcAddress(h, "?getProgramName@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
     if (!f)
         return "unk";
     return f();
