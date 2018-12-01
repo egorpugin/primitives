@@ -62,7 +62,7 @@ namespace primitives
 {
 
 #if defined(_WIN32)
-static String getVersionString()
+static std::string getVersionString()
 {
     auto h = GetModuleHandle(0);
     //auto f = (String(*)())GetProcAddress(h, "?getVersionString@primitives@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
@@ -70,6 +70,11 @@ static String getVersionString()
     if (!f)
         return "version information is missing";
     return f();
+}
+#else
+std::string getVersionString()
+{
+    return {};
 }
 #endif
 

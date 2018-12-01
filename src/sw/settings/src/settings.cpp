@@ -27,6 +27,11 @@ std::string getProgramName()
         return "unk";
     return f();
 }
+#else
+std::string getProgramName()
+{
+    return {};
+}
 #endif
 
 path getSettingsDir()
