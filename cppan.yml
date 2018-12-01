@@ -375,7 +375,7 @@ projects:
                 pvt.cppan.demo.ragel:
                     version: 6
                 pvt.cppan.demo.fmt:
-                    version: 4
+                    version: "*"
                 pvt.cppan.demo.lexxmark.winflexbison.flex:
                     version: master
                     ref: flex

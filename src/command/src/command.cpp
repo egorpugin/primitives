@@ -469,7 +469,7 @@ void Command::execute1(std::error_code *ec_in)
     if (ec_in)
     {
         if (exit_code)
-            ec_in->assign(exit_code.value(), std::generic_category());
+            ec_in->assign((int)exit_code.value(), std::generic_category());
         else // default error
             ec_in->assign(1, std::generic_category());
         return;
@@ -489,7 +489,7 @@ String Command::getError() const
         std::ostringstream stream;
         stream << "0x" << std::hex << std::uppercase << exit_code.value();
         err += " (" + stream.str() + ")";
-        auto e = FormatNtStatus(exit_code.value());
+        auto e = FormatNtStatus((NTSTATUS)exit_code.value());
         if (!e.empty())
             err += ": " + e;
     }

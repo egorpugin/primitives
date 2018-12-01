@@ -283,7 +283,7 @@ void build(Solution &s)
 
     ADD_LIBRARY(version);
     version.Public += string, templates,
-        "org.sw.demo.fmt-5"_dep,
+        "org.sw.demo.fmt-*"_dep,
         "org.sw.demo.boost.container_hash-1"_dep,
         "org.sw.demo.imageworks.pystring-1"_dep;
     gen_ragel(version, "src/version.rl");
