@@ -95,6 +95,15 @@ FileMonitor::FileMonitor()
 
 FileMonitor::~FileMonitor()
 {
+    stop();
+}
+
+void FileMonitor::stop()
+{
+    if (stopped)
+        return;
+    stopped = true;
+
     // first, stop all watchers
     for (auto &d : dir_files)
         d.second.r->stop();
@@ -124,6 +133,8 @@ void FileMonitor::start()
 
 void FileMonitor::addFile(const path &p, record::Callback cb)
 {
+    if (stopped)
+        return;
     if (p.empty())
         return;
 

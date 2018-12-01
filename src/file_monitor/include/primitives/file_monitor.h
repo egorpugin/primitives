@@ -69,8 +69,11 @@ public:
     ~FileMonitor();
 
     void addFile(const path &p, record::Callback cb);
+    void stop();
 
 private:
+    bool stopped = false;
+
     void start();
     bool has_file(const path &dir, const path &fn) const;
 };
