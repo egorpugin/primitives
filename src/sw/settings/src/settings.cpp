@@ -35,13 +35,14 @@ std::string getProgramName()
 #else
 std::string getProgramName()
 {
-    auto h = dlopen(0, 0);
+    auto h = dlopen(0, RTLD_LAZY);
     if (!h)
     {
         std::cerr << "sw.settings: dlopen error" << std::endl;
         return "unk";
     }
-    auto f = (String(*)())dlsym(h, "_ZN2sw14getProgramNameB5cxx11Ev");
+    //auto f = (String(*)())dlsym(h, "_ZN2sw14getProgramNameB5cxx11Ev");
+    auto f = (String(*)())dlsym(h, "_Z14getProgramNameB5cxx11Ev");
     if (!f)
     {
         dlclose(h);
