@@ -86,7 +86,7 @@ std::string getVersionString()
         return "version information is missing";
     }
     //auto f = (String(*)())dlsym(h, "_ZN10primitives16getVersionStringB5cxx11Ev");
-    auto f = (String(*)())dlsym(h, "_Z16getVersionStringB5cxx11Ev");
+    auto f = (String(*)())dlsym(h, "_Z16getVersionStringB5cxx11v");
     if (!f)
     {
         dlclose(h);

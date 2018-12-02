@@ -42,7 +42,7 @@ std::string getProgramName()
         return "unk";
     }
     //auto f = (String(*)())dlsym(h, "_ZN2sw14getProgramNameB5cxx11Ev");
-    auto f = (String(*)())dlsym(h, "_Z14getProgramNameB5cxx11Ev");
+    auto f = (String(*)())dlsym(h, "_Z14getProgramNameB5cxx11v");
     if (!f)
     {
         dlclose(h);
