@@ -613,7 +613,6 @@ int main(int argc, char **argv)
     auto j = nlohmann::json::parse(download_file(url));
     double temp = j["main"]["temp"];*/
 
-    Catch::Session().run(argc, argv);
-
-    return 0;
+    auto r = Catch::Session().run(argc, argv);
+    return r;
 }

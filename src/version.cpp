@@ -1333,7 +1333,6 @@ TEST_CASE("Checking version ranges", "[range]")
 int main(int argc, char **argv)
 {
     Catch::Session s;
-    s.run(argc, argv);
-
-    return 0;
+    auto r = s.run(argc, argv);
+    return r;
 }

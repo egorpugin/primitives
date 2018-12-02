@@ -649,7 +649,12 @@ int main(int argc, char **argv)
 
     Catch::Session s;
     //while (1)
-    s.run(argc, argv);
+    auto r = s.run(argc, argv);
+    return r;
+}
 
-    return 0;
+EXPORT_FROM_EXECUTABLE
+std::string getProgramName()
+{
+    return PACKAGE_NAME_CLEAN;
 }

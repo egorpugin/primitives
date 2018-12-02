@@ -315,8 +315,14 @@ void build(Solution &s)
         executor, hash, yaml;
 
     auto &test_settings = add_test("settings");
+    test_settings.PackageDefinitions = true;
     test_settings += sw_main, settings;
 
     auto &test_version = add_test("version");
     test_version += sw_main, version;
+
+    s.addTest(test_main);
+    s.addTest(test_db);
+    s.addTest(test_settings);
+    s.addTest(test_version);
 }
