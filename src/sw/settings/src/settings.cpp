@@ -37,13 +37,16 @@ std::string getProgramName()
 {
     auto h = dlopen(0, 0);
     if (!h)
-        std::cerr << "settings: dlopen error" << std::endl;
+    {
+        std::cerr << "sw.settings: dlopen error" << std::endl;
+        return "unk";
+    }
     auto f = (String(*)())dlsym(h, "_ZN2sw14getProgramNameB5cxx11Ev");
     if (!f)
     {
         dlclose(h);
-        std::cerr << "settings: calling getVersionString(), but function is not defined; result is unknown" << std::endl;
-        return "version information is missing";
+        std::cerr << "sw.settings: calling getVersionString(), but function is not defined; result is unknown" << std::endl;
+        return "unk";
     }
     auto s = f();
     dlclose(h);
