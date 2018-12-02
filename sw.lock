@@ -2928,6 +2928,12 @@
       "prefix": 3
     },
     {
+      "group_number": 694,
+      "hash": "3_2$700f04979086d0da7e9a73573940aeeae91848a009b43a1d2294de6f74f19bd07a43b30803aa50f46e3dc8be5023c97de46753f93c27bd524ffd620b33516900",
+      "package": "org.sw.demo.catchorg.catch2-2.4.2",
+      "prefix": 3
+    },
+    {
       "group_number": 364,
       "hash": "3_2$2762b5ebf479e37c88a01b48bd0577bffc473c2d2adc3c82a6b36f9d3d78d6b066768c6d9f344c25702a0c6c901f8f3aa1caa3f1135f4e3a895a3f3541c14107",
       "package": "org.sw.demo.find.libpq-master",
@@ -3134,6 +3140,12 @@
       "prefix": 3
     },
     {
+      "group_number": 648,
+      "hash": "3_2$6714370309de4f667cbe96dd2c37a44c36de83e5093a7338f8ff5c1037216d95d3ed2d290edab4c3c1df9bc38c192aa5ba24ce8ad01e24ad256e72bcb1ad1a5f",
+      "package": "org.sw.demo.nlohmann.json-3.4.0",
+      "prefix": 3
+    },
+    {
       "group_number": 332,
       "hash": "3_2$d179de9a83ad122cb22f5fc1e6aa45a04a084dce9c1edad43129643b1fca91ab2a7f295efe3ea5a306d9564172a408066b44d57734558c4d84bdab04dc7b7f1a",
       "package": "org.sw.demo.oberhumer.lzo.lzo-2.10.0",
@@ -3228,6 +3240,9 @@
     "org.sw.demo.boost.thread->=1.0.0 <2.0.0": {
       "package": "org.sw.demo.boost.thread-1.68.0"
     },
+    "org.sw.demo.catchorg.catch2-*": {
+      "package": "org.sw.demo.catchorg.catch2-2.4.2"
+    },
     "org.sw.demo.fmt-*": {
       "package": "org.sw.demo.fmt-5.2.1"
     },
@@ -3263,6 +3278,9 @@
     },
     "org.sw.demo.libuv->=1.0.0 <2.0.0": {
       "package": "org.sw.demo.libuv-1.24.0"
+    },
+    "org.sw.demo.nlohmann.json-*": {
+      "package": "org.sw.demo.nlohmann.json-3.4.0"
     },
     "org.sw.demo.openssl.crypto->=1.0.0.0 <2.0.0.0": {
       "package": "org.sw.demo.openssl.crypto-1.1.1"

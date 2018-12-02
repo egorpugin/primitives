@@ -24,7 +24,10 @@ std::string getProgramName()
     //auto f = (String(*)())GetProcAddress(h, "?getProgramName@sw@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
     auto f = (String(*)())GetProcAddress(h, "?getProgramName@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
     if (!f)
+    {
+        std::cerr << "sw.settings: calling getProgramName(), but function is not defined; result is unknown" << std::endl;
         return "unk";
+    }
     return f();
 }
 #else

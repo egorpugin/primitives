@@ -68,7 +68,10 @@ static std::string getVersionString()
     //auto f = (String(*)())GetProcAddress(h, "?getVersionString@primitives@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
     auto f = (String(*)())GetProcAddress(h, "?getVersionString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
     if (!f)
+    {
+        std::cerr << "settings: calling getVersionString(), but function is not defined; result is unknown" << std::endl;
         return "version information is missing";
+    }
     return f();
 }
 #else

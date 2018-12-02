@@ -109,7 +109,9 @@ void FileMonitor::stop()
         d.second.r->stop();
 
     // join thread
-    t.join();
+    uv_stop(&loop);
+    if (t.joinable())
+        t.join();
 
     Strings errors;
 

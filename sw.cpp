@@ -246,6 +246,14 @@ void build(Solution &s)
     sw_settings -= "src/sw.settings.program_name.cpp";
     //sw_settings.Interface += "src/sw.settings.program_name.cpp";
 
+    ADD_LIBRARY(version);
+    version.Public += string, templates,
+        "org.sw.demo.fmt-*"_dep,
+        "org.sw.demo.boost.container_hash-1"_dep,
+        "org.sw.demo.imageworks.pystring-1"_dep;
+    gen_ragel(version, "src/version.rl");
+    gen_flex_bison_pair(version, "GLR_CPP_PARSER", "src/range");
+
     auto &sw_main = p.addTarget<StaticLibraryTarget>("sw.main");
     setup_primitives(sw_main);
     sw_main.Public += main, sw_settings,
@@ -281,27 +289,34 @@ void build(Solution &s)
     setup_primitives_no_all_sources(stamp_gen);
     stamp_gen += "src/tools/stamp_gen.cpp";
 
-    ADD_LIBRARY(version);
-    version.Public += string, templates,
-        "org.sw.demo.fmt-*"_dep,
-        "org.sw.demo.boost.container_hash-1"_dep,
-        "org.sw.demo.imageworks.pystring-1"_dep;
-    gen_ragel(version, "src/version.rl");
-    gen_flex_bison_pair(version, "GLR_CPP_PARSER", "src/range");
-
     auto &test = p.addDirectory("test");
     test.Scope = TargetScope::Test;
 
-    /*auto add_test = [](const String &name) -> decltype(auto)
+    auto add_test = [&test, &s](const String &name) -> decltype(auto)
     {
-        auto &t = test.addTarget<ExecutableTarget>("main");
+        auto &t = test.addTarget<ExecutableTarget>(name);
         t.CPPVersion = CPPLanguageStandard::CPP17;
-        t += "src/" + name + ".cpp";
+        t += path("src/" + name + ".cpp");
+        t += "org.sw.demo.catchorg.catch2-*"_dep;
+        if (s.Settings.Native.CompilerType == CompilerType::MSVC)
+            t.CompileOptions.push_back("-bigobj");
+        //else if (s.Settings.Native.CompilerType == CompilerType::GNU)
+            //t.CompileOptions.push_back("-Wa,-mbig-obj");
         return t;
     };
 
     auto &test_main = add_test("main");
+    test_main += sw_main, command, date_time,
+        executor, hash, yaml, context, http,
+        "org.sw.demo.nlohmann.json-*"_dep;
+
     auto &test_db = add_test("db");
+    test_db += sw_main, command, db_sqlite3, db_postgresql, date_time,
+        executor, hash, yaml;
+
     auto &test_settings = add_test("settings");
-    auto &test_version = add_test("version");*/
+    test_settings += sw_main, settings;
+
+    auto &test_version = add_test("version");
+    test_version += sw_main, version;
 }
