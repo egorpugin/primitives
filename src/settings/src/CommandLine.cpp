@@ -50,6 +50,8 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
+#else
+#include <dlfcn.h>
 #endif
 
 using namespace llvm;
@@ -77,7 +79,19 @@ static std::string getVersionString()
 #else
 std::string getVersionString()
 {
-    return {};
+    auto h = dlopen(0, 0);
+    if (!h)
+        std::cerr << "settings: dlopen error" << std::endl;
+    auto f = (String(*)())dlsym(h, "_ZN10primitives16getVersionStringB5cxx11Ev");
+    if (!f)
+    {
+        dlclose(h);
+        std::cerr << "settings: calling getVersionString(), but function is not defined; result is unknown" << std::endl;
+        return "version information is missing";
+    }
+    auto s = f();
+    dlclose(h);
+    return s;
 }
 #endif
 
