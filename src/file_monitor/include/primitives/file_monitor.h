@@ -43,7 +43,7 @@ class PRIMITIVES_FILE_MONITOR_API FileMonitor
         uv_fs_event_t e;
         Callback callback;
 
-        record(FileMonitor *mon, const path &dir, Callback callback);
+        record(FileMonitor *mon, const path &dir, Callback callback, bool recursive);
         ~record();
 
         void stop();
@@ -59,8 +59,6 @@ class PRIMITIVES_FILE_MONITOR_API FileMonitor
     };
 
     uv_loop_t loop;
-    std::thread t;
-    std::atomic_bool started;
     std::unordered_map<path, holder> dir_files;
     mutable boost::upgrade_mutex m;
 
@@ -68,13 +66,13 @@ public:
     FileMonitor();
     ~FileMonitor();
 
-    void addFile(const path &p, record::Callback cb);
+    void addFile(const path &p, record::Callback cb, bool recursive = true);
     void stop();
+    void run();
 
 private:
     bool stopped = false;
 
-    void start();
     bool has_file(const path &dir, const path &fn) const;
 };
 

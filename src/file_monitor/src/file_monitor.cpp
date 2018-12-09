@@ -21,9 +21,14 @@ int uv_loop_close(uv_loop_t &loop, Strings &errors)
     {
         if (r == UV_EBUSY)
         {
-            auto wlk = [](uv_handle_t* handle, void* arg) { uv_close(handle, 0); };
+            auto wlk = [](uv_handle_t* handle, void* arg)
+            {
+                if (handle)
+                    uv_close(handle, 0);
+            };
             uv_walk(&loop, wlk, 0);
-            uv_run(&loop, UV_RUN_ONCE);
+            while (uv_run(&loop, UV_RUN_DEFAULT) != 0)
+                ;
             if (r = uv_loop_close(&loop); r)
             {
                 if (r == UV_EBUSY)
@@ -43,7 +48,7 @@ int uv_loop_close(uv_loop_t &loop, Strings &errors)
 namespace filesystem
 {
 
-FileMonitor::record::record(FileMonitor *mon, const path &dir, Callback callback)
+FileMonitor::record::record(FileMonitor *mon, const path &dir, Callback callback, bool recursive)
     : mon(mon), dir(dir), dir_holder(dir.u8string()), callback(callback)
 {
     if (uv_fs_event_init(&mon->loop, &e))
@@ -51,7 +56,7 @@ FileMonitor::record::record(FileMonitor *mon, const path &dir, Callback callback
     e.data = this;
     if (uv_fs_event_start(&e, cb, dir_holder.c_str(),
         // was 0 = non recursive
-        UV_FS_EVENT_RECURSIVE
+        recursive ? UV_FS_EVENT_RECURSIVE : 0
     ) < 0)
     {
         // maybe unconditionally?
@@ -90,7 +95,7 @@ void FileMonitor::record::cb(uv_fs_event_t* handle, const char* filename, int ev
 FileMonitor::FileMonitor()
 {
     uv_loop_init(&loop);
-    uv_run(&loop, UV_RUN_ONCE);
+    uv_run(&loop, UV_RUN_ONCE); // why?
 }
 
 FileMonitor::~FileMonitor()
@@ -104,46 +109,39 @@ void FileMonitor::stop()
         return;
     stopped = true;
 
-    // first, stop all watchers
+    // first, stop all watchers, but not clear them!!!
     for (auto &d : dir_files)
         d.second.r->stop();
 
     // join thread
     uv_stop(&loop);
-    if (t.joinable())
-        t.join();
 
     Strings errors;
-
     // and cleanup loop
     ::primitives::detail::uv_loop_close(loop, errors);
+    for (auto &e : errors)
+        std::cerr << e << "\n";
 }
 
-void FileMonitor::start()
+void FileMonitor::run()
 {
-    bool e = false;
-    if (!started.compare_exchange_strong(e, true))
-        return;
-
-    t = make_thread([this]
-    {
-//#ifdef _WIN32
-        uv_run(&loop, UV_RUN_DEFAULT);
-//#endif
-    });
+    uv_run(&loop, UV_RUN_DEFAULT);
 }
 
-void FileMonitor::addFile(const path &p, record::Callback cb)
+void FileMonitor::addFile(const path &p, record::Callback cb, bool recursive)
 {
     if (stopped)
         return;
     if (p.empty())
         return;
 
+    bool is_dir = false;
     auto dir = p;
     error_code ec;
     if (fs::is_regular_file(p, ec))
         dir = p.parent_path();
+    else
+        is_dir = true;
     if (ec)
         return;
 
@@ -158,14 +156,15 @@ void FileMonitor::addFile(const path &p, record::Callback cb)
     if (di != dir_files.end())
     {
         boost::unique_lock lk2(di->second.m);
-        di->second.files.insert(p.filename());
+        if (!is_dir)
+            di->second.files.insert(p.filename());
         return;
     }
     boost::upgrade_to_unique_lock lk2(lk);
     auto &ref = dir_files[dir];
-    ref.files.insert(p.filename());
-    ref.r = std::make_shared<record>(this, dir, cb);
-    start();
+    if (!is_dir)
+        ref.files.insert(p.filename());
+    ref.r = std::make_shared<record>(this, dir, cb, recursive);
 }
 
 bool FileMonitor::has_file(const path &dir, const path &fn) const
@@ -175,7 +174,8 @@ bool FileMonitor::has_file(const path &dir, const path &fn) const
     if (di == dir_files.end())
         return false;
     boost::upgrade_lock lk2(di->second.m);
-    return di->second.files.find(fn) != di->second.files.end();
+    // if empty, we consider as true for all children (files)
+    return di->second.files.empty() || di->second.files.find(fn) != di->second.files.end();
 }
 
 }
