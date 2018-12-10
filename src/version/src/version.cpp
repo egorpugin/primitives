@@ -4,6 +4,7 @@
 
 #include <fmt/format.h>
 #include <primitives/constants.h>
+#include <primitives/exceptions.h>
 #include <primitives/hash_combine.h>
 #include <primitives/string.h>
 
@@ -24,17 +25,17 @@ static std::string preprocess_input_extra(const std::string &in)
 
 static void throw_bad_version(const std::string &s)
 {
-    throw std::runtime_error("Invalid version: " + s);
+    throw SW_RUNTIME_EXCEPTION("Invalid version: " + s);
 }
 
 static void throw_bad_version_extra(const std::string &s)
 {
-    throw std::runtime_error("Invalid version extra: " + s);
+    throw SW_RUNTIME_EXCEPTION("Invalid version extra: " + s);
 }
 
 static void throw_bad_version_range(const std::string &s)
 {
-    throw std::runtime_error("Invalid version range: " + s);
+    throw SW_RUNTIME_EXCEPTION("Invalid version range: " + s);
 }
 
 namespace primitives::version
@@ -76,7 +77,7 @@ GenericNumericVersion::GenericNumericVersion(const std::initializer_list<Number>
     : numbers(list)
 {
     if (std::any_of(numbers.begin(), numbers.end(), [](const auto &n) {return n < 0; }))
-        throw std::runtime_error("Version number cannot be less than 0");
+        throw SW_RUNTIME_EXCEPTION("Version number cannot be less than 0");
     auto l = std::max(minimum_level, level);
     if (numbers.size() < l)
         numbers.resize(l);
@@ -92,7 +93,7 @@ GenericNumericVersion::Number GenericNumericVersion::get(Level level) const
 {
     if (numbers.size() <= level)
         return 0;
-        //throw std::runtime_error("There is no that much numbers");
+        //throw SW_RUNTIME_EXCEPTION("There is no that much numbers");
     return numbers[level];
 }
 

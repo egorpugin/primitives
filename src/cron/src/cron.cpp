@@ -6,6 +6,7 @@
 
 #include <primitives/cron.h>
 
+#include <primitives/exceptions.h>
 #include <primitives/executor.h>
 #include <primitives/thread.h>
 
@@ -73,10 +74,4 @@ void Cron::run()
     }
 }
 
-Cron &get_cron(Cron *c)
-{
-    static Cron *cron;
-    if (c)
-        cron = c;
-    return *cron;
-}
+SW_DEFINE_GLOBAL_STATIC_FUNCTION(Cron, get_cron)

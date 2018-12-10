@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <primitives/templates.h>
+
 #include <chrono>
 #include <condition_variable>
 #include <functional>
@@ -101,4 +103,4 @@ private:
 };
 
 PRIMITIVES_CRON_API
-Cron &get_cron(Cron *c = nullptr);
+SW_DECLARE_GLOBAL_STATIC_FUNCTION(Cron, get_cron);

@@ -6,6 +6,7 @@
 
 #include <primitives/executor.h>
 
+#include <primitives/exceptions.h>
 #include <primitives/thread.h>
 
 #include <iostream>
@@ -18,31 +19,28 @@
 //#include "log.h"
 //DECLARE_STATIC_LOGGER(logger, "executor");
 
-size_t get_max_threads(size_t N)
+size_t get_max_threads(int N)
 {
     return std::max<size_t>(N, std::thread::hardware_concurrency());
 }
 
-Executor &getExecutor(size_t N)
+size_t select_number_of_threads(int N)
 {
-    static size_t threads = [&N]()
-    {
-        if (N > 0)
-            return N;
-        N = std::thread::hardware_concurrency();
-        if (N == 1)
-            N = 2;
-        else if (N <= 8)
-            N += 2;
-        else if (N <= 64)
-            N += 4;
-        else
-            N += 8;
+    if (N > 0)
         return N;
-    }();
-    static Executor e(threads);
-    return e;
+    N = std::thread::hardware_concurrency();
+    if (N == 1)
+        N = 2;
+    else if (N <= 8)
+        N += 2;
+    else if (N <= 64)
+        N += 4;
+    else
+        N += 8;
+    return N;
 }
+
+SW_DEFINE_GLOBAL_STATIC_FUNCTION(Executor, getExecutor)
 
 Executor::Executor(const std::string &name, size_t nThreads)
     : Executor(nThreads, name)
@@ -230,7 +228,7 @@ void Executor::wait(WaitStatus p)
 void Executor::push(Task &&t)
 {
     if (waiting_ == WaitStatus::RejectIncoming)
-        throw std::runtime_error("Executor is in the wait state and rejects new jobs");
+        throw SW_RUNTIME_EXCEPTION("Executor is in the wait state and rejects new jobs");
     if (waiting_ == WaitStatus::BlockIncoming)
     {
         std::unique_lock<std::mutex> lk(m_wait);

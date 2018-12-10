@@ -6,6 +6,7 @@
 
 #include <primitives/db.h>
 
+#include <primitives/exceptions.h>
 #include <primitives/templates.h>
 
 #include <pystring.h>
@@ -19,7 +20,7 @@ void LiteDatabase::checkKey(const String &key)
 {
     static const std::regex r("[_a-zA-Z][_a-zA-Z0-9]*");
     if (!std::regex_match(key, r))
-        throw std::runtime_error("bad key");
+        throw SW_RUNTIME_EXCEPTION("bad key");
 }
 
 void DatabaseSchemaManager::createOrUpdate() const

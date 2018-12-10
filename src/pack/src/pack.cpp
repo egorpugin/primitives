@@ -6,6 +6,7 @@
 
 #include <primitives/pack.h>
 
+#include <primitives/exceptions.h>
 #include <primitives/templates.h>
 
 #include <libarchive/archive.h>
@@ -111,7 +112,7 @@ Files unpack_file(const path &fn, const path &dst)
     archive_read_support_format_all(a);
     auto r = archive_read_open_filename(a, fn.u8string().c_str(), BLOCK_SIZE);
     if (r != ARCHIVE_OK)
-        throw std::runtime_error(archive_error_string(a));
+        throw SW_RUNTIME_EXCEPTION(archive_error_string(a));
     archive_entry *entry;
     while (archive_read_next_header(a, &entry) == ARCHIVE_OK)
     {
@@ -143,7 +144,7 @@ Files unpack_file(const path &fn, const path &dst)
             if (r == ARCHIVE_EOF)
                 break;
             if (r < ARCHIVE_OK)
-                throw std::runtime_error(archive_error_string(a));
+                throw SW_RUNTIME_EXCEPTION(archive_error_string(a));
             fwrite(buff, size, 1, o.getHandle());
         }
         files.insert(f);

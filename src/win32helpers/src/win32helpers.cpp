@@ -6,6 +6,8 @@
 
 #include <primitives/win32helpers.h>
 
+#include <primitives/exceptions.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/dll.hpp>
 
@@ -158,7 +160,7 @@ void Elevate()
     sei.nShow = SW_NORMAL;
 
     if (!ShellExecuteEx(&sei))
-        throw std::runtime_error("Cannot elevate privilegies: " + get_last_error());
+        throw SW_RUNTIME_EXCEPTION("Cannot elevate privilegies: " + get_last_error());
 
     // normal exit
     exit(0);

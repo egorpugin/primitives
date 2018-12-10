@@ -19,6 +19,7 @@
 #pragma warning(disable : 4065)
 #endif
 
+#include <primitives/exceptions.h>
 #include <primitives/preprocessor.h>
 #include <primitives/stdcompat/optional.h>
 
@@ -230,7 +231,7 @@ struct base_parser : BaseParser
             self->bb.error_msg += ", bad symbol = '" + self->bb.bad_symbol + "'";            \
         self->bb.error_msg += "\n";                                                          \
         if (self->bb.can_throw)                                                              \
-            throw std::runtime_error("Error during parse: " + ss.str());                     \
+            throw SW_RUNTIME_EXCEPTION("Error during parse: " + ss.str());                     \
     }
 
 // debug level

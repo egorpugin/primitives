@@ -67,7 +67,7 @@ void merge(yaml &dst, const yaml &src, const YamlMergeFlags &flags)
             else if (ff == YAML::NodeType::Map && ft == YAML::NodeType::Map)
                 merge(t.second, f.second, flags);
             else // elaborate more on this?
-                throw std::runtime_error("yaml merge: nodes ('" + sf + "') has incompatible types");
+                throw SW_RUNTIME_EXCEPTION("yaml merge: nodes ('" + sf + "') has incompatible types");
             found = true;
         }
         if (!found)

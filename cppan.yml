@@ -424,6 +424,8 @@ projects:
                     version: master
                 string:
                     version: "*"
+                templates:
+                    version: "*"
 
     test.main:
         skip_on_server: true

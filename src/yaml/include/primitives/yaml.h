@@ -7,6 +7,7 @@
 #pragma once
 
 #include <primitives/string.h>
+#include <primitives/exceptions.h>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -38,7 +39,7 @@ auto get_scalar(const yaml &node, const String &key, const T &default_ = T())
     if (const auto &n = node[key]; n.IsDefined())
     {
         if (!n.IsScalar())
-            throw std::runtime_error("'" + key + "' must be a scalar");
+            throw SW_RUNTIME_EXCEPTION("'" + key + "' must be a scalar");
         return n.as<T>();
     }
     return default_;
@@ -50,7 +51,7 @@ void get_scalar_f(const yaml &node, const String &key, F &&f)
     if (const auto &n = node[key]; n.IsDefined())
     {
         if (!n.IsScalar())
-            throw std::runtime_error("'" + key + "' must be a scalar");
+            throw SW_RUNTIME_EXCEPTION("'" + key + "' must be a scalar");
         f(n);
     }
 }
@@ -77,7 +78,7 @@ auto get_sequence(const yaml &node, const String &key, const T &default_ = T())
 {
     const auto &n = node[key];
     if (n.IsDefined() && !(n.IsScalar() || n.IsSequence()))
-        throw std::runtime_error("'" + key + "' must be a sequence");
+        throw SW_RUNTIME_EXCEPTION("'" + key + "' must be a sequence");
     auto result = get_sequence<T>(n);
     if (!default_.empty())
         result.push_back(default_);
@@ -120,7 +121,7 @@ void get_sequence_and_iterate(const yaml &node, const String &key, F &&f)
                 f(v);
         }
         else
-            throw std::runtime_error("'" + key + "' must be a sequence");
+            throw SW_RUNTIME_EXCEPTION("'" + key + "' must be a sequence");
     }
 }
 
@@ -130,7 +131,7 @@ void get_map(const yaml &node, const String &key, F &&f)
     if (const auto &n = node[key]; n.IsDefined())
     {
         if (!n.IsMap())
-            throw std::runtime_error("'" + key + "' must be a map");
+            throw SW_RUNTIME_EXCEPTION("'" + key + "' must be a map");
         f(n);
     }
 }
@@ -141,7 +142,7 @@ void get_map_and_iterate(const yaml &node, const String &key, F &&f)
     if (const auto &n = node[key]; n.IsDefined())
     {
         if (!n.IsMap())
-            throw std::runtime_error("'" + key + "' must be a map");
+            throw SW_RUNTIME_EXCEPTION("'" + key + "' must be a map");
         for (const auto &v : n)
             f(v);
     }
@@ -153,7 +154,7 @@ void get_string_map(const yaml &node, const String &key, T &data)
     if (const auto &n = node[key]; n.IsDefined())
     {
         if (!n.IsMap())
-            throw std::runtime_error("'" + key + "' must be a map");
+            throw SW_RUNTIME_EXCEPTION("'" + key + "' must be a map");
         for (const auto &v : n)
             data.emplace(v.first.as<String>(), v.second.as<String>());
     }

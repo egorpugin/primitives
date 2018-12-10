@@ -6,6 +6,7 @@
 
 #include <primitives/filesystem.h>
 
+#include <primitives/exceptions.h>
 #include <primitives/file_iterator.h>
 
 #include <boost/algorithm/string.hpp>
@@ -122,7 +123,7 @@ String read_file_bytes(const path &p, uintmax_t offset, uintmax_t count)
 {
     error_code ec;
     if (!fs::exists(p, ec))
-        throw std::runtime_error("File '" + p.u8string() + "' does not exist");
+        throw SW_RUNTIME_EXCEPTION("File '" + p.u8string() + "' does not exist");
     return read_file_bytes_unchecked(p, offset, count);
 }
 
@@ -130,11 +131,11 @@ String read_file_from_offset(const path &p, uintmax_t offset, uintmax_t max_size
 {
     error_code ec;
     if (!fs::exists(p, ec))
-        throw std::runtime_error("File '" + p.u8string() + "' does not exist");
+        throw SW_RUNTIME_EXCEPTION("File '" + p.u8string() + "' does not exist");
 
     auto sz = fs::file_size(p) - offset;
     if (sz > max_size)
-        throw std::runtime_error("File " + p.u8string() + " is bigger than allowed limit (" + std::to_string(max_size) + " bytes)");
+        throw SW_RUNTIME_EXCEPTION("File " + p.u8string() + " is bigger than allowed limit (" + std::to_string(max_size) + " bytes)");
 
     return read_file_bytes_unchecked(p, offset, sz);
 }
@@ -371,11 +372,11 @@ bool compare_dirs(const path &dir1, const path &dir2)
     auto files2 = traverse_dir(dir2);
 
     if (files1.empty())
-        return false; // throw std::runtime_error("left side has no files");
+        return false; // throw SW_RUNTIME_EXCEPTION("left side has no files");
     if (files2.empty())
-        return false; // throw std::runtime_error("right side has no files");
+        return false; // throw SW_RUNTIME_EXCEPTION("right side has no files");
     if (files1.size() != files2.size())
-        return false; // throw std::runtime_error("different number of files");
+        return false; // throw SW_RUNTIME_EXCEPTION("different number of files");
 
     auto sz = files1.size();
     for (size_t i = 0; i < sz; i++)
@@ -390,7 +391,7 @@ bool compare_dirs(const path &dir1, const path &dir2)
 FileIterator::FileIterator(const FilesOrdered &fns)
 {
     if (fns.empty())
-        throw std::runtime_error("Provide at least one file");
+        throw SW_RUNTIME_EXCEPTION("Provide at least one file");
 
     for (auto &f : fns)
     {
@@ -470,7 +471,7 @@ FILE *fopen_checked(const path &p, const char *mode)
 {
     auto f = fopen(p, mode);
     if (!f)
-        throw std::runtime_error("Cannot open file: " + p.u8string() + ", mode = " + mode + ", errno = " + std::to_string(errno));
+        throw SW_RUNTIME_EXCEPTION("Cannot open file: " + p.u8string() + ", mode = " + mode + ", errno = " + std::to_string(errno));
     return f;
 }
 

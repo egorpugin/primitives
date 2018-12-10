@@ -34,10 +34,13 @@ template <class T>
 struct SharedState;
 
 PRIMITIVES_EXECUTOR_API
-size_t get_max_threads(size_t N = 4);
+size_t get_max_threads(int N = 4);
 
 PRIMITIVES_EXECUTOR_API
-Executor &getExecutor(size_t N = 0);
+size_t select_number_of_threads(int N = 0);
+
+PRIMITIVES_EXECUTOR_API
+SW_DECLARE_GLOBAL_STATIC_FUNCTION(Executor, getExecutor);
 
 class PRIMITIVES_EXECUTOR_API TaskQueue
 {

@@ -368,7 +368,7 @@ struct Setting
         convert<U>();
         if (auto p = std::any_cast<U>(&value); p)
             return *p;
-        throw std::runtime_error("Bad any_cast");
+        throw SW_RUNTIME_EXCEPTION("Bad any_cast");
     }
 
     template <class U>
@@ -377,7 +377,7 @@ struct Setting
         convert<U>();
         if (auto p = std::any_cast<U>(&value); p)
             return *p;
-        throw std::runtime_error("Bad any_cast");
+        throw SW_RUNTIME_EXCEPTION("Bad any_cast");
     }
 
     template <class U>
@@ -386,7 +386,7 @@ struct Setting
         if (representation.empty())
             return;
         if (excludedValues.find(representation) != excludedValues.end())
-            throw std::runtime_error("Setting value is prohibited: '" + representation + "'");
+            throw SW_RUNTIME_EXCEPTION("Setting value is prohibited: '" + representation + "'");
         setType<U>();
         value = parser->fromString(representation);
         representation.clear();

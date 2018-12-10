@@ -3,10 +3,10 @@
 #include <iostream>
 #include <thread>
 
-template <class F>
-std::thread make_thread(F &&f)
+template <class F, class Thread = std::thread>
+auto make_thread(F &&f)
 {
-    return std::thread([f = std::move(f)]() mutable
+    return Thread([f = std::move(f)]() mutable
     {
         auto id = std::this_thread::get_id();
         try
@@ -22,4 +22,20 @@ std::thread make_thread(F &&f)
             std::cerr << "unknown unrecoverable error in thread #" << id << ": " << std::endl;
         }
     });
+}
+
+struct joining_thread : std::thread
+{
+    using std::thread::thread;
+
+    ~joining_thread()
+    {
+        join();
+    }
+};
+
+template <class F>
+auto make_joining_thread(F &&f)
+{
+    return make_thread<F, joining_thread>(std::forward<F>(f));
 }

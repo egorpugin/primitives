@@ -7,6 +7,7 @@
 #pragma once
 
 #include <primitives/filesystem.h>
+#include <primitives/exceptions.h>
 
 PRIMITIVES_HASH_API
 String generate_random_alnum_sequence(uint32_t len);
@@ -99,5 +100,5 @@ bool check_strong_file_hash(const T &data, const String &hash)
         return hash == strong_file_hash_sha3_sha2(data);
     if (f == HashType::blake2b_512 && s == HashType::sha3_256)
         return hash == strong_file_hash_blake2b_sha3(data);
-    throw std::runtime_error("Unknown hash type(s)");
+    throw SW_RUNTIME_EXCEPTION("Unknown hash type(s)");
 }
