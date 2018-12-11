@@ -289,7 +289,7 @@ void build(Solution &s)
     setup_primitives_no_all_sources(stamp_gen);
     stamp_gen += "src/tools/stamp_gen.cpp";
 
-    auto &test = p.addDirectory("test");
+    /*auto &test = p.addDirectory("test");
     test.Scope = TargetScope::Test;
 
     auto add_test = [&test, &s](const String &name) -> decltype(auto)
@@ -324,5 +324,5 @@ void build(Solution &s)
     s.addTest(test_main);
     s.addTest(test_db);
     s.addTest(test_settings);
-    s.addTest(test_version);
+    s.addTest(test_version);*/
 }
