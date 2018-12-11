@@ -14,7 +14,7 @@ Exception::Exception(const char* file, const char* function, int line, const std
 {
 }
 
-const char* Exception::what() const
+const char* Exception::what() const noexcept
 {
     if (what_.empty())
         what_ = format();

@@ -20,7 +20,7 @@ struct Exception : std::exception
 {
     Exception(const char* file, const char* function, int line, const std::string &msg);
 
-    const char* what() const override;
+    const char* what() const noexcept override;
 
 protected:
     //std::string ex_type; // ?
