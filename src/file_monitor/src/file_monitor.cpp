@@ -101,6 +101,12 @@ FileMonitor::FileMonitor()
 FileMonitor::~FileMonitor()
 {
     stop();
+
+    Strings errors;
+    // cleanup loop
+    ::primitives::detail::uv_loop_close(loop, errors);
+    for (auto &e : errors)
+        std::cerr << e << "\n";
 }
 
 void FileMonitor::stop()
@@ -113,14 +119,8 @@ void FileMonitor::stop()
     for (auto &d : dir_files)
         d.second.r->stop();
 
-    // join thread
+    // stop loop
     uv_stop(&loop);
-
-    Strings errors;
-    // and cleanup loop
-    ::primitives::detail::uv_loop_close(loop, errors);
-    for (auto &e : errors)
-        std::cerr << e << "\n";
 }
 
 void FileMonitor::run()
