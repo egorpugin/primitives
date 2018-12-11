@@ -190,7 +190,7 @@ void build(Solution &s)
     cron.Public += executor, log;
 
     ADD_LIBRARY(yaml);
-    yaml.Public += string,
+    yaml.Public += string, templates,
         "org.sw.demo.jbeder.yaml_cpp-master"_dep;
 
     ADD_LIBRARY(pack);
