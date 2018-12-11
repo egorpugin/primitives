@@ -39,3 +39,34 @@ auto make_joining_thread(F &&f)
 {
     return make_thread<F, joining_thread>(std::forward<F>(f));
 }
+
+template <class T, typename FReturnType = void>
+struct joining_thread_with_object : joining_thread
+{
+    using F = FReturnType(T::*)();
+
+    T &t;
+    F stop;
+
+    joining_thread_with_object(T &in, F run, F stop)
+        : joining_thread([&in, run] { (in.*run)(); }), t(in), stop(stop)
+    {
+    }
+
+    ~joining_thread_with_object()
+    {
+        (t.*stop)();
+    }
+};
+
+template <class T>
+struct joining_thread_with_object_run_stop : joining_thread_with_object<T>
+{
+    joining_thread_with_object_run_stop(T &in)
+        : joining_thread_with_object<T>(in, &T::run, &T::stop)
+    {
+    }
+};
+
+template <class T>
+joining_thread_with_object_run_stop(T&)->joining_thread_with_object_run_stop<T>;
