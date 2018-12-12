@@ -30,6 +30,7 @@
     } while (0)
 #define YAML_EXTRACT(val, type) YAML_EXTRACT_VAR(root, val, #val, type)
 #define YAML_EXTRACT_AUTO(val) YAML_EXTRACT(val, decltype(val))
+#define YAML_EXTRACT_AUTO2(val, var) YAML_EXTRACT_VAR(root, val, var, decltype(val))
 
 using yaml = YAML::Node;
 
