@@ -9,10 +9,10 @@
 #include <primitives/filesystem.h>
 
 PRIMITIVES_PACK_API
-bool pack_files(const path &archive, const std::unordered_map<path, path> &files);
+bool pack_files(const path &archive, const std::unordered_map<path, path> &files, String *error = nullptr);
 
 PRIMITIVES_PACK_API
-bool pack_files(const path &archive, const Files &files, const path &root_dir);
+bool pack_files(const path &archive, const Files &files, const path &root_dir, String *error = nullptr);
 
 PRIMITIVES_PACK_API
 Files unpack_file(const path &archive, const path &dest_dir);

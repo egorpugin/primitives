@@ -29,14 +29,17 @@ std::unordered_map<path, path> prepare_files(const Files &files, const path &roo
         if (!fs::exists(f))
         {
             files2[f]; // still add to return false later
-            continue;
+            continue; // report error?
         }
 
         // skip symlinks too
         if (!fs::is_regular_file(f))
-            continue;
+            continue; // report error?
 
         auto r = fs::relative(f, root_dir);
+        if (r.u8string().find("..") != String::npos)
+            if (!is_under_root(f, root_dir))
+                continue; // report error?
         if (!file_prefix.empty())
             r = file_prefix.string() + r.string();
         if (!dir_prefix.empty())
@@ -48,7 +51,7 @@ std::unordered_map<path, path> prepare_files(const Files &files, const path &roo
 
 }
 
-bool pack_files(const path &fn, const std::unordered_map<path, path> &files)
+bool pack_files(const path &fn, const std::unordered_map<path, path> &files, String *error)
 {
     bool result = true;
     auto a = archive_write_new();
@@ -66,6 +69,8 @@ bool pack_files(const path &fn, const std::unordered_map<path, path> &files)
         if (!fs::exists(f))
         {
             result = false;
+            if (error)
+                *error = "Missing file: " + normalize_path(f);
             continue;
         }
 
@@ -89,9 +94,9 @@ bool pack_files(const path &fn, const std::unordered_map<path, path> &files)
     return result;
 }
 
-bool pack_files(const path &fn, const Files &files, const path &root_dir)
+bool pack_files(const path &fn, const Files &files, const path &root_dir, String *error)
 {
-    return pack_files(fn, primitives::pack::prepare_files(files, root_dir));
+    return pack_files(fn, primitives::pack::prepare_files(files, root_dir), error);
 }
 
 Files unpack_file(const path &fn, const path &dst)
