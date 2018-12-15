@@ -63,7 +63,15 @@ bool pack_files(const path &fn, const std::unordered_map<path, path> &files, Str
 
     archive_write_add_filter_gzip(a);
     archive_write_set_format_pax_restricted(a);
-    archive_write_open_filename(a, fn.u8string().c_str());
+    auto r = archive_write_open_filename(a, fn.u8string().c_str());
+    if (r != ARCHIVE_OK)
+        throw SW_RUNTIME_EXCEPTION(archive_error_string(a));
+
+    SCOPE_EXIT
+    {
+        archive_write_close(a);
+    };
+
     for (auto &[f, n] : files)
     {
         if (!fs::exists(f))
@@ -118,6 +126,12 @@ Files unpack_file(const path &fn, const path &dst)
     auto r = archive_read_open_filename(a, fn.u8string().c_str(), BLOCK_SIZE);
     if (r != ARCHIVE_OK)
         throw SW_RUNTIME_EXCEPTION(archive_error_string(a));
+
+    SCOPE_EXIT
+    {
+        archive_read_close(a);
+    };
+
     archive_entry *entry;
     while (archive_read_next_header(a, &entry) == ARCHIVE_OK)
     {
