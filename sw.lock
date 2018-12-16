@@ -2593,7 +2593,7 @@
     },
     {
       "dependencies": [
-        "org.sw.demo.openssl.ssl-1.1.1"
+        "org.sw.demo.openssl.ssl-1.1.1.1"
       ],
       "group_number": 670,
       "hash": "3_2$1b2b0c8eaa90230f34eba04fc5f6c99508b167403d0ead2a56e60e8e9b0e68541681dc7399ffbb479058e098a2863c4cabaea3eee0f33ee8b13dfee825bdff93",
@@ -2641,18 +2641,18 @@
       "prefix": 3
     },
     {
-      "group_number": 481,
-      "hash": "3_2$3ead81c76ec41cd2162efe4c0e44f6e131abc0c8bb509cf036f344c9055660f83b121b5310b1d792d8f7e65e1f6450991f350ec73c2ef2e7ae44c6d46905cd06",
-      "package": "org.sw.demo.openssl.crypto-1.1.1",
+      "group_number": 809,
+      "hash": "3_2$4775d691463f2fb0f606ded918366c6f8bebdbf16948e7ef873c9d9fc93482f64030da1fb12b3de8646b8460f81ddfccc8fd380eaa751f3e75f4694744088121",
+      "package": "org.sw.demo.openssl.crypto-1.1.1.1",
       "prefix": 3
     },
     {
       "dependencies": [
-        "org.sw.demo.openssl.crypto-1.1.1"
+        "org.sw.demo.openssl.crypto-1.1.1.1"
       ],
-      "group_number": 481,
-      "hash": "3_2$bf989123692a20e2cd7783b95e721c0d0ef5a7f60c20016b7f429747d22a3c41bb31b0f58e9321672c4df27a3a74dd73383cba83ef2312c03ae37c9654081de4",
-      "package": "org.sw.demo.openssl.ssl-1.1.1",
+      "group_number": 809,
+      "hash": "3_2$b8766964b861d2d9b2732ecaa0e090c3321041cf9a3498457188dee50c906bd76898ba6ff46bc8bb72df27af613ff0f32bc42808cfe159a4be297416d7902e84",
+      "package": "org.sw.demo.openssl.ssl-1.1.1.1",
       "prefix": 3
     },
     {
@@ -2766,7 +2766,7 @@
       "package": "org.sw.demo.libuv-1.24.0"
     },
     "org.sw.demo.openssl.crypto->=1.0.0.0 <2.0.0.0": {
-      "package": "org.sw.demo.openssl.crypto-1.1.1"
+      "package": "org.sw.demo.openssl.crypto-1.1.1.1"
     },
     "org.sw.demo.ragel-6.10.0": {
       "package": "org.sw.demo.ragel-6.10.0"
