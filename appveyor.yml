@@ -2,7 +2,7 @@ image: Visual Studio 2017
 
 platform:
   - Win32
-  #- Win64
+  - Win64
 
 cache:
   - c:/Users/appveyor/.sw
@@ -23,7 +23,7 @@ before_build:
   - set PATH=%PATH%;%cd%
 
 build_script:
-  - client build sw.cpp
+  - client -platform %winplatform% build sw.cpp
 
 #artifacts:
   #- path: bin
