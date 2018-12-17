@@ -211,7 +211,8 @@ StringSet ignore_for_qt_begin_namespace_check {
 };
 
 const std::map<String, StringSet> inject_headers {
-    {"src/corelib/global", { "qconfig.h", "qconfig_p.h" }}
+    {"src/corelib/global", { "qconfig.h", "qconfig_p.h" }},
+    {"src/qml", { "qqmljsgrammar_p.h", "qqmljsparser_p.h" }},
 };
 
 const std::set<String> qpa_headers {

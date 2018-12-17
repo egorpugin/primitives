@@ -468,7 +468,7 @@ void Command::execute1(std::error_code *ec_in)
         return;
     }
 
-    throw std::runtime_error(getError());
+    throw SW_RUNTIME_EXCEPTION(getError());
 }
 
 String Command::getError() const
