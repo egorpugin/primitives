@@ -17,17 +17,15 @@ branches:
 
 cache:
   directories:
-    - $HOME/.cppan/storage
+    - $HOME/.sw
 
 addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-    - gcc-7
-    - g++-7
-    - ninja-build
-    - cmake
+    - gcc-8
+    - g++-8
     - postgresql
     - postgresql-server-dev-all
 
@@ -36,13 +34,16 @@ before_install:
   - if [[ $TRAVIS_OS_NAME == osx     ]]; then OSX=true; fi
 
 install:
+  - curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/client_linux.tar.gz
+  - tar -xvf sw.tar.gz
+
   #- if [[ $LINUX ]]; then sudo apt-get update; fi
-  - if [[ $LINUX ]]; then wget --no-check-certificate http://www.cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.sh; fi
-  - if [[ $LINUX ]]; then sudo sh cmake-3.11.0-Linux-x86_64.sh --skip-license --prefix=/usr; fi
+  #- if [[ $LINUX ]]; then wget --no-check-certificate http://www.cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.sh; fi
+  #- if [[ $LINUX ]]; then sudo sh cmake-3.11.0-Linux-x86_64.sh --skip-license --prefix=/usr; fi
   #- wget -O master.zip https://github.com/cppan/tests/archive/master.zip
   #- unzip master.zip -d .
-  - if [[ $LINUX ]]; then wget https://cppan.org/client/cppan-master-Linux-client.deb; fi
-  - if [[ $LINUX ]]; then sudo dpkg -i cppan-master-Linux-client.deb; fi
+  #- if [[ $LINUX ]]; then wget https://cppan.org/client/cppan-master-Linux-client.deb; fi
+  #- if [[ $LINUX ]]; then sudo dpkg -i cppan-master-Linux-client.deb; fi
 
   #- if [[ $OSX ]]; then brew upgrade cmake; fi
   - if [[ $OSX ]]; then wget https://cppan.org/client/cppan-master-macOS-client.zip; fi
@@ -50,6 +51,4 @@ install:
   - if [[ $OSX ]]; then sudo mv cppan /usr/local/bin/cppan; fi
 
 script:
-  - if [[ $LINUX ]]; then cppan --build . --config gcc7 -s; fi
-  - if [[ $OSX ]];   then cppan --build . -s; fi
-  - ./bin/main
+  - ./sw build
