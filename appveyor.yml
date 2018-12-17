@@ -20,7 +20,7 @@ before_build:
   - set PATH=%PATH%;%cd%
 
 build_script:
-  - sw -platform %platform% test
+  - sw -platform %platform% build
 
 after_build:
   - 7z a test.zip %APPVEYOR_BUILD_FOLDER%\.sw\test\*
