@@ -27,7 +27,7 @@ addons:
     - gcc-8
     - g++-8
     - postgresql
-    - postgresql-server-dev-10
+    #- postgresql-server-dev-10
 
 before_install:
   - if [[ $TRAVIS_OS_NAME == linux   ]]; then LINUX=true; fi
