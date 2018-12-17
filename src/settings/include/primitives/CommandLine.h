@@ -867,7 +867,12 @@ protected:
   ~basic_parser() = default;
 };
 
-#ifdef _MSC_VER
+#if __clang__ && defined(_MSC_VER)
+#error "clang-cl does not work here, find workaround!"
+#define EXTERN_PARSER_TEMPLATE(type) \
+    extern template class basic_parser<type>; \
+    extern template class parser<type>
+#elif defined(_MSC_VER)
 #define EXTERN_PARSER_TEMPLATE(type) \
     PRIMITIVES_SETTINGS_API_EXTERN template class PRIMITIVES_SETTINGS_API basic_parser<type>; \
     PRIMITIVES_SETTINGS_API_EXTERN template class PRIMITIVES_SETTINGS_API parser<type>
