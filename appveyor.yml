@@ -15,15 +15,12 @@ install:
   - set PATH=C:\Program Files\Git\mingw64\bin;%PATH%
 
 before_build:
-  - if %platform%==Win32 set winplatform=Win32
-  - if %platform%==Win64 set winplatform=Win64
-
   - curl -fsS -L -o cppan.zip https://github.com/SoftwareNetwork/binaries/raw/master/client.zip
   - 7z x cppan.zip
   - set PATH=%PATH%;%cd%
 
 build_script:
-  - client -platform %winplatform% build sw.cpp
+  - client -platform %platform% build sw.cpp
 
 #artifacts:
   #- path: bin
