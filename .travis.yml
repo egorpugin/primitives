@@ -26,7 +26,7 @@ addons:
     packages:
     - gcc-8
     - g++-8
-    - postgresql
+    #- postgresql
     #- postgresql-server-dev-10
 
 before_install:
