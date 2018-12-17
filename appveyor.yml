@@ -1,7 +1,7 @@
 image: Visual Studio 2017
 
 platform:
-  - Win32
+  #- Win32 # win32 does not have postgres
   - Win64
 
 cache:
