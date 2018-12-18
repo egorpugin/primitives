@@ -20,11 +20,11 @@ before_build:
   - set PATH=%PATH%;%cd%
 
 build_script:
-  - sw -platform %platform% build
+  - sw -platform %platform% build # test
 
-after_build:
-  - 7z a test.zip %APPVEYOR_BUILD_FOLDER%\.sw\test\*
+#after_build:
+#  - 7z a test.zip %APPVEYOR_BUILD_FOLDER%\.sw\test\*
 
-artifacts:
-  - path: test.zip
-    name: primitives-$(APPVEYOR_BUILD_VERSION)
+#artifacts:
+#  - path: test.zip
+#    name: primitives-$(APPVEYOR_BUILD_VERSION)
