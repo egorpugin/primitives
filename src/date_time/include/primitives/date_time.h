@@ -27,6 +27,9 @@ PRIMITIVES_DATE_TIME_API
 TimePoint string2timepoint(const String &s);
 
 PRIMITIVES_DATE_TIME_API
+String timepoint2string(const TimePoint &t);
+
+PRIMITIVES_DATE_TIME_API
 time_t string2time_t(const String &s);
 
 PRIMITIVES_DATE_TIME_API

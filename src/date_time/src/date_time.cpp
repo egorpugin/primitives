@@ -11,18 +11,24 @@ TimePoint getUtc()
     boost::posix_time::ptime t(
         boost::gregorian::day_clock::universal_day(),
         boost::posix_time::second_clock::universal_time().time_of_day());
-    return std::chrono::system_clock::from_time_t(boost::posix_time::to_time_t(t));
+    return Clock::from_time_t(boost::posix_time::to_time_t(t));
 }
 
 TimePoint string2timepoint(const String &s)
 {
     auto t = boost::posix_time::time_from_string(s);
-    return std::chrono::system_clock::from_time_t(boost::posix_time::to_time_t(t));
+    return Clock::from_time_t(boost::posix_time::to_time_t(t));
+}
+
+String timepoint2string(const TimePoint &t)
+{
+    auto t2 = boost::posix_time::from_time_t(Clock::to_time_t(t));
+    return boost::posix_time::to_simple_string(t2);
 }
 
 time_t string2time_t(const String &s)
 {
-    return std::chrono::system_clock::to_time_t(string2timepoint(s));
+    return Clock::to_time_t(string2timepoint(s));
 }
 
 String local_time()
