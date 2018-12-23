@@ -14,7 +14,7 @@
 
 #define LOGGER_GLOBAL_INIT
 #define LOGGER_GLOBAL_DESTROY
-#define LOGGER_CONFIGURE(loglevel, filename) initLogger(loglevel, filename)
+//#define LOGGER_CONFIGURE(loglevel, filename) initLogger(loglevel, filename)
 
 #define CREATE_LOGGER(name) const char *name
 #define GET_LOGGER(module) module

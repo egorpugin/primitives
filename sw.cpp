@@ -65,7 +65,7 @@ void embed(NativeExecutedTarget &t, const path &in)
     t += IncludeDirectory(out.parent_path()); // but remove this later
 }
 
-void syncqt(NativeExecutedTarget &t, const Strings &modules)
+Files syncqt(NativeExecutedTarget &t, const Strings &modules)
 {
     auto sqt = THIS_PREFIX "." "primitives.tools.syncqt" "-" THIS_VERSION_DEPENDENCY;
     {
@@ -73,10 +73,12 @@ void syncqt(NativeExecutedTarget &t, const Strings &modules)
         d->Dummy = true;
     }
 
+    Files out;
+    auto i = t.BinaryDir / "include";
     auto v = t.pkg.version.toString();
     for (auto &m : modules)
     {
-        fs::create_directories(t.BinaryDir / "include" / m / v / m);
+        fs::create_directories(i / m / v / m);
 
         auto c = t.addCommand();
         c << cmd::prog(sqt)
@@ -85,14 +87,18 @@ void syncqt(NativeExecutedTarget &t, const Strings &modules)
             << "-m" << m
             << "-v" << v
             << cmd::end()
-            << cmd::out(t.BinaryDir / "include" / m / m)
+            << cmd::out(i / m / m)
             ;
+        c.c->strict_order = 1; // run before moc
+        out.insert(i / m / m);
+        //t.Interface += i / m / m; makes cyclic deps
 
-        t.Public += IncludeDirectory(t.BinaryDir / "include");
-        t.Public += IncludeDirectory(t.BinaryDir / "include" / m);
-        t.Public += IncludeDirectory(t.BinaryDir / "include" / m / v);
-        t.Public += IncludeDirectory(t.BinaryDir / "include" / m / v / m);
+        t.Public += IncludeDirectory(i);
+        t.Public += IncludeDirectory(i / m);
+        t.Public += IncludeDirectory(i / m / v);
+        t.Public += IncludeDirectory(i / m / v / m);
     }
+    return out;
 }
 
 #pragma sw header off
