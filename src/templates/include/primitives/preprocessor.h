@@ -1,5 +1,9 @@
 #pragma once
 
+//
+#define STRINGIFY2(s) #s
+#define STRINGIFY(s) STRINGIFY2(s)
+
 // Concatenate preprocessor tokens A and B without expanding macro definitions
 // (however, if invoked from a macro, macro arguments are expanded).
 #define CONCATENATE_NX(s1, s2) s1 ## s2
