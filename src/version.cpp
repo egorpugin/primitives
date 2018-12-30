@@ -1049,6 +1049,16 @@ TEST_CASE("Checking version ranges", "[range]")
         CHECK(vr.toString() == "*");
     }
 
+    {
+        Version v1("1.1");
+        Version v2("1.2");
+        VersionRange vr1(v1, v2);
+        CHECK(vr1.size() == 1);
+
+        VersionRange vr2(v2, v1);
+        CHECK(vr2.size() == 1);
+    }
+
     // from simple to complex
     CHECK(VersionRange("1").toString() == ">=1.0.0 <2.0.0");
     CHECK(VersionRange("1.0.0").toString() == "1.0.0");
@@ -1278,12 +1288,30 @@ TEST_CASE("Checking version ranges", "[range]")
     {
         VersionRange vr("master");
         CHECK(vr.toString() == "master");
+        CHECK(vr.hasVersion("master"));
+        CHECK_FALSE(vr.hasVersion("master1"));
+    }
+
+    {
+        Version v("master");
+        Version v2("master2");
+        Version v3;
+        CHECK_THROWS(VersionRange(v, v2));
+        CHECK_THROWS(VersionRange(v, v3));
+        CHECK_THROWS(VersionRange(v3, v));
+        REQUIRE_NOTHROW(VersionRange(v, v));
+        CHECK_NOTHROW(VersionRange(v2, v2));
+        VersionRange vr(v, v);
+        CHECK(vr.hasVersion("master"));
+        CHECK_FALSE(vr.hasVersion("master2"));
     }
 
     CHECK_THROWS(VersionRange("master-master"));
-    CHECK(VersionRange("a b").toString() == "a");
-    CHECK(VersionRange("a b || c").toString() == "a");
-    CHECK(VersionRange("a b - d || c").toString() == "a");
+    CHECK_THROWS(VersionRange("master || master2"));
+
+    CHECK_THROWS(VersionRange("a b").toString() == "a");
+    CHECK_THROWS(VersionRange("a b || c").toString() == "a");
+    CHECK_THROWS(VersionRange("a b - d || c").toString() == "a");
     CHECK_THROWS(VersionRange("a - b - d || c || d || e||f").toString() == "a");
 
     // cmp
@@ -1291,7 +1319,7 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK_FALSE(VersionRange("a") != VersionRange("a"));
     CHECK(VersionRange() < VersionRange("a"));
     CHECK(VersionRange() != VersionRange("a"));
-    CHECK(VersionRange("a") < VersionRange("b || c d"));
+    CHECK_THROWS(VersionRange("a") < VersionRange("b || c d"));
 
     // v1 ranges
     {
