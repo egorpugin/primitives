@@ -513,3 +513,10 @@ void ScopedFile::seek(uintmax_t offset)
 {
     fseek(f, offset, SEEK_SET);
 }
+
+void ScopedFile::close()
+{
+    fclose(f);
+    f = nullptr;
+}
+

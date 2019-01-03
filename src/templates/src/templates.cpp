@@ -14,11 +14,13 @@ ScopeGuard::~ScopeGuard()
     }
     catch (const std::exception &e)
     {
-        std::cerr << "exception was thrown in scope guard: " << e.what() << "\n";
+        std::cerr << "exception was thrown in scope guard: " << e.what() << std::endl;
+        //throw;
     }
     catch (...)
     {
-        std::cerr << "unknown exception was thrown in scope guard\n";
+        std::cerr << "unknown exception was thrown in scope guard" << std::endl;
+        //throw;
     }
 }
 

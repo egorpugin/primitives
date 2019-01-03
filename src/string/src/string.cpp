@@ -113,3 +113,8 @@ std::string to_string(const std::wstring &s)
     auto &converter = get_string_converter();
     return converter.to_bytes(s.c_str());
 }
+
+std::string errno2string(int e)
+{
+    throw std::runtime_error("not implemented");
+}

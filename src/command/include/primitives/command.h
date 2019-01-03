@@ -63,6 +63,10 @@ struct PRIMITIVES_COMMAND_API Command
 
     virtual void execute() { execute1(); }
     virtual void execute(std::error_code &ec) { execute1(&ec); }
+
+    virtual void onBeforeRun() {}
+    virtual void onEnd() {}
+
     void write(path p) const;
     String print() const;
     String getError() const;

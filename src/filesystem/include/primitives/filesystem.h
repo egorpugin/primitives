@@ -219,6 +219,7 @@ public:
 
     size_t read(void *buf, size_t sz);
     void seek(uintmax_t offset);
+    void close();
 
 private:
     FILE *f = nullptr;

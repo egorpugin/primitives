@@ -321,7 +321,9 @@ void Command::execute1(std::error_code *ec_in)
     // exit callback
     auto on_exit = [](uv_process_t *child_req, int64_t exit_status, int term_signal)
     {
-        ((Command*)(child_req->data))->exit_code = exit_status;
+        auto c = (Command*)(child_req->data);
+        c->exit_code = exit_status;
+        c->onEnd();
         uv_close((uv_handle_t*)child_req, 0);
     };
 
@@ -381,6 +383,8 @@ void Command::execute1(std::error_code *ec_in)
     // child handle
     uv_process_t child_req = { 0 };
     child_req.data = this; // self pointer
+
+    onBeforeRun();
 
     if (r = uv_spawn(&loop, &child_req, &options); r)
         errors.push_back("child not started: "s + uv_strerror(r));
@@ -455,6 +459,10 @@ void Command::execute1(std::error_code *ec_in)
 
     // cleanup loop
     r = ::primitives::detail::uv_loop_close(loop, errors);
+    for (auto &e : errors)
+        std::cerr << "error in cmd: " << e << std::endl;
+    if (r)
+        std::cerr << "error in cmd: loop was not closed" << std::endl;
 
     if (exit_code && exit_code.value() == 0)
         return;
