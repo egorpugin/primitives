@@ -172,12 +172,9 @@ String Command::print() const
 {
     String s;
     s += "\"" + program.u8string() + "\" ";
-    for (auto &a : args)
+    for (auto &a : getArgs())
     {
-        //if (protect_args_with_quotes)
-            s += "\"" + a + "\"";
-        //else
-            //s += a;
+        s += "\"" + a + "\"";
         s += " ";
     }
     s.resize(s.size() - 1);
@@ -188,9 +185,9 @@ path Command::getProgram() const
 {
     if (!program.empty())
         return program;
-    if (args.empty())
+    if (getArgs().empty())
         throw SW_RUNTIME_EXCEPTION("No program was set");
-    return args[0];
+    return getArgs()[0];
 }
 
 void Command::execute1(std::error_code *ec_in)
@@ -200,11 +197,11 @@ void Command::execute1(std::error_code *ec_in)
     // try to use first arg as a program
     if (program.empty())
     {
-        if (args.empty())
+        if (getArgs().empty())
             throw SW_RUNTIME_EXCEPTION("No program was set");
-        program = args[0];
-        auto t = std::move(args);
-        args.assign(t.begin() + 1, t.end());
+        program = getArgs()[0];
+        auto t = std::move(getArgs());
+        getArgs().assign(t.begin() + 1, t.end());
     }
 
     // resolve exe
@@ -240,8 +237,8 @@ void Command::execute1(std::error_code *ec_in)
     // args
     std::vector<char*> uv_args;
     uv_args.push_back(prog.data()); // this name arg, win only?
-    for (auto &a : args)
-        uv_args.push_back(a.data());
+    for (const auto &a : getArgs())
+        uv_args.push_back((char *)a.data());
     uv_args.push_back(nullptr); // last null
 
     // setup pipes

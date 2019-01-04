@@ -51,7 +51,6 @@ struct PRIMITIVES_COMMAND_API Command
     // properties
     int32_t pid = -1;
     size_t buf_size = 8192;
-    bool use_parent_environment = true;
     bool detached = false;
     void *attribute_list = nullptr; // win32 STARTUPINFOEX
     //bool protect_args_with_quotes = true;
@@ -60,6 +59,9 @@ struct PRIMITIVES_COMMAND_API Command
 
     Command();
     virtual ~Command();
+
+    virtual Strings &getArgs() { return args; }
+    virtual const Strings &getArgs() const { return const_cast<Command*>(this)->getArgs(); }
 
     virtual void execute() { execute1(); }
     virtual void execute(std::error_code &ec) { execute1(&ec); }
