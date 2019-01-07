@@ -25,17 +25,17 @@ static std::string preprocess_input_extra(const std::string &in)
 
 static void throw_bad_version(const std::string &s)
 {
-    throw SW_RUNTIME_EXCEPTION("Invalid version: " + s);
+    throw SW_RUNTIME_ERROR("Invalid version: " + s);
 }
 
 static void throw_bad_version_extra(const std::string &s)
 {
-    throw SW_RUNTIME_EXCEPTION("Invalid version extra: " + s);
+    throw SW_RUNTIME_ERROR("Invalid version extra: " + s);
 }
 
 static void throw_bad_version_range(const std::string &s)
 {
-    throw SW_RUNTIME_EXCEPTION("Invalid version range: " + s);
+    throw SW_RUNTIME_ERROR("Invalid version range: " + s);
 }
 
 namespace primitives::version
@@ -77,7 +77,7 @@ GenericNumericVersion::GenericNumericVersion(const std::initializer_list<Number>
     : numbers(list)
 {
     if (std::any_of(numbers.begin(), numbers.end(), [](const auto &n) {return n < 0; }))
-        throw SW_RUNTIME_EXCEPTION("Version number cannot be less than 0");
+        throw SW_RUNTIME_ERROR("Version number cannot be less than 0");
     auto l = std::max(minimum_level, level);
     if (numbers.size() < l)
         numbers.resize(l);
@@ -93,7 +93,7 @@ GenericNumericVersion::Number GenericNumericVersion::get(Level level) const
 {
     if (numbers.size() <= level)
         return 0;
-        //throw SW_RUNTIME_EXCEPTION("There is no that much numbers");
+        //throw SW_RUNTIME_ERROR("There is no that much numbers");
     return numbers[level];
 }
 
@@ -747,13 +747,13 @@ VersionRange::VersionRange(const Version &v1, const Version &v2)
     if (v1.isBranch() && v2.isBranch())
     {
         if (v1 != v2)
-            throw SW_RUNTIME_EXCEPTION("Cannot initialize version range from two different versions");
+            throw SW_RUNTIME_ERROR("Cannot initialize version range from two different versions");
         branch = v1.toString();
         return;
     }
     if (v1.isBranch() || v2.isBranch())
     {
-        throw SW_RUNTIME_EXCEPTION("Cannot initialize version range from branch and non-branch versions");
+        throw SW_RUNTIME_ERROR("Cannot initialize version range from branch and non-branch versions");
     }
     if (v1 > v2)
         range.emplace_back(v2, v1);
@@ -995,11 +995,11 @@ bool VersionRange::operator!=(const VersionRange &rhs) const
 VersionRange &VersionRange::operator|=(const RangePair &rhs)
 {
     if (isBranch())
-        throw SW_RUNTIME_EXCEPTION("Cannot |= with branch on LHS");
+        throw SW_RUNTIME_ERROR("Cannot |= with branch on LHS");
     if (rhs.isBranch())
     {
         if (!isEmpty())
-            throw SW_RUNTIME_EXCEPTION("Cannot |= with branch on RHS");
+            throw SW_RUNTIME_ERROR("Cannot |= with branch on RHS");
 
         range.clear();
         branch = rhs.toString();
@@ -1059,11 +1059,11 @@ VersionRange &VersionRange::operator|=(const RangePair &rhs)
 VersionRange &VersionRange::operator&=(const RangePair &rhs)
 {
     if (isBranch())
-        throw SW_RUNTIME_EXCEPTION("Cannot &= with branch on LHS");
+        throw SW_RUNTIME_ERROR("Cannot &= with branch on LHS");
     if (rhs.isBranch())
     {
         if (!isEmpty())
-            throw SW_RUNTIME_EXCEPTION("Cannot &= with branch on RHS");
+            throw SW_RUNTIME_ERROR("Cannot &= with branch on RHS");
 
         range.clear();
         branch = rhs.toString();
@@ -1093,11 +1093,11 @@ VersionRange &VersionRange::operator&=(const RangePair &rhs)
 VersionRange &VersionRange::operator|=(const VersionRange &rhs)
 {
     if (isBranch())
-        throw SW_RUNTIME_EXCEPTION("Cannot |= with branch on LHS");
+        throw SW_RUNTIME_ERROR("Cannot |= with branch on LHS");
     if (rhs.isBranch())
     {
         if (!isEmpty())
-            throw SW_RUNTIME_EXCEPTION("Cannot |= with branch on RHS");
+            throw SW_RUNTIME_ERROR("Cannot |= with branch on RHS");
 
         range.clear();
         branch = rhs.toString();
@@ -1111,11 +1111,11 @@ VersionRange &VersionRange::operator|=(const VersionRange &rhs)
 VersionRange &VersionRange::operator&=(const VersionRange &rhs)
 {
     if (isBranch())
-        throw SW_RUNTIME_EXCEPTION("Cannot &= with branch on LHS");
+        throw SW_RUNTIME_ERROR("Cannot &= with branch on LHS");
     if (rhs.isBranch())
     {
         if (!isEmpty())
-            throw SW_RUNTIME_EXCEPTION("Cannot &= with branch on RHS");
+            throw SW_RUNTIME_ERROR("Cannot &= with branch on RHS");
 
         range.clear();
         branch = rhs.toString();

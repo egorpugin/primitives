@@ -65,7 +65,7 @@ bool pack_files(const path &fn, const std::unordered_map<path, path> &files, Str
     archive_write_set_format_pax_restricted(a);
     auto r = archive_write_open_filename(a, fn.u8string().c_str());
     if (r != ARCHIVE_OK)
-        throw SW_RUNTIME_EXCEPTION(archive_error_string(a));
+        throw SW_RUNTIME_ERROR(archive_error_string(a));
 
     SCOPE_EXIT
     {
@@ -125,7 +125,7 @@ Files unpack_file(const path &fn, const path &dst)
     archive_read_support_format_all(a);
     auto r = archive_read_open_filename(a, fn.u8string().c_str(), BLOCK_SIZE);
     if (r != ARCHIVE_OK)
-        throw SW_RUNTIME_EXCEPTION(archive_error_string(a));
+        throw SW_RUNTIME_ERROR(archive_error_string(a));
 
     SCOPE_EXIT
     {
@@ -163,7 +163,7 @@ Files unpack_file(const path &fn, const path &dst)
             if (r == ARCHIVE_EOF)
                 break;
             if (r < ARCHIVE_OK)
-                throw SW_RUNTIME_EXCEPTION(archive_error_string(a));
+                throw SW_RUNTIME_ERROR(archive_error_string(a));
             fwrite(buff, size, 1, o.getHandle());
         }
         files.insert(f);

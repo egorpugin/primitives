@@ -46,7 +46,7 @@ String generate_strong_random_bytes(uint32_t len)
 {
     String bytes(len, 0);
     if (!RAND_bytes((unsigned char *)&bytes[0], (int)bytes.size()))
-        throw SW_RUNTIME_EXCEPTION("Error during getting random bytes");
+        throw SW_RUNTIME_ERROR("Error during getting random bytes");
     return bytes;
 }
 
@@ -172,12 +172,12 @@ String strong_file_hash(const path &fn)
 
     auto sha2_256_ctx = EVP_MD_CTX_create();
     if (!sha2_256_ctx)
-        throw SW_RUNTIME_EXCEPTION("Cannot create sha2 context");
+        throw SW_RUNTIME_ERROR("Cannot create sha2 context");
     EVP_DigestInit(sha2_256_ctx, EVP_sha256());
 
     auto sha3_256_ctx = rhash_init(RHASH_SHA3_256);
     if (!sha3_256_ctx)
-        throw SW_RUNTIME_EXCEPTION("Cannot create sha3 context");
+        throw SW_RUNTIME_ERROR("Cannot create sha3 context");
 
     FileIterator fi({ fn });
     auto r = fi.iterate([sha2_256_ctx, sha3_256_ctx](const auto &b, auto sz)
@@ -199,7 +199,7 @@ String strong_file_hash(const path &fn)
     rhash_free(sha3_256_ctx);
 
     if (!r)
-        throw SW_RUNTIME_EXCEPTION("Error during strong_file_hash()");
+        throw SW_RUNTIME_ERROR("Error during strong_file_hash()");
 
     auto p1 = bytes_to_string(hash2, hash2_size);
     auto p2 = bytes_to_string(hash3);
@@ -239,12 +239,12 @@ String strong_file_hash_blake2b_sha3(const path &fn)
 
     auto blake2b_ctx = EVP_MD_CTX_create();
     if (!blake2b)
-        throw SW_RUNTIME_EXCEPTION("Cannot create blake2b context");
+        throw SW_RUNTIME_ERROR("Cannot create blake2b context");
     EVP_DigestInit(blake2b_ctx, EVP_blake2b512());
 
     auto sha3_256_ctx = rhash_init(RHASH_SHA3_256);
     if (!sha3_256_ctx)
-        throw SW_RUNTIME_EXCEPTION("Cannot create sha3 context");
+        throw SW_RUNTIME_ERROR("Cannot create sha3 context");
 
     FileIterator fi({ fn });
     auto r = fi.iterate([blake2b_ctx, sha3_256_ctx](const auto &b, auto sz)
@@ -266,7 +266,7 @@ String strong_file_hash_blake2b_sha3(const path &fn)
     rhash_free(sha3_256_ctx);
 
     if (!r)
-        throw SW_RUNTIME_EXCEPTION("Error during strong_file_hash_blake2b_sha3()");
+        throw SW_RUNTIME_ERROR("Error during strong_file_hash_blake2b_sha3()");
 
     auto p1 = bytes_to_string(sha3);
     auto p2 = bytes_to_string(blake2b, blake2b_size);

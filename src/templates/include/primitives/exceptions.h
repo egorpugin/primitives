@@ -11,7 +11,7 @@
 
 #define SW_BASE_EXCEPTION(t, msg) t(__FILE__, __func__, __LINE__, msg)
 #define SW_EXCEPTION(t, msg) SW_BASE_EXCEPTION(sw::Exception, msg)
-#define SW_RUNTIME_EXCEPTION(msg) SW_BASE_EXCEPTION(sw::RuntimeException, msg)
+#define SW_RUNTIME_ERROR(msg) SW_BASE_EXCEPTION(sw::RuntimeError, msg)
 
 namespace sw
 {
@@ -33,7 +33,7 @@ protected:
     std::string format() const;
 };
 
-struct RuntimeException : Exception
+struct RuntimeError : Exception
 {
     using Exception::Exception;
 };

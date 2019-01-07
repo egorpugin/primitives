@@ -100,5 +100,5 @@ bool check_strong_file_hash(const T &data, const String &hash)
         return hash == strong_file_hash_sha3_sha2(data);
     if (f == HashType::blake2b_512 && s == HashType::sha3_256)
         return hash == strong_file_hash_blake2b_sha3(data);
-    throw SW_RUNTIME_EXCEPTION("Unknown hash type(s)");
+    throw SW_RUNTIME_ERROR("Unknown hash type(s)");
 }

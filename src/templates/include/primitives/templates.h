@@ -220,7 +220,7 @@ template <typename T,
         if (in)                                                \
             g = in;                                            \
         if (g == nullptr)                                      \
-            throw SW_RUNTIME_EXCEPTION("missing initializer"); \
+            throw SW_RUNTIME_ERROR("missing initializer"); \
         return *g;                                             \
     }
 

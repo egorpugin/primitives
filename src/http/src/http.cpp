@@ -123,13 +123,13 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
     if (res == CURLE_ABORTED_BY_CALLBACK)
     {
         fs::remove(fn);
-        throw SW_RUNTIME_EXCEPTION("File '" + url + "' is too big. Limit is " + std::to_string(file_size_limit) + " bytes.");
+        throw SW_RUNTIME_ERROR("File '" + url + "' is too big. Limit is " + std::to_string(file_size_limit) + " bytes.");
     }
     if (res != CURLE_OK)
-        throw SW_RUNTIME_EXCEPTION("url = " + url + ", curl error: "s + curl_easy_strerror(res));
+        throw SW_RUNTIME_ERROR("url = " + url + ", curl error: "s + curl_easy_strerror(res));
 
     if (http_code / 100 != 2)
-        throw SW_RUNTIME_EXCEPTION("url = " + url + ", http returned " + std::to_string(http_code));
+        throw SW_RUNTIME_ERROR("url = " + url + ", http returned " + std::to_string(http_code));
 }
 
 HttpResponse url_request(const HttpRequest &request)
@@ -235,7 +235,7 @@ HttpResponse url_request(const HttpRequest &request)
         curl_free(e);
 
     if (res != CURLE_OK)
-        throw SW_RUNTIME_EXCEPTION("url = " + request.url + ", curl error: "s + curl_easy_strerror(res));
+        throw SW_RUNTIME_ERROR("url = " + request.url + ", curl error: "s + curl_easy_strerror(res));
 
     return response;
 }

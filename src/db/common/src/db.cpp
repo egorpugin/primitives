@@ -20,7 +20,7 @@ void LiteDatabase::checkKey(const String &key)
 {
     static const std::regex r("[_a-zA-Z][_a-zA-Z0-9]*");
     if (!std::regex_match(key, r))
-        throw SW_RUNTIME_EXCEPTION("bad key");
+        throw SW_RUNTIME_ERROR("bad key");
 }
 
 void DatabaseSchemaManager::createOrUpdate() const

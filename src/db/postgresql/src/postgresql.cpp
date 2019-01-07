@@ -68,7 +68,7 @@ void PostgresqlDatabase::createServiceTable()
     if (r.empty())
         txn.exec("INSERT INTO " + service_table + " (version) values (-1)");
     else if (r.size() > 1)
-        throw SW_RUNTIME_EXCEPTION("db error: more than one row is present"s);
+        throw SW_RUNTIME_ERROR("db error: more than one row is present"s);
 }
 
 bool PostgresqlDatabase::createServiceTableColumn(const String &col)

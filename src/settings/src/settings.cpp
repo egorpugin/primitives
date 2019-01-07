@@ -123,7 +123,7 @@ void SettingPath::parse(const String &s)
     PathParserDriver d;
     auto r = d.parse(s);
     if (!d.bb.error_msg.empty())
-        throw SW_RUNTIME_EXCEPTION("While parsing setting path '" + s + "':" + d.bb.error_msg);
+        throw SW_RUNTIME_ERROR("While parsing setting path '" + s + "':" + d.bb.error_msg);
     parts = d.sp;
 }
 
@@ -185,7 +185,7 @@ void Settings::load(const path &fn, SettingsType type)
         SettingsParserDriver d;
         auto r = d.parse(f.get());
         if (!d.bb.error_msg.empty())
-            throw SW_RUNTIME_EXCEPTION(d.bb.error_msg);
+            throw SW_RUNTIME_ERROR(d.bb.error_msg);
         settings = d.sm;
     }
 }
@@ -195,7 +195,7 @@ void Settings::load(const String &s, SettingsType type)
     SettingsParserDriver d;
     auto r = d.parse(s);
     if (!d.bb.error_msg.empty())
-        throw SW_RUNTIME_EXCEPTION(d.bb.error_msg);
+        throw SW_RUNTIME_ERROR(d.bb.error_msg);
     settings = d.sm;
 }
 
@@ -205,7 +205,7 @@ void Settings::load(const yaml &root, const SettingPath &prefix)
         return;*/
     if (!root.IsMap())
         return;
-        //throw SW_RUNTIME_EXCEPTION("Config must be a map");
+        //throw SW_RUNTIME_ERROR("Config must be a map");
 
     for (auto kv : root)
     {
@@ -214,7 +214,7 @@ void Settings::load(const yaml &root, const SettingPath &prefix)
         else if (kv.second.IsMap())
             load(kv.second, prefix / SettingPath::fromRawString(kv.first.as<String>()));
         else
-            throw SW_RUNTIME_EXCEPTION("sequences are not supported");
+            throw SW_RUNTIME_ERROR("sequences are not supported");
     }
 }
 
@@ -259,7 +259,7 @@ void Settings::save(const path &fn) const
 String Settings::dump() const
 {
     String s;
-    throw SW_RUNTIME_EXCEPTION("not implemented");
+    throw SW_RUNTIME_ERROR("not implemented");
     return s;
 }
 
@@ -285,7 +285,7 @@ const Setting &Settings::operator[](const String &k) const
 {
     auto i = settings.find(prefix / k);
     if (i == settings.end())
-        throw SW_RUNTIME_EXCEPTION("No such setting: " + k);
+        throw SW_RUNTIME_ERROR("No such setting: " + k);
     return i->second;
 }
 
@@ -298,7 +298,7 @@ const Setting &Settings::operator[](const SettingPath &k) const
 {
     auto i = settings.find(prefix / k);
     if (i == settings.end())
-        throw SW_RUNTIME_EXCEPTION("No such setting: " + k.toString());
+        throw SW_RUNTIME_ERROR("No such setting: " + k.toString());
     return i->second;
 }
 
@@ -337,7 +337,7 @@ template <class T>
 T &SettingStorage<T>::get(SettingsType type)
 {
     if (type < SettingsType::Local || type >= SettingsType::Max)
-        throw SW_RUNTIME_EXCEPTION("No such settings storage");
+        throw SW_RUNTIME_ERROR("No such settings storage");
 
     auto &s = settings[toIndex(type)];
     switch (type)
@@ -367,7 +367,7 @@ T &SettingStorage<T>::get(SettingsType type)
                         error_code ec;
                         fs::create_directories(fn.parent_path(), ec);
                         if (ec)
-                            throw SW_RUNTIME_EXCEPTION(ec.message());
+                            throw SW_RUNTIME_ERROR(ec.message());
                         ss.save(fn);
                     }
                 }

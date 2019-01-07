@@ -186,7 +186,7 @@ path Command::getProgram() const
     if (!program.empty())
         return program;
     if (getArgs().empty())
-        throw SW_RUNTIME_EXCEPTION("No program was set");
+        throw SW_RUNTIME_ERROR("No program was set");
     return getArgs()[0];
 }
 
@@ -198,7 +198,7 @@ void Command::execute1(std::error_code *ec_in)
     if (program.empty())
     {
         if (getArgs().empty())
-            throw SW_RUNTIME_EXCEPTION("No program was set");
+            throw SW_RUNTIME_ERROR("No program was set");
         program = getArgs()[0];
         auto t = std::move(getArgs());
         getArgs().assign(t.begin() + 1, t.end());
@@ -211,7 +211,7 @@ void Command::execute1(std::error_code *ec_in)
         {
             auto e = "Cannot resolve executable: " + program.u8string();
             if (!ec_in)
-                throw SW_RUNTIME_EXCEPTION(e);
+                throw SW_RUNTIME_ERROR(e);
             *ec_in = std::make_error_code(std::errc::no_such_file_or_directory);
             err.text = e;
             return;
@@ -347,7 +347,7 @@ void Command::execute1(std::error_code *ec_in)
 #ifdef _WIN32
         auto lpvEnv = GetEnvironmentStrings();
         if (!lpvEnv)
-            throw SW_RUNTIME_EXCEPTION("GetEnvironmentStrings failed: " + std::to_string(GetLastError()));
+            throw SW_RUNTIME_ERROR("GetEnvironmentStrings failed: " + std::to_string(GetLastError()));
 
         auto lpszVariable = (LPTSTR)lpvEnv;
         while (*lpszVariable)
@@ -473,7 +473,7 @@ void Command::execute1(std::error_code *ec_in)
         return;
     }
 
-    throw SW_RUNTIME_EXCEPTION(getError());
+    throw SW_RUNTIME_ERROR(getError());
 }
 
 String Command::getError() const

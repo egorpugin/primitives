@@ -228,7 +228,7 @@ void Executor::wait(WaitStatus p)
 void Executor::push(Task &&t)
 {
     if (waiting_ == WaitStatus::RejectIncoming)
-        throw SW_RUNTIME_EXCEPTION("Executor is in the wait state and rejects new jobs");
+        throw SW_RUNTIME_ERROR("Executor is in the wait state and rejects new jobs");
     if (waiting_ == WaitStatus::BlockIncoming)
     {
         std::unique_lock<std::mutex> lk(m_wait);

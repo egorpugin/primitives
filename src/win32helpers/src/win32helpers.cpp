@@ -160,7 +160,7 @@ void Elevate()
     sei.nShow = SW_NORMAL;
 
     if (!ShellExecuteEx(&sei))
-        throw SW_RUNTIME_EXCEPTION("Cannot elevate privilegies: " + get_last_error());
+        throw SW_RUNTIME_ERROR("Cannot elevate privilegies: " + get_last_error());
 
     // normal exit
     exit(0);

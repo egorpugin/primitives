@@ -47,7 +47,7 @@ void SqliteDatabase::check_error(int r, int ec)
     if (r == ec)
         return;
     auto err = sqlite3_errmsg(db);
-    throw SW_RUNTIME_EXCEPTION("db error: "s + err);
+    throw SW_RUNTIME_ERROR("db error: "s + err);
 }
 
 optional<String> SqliteDatabase::getValueByKey(const String &key)
@@ -128,7 +128,7 @@ void SqliteDatabase::createServiceTable()
         check_error(r, SQLITE_OK);
     }
     else if (nrows > 1)
-        throw SW_RUNTIME_EXCEPTION("db error: more than one row is present"s);
+        throw SW_RUNTIME_ERROR("db error: more than one row is present"s);
 }
 
 int SqliteDatabase::createServiceTableColumn(const String &col)
