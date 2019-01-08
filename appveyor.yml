@@ -20,7 +20,7 @@ before_build:
   - set PATH=%PATH%;%cd%
 
 build_script:
-  - sw -internal-with-crash-server=1 -platform %platform% build # test
+  - sw -internal-with-crash-server=1 -trace -platform %platform% build # test
 
 #after_build:
 #  - 7z a test.zip %APPVEYOR_BUILD_FOLDER%\.sw\test\*
