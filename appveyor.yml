@@ -6,6 +6,7 @@ platform:
 
 cache:
   - c:/Users/appveyor/.sw
+  - .sw
 
 configuration:
   - Release
