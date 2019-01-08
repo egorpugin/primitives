@@ -5,8 +5,8 @@ platform:
   - Win64
 
 cache:
-  - c:/Users/appveyor/.sw
-  - .sw
+  #- c:/Users/appveyor/.sw
+  #- .sw
 
 configuration:
   - Release
