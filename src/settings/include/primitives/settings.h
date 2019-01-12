@@ -295,7 +295,7 @@ struct Setting
 {
     // add setting path?
     mutable std::string representation;
-    mutable detail::parser_base *parser;
+    mutable detail::parser_base *parser = nullptr;
     std::any value;
     std::any defaultValue;
     // store typeid to provide type safety?

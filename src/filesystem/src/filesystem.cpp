@@ -13,10 +13,12 @@
 #include <boost/filesystem.hpp>
 
 #include <iostream>
+#include <mutex>
 #include <regex>
 
 #ifdef _WIN32
 #include <Windows.h>
+#include <io.h>
 #endif
 
 #ifndef _WIN32
@@ -500,8 +502,7 @@ ScopedFile::ScopedFile(const path &p, const char *mode)
 
 ScopedFile::~ScopedFile()
 {
-    if (f)
-        fclose(f);
+    close();
 }
 
 size_t ScopedFile::read(void *buf, size_t sz)
@@ -516,7 +517,10 @@ void ScopedFile::seek(uintmax_t offset)
 
 void ScopedFile::close()
 {
-    fclose(f);
-    f = nullptr;
+    if (f)
+    {
+        if (fclose(f) != 0)
+            std::cerr << "Cannot close file, errno = " << std::to_string(errno) << std::endl;
+        f = nullptr;
+    }
 }
-

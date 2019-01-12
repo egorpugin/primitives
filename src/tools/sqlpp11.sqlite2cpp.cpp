@@ -29,8 +29,6 @@
 
 using DatabaseCallback = std::function<int(int /*ncols*/, char** /*cols*/, char** /*names*/)>;
 
-sqlite3 *db;
-
 String INCLUDE = "sqlpp11";
 String NAMESPACE = "sqlpp";
 
@@ -63,7 +61,7 @@ String get_type(const String &in)
     return {};
 }
 
-void execute(const String &sql, DatabaseCallback callback = 0)
+void execute(sqlite3 *db, const String &sql, DatabaseCallback callback = 0)
 {
     char *errmsg;
     auto cb = [](void *o, int ncols, char **cols, char **names)
@@ -142,8 +140,9 @@ int main(int argc, char **argv)
     auto sql = read_file(ddl);
     sql = sql.substr(0, sql.find("%split"));
 
+    sqlite3 *db;
     sqlite3_open(":memory:", &db);
-    execute(sql.c_str());
+    execute(db, sql.c_str());
 
     primitives::CppContext ctx;
 
@@ -159,7 +158,7 @@ int main(int argc, char **argv)
     ctx.beginNamespace(ns);
 
     Strings tables;
-    execute("SELECT name FROM sqlite_master WHERE type=\"table\"", [&tables](SQLITE_CALLBACK_ARGS)
+    execute(db, "SELECT name FROM sqlite_master WHERE type=\"table\"", [&tables](SQLITE_CALLBACK_ARGS)
     {
         String table_name = cols[0];
         if (table_name.find("sqlite_") == 0)
@@ -177,7 +176,7 @@ int main(int argc, char **argv)
         auto tableTemplateParameters = tableClass;
         ctx.beginNamespace(tableNamespace);
 
-        execute("PRAGMA table_info(" + table_name + ")", [&](SQLITE_CALLBACK_ARGS)
+        execute(db, "PRAGMA table_info(" + table_name + ")", [&](SQLITE_CALLBACK_ARGS)
         {
             String sqlColumnName = cols[1];
             auto columnClass = toClassName(sqlColumnName);
