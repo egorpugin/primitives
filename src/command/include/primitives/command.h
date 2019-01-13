@@ -7,7 +7,7 @@
 #pragma once
 
 #include <primitives/filesystem.h>
-#include <primitives/stdcompat/optional.h>
+#include <optional>
 
 #include <functional>
 
@@ -42,7 +42,7 @@ struct PRIMITIVES_COMMAND_API Command
     path working_directory;
 
     // output
-    optional<int64_t> exit_code;
+    std::optional<int64_t> exit_code;
     Stream in;
     Stream out;
     Stream err;

@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 
-#include <primitives/stdcompat/optional.h>
-#include <primitives/stdcompat/variant.h>
+#include <optional>
+#include <variant>
 
 namespace primitives::version
 {
@@ -235,8 +235,8 @@ struct PRIMITIVES_VERSION_API VersionRange
     bool hasVersion(const Version &) const;
     size_t size() const;
 
-    optional<Version> getMinSatisfyingVersion(const std::set<Version> &) const;
-    optional<Version> getMaxSatisfyingVersion(const std::set<Version> &) const;
+    std::optional<Version> getMinSatisfyingVersion(const std::set<Version> &) const;
+    std::optional<Version> getMaxSatisfyingVersion(const std::set<Version> &) const;
 
     // operators
     bool operator<(const VersionRange &) const;
@@ -250,7 +250,7 @@ struct PRIMITIVES_VERSION_API VersionRange
 
 public:
     /// get range from string without throw
-    static optional<VersionRange> parse(const std::string &s);
+    static std::optional<VersionRange> parse(const std::string &s);
 
     /// returns empty set
     static VersionRange empty();
@@ -268,7 +268,7 @@ private:
         bool isBranch() const;
         size_t getStdHash() const;
 
-        optional<RangePair> operator&(const RangePair &) const;
+        std::optional<RangePair> operator&(const RangePair &) const;
     };
 
     using Range = std::vector<RangePair>;
@@ -284,7 +284,7 @@ private:
 
     /// range will be in an invalid state in case of errors
     /// optional error will be returned
-    static optional<std::string> parse(VersionRange &v, const std::string &s);
+    static std::optional<std::string> parse(VersionRange &v, const std::string &s);
 
     friend PRIMITIVES_VERSION_API bool operator<(const VersionRange &, const Version &);
     friend PRIMITIVES_VERSION_API bool operator<(const Version &, const VersionRange &);

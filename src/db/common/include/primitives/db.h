@@ -7,7 +7,7 @@
 #pragma once
 
 #include <primitives/schema_manager.h>
-#include <primitives/stdcompat/optional.h>
+#include <optional>
 
 namespace primitives::db
 {
@@ -21,7 +21,7 @@ struct PRIMITIVES_DB_COMMON_API LiteDatabase
     virtual void execute(const String &) = 0;
 
     template <typename T>
-    optional<T> getValue(const String &key)
+    std::optional<T> getValue(const String &key)
     {
         checkKey(key);
         auto v = getValueByKey(key);
@@ -68,7 +68,7 @@ struct PRIMITIVES_DB_COMMON_API LiteDatabase
     }
 
 private:
-    virtual optional<String> getValueByKey(const String &key) = 0;
+    virtual std::optional<String> getValueByKey(const String &key) = 0;
     virtual void setValueByKey(const String &key, const String &value) = 0;
     void checkKey(const String &key);
 };

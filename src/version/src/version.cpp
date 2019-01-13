@@ -775,7 +775,7 @@ VersionRange::VersionRange(const char *v)
 {
 }
 
-optional<std::string> VersionRange::parse(VersionRange &vr, const std::string &s)
+std::optional<std::string> VersionRange::parse(VersionRange &vr, const std::string &s)
 {
     if (s.size() > 32_KB)
         return { "Range string length must be less than 32K" };
@@ -796,7 +796,7 @@ optional<std::string> VersionRange::parse(VersionRange &vr, const std::string &s
     return error;
 }
 
-optional<VersionRange> VersionRange::parse(const std::string &s)
+std::optional<VersionRange> VersionRange::parse(const std::string &s)
 {
     VersionRange vr;
     auto in = preprocess_input(s);
@@ -846,7 +846,7 @@ bool VersionRange::RangePair::hasVersion(const Version &v) const
     return first <= v && v <= second;
 }
 
-optional<VersionRange::RangePair> VersionRange::RangePair::operator&(const RangePair &rhs) const
+std::optional<VersionRange::RangePair> VersionRange::RangePair::operator&(const RangePair &rhs) const
 {
     if (isBranch())
         return *this;
@@ -1184,7 +1184,7 @@ bool operator>(const Version &v, const VersionRange &r)
     return v > r.range.back().second;
 }
 
-optional<Version> VersionRange::getMinSatisfyingVersion(const std::set<Version> &s) const
+std::optional<Version> VersionRange::getMinSatisfyingVersion(const std::set<Version> &s) const
 {
     for (auto &v : s)
     {
@@ -1194,7 +1194,7 @@ optional<Version> VersionRange::getMinSatisfyingVersion(const std::set<Version> 
     return {};
 }
 
-optional<Version> VersionRange::getMaxSatisfyingVersion(const std::set<Version> &s) const
+std::optional<Version> VersionRange::getMaxSatisfyingVersion(const std::set<Version> &s) const
 {
     for (auto i = s.rbegin(); i != s.rend(); i++)
     {

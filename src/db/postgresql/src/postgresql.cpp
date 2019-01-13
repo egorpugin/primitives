@@ -38,7 +38,7 @@ void PostgresqlDatabase::execute(const String &q)
     txn.exec(q);
 }
 
-optional<String> PostgresqlDatabase::getValueByKey(const String &key)
+std::optional<String> PostgresqlDatabase::getValueByKey(const String &key)
 {
     createServiceTable();
     if (createServiceTableColumn(key))

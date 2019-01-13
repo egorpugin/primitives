@@ -21,7 +21,7 @@
 
 #include <primitives/exceptions.h>
 #include <primitives/preprocessor.h>
-#include <primitives/stdcompat/optional.h>
+#include <optional>
 
 #include <sstream>
 #include <string>
@@ -102,7 +102,7 @@ struct basic_block1 : basic_block
     }
 
     template <class T>
-    optional<T> getResult() const
+    std::optional<T> getResult() const
     {
         if (data.empty())
             return {};

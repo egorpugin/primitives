@@ -50,7 +50,7 @@ void SqliteDatabase::check_error(int r, int ec)
     throw SW_RUNTIME_ERROR("db error: "s + err);
 }
 
-optional<String> SqliteDatabase::getValueByKey(const String &key)
+std::optional<String> SqliteDatabase::getValueByKey(const String &key)
 {
     createServiceTable();
     if (createServiceTableColumn(key) == SQLITE_OK)

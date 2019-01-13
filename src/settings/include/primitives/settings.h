@@ -12,7 +12,6 @@
 
 #include <primitives/enums.h>
 #include <primitives/filesystem.h>
-#include <primitives/stdcompat/variant.h>
 #include <primitives/templates.h>
 #include <primitives/yaml.h>
 

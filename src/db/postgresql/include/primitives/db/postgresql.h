@@ -31,7 +31,7 @@ private:
 
     bool execute_and_check(const String &q, const String &allowed_error_code);
 
-    optional<String> getValueByKey(const String &key) override;
+    std::optional<String> getValueByKey(const String &key) override;
     void setValueByKey(const String &key, const String &value) override;
 
     void createServiceTable();

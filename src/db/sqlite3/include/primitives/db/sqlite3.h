@@ -29,7 +29,7 @@ private:
 
     void check_error(int r, int ec);
 
-    optional<String> getValueByKey(const String &key) override;
+    std::optional<String> getValueByKey(const String &key) override;
     void setValueByKey(const String &key, const String &value) override;
 
     void createServiceTable();

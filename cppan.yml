@@ -345,6 +345,15 @@ projects:
                 templates:
                     version: "*"
 
+    patch:
+        name: patch
+        type: library
+        root_directory: src/patch
+        dependencies:
+            public:
+                filesystem:
+                    version: "*"
+
     string:
         name: string
         type: library
@@ -491,6 +500,20 @@ projects:
                     version: 2
 
 
+
+    test.patch:
+        skip_on_server: true
+        files:
+            -   src/patch.cpp
+        dependencies:
+            public:
+                pvt.cppan.demo.catchorg.catch2:
+                    version: 2
+
+                patch:
+                    version: "*"
+                sw.main:
+                    version: "*"
 
     test.settings:
         skip_on_server: true
