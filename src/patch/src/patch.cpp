@@ -25,7 +25,7 @@ void add_line(String &r, int &ni, const String &s)
 static
 std::optional<String> patch_hunk(
     const Strings &lines, Strings::iterator &i, const Strings::iterator end, int options,
-    int &oi, int &ni, int os, int ns)
+    size_t &oi, int &ni, int os, int ns)
 {
     // we are in hunk right now
 
@@ -73,7 +73,7 @@ std::optional<String> patch_hunk(
 
 static std::optional<String> patch_file(
     const Strings &lines, Strings::iterator &i, const Strings::iterator end, int options,
-    int &oi)
+    size_t &oi)
 {
     String r;
 
@@ -108,7 +108,7 @@ static std::optional<String> patch_file(
             auto ns = std::stoi(m[4].str());
 
             // copy lines up to hunk
-            for (; oi < ol; oi++)
+            for (; oi < (size_t)ol; oi++)
                 add_line(r, ni, lines[oi]);
 
             if (nl != ni)
@@ -152,7 +152,7 @@ std::optional<String> patch(const String &text, Strings::iterator &i, const Stri
 {
     auto lines = prepare_lines(text);
 
-    int oi = 0; // old index
+    size_t oi = 0; // old index
     auto r = patch_file(lines, i, end, options, oi);
 
     if (!r)
