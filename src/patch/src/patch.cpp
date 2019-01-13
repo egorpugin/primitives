@@ -15,13 +15,15 @@
 namespace primitives::patch
 {
 
-static void add_line(String &r, int &ni, const String &s)
+static
+void add_line(String &r, int &ni, const String &s)
 {
     r += s + "\n";
     ni++;
 }
 
-static std::optional<String> patch_hunk(
+static
+std::optional<String> patch_hunk(
     const Strings &lines, Strings::iterator &i, const Strings::iterator end, int options,
     int &oi, int &ni, int os, int ns)
 {
@@ -54,6 +56,8 @@ static std::optional<String> patch_hunk(
             ns--;
             break;
         case '-':
+            if (lines[oi] != i->substr(1))
+                return {}; // context lines do not match
             os--;
             oi++;
             break;
@@ -130,7 +134,8 @@ static std::optional<String> patch_file(
     return r;
 }
 
-static auto prepare_lines(const String &s)
+static
+auto prepare_lines(const String &s)
 {
     Strings v;
     boost::split(v, s, boost::is_any_of("\n"));
@@ -142,7 +147,8 @@ static auto prepare_lines(const String &s)
     return v;
 }
 
-static std::optional<String> patch(const String &text, Strings::iterator &i, const Strings::iterator end, int options)
+static
+std::optional<String> patch(const String &text, Strings::iterator &i, const Strings::iterator end, int options)
 {
     auto lines = prepare_lines(text);
 
@@ -170,7 +176,8 @@ std::optional<String> patch(const String &text, const String &unidiff, int optio
     return patch(text, begin, diff.end(), options);
 }
 
-static bool patch(const path &root_dir, Strings::iterator &i, const Strings::iterator end, int options)
+static
+bool patch(const path &root_dir, Strings::iterator &i, const Strings::iterator end, int options)
 {
     for (; i != end; i++)
     {
