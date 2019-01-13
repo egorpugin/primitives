@@ -36,7 +36,7 @@ TEST_CASE("Checking patch", "[patch]")
 {
     using namespace primitives::patch;
 
-    const String in = R"(This part of the
+    String in = R"(This part of the
 document has stayed the
 same from version to
 version.  It shouldn't
@@ -61,7 +61,7 @@ this paragraph needs to
 be changed. Things can
 be added after it.)";
 
-    const String out = R"(This is an important
+    String out = R"(This is an important
 notice! It should
 therefore be located at
 the beginning of this
@@ -127,9 +127,21 @@ to this document.)";
 +important new additions
 +to this document.)";
 
-    auto r = patch(in, diff);
-    REQUIRE(r);
-    CHECK(*r == out);
+    // basic
+    {
+        auto r = patch(in, diff);
+        REQUIRE(r);
+        CHECK(*r == out);
+    }
+
+    // check rest of the file saving
+    {
+        in += "\n";
+        out += "\n";
+        auto r = patch(in, diff);
+        REQUIRE(r);
+        CHECK(*r == out);
+    }
 }
 
 int main(int argc, char **argv)

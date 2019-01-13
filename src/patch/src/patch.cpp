@@ -6,6 +6,8 @@
 
 #include <primitives/patch.h>
 
+#include <primitives/exceptions.h>
+
 #include <boost/algorithm/string.hpp>
 
 #include <regex>
@@ -13,41 +15,28 @@
 namespace primitives::patch
 {
 
-static std::optional<String> patch_hunk(const Strings &lines, Strings::iterator &i, Strings::iterator end, int options)
+static void add_line(String &r, int &ni, const String &s)
 {
-    return {};
+    r += s + "\n";
+    ni++;
 }
 
-static std::optional<String> patch_file(const Strings &lines, Strings::iterator &i, Strings::iterator end, int options)
+static std::optional<String> patch_hunk(
+    const Strings &lines, Strings::iterator &i, const Strings::iterator end, int options,
+    int &oi, int &ni, int os, int ns)
 {
+    // we are in hunk right now
+
     String r;
-    bool in_hunk = false;
-    int oi = 0; // old index
-    int ni = 0; // new index
-    int os = 0; // old changes
-    int ns = 0; // new changes
-
-    auto add_line = [&r, &ni](const String &s)
-    {
-        r += s + "\n";
-        ni++;
-    };
-
-    auto check_hunk = [&in_hunk, &os, &ns]()
-    {
-        if (os == 0 && ns == 0)
-            in_hunk = false;
-        if (os < 0 || ns < 0)
-            return false;
-        return true;
-    };
 
     for (; i != end; i++)
     {
         if (i->empty())
             return {}; // empty lines not allowed
 
-        if (!check_hunk())
+        if (os == 0 && ns == 0)
+            return r;
+        if (os < 0 || ns < 0)
             return {}; // hunk info is bad
 
         switch ((*i)[0])
@@ -55,98 +44,117 @@ static std::optional<String> patch_file(const Strings &lines, Strings::iterator 
         case ' ':
             if (lines[oi] != i->substr(1))
                 return {}; // context lines do not match
-            add_line(lines[oi]);
+            add_line(r, ni, lines[oi]);
             os--;
             ns--;
             oi++;
             break;
         case '+':
-            if (!in_hunk)
-            {
-                if (i->find("+++") == 0)
-                    continue;
-                return {}; // + is out of hunk
-            }
-            add_line(i->substr(1));
+            add_line(r, ni, i->substr(1));
             ns--;
             break;
         case '-':
-            if (!in_hunk)
-            {
-                if (i->find("---") == 0)
-                    continue;
-                return {}; // - is out of hunk
-            }
             os--;
             oi++;
             break;
-            // git stuff
-        case 'd':
-        case 'i':
-            if (options & PatchOption::Git)
-            {
-                if (in_hunk)
-                    return {}; // symbols are in hunk
-            }
-            else
-                return {}; // not git format
-            break;
+        default:
+            return {}; // bad symbol
+        }
+    }
+
+    if (os == 0 && ns == 0)
+        return r;
+    return {}; // hunk info is bad
+}
+
+static std::optional<String> patch_file(
+    const Strings &lines, Strings::iterator &i, const Strings::iterator end, int options,
+    int &oi)
+{
+    String r;
+
+    int ni = 0; // new index
+
+    for (; i != end; i++)
+    {
+        if (i->empty())
+            return {}; // empty lines not allowed
+
+        switch ((*i)[0])
+        {
+        case '+':
+            if (i->find("+++") == 0)
+                continue;
+            return {}; // + is out of hunk
+        case '-':
+            if (i->find("---") == 0)
+                continue;
+            return {}; // - is out of hunk
         case '@':
         {
-            // @@ -1,3 +1,9 @@
-            static const std::regex r_hunk("@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@");
+            // @@ -1,3 +1,9 @@ some extra info here (git uses this)
+            static const std::regex r_hunk("@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@.*");
             std::smatch m;
             if (!std::regex_match(*i, m, r_hunk))
                 return {}; // bad hunk description
 
-            in_hunk = true;
-
             auto ol = std::stoi(m[1].str()) - 1;
-            os = std::stoi(m[2].str());
+            auto os = std::stoi(m[2].str());
             auto nl = std::stoi(m[3].str()) - 1;
-            ns = std::stoi(m[4].str());
+            auto ns = std::stoi(m[4].str());
 
             // copy lines up to hunk
             for (; oi < ol; oi++)
-                add_line(lines[oi]);
+                add_line(r, ni, lines[oi]);
 
             if (nl != ni)
                 return {}; // nl is wrong
+
+            auto r2 = patch_hunk(lines, ++i, end, options, oi, ni, os, ns);
+            if (!r2)
+                return {}; // bad hunk
+            r += *r2;
+            --i;
         }
-        break;
+            break;
+        // git stuff
+        case 'd':
+        case 'i':
+            if (options & PatchOption::Git)
+                return r; // handle outside
         default:
             return {};
         }
     }
 
-    if (!check_hunk() || in_hunk)
-        return {}; // hunk info is bad
-
     return r;
 }
 
-std::optional<String> patch(const String &text, const String &unidiff, int options)
+static auto prepare_lines(const String &s)
 {
-    auto prepare_lines = [](const auto &s)
+    Strings v;
+    boost::split(v, s, boost::is_any_of("\n"));
+    for (auto &l : v)
     {
-        Strings v;
-        boost::split(v, s, boost::is_any_of("\n"));
-        for (auto &l : v)
-        {
-            while (!l.empty() && l.back() == '\r')
-                l.resize(l.size() - 1);
-        }
-        return v;
-    };
+        while (!l.empty() && l.back() == '\r')
+            l.resize(l.size() - 1);
+    }
+    return v;
+}
 
+static std::optional<String> patch(const String &text, Strings::iterator &i, const Strings::iterator end, int options)
+{
     auto lines = prepare_lines(text);
-    auto diff = prepare_lines(unidiff);
 
-    auto begin = diff.begin();
-    auto r = patch_file(lines, begin, diff.end(), options);
+    int oi = 0; // old index
+    auto r = patch_file(lines, i, end, options, oi);
 
     if (!r)
-        return {};
+        return {}; // bad file
+
+    // add rest of the file
+    for (; oi < lines.size(); oi++)
+        *r += lines[oi] + "\n";
 
     if (!r->empty())
         r->resize(r->size() - 1); // remove last '\n'
@@ -154,9 +162,65 @@ std::optional<String> patch(const String &text, const String &unidiff, int optio
     return r;
 }
 
+std::optional<String> patch(const String &text, const String &unidiff, int options)
+{
+    auto diff = prepare_lines(unidiff);
+
+    auto begin = diff.begin();
+    return patch(text, begin, diff.end(), options);
+}
+
+static bool patch(const path &root_dir, Strings::iterator &i, const Strings::iterator end, int options)
+{
+    for (; i != end; i++)
+    {
+        if (i->empty())
+            return {}; // empty lines not allowed
+
+        switch ((*i)[0])
+        {
+        // git stuff
+        case 'd':
+            if (options & PatchOption::Git)
+            {
+                // diff --git a/cppan.yml b/cppan.yml
+                static const std::regex r_d("diff --git a/([^[[:space:]]]).*");
+                std::smatch m;
+                if (!std::regex_match(*i, m, r_d))
+                    return {}; // bad diff description
+
+                path fn = m[1].str();
+                if (fn.is_absolute())
+                    return {}; // not allowed
+
+                auto text = read_file(root_dir / fn);
+                auto r = patch(text, i, end, options);
+                if (!r)
+                    return {}; // cannot patch this file
+
+                continue;
+            }
+            [[fallthrough]];
+        case 'i':
+            if (options & PatchOption::Git)
+                continue;
+            [[fallthrough]];
+        default:
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool patch(const path &root_dir, const String &unidiff, int options)
 {
-    return true;
+    throw SW_RUNTIME_ERROR("not tested");
+
+    auto diff = prepare_lines(unidiff);
+
+    auto begin = diff.begin();
+    return patch(root_dir, begin, diff.end(), options);
 }
 
 }
