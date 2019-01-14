@@ -332,9 +332,9 @@ void Command::execute1(std::error_code *ec_in)
     options.args = uv_args.data();
     options.stdio = child_stdio;
     options.stdio_count = 3;
-#if UV_VERSION_MAJOR > 1
+//#if UV_VERSION_MAJOR > 1
     options.attribute_list = attribute_list;
-#endif
+//#endif
     if (detached)
         options.flags |= UV_PROCESS_DETACHED;
 

@@ -1,3 +1,9 @@
+#source:
+    #git: https://github.com/egorpugin/primitives
+    #branch: master
+
+#version: master
+
 local_settings:
     #build_dir_type: local
     #use_shared_libs: false
