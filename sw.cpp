@@ -204,6 +204,9 @@ void build(Solution &s)
     pack.Public += filesystem, templates,
         "org.sw.demo.libarchive.libarchive-3"_dep;
 
+    ADD_LIBRARY(patch);
+    patch.Public += filesystem, templates;
+
     ADD_LIBRARY(http);
     http.Public += filesystem, templates,
         "org.sw.demo.badger.curl.libcurl-7"_dep;
@@ -328,6 +331,9 @@ void build(Solution &s)
     auto &test_version = add_test("version");
     test_version += sw_main, version;
 
+    auto &test_patch = add_test("patch");
+    test_patch += sw_main, patch;
+
     s.addTest(test_main);
     auto tdb = s.addTest(test_db);
     if (s.Settings.TargetOS.Type == OSType::Windows)
@@ -338,6 +344,7 @@ void build(Solution &s)
             c->addPathDirectory(pq.LinkDirectories.begin()->parent_path() / "bin");
         });
     }
+    s.addTest(test_patch);
     s.addTest(test_settings);
     s.addTest(test_version);
 }

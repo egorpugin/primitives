@@ -12,6 +12,9 @@
 
 #include <regex>
 
+// just skip fully empty lines
+#define EMPTY_ACTION(x) if ((x).empty()) continue
+
 namespace primitives::patch
 {
 
@@ -33,8 +36,7 @@ std::optional<String> patch_hunk(
 
     for (; i != end; i++)
     {
-        if (i->empty())
-            return {}; // empty lines not allowed
+        EMPTY_ACTION(*i);
 
         if (os == 0 && ns == 0)
             return r;
@@ -81,8 +83,7 @@ static std::optional<String> patch_file(
 
     for (; i != end; i++)
     {
-        if (i->empty())
-            return {}; // empty lines not allowed
+        EMPTY_ACTION(*i);
 
         switch ((*i)[0])
         {
@@ -181,8 +182,7 @@ bool patch(const path &root_dir, Strings::iterator &i, const Strings::iterator e
 {
     for (; i != end; i++)
     {
-        if (i->empty())
-            return {}; // empty lines not allowed
+        EMPTY_ACTION(*i);
 
         switch ((*i)[0])
         {

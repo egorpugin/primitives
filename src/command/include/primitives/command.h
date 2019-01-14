@@ -52,10 +52,11 @@ struct PRIMITIVES_COMMAND_API Command
     int32_t pid = -1;
     size_t buf_size = 8192;
     bool detached = false;
+    bool create_new_console = false;
     void *attribute_list = nullptr; // win32 STARTUPINFOEX
     //bool protect_args_with_quotes = true;
     //bool capture = true; // by default - we can make redirect to null by default instead
-    bool inherit = false;
+    bool inherit = false; // inherit everything (out+err)
 
     Command();
     virtual ~Command();
@@ -75,6 +76,9 @@ struct PRIMITIVES_COMMAND_API Command
 
     virtual path getProgram() const;
 
+    //void setInteractive(bool i);
+
+public:
     static void execute(const path &p);
     static void execute(const path &p, std::error_code &ec);
     static void execute(const path &p, const Strings &args);

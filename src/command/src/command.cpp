@@ -248,13 +248,15 @@ void Command::execute1(std::error_code *ec_in)
     pout.data = &this->out;
     perr.data = &this->err;
 
-    uv_stdio_container_t child_stdio[3];
+    uv_stdio_container_t child_stdio[3] = { {0},{0},{0} };
 
     if (inherit)
         out.inherit = err.inherit = true;
 
-    auto setup_pipe = [&loop, &child_stdio](auto &stream, int fd, auto &pipe, auto &file_req, auto &file, bool out = true)
+    auto setup_pipe = [this, &loop, &child_stdio](auto &stream, int fd, auto &pipe, auto &file_req, auto &file, bool out = true)
     {
+        if (detached)
+            return;
 #if UV_VERSION_MAJOR > 1
         // FIXME:
         throw std::logic_error("FIXME: " __FILE__);
@@ -326,7 +328,8 @@ void Command::execute1(std::error_code *ec_in)
 
     // options
     uv_process_options_t options = { 0 };
-    options.exit_cb = on_exit;
+    //if (!detached)
+        options.exit_cb = on_exit;
     options.file = prog.c_str();
     options.cwd = wdir.c_str();
     options.args = uv_args.data();
@@ -337,6 +340,8 @@ void Command::execute1(std::error_code *ec_in)
 //#endif
     if (detached)
         options.flags |= UV_PROCESS_DETACHED;
+    if (create_new_console)
+        options.flags |= UV_PROCESS_WINDOWS_ALLOC_CONSOLE;
 
     // set env
     std::vector<char *> env;
@@ -417,6 +422,8 @@ void Command::execute1(std::error_code *ec_in)
     // start capture
     auto start_capture = [&r, &on_alloc, &on_read, this](auto &stream, auto &pipe, auto &pipe_name)
     {
+        if (detached)
+            return;
         if (!stream.inherit && stream.file.empty())
         {
             if (r = uv_read_start((uv_stream_t*)&pipe, on_alloc, on_read); r)
@@ -427,15 +434,20 @@ void Command::execute1(std::error_code *ec_in)
     start_capture(err, perr, "err");
 
     if (detached)
+    {
         uv_unref((uv_handle_t*)&child_req);
+        //uv_close((uv_handle_t*)&child_req);
+    }
 
     // main loop
     if (r = uv_run(&loop, UV_RUN_DEFAULT); r)
         errors.push_back("something goes wrong in the loop: "s + uv_strerror(r));
 
     // cleanup
-    auto close = [&loop](auto &stream, auto &pipe, auto &file_req)
+    auto close = [this, &loop](auto &stream, auto &pipe, auto &file_req)
     {
+        if (detached)
+            return;
         if (!stream.inherit && stream.file.empty())
             uv_close((uv_handle_t*)&pipe, NULL);
         else if (!stream.file.empty())
@@ -461,7 +473,12 @@ void Command::execute1(std::error_code *ec_in)
     if (r)
         std::cerr << "error in cmd: loop was not closed" << std::endl;
 
-    if (exit_code && exit_code.value() == 0)
+    if (exit_code)
+    {
+        if (exit_code.value() == 0)
+            return;
+    }
+    else if (detached)
         return;
 
     if (ec_in)
@@ -504,6 +521,12 @@ void Command::write(path p) const
     write_file(p / (fn + "_out.txt"), out.text);
     write_file(p / (fn + "_err.txt"), err.text);
 }
+
+/*void Command::setInteractive(bool i)
+{
+    // check if we have win32 or console app?
+    create_new_console = true;
+}*/
 
 void Command::execute1(const path &p, const Strings &args, std::error_code *ec)
 {
