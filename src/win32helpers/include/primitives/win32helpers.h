@@ -27,6 +27,12 @@ PRIMITIVES_WIN32HELPERS_API
 std::string get_last_error(_DWORD ec);
 
 PRIMITIVES_WIN32HELPERS_API
+void message_box(const std::string &caption, const std::string &s);
+
+PRIMITIVES_WIN32HELPERS_API
+void message_box(const std::string &caption, const std::wstring &s);
+
+PRIMITIVES_WIN32HELPERS_API
 void message_box(const std::string &s);
 
 PRIMITIVES_WIN32HELPERS_API

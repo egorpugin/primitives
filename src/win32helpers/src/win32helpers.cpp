@@ -194,15 +194,33 @@ std::string get_last_error()
     return get_last_error(GetLastError());
 }
 
+void message_box(const std::string &caption, const std::string &s)
+{
+    if (MessageBoxA(0, s.c_str(), caption.c_str(), 0) == 0)
+    {
+        auto e = GetLastError();
+        message_box(caption, "MessageBoxA error: " + get_last_error(e));
+    }
+}
+
+void message_box(const std::string &caption, const std::wstring &s)
+{
+    auto ws = to_wstring(caption);
+    if (MessageBoxW(0, s.c_str(), ws.c_str(), 0) == 0)
+    {
+        auto e = GetLastError();
+        message_box(caption, "MessageBoxW error: " + get_last_error(e));
+    }
+}
+
 void message_box(const std::string &s)
 {
-    MessageBoxA(0, s.c_str(), PACKAGE_NAME_CLEAN, 0);
+    message_box(PACKAGE_NAME_CLEAN, s);
 }
 
 void message_box(const std::wstring &s)
 {
-    auto ws = to_wstring(PACKAGE_NAME_CLEAN);
-    MessageBoxW(0, s.c_str(), ws.c_str(), 0);
+    message_box(PACKAGE_NAME_CLEAN, s);
 }
 
 #include <fcntl.h>
@@ -264,7 +282,7 @@ void SetupConsole()
             {
                 std::string s;
                 s += "Cannot AllocConsole(): " + get_last_error();
-                MessageBoxA(0, s.c_str(), 0, 0);
+                message_box(s);
                 exit(1);
             }
         }
