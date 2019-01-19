@@ -61,8 +61,12 @@ bool pack_files(const path &fn, const std::unordered_map<path, path> &files, Str
         archive_write_free(a);
     };
 
-    archive_write_add_filter_gzip(a);
-    archive_write_set_format_pax_restricted(a);
+    //archive_write_add_filter_gzip(a);
+    //archive_write_set_format_pax_restricted(a);
+
+    if (archive_write_set_format_filter_by_ext(a, fn.filename().u8string().c_str()) != ARCHIVE_OK)
+        throw SW_RUNTIME_ERROR(archive_error_string(a));
+
     auto r = archive_write_open_filename(a, fn.u8string().c_str());
     if (r != ARCHIVE_OK)
         throw SW_RUNTIME_ERROR(archive_error_string(a));

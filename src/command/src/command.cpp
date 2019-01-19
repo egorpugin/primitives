@@ -468,10 +468,16 @@ void Command::execute1(std::error_code *ec_in)
 
     // cleanup loop
     r = ::primitives::detail::uv_loop_close(loop, errors);
-    for (auto &e : errors)
-        std::cerr << "error in cmd: " << e << std::endl;
     if (r)
-        std::cerr << "error in cmd: loop was not closed" << std::endl;
+        errors.push_back("error in cmd: loop was not closed");
+
+    // TODO: use sync ostream from C++20
+    for (auto &e : errors)
+    {
+        static std::mutex m;
+        std::unique_lock lk(m);
+        std::cerr << "error in cmd: " << e << std::endl;
+    }
 
     if (exit_code)
     {
