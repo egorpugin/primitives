@@ -208,7 +208,7 @@ private:
 struct PRIMITIVES_VERSION_API VersionRange
 {
     /// default is any version or * or Version::min() - Version::max()
-    VersionRange(GenericNumericVersion::Level level = Version::minimum_level);
+    explicit VersionRange(GenericNumericVersion::Level level = Version::minimum_level);
 
     /// from one version
     VersionRange(const Version &);

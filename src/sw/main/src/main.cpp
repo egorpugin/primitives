@@ -307,6 +307,10 @@ int main(int argc, char *argv[])
     }
 #endif
 
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
     // init settings early
     // e.g. before parsing command line
     sw::getSettingStorage();

@@ -70,6 +70,8 @@ struct PRIMITIVES_COMMAND_API Command
     virtual void onBeforeRun() {}
     virtual void onEnd() {}
 
+    virtual path resolveProgram(const path &p) const;
+
     void write(path p) const;
     String print() const;
     String getError() const;
@@ -96,10 +98,11 @@ private:
     static void execute1(const path &p, const Strings &args = Strings(), std::error_code *ec = nullptr);
 };
 
+/// return empty when file not found
 PRIMITIVES_COMMAND_API
 path resolve_executable(const path &p);
 
 PRIMITIVES_COMMAND_API
-path resolve_executable(const std::vector<path> &paths);
+path resolve_executable(const FilesOrdered &paths);
 
 }

@@ -149,7 +149,7 @@ path resolve_executable(const path &p)
     return bp::search_path(p.wstring()).wstring();
 }
 
-path resolve_executable(const std::vector<path> &paths)
+path resolve_executable(const FilesOrdered &paths)
 {
     for (auto &p : paths)
     {
@@ -166,6 +166,11 @@ Command::Command()
 
 Command::~Command()
 {
+}
+
+path Command::resolveProgram(const path &in) const
+{
+    return resolve_executable(in);
 }
 
 String Command::print() const
@@ -206,7 +211,8 @@ void Command::execute1(std::error_code *ec_in)
 
     // resolve exe
     {
-        auto p = resolve_executable(program);
+        // remove this? underlying libuv could resolve itself
+        auto p = resolveProgram(program);
         if (p.empty())
         {
             auto e = "Cannot resolve executable: " + program.u8string();
