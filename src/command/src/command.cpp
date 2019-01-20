@@ -248,7 +248,8 @@ void Command::execute1(std::error_code *ec_in)
     pout.data = &this->out;
     perr.data = &this->err;
 
-    uv_stdio_container_t child_stdio[3] = { {0},{0},{0} };
+    uv_stdio_container_t child_stdio[3];
+    memset(child_stdio, 0, sizeof(child_stdio));
 
     if (inherit)
         out.inherit = err.inherit = true;
