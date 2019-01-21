@@ -1,9 +1,10 @@
-#ifdef SW_PRAGMA_HEADER
+#pragma sw require header org.sw.demo.ragel-6
+#pragma sw require header org.sw.demo.lexxmark.winflexbison.bison-master
+
 #pragma sw header on
 
-static void gen_stamp(NativeExecutedTarget &t)
+static void gen_stamp(const DependencyPtr &tools_stamp_gen, NativeExecutedTarget &t)
 {
-    auto tools_stamp_gen = THIS_PREFIX "." "primitives.tools.stamp_gen" "-" THIS_VERSION_DEPENDENCY;
     {
         auto d = t + tools_stamp_gen;
         d->Dummy = true;
@@ -19,9 +20,8 @@ static void gen_stamp(NativeExecutedTarget &t)
     t += out;
 }
 
-static void gen_sqlite2cpp(NativeExecutedTarget &t, const path &sql_file, const path &out_file, const String &ns)
+static void gen_sqlite2cpp(const DependencyPtr &tools_sqlite2cpp, NativeExecutedTarget &t, const path &sql_file, const path &out_file, const String &ns)
 {
-    auto tools_sqlite2cpp = THIS_PREFIX "." "primitives.tools.sqlpp11.sqlite2cpp" "-" THIS_VERSION_DEPENDENCY;
     {
         auto d = t + tools_sqlite2cpp;
         d->Dummy = true;
@@ -39,12 +39,11 @@ static void gen_sqlite2cpp(NativeExecutedTarget &t, const path &sql_file, const 
     t += out;
 }
 
-static void embed(NativeExecutedTarget &t, const path &in)
+static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const path &in)
 {
     if (in.is_absolute())
         throw std::runtime_error("embed: in must be relative to SourceDir");
 
-    auto embedder = THIS_PREFIX "." "primitives.tools.embedder" "-" THIS_VERSION_DEPENDENCY;
     {
         auto d = t + embedder;
         d->Dummy = true;
@@ -65,9 +64,8 @@ static void embed(NativeExecutedTarget &t, const path &in)
     t += IncludeDirectory(out.parent_path()); // but remove this later
 }
 
-static Files syncqt(NativeExecutedTarget &t, const Strings &modules)
+static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Strings &modules)
 {
-    auto sqt = THIS_PREFIX "." "primitives.tools.syncqt" "-" THIS_VERSION_DEPENDENCY;
     {
         auto d = t + sqt;
         d->Dummy = true;
@@ -102,18 +100,8 @@ static Files syncqt(NativeExecutedTarget &t, const Strings &modules)
 }
 
 #pragma sw header off
-#endif
 
-#pragma sw require header org.sw.demo.ragel-6
-#pragma sw require header org.sw.demo.lexxmark.winflexbison.bison-master
-
-#define ADD_LIBRARY_WITH_NAME(var, name)          \
-    auto &var = p.addTarget<LibraryTarget>(name); \
-    setup_primitives(var)
-
-#define ADD_LIBRARY(x) ADD_LIBRARY_WITH_NAME(x, #x)
-
-void configure(Solution &s)
+void configure(Solution &b)
 {
     //s.Settings.Native.LibrariesType = LibraryType::Static;
     //s.Settings.Native.ConfigurationType = ConfigurationType::Debug;
@@ -149,6 +137,12 @@ void build(Solution &s)
         t += "include/.*"_rr;
         t += "src/.*"_rr;
     };
+
+#define ADD_LIBRARY_WITH_NAME(var, name)          \
+    auto &var = p.addTarget<LibraryTarget>(name); \
+    setup_primitives(var)
+
+#define ADD_LIBRARY(x) ADD_LIBRARY_WITH_NAME(x, #x)
 
     ADD_LIBRARY(error_handling);
 
@@ -245,8 +239,8 @@ void build(Solution &s)
     ADD_LIBRARY(settings);
     settings.Public += yaml, filesystem, templates,
         "pub.egorpugin.llvm_project.llvm.support_lite-master"_dep;
-    gen_flex_bison_pair(settings, "LALR1_CPP_VARIANT_PARSER", "src/settings");
-    gen_flex_bison_pair(settings, "LALR1_CPP_VARIANT_PARSER", "src/path");
+    gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison-master"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/settings");
+    gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison-master"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/path");
 
     ADD_LIBRARY(symbol);
     symbol.Public += filesystem, "org.sw.demo.boost.dll-1"_dep;
@@ -261,8 +255,8 @@ void build(Solution &s)
         "org.sw.demo.fmt-*"_dep,
         "org.sw.demo.boost.container_hash-1"_dep,
         "org.sw.demo.imageworks.pystring-1"_dep;
-    gen_ragel(version, "src/version.rl");
-    gen_flex_bison_pair(version, "GLR_CPP_PARSER", "src/range");
+    gen_ragel("org.sw.demo.ragel-6"_dep, version, "src/version.rl");
+    gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison-master"_dep, version, "GLR_CPP_PARSER", "src/range");
 
     auto &sw_main = p.addTarget<StaticLibraryTarget>("sw.main");
     setup_primitives(sw_main);
