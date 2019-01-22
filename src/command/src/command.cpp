@@ -343,12 +343,16 @@ void Command::execute1(std::error_code *ec_in)
     options.stdio = child_stdio;
     options.stdio_count = 3;
 //#if UV_VERSION_MAJOR > 1
+#ifdef _WIN32
     options.attribute_list = attribute_list;
+#endif
 //#endif
     if (detached)
         options.flags |= UV_PROCESS_DETACHED;
+#ifdef _WIN32
     if (create_new_console)
         options.flags |= UV_PROCESS_WINDOWS_ALLOC_CONSOLE;
+#endif
 
     // set env
     std::vector<char *> env;
