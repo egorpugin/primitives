@@ -46,6 +46,8 @@ namespace detail
 
 bool Extra::operator<(const Extra &rhs) const
 {
+    // this one is tricky
+    // 1.2.3.rc1 is less than 1.2.3!
     if (empty() && rhs.empty())
         return false;
     if (rhs.empty())
@@ -374,67 +376,44 @@ bool Version::isVersion() const
     return branch.empty();
 }
 
+template <class F>
+static bool Version::cmp(const Version &v1, const Version &v2, F f)
+{
+    if (v1.numbers.size() != v2.numbers.size())
+    {
+        auto v3 = v1;
+        auto v4 = v2;
+        auto sz = std::max(v1.numbers.size(), v2.numbers.size());
+        v3.numbers.resize(sz);
+        v4.numbers.resize(sz);
+        return cmp(v3, v4, f);
+    }
+    return f(std::tie(v1.branch, v1.numbers, v1.extra), std::tie(v2.branch, v2.numbers, v2.extra));
+}
+
 bool Version::operator<(const Version &rhs) const
 {
-    if (isBranch() && rhs.isBranch())
-        return branch < rhs.branch;
-    if (isBranch())
-        return false;
-    if (rhs.isBranch())
-        return true;
-    if (numbers < rhs.numbers)
-        return true;
-    if (numbers == rhs.numbers)
-    {
-        if (extra.empty())
-            return false; // >=
-        if (rhs.extra.empty())
-            return true;
-        return extra < rhs.extra;
-    }
-    return false;
+    return cmp(*this, rhs, std::less());
 }
 
 bool Version::operator>(const Version &rhs) const
 {
-    if (isBranch() && rhs.isBranch())
-        return branch > rhs.branch;
-    if (isBranch())
-        return true;
-    if (rhs.isBranch())
-        return false;
-    return std::tie(numbers, extra) > std::tie(rhs.numbers, rhs.extra);
+    return cmp(*this, rhs, std::greater());
 }
 
 bool Version::operator<=(const Version &rhs) const
 {
-    if (isBranch() && rhs.isBranch())
-        return branch <= rhs.branch;
-    if (isBranch())
-        return false;
-    if (rhs.isBranch())
-        return true;
-    return std::tie(numbers, extra) <= std::tie(rhs.numbers, rhs.extra);
+    return cmp(*this, rhs, std::less_equal());
 }
 
 bool Version::operator>=(const Version &rhs) const
 {
-    if (isBranch() && rhs.isBranch())
-        return branch >= rhs.branch;
-    if (isBranch())
-        return true;
-    if (rhs.isBranch())
-        return false;
-    return std::tie(numbers, extra) >= std::tie(rhs.numbers, rhs.extra);
+    return cmp(*this, rhs, std::greater_equal());
 }
 
 bool Version::operator==(const Version &rhs) const
 {
-    if (isBranch() && rhs.isBranch())
-        return branch == rhs.branch;
-    if (isBranch() || rhs.isBranch())
-        return false;
-    return std::tie(numbers, extra) == std::tie(rhs.numbers, rhs.extra);
+    return cmp(*this, rhs, std::equal_to());
 }
 
 bool Version::operator!=(const Version &rhs) const

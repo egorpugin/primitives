@@ -674,12 +674,44 @@ TEST_CASE("Checking versions", "[version]")
     CHECK(Version() < Version("a"));
     CHECK(Version() != Version("a"));
     CHECK(Version("a") < Version("b"));
+    CHECK(Version(1) < Version("b"));
 
     CHECK(Version(2, 14, 0, "rc16") != Version(2, 14, 0));
     CHECK(Version(2, 14, 0, "rc16") < Version(2, 14, 0));
     CHECK(Version(2, 14, 0, "rc16") <= Version(2, 14, 0));
     CHECK_FALSE(Version(2, 14, 0, "rc16") > Version(2, 14, 0));
     CHECK_FALSE(Version(2, 14, 0, "rc16") >= Version(2, 14, 0));
+
+    // ==
+    {
+        CHECK(Version() == Version());
+        CHECK(Version() == Version(0));
+        CHECK(Version() == Version(0, 0));
+        CHECK(Version() == Version(0, 0, 0));
+        CHECK(Version() == Version(0, 0, 1));
+        CHECK_FALSE(Version() != Version());
+        CHECK(Version(0) == Version(0));
+        CHECK(Version(0) == Version(0, 0));
+        CHECK(Version(0) == Version(0, 0, 0));
+        CHECK(Version(0) == Version(0, 0, 1));
+        CHECK(Version(0) != Version(0, 0, 0, 0)); // 0.0.1 != 0.0.0.1
+        CHECK(Version(0) != Version({ 0, 0, 0, 0, 0 })); // 0.0.1 != 0.0.0.0.1
+        CHECK(Version(0) == Version({ 0, 0, 1, 0, 0 }));
+        CHECK(Version(1) == Version(1));
+        CHECK(Version(1) == Version(1, 0));
+        CHECK(Version(1) == Version(1, 0, 0));
+        CHECK(Version(1) == Version(1, 0, 0, 0));
+        CHECK(Version(1) == Version({ 1, 0, 0, 0, 0 }));
+        CHECK(Version(1, 2) == Version(1, 2));
+        CHECK(Version(1, 2) == Version(1, 2, 0));
+        CHECK(Version(1, 2) == Version(1, 2, 0, 0));
+        CHECK(Version(1, 2, 3) == Version(1, 2, 3, 0));
+        CHECK(Version(1, 2, 3) == Version({ 1, 2, 3, 0, 0 }));
+        CHECK(Version(1, 2, 3, 4) == Version({ 1, 2, 3, 4, 0 }));
+        CHECK(Version(1, 2, 3, 4) == Version({1, 2, 3, 4, 0, 0}));
+        CHECK(Version(1, 1, 1) == Version({1, 1, 1, 0}));
+        CHECK(Version(1, 1, 1) == Version({1, 1, 1, 0, 0}));
+    }
 }
 
 TEST_CASE("Checking version ranges", "[range]")

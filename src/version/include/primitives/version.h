@@ -203,6 +203,9 @@ private:
     std::string printExtra() const;
 
     void checkExtra() const;
+
+    template <class F>
+    static bool cmp(const Version &v1, const Version &v2, F f);
 };
 
 struct PRIMITIVES_VERSION_API VersionRange
