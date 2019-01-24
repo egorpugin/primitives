@@ -377,7 +377,7 @@ bool Version::isVersion() const
 }
 
 template <class F>
-static bool Version::cmp(const Version &v1, const Version &v2, F f)
+bool Version::cmp(const Version &v1, const Version &v2, F f)
 {
     if (v1.numbers.size() != v2.numbers.size())
     {
