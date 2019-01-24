@@ -46,7 +46,7 @@ std::string getProgramName()
     if (!f)
     {
         dlclose(h);
-        std::cerr << "sw.settings: calling getVersionString(), but function is not defined; result is unknown" << std::endl;
+        std::cerr << "sw.settings: calling getProgramName(), but function is not defined; result is unknown" << std::endl;
         return "unk";
     }
     auto s = f();

@@ -101,13 +101,6 @@ static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Str
 
 #pragma sw header off
 
-void configure(Solution &b)
-{
-    //s.Settings.Native.LibrariesType = LibraryType::Static;
-    //s.Settings.Native.ConfigurationType = ConfigurationType::Debug;
-    //s.Settings.Native.CompilerType = CompilerType::ClangCl;
-}
-
 void build(Solution &s)
 {
     auto &p = s.addProject("primitives", "master");

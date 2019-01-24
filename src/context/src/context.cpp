@@ -498,6 +498,11 @@ size_t BinaryContext::_read(void *dst, size_t size, size_t offset) const
     return size;
 }
 
+bool BinaryContext::has(size_t size) const
+{
+    return index_ + size <= end_;
+}
+
 size_t BinaryContext::_write(const void *src, size_t size)
 {
     if (!buf_)

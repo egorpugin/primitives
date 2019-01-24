@@ -214,6 +214,7 @@ struct PRIMITIVES_CONTEXT_API BinaryContext
         read_vector<T, SizeType>(v, n);
     }
 
+    bool has(size_t size) const;
     void seek(size_t size) const; // setpos
     void skip(int n) const;
     size_t end() const { return end_; }

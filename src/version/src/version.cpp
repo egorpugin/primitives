@@ -393,27 +393,27 @@ static bool Version::cmp(const Version &v1, const Version &v2, F f)
 
 bool Version::operator<(const Version &rhs) const
 {
-    return cmp(*this, rhs, std::less());
+    return cmp(*this, rhs, std::less<decltype(std::tie(branch, numbers, extra))>());
 }
 
 bool Version::operator>(const Version &rhs) const
 {
-    return cmp(*this, rhs, std::greater());
+    return cmp(*this, rhs, std::greater<decltype(std::tie(branch, numbers, extra))>());
 }
 
 bool Version::operator<=(const Version &rhs) const
 {
-    return cmp(*this, rhs, std::less_equal());
+    return cmp(*this, rhs, std::less_equal<decltype(std::tie(branch, numbers, extra))>());
 }
 
 bool Version::operator>=(const Version &rhs) const
 {
-    return cmp(*this, rhs, std::greater_equal());
+    return cmp(*this, rhs, std::greater_equal<decltype(std::tie(branch, numbers, extra))>());
 }
 
 bool Version::operator==(const Version &rhs) const
 {
-    return cmp(*this, rhs, std::equal_to());
+    return cmp(*this, rhs, std::equal_to<decltype(std::tie(branch, numbers, extra))>());
 }
 
 bool Version::operator!=(const Version &rhs) const
