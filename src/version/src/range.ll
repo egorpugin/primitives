@@ -8,7 +8,7 @@
 #include <range_parser.h>
 
 static
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
 long
 #endif
 long make_long(const char *s)
