@@ -393,9 +393,8 @@ T &SettingStorage<T>::get(SettingsType type)
     return s;
 }
 
-#if defined(_WIN32) || defined(__APPLE__)
+// every os
 template struct SettingStorage<primitives::Settings>;
-#endif
 
 primitives::SettingStorage<primitives::Settings> &getSettingStorage(primitives::SettingStorage<primitives::Settings> *v)
 {
