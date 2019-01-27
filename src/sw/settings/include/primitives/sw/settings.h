@@ -45,12 +45,17 @@ struct SettingStorage : public ::primitives::SettingStorage<T>
     ~SettingStorage();
 };
 
-#ifdef _MSC_VER
+#if defined(_WIN32)
 #pragma warning(push)
 #pragma warning(disable : 4661)
-PRIMITIVES_SW_SETTINGS_API_EXTERN
+PRIMITIVES_SETTINGS_API_EXTERN
 template struct PRIMITIVES_SW_SETTINGS_API SettingStorage<::primitives::Settings>;
 #pragma warning(pop)
+#elif defined(__APPLE__)
+extern
+template struct PRIMITIVES_SW_SETTINGS_API SettingStorage<::primitives::Settings>;
+#else
+template struct PRIMITIVES_SW_SETTINGS_API SettingStorage<::primitives::Settings>;
 #endif
 
 PRIMITIVES_SW_SETTINGS_API

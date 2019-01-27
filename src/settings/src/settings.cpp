@@ -201,8 +201,8 @@ void Settings::load(const String &s, SettingsType type)
 
 void Settings::load(const yaml &root, const SettingPath &prefix)
 {
-    /*if (root.IsNull() || root.IsScalar())
-        return;*/
+    //if (root.IsNull() || root.IsScalar())
+        //return;
     if (!root.IsMap())
         return;
         //throw SW_RUNTIME_ERROR("Config must be a map");
@@ -393,7 +393,7 @@ T &SettingStorage<T>::get(SettingsType type)
     return s;
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
 template struct SettingStorage<primitives::Settings>;
 #endif
 

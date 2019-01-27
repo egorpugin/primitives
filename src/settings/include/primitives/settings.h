@@ -307,11 +307,11 @@ struct Setting
     Setting(const Setting &) = default;
     Setting &operator=(const Setting &) = default;
 
-    explicit Setting(const std::any &v)
+    /*explicit Setting(const std::any &v)
     {
         value = v;
         defaultValue = v;
-    }
+    }*/
 
     String toString() const;
 
@@ -587,12 +587,15 @@ private:
     T settings[toIndex(SettingsType::Max)];
 };
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #pragma warning(push)
 #pragma warning(disable : 4661)
 PRIMITIVES_SETTINGS_API_EXTERN
 template struct PRIMITIVES_SETTINGS_API SettingStorage<::primitives::Settings>;
 #pragma warning(pop)
+#elif defined(__APPLE__)
+extern
+template struct PRIMITIVES_SETTINGS_API SettingStorage<::primitives::Settings>;
 #else
 template struct PRIMITIVES_SETTINGS_API SettingStorage<::primitives::Settings>;
 #endif

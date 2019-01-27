@@ -14,8 +14,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/asio/use_future.hpp>
 #include <boost/asio/executor_work_guard.hpp>
-//#include <boost/nowide/convert.hpp>
-#include <boost/process.hpp>
+#include <boost/process/search_path.hpp>
 
 #include <uv.h>
 
@@ -79,41 +78,6 @@ String FormatNtStatus(NTSTATUS nsCode)
 namespace primitives
 {
 
-namespace bp = boost::process;
-
-struct CommandData
-{
-    using cb_func = std::function<void(const boost::system::error_code &, std::size_t)>;
-
-    boost::asio::io_context &ios;
-    boost::process::async_pipe pout, perr;
-
-    cb_func out_cb, err_cb;
-
-    std::vector<char> out_buf, err_buf;
-    FILE *out_fs = nullptr;
-    FILE *err_fs = nullptr;
-
-    std::mutex m;
-    std::condition_variable cv;
-    std::atomic_int stopped{ 0 };
-
-    // TODO: add pid and option to command to execute callbacks right in this thread
-
-    CommandData(boost::asio::io_context &ios)
-        : ios(ios), pout(ios), perr(ios)
-    {
-    }
-
-    ~CommandData()
-    {
-        if (out_fs)
-            fclose(out_fs);
-        if (err_fs)
-            fclose(err_fs);
-    }
-};
-
 path resolve_executable(const path &p)
 {
 #ifdef _WIN32
@@ -146,7 +110,7 @@ path resolve_executable(const path &p)
     if (fs::exists(p) && fs::is_regular_file(p))
         return p;
 #endif
-    return bp::search_path(p.wstring()).wstring();
+    return boost::process::search_path(p.wstring()).wstring();
 }
 
 path resolve_executable(const FilesOrdered &paths)

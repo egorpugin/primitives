@@ -876,6 +876,10 @@ protected:
 #define EXTERN_PARSER_TEMPLATE(type) \
     PRIMITIVES_SETTINGS_API_EXTERN template class PRIMITIVES_SETTINGS_API basic_parser<type>; \
     PRIMITIVES_SETTINGS_API_EXTERN template class PRIMITIVES_SETTINGS_API parser<type>
+#elif defined(__APPLE__)
+#define EXTERN_PARSER_TEMPLATE(type) \
+    extern template class PRIMITIVES_SETTINGS_API basic_parser<type>; \
+    extern template class PRIMITIVES_SETTINGS_API parser<type>
 #else
 #define EXTERN_PARSER_TEMPLATE(type) \
     template class basic_parser<type>; \
@@ -1426,19 +1430,42 @@ public:
   }
 };
 
-#ifdef _WIN32
-extern template class opt<unsigned>;
-extern template class opt<int>;
-extern template class opt<std::string>;
-extern template class opt<char>;
-extern template class opt<bool>;
-#else
-template class opt<unsigned>;
-template class opt<int>;
-template class opt<std::string>;
-template class opt<char>;
-template class opt<bool>;
+#if defined(_WIN32)
+PRIMITIVES_SETTINGS_API_EXTERN
+#elif defined(__APPLE__)
+extern
 #endif
+template PRIMITIVES_SETTINGS_API class opt<unsigned>;
+
+#if defined(_WIN32)
+PRIMITIVES_SETTINGS_API_EXTERN
+#elif defined(__APPLE__)
+extern
+#endif
+template PRIMITIVES_SETTINGS_API class opt<int>;
+
+
+#if defined(_WIN32)
+PRIMITIVES_SETTINGS_API_EXTERN
+#elif defined(__APPLE__)
+extern
+#endif
+template PRIMITIVES_SETTINGS_API class opt<std::string>;
+
+
+#if defined(_WIN32)
+PRIMITIVES_SETTINGS_API_EXTERN
+#elif defined(__APPLE__)
+extern
+#endif
+template PRIMITIVES_SETTINGS_API class opt<char>;
+
+#if defined(_WIN32)
+PRIMITIVES_SETTINGS_API_EXTERN
+#elif defined(__APPLE__)
+extern
+#endif
+template PRIMITIVES_SETTINGS_API class opt<bool>;
 
 //===----------------------------------------------------------------------===//
 // list_storage class
