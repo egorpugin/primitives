@@ -167,9 +167,12 @@ projects:
         options:
             any:
                 link_libraries:
-                    unix:
+                    unix and not apple:
                         public:
                             - stdc++fs
+                    apple:
+                        public:
+                            - c++fs
         dependencies:
             public:
                 string:
