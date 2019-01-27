@@ -55,7 +55,7 @@ template struct PRIMITIVES_SW_SETTINGS_API SettingStorage<::primitives::Settings
 extern
 template struct PRIMITIVES_SW_SETTINGS_API SettingStorage<::primitives::Settings>;
 #else
-template struct PRIMITIVES_SW_SETTINGS_API SettingStorage<::primitives::Settings>;
+template struct SettingStorage<::primitives::Settings>;
 #endif
 
 PRIMITIVES_SW_SETTINGS_API

@@ -1431,41 +1431,69 @@ public:
 };
 
 #if defined(_WIN32)
+#pragma warning(push)
+#pragma warning(disable : 4661)
 PRIMITIVES_SETTINGS_API_EXTERN
-#elif defined(__APPLE__)
-extern
-#endif
 template PRIMITIVES_SETTINGS_API class opt<unsigned>;
-
-#if defined(_WIN32)
-PRIMITIVES_SETTINGS_API_EXTERN
+#pragma warning(pop)
 #elif defined(__APPLE__)
 extern
+template PRIMITIVES_SETTINGS_API class opt<unsigned>;
+#else
+template class opt<unsigned>;
 #endif
+
+#if defined(_WIN32)
+#pragma warning(push)
+#pragma warning(disable : 4661)
+PRIMITIVES_SETTINGS_API_EXTERN
 template PRIMITIVES_SETTINGS_API class opt<int>;
-
-
-#if defined(_WIN32)
-PRIMITIVES_SETTINGS_API_EXTERN
+#pragma warning(pop)
 #elif defined(__APPLE__)
 extern
+template PRIMITIVES_SETTINGS_API class opt<int>;
+#else
+template class opt<int>;
 #endif
+
+#if defined(_WIN32)
+#pragma warning(push)
+#pragma warning(disable : 4661)
+PRIMITIVES_SETTINGS_API_EXTERN
 template PRIMITIVES_SETTINGS_API class opt<std::string>;
-
-
-#if defined(_WIN32)
-PRIMITIVES_SETTINGS_API_EXTERN
+#pragma warning(pop)
 #elif defined(__APPLE__)
 extern
+template PRIMITIVES_SETTINGS_API class opt<std::string>;
+#else
+template class opt<std::string>;
 #endif
+
+#if defined(_WIN32)
+#pragma warning(push)
+#pragma warning(disable : 4661)
+PRIMITIVES_SETTINGS_API_EXTERN
 template PRIMITIVES_SETTINGS_API class opt<char>;
-
-#if defined(_WIN32)
-PRIMITIVES_SETTINGS_API_EXTERN
+#pragma warning(pop)
 #elif defined(__APPLE__)
 extern
+template PRIMITIVES_SETTINGS_API class opt<char>;
+#else
+template class opt<char>;
 #endif
+
+#if defined(_WIN32)
+#pragma warning(push)
+#pragma warning(disable : 4661)
+PRIMITIVES_SETTINGS_API_EXTERN
 template PRIMITIVES_SETTINGS_API class opt<bool>;
+#pragma warning(pop)
+#elif defined(__APPLE__)
+extern
+template PRIMITIVES_SETTINGS_API class opt<bool>;
+#else
+template class opt<bool>;
+#endif
 
 //===----------------------------------------------------------------------===//
 // list_storage class
