@@ -185,6 +185,10 @@ projects:
                     version: 1
                 pvt.cppan.demo.grisumbras.enum_flags:
                     version: master
+        post_target: |
+            if (APPLE)
+                target_link_directories(${this} PUBLIC /usr/local/Cellar/llvm/7.0.0/lib)
+            endif()
 
     file_monitor:
         name: file_monitor
