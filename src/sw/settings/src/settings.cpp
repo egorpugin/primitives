@@ -66,8 +66,9 @@ SettingStorage<T>::~SettingStorage()
     base::getUserSettings().save(base::userConfigFilename);
 }
 
-// every os
+#if defined(_WIN32) || defined(__APPLE__)
 template struct SettingStorage<::primitives::Settings>;
+#endif
 
 primitives::SettingStorage<primitives::Settings> &getSettingStorage()
 {
