@@ -54,10 +54,10 @@ path get_home_directory()
 
 path current_thread_path(const path &p)
 {
-    thread_local path thread_working_dir = p.empty() ? fs::current_path() : fs::canonical(fs::absolute(p));
+    thread_local path thread_working_dir = p.empty() ? fs::current_path() : fs::canonical(p);
     if (p.empty())
         return thread_working_dir;
-    return thread_working_dir = fs::canonical(fs::absolute(p));
+    return thread_working_dir = fs::canonical(p);
 }
 
 void remove_file(const path &p)
@@ -74,12 +74,25 @@ void remove_all_from_dir(const path &dir)
         fs::remove_all(f);
 }
 
+static void set_uppercase_disk(std::string &s)
+{
+    if (s.size() >= 2 && s[1] == ':')
+        s[0] = toupper(s[0]);
+}
+
+static void set_uppercase_disk(std::wstring &s)
+{
+    if (s.size() >= 2 && s[1] == L':')
+        s[0] = towupper(s[0]);
+}
+
 String normalize_path(const path &p)
 {
     if (p.empty())
         return "";
     auto s = p.u8string();
     normalize_string(s);
+    set_uppercase_disk(s);
     return s;
 }
 
@@ -89,6 +102,7 @@ String normalize_path_windows(const path &p)
         return "";
     auto s = p.u8string();
     normalize_string_windows(s);
+    set_uppercase_disk(s);
     return s;
 }
 
@@ -98,6 +112,7 @@ std::wstring wnormalize_path(const path &p)
         return L"";
     auto s = p.wstring();
     normalize_string(s);
+    set_uppercase_disk(s);
     return s;
 }
 
@@ -107,6 +122,7 @@ std::wstring wnormalize_path_windows(const path &p)
         return L"";
     auto s = p.wstring();
     normalize_string_windows(s);
+    set_uppercase_disk(s);
     return s;
 }
 
