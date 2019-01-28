@@ -101,7 +101,7 @@ static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Str
 
 #pragma sw header off
 
-void configure(Solution &s)
+void configure(Build &s)
 {
     if (s.isConfigSelected("cyg2mac"))
         s.loadModule("utils/cc/cygwin2macos.cpp").call<void(Solution&)>("configure", s);
