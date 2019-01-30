@@ -43,7 +43,10 @@ PRIMITIVES_FILESYSTEM_API
 String read_file_without_bom(const path &p, uintmax_t max_size = UINTMAX_MAX);
 
 PRIMITIVES_FILESYSTEM_API
-void write_file(const path &p, const String &s);
+void write_file(const path &p, const String &);
+
+PRIMITIVES_FILESYSTEM_API
+void write_file(const path &p, const std::vector<uint8_t> &);
 
 PRIMITIVES_FILESYSTEM_API
 void write_file_if_different(const path &p, const String &s);

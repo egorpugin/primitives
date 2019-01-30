@@ -222,19 +222,24 @@ Strings read_lines(const path &p)
     return split_lines(s);
 }
 
-static void write_file1(const path &p, const String &s, const char *mode)
+static void write_file1(const path &p, const void *v, size_t sz, const char *mode)
 {
     auto pp = p.parent_path();
     if (!pp.empty())
         fs::create_directories(pp);
 
     ScopedFile f(p, mode);
-    fwrite(s.c_str(), s.size(), 1, f.getHandle());
+    fwrite(v, sz, 1, f.getHandle());
 }
 
 void write_file(const path &p, const String &s)
 {
-    write_file1(p, s, "wb");
+    write_file1(p, s.data(), s.size(), "wb");
+}
+
+void write_file(const path &p, const std::vector<uint8_t> &s)
+{
+    write_file1(p, s.data(), s.size(), "wb");
 }
 
 void write_file_if_different(const path &p, const String &s)
@@ -257,7 +262,7 @@ void prepend_file(const path &p, const String &s)
 
 void append_file(const path &p, const String &s)
 {
-    write_file1(p, s, "ab");
+    write_file1(p, s.data(), s.size(), "ab");
 }
 
 void copy_dir(const path &src, const path &dst)
