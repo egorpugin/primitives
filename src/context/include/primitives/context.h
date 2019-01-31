@@ -31,12 +31,13 @@ struct PRIMITIVES_CONTEXT_API Line
 
     Line() = default;
     Line(const Line &) = default;
+    Line &operator=(const Line &t) = default;
     Line(Line &&);
     Line(const Text &t, int n = 0);
     Line(const Context &ctx, int n = 0);
     ~Line();
 
-    Line& operator+=(const Text &t);
+    Line &operator+=(const Text &t);
 
     Text &back();
 
