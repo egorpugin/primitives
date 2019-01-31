@@ -173,7 +173,7 @@ void build(Solution &s)
     command.Public += file_monitor,
         "org.sw.demo.boost.process-1"_dep;
     if (s.Settings.TargetOS.Type == OSType::Windows)
-        command.Public += "Shell32.lib"_l;
+        command.Public += "Shell32.lib"_slib;
 
     ADD_LIBRARY(date_time);
     date_time.Public += string,
@@ -204,7 +204,7 @@ void build(Solution &s)
     http.Public += filesystem, templates,
         "org.sw.demo.badger.curl.libcurl-7"_dep;
     if (s.Settings.TargetOS.Type == OSType::Windows)
-        http.Public += "Winhttp.lib"_l;
+        http.Public += "Winhttp.lib"_slib;
 
     ADD_LIBRARY(hash);
     hash.Public += filesystem,
@@ -218,7 +218,7 @@ void build(Solution &s)
     if (s.Settings.TargetOS.Type == OSType::Windows)
     {
         win32helpers.Public += "UNICODE"_d;
-        win32helpers += "Shell32.lib"_lib, "Ole32.lib"_lib, "Advapi32.lib"_lib, "user32.lib"_lib;
+        win32helpers += "Shell32.lib"_slib, "Ole32.lib"_slib, "Advapi32.lib"_slib, "user32.lib"_slib;
     }
 
     ADD_LIBRARY_WITH_NAME(db_common, "db.common");
