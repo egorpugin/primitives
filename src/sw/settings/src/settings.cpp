@@ -27,8 +27,8 @@ std::string getProgramName()
     auto f = (String(*)())GetProcAddress(h, "?getProgramName@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
     if (!f)
     {
-        std::cerr << "sw.settings: calling getProgramName(), but function is not defined; result is unknown" << std::endl;
-        return "unk";
+        //std::cerr << "sw.settings: calling getProgramName(), but function is not defined; result is unknown" << std::endl;
+        return {};
     }
     return f();
 }
@@ -39,15 +39,15 @@ std::string getProgramName()
     if (!h)
     {
         std::cerr << "sw.settings: dlopen error" << std::endl;
-        return "unk";
+        return {};
     }
     //auto f = (String(*)())dlsym(h, "_ZN2sw14getProgramNameB5cxx11Ev");
     auto f = (String(*)())dlsym(h, "_Z14getProgramNameB5cxx11v");
     if (!f)
     {
         dlclose(h);
-        std::cerr << "sw.settings: calling getProgramName(), but function is not defined; result is unknown" << std::endl;
-        return "unk";
+        //std::cerr << "sw.settings: calling getProgramName(), but function is not defined; result is unknown" << std::endl;
+        return {};
     }
     auto s = f();
     dlclose(h);
@@ -77,7 +77,14 @@ primitives::SettingStorage<primitives::Settings> &getSettingStorage()
         static SettingStorage<primitives::Settings> s;
         primitives::getSettingStorage(&s); // save to common storage
         s.userConfigFilename = getSettingsDir() / YAML_SETTINGS_FILENAME;
-        path local_name = getProgramName() + ".settings";
+        auto prog = getProgramName();
+        auto sfile = prog + ".settings";
+        if (prog.empty())
+        {
+            //LOG_TRACE(logger, "load settings: getProgramName() returned nothing. Trying to load " + sfile);
+            std::cerr << "sw.settings: calling getProgramName(), but function returned nothing; result is unknown" << std::endl;
+        }
+        path local_name = sfile;
         if (fs::exists(local_name))
             s.getLocalSettings().load(local_name);
         return s;
