@@ -712,6 +712,20 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(Version(1, 1, 1) == Version({1, 1, 1, 0}));
         CHECK(Version(1, 1, 1) == Version({1, 1, 1, 0, 0}));
     }
+
+    // toString()
+    {
+        CHECK(Version().toString() == "0.0.1");
+        CHECK(Version().toString(5) == "0.0.1.0.0");
+        CHECK(Version().toString(4) == "0.0.1.0");
+        CHECK(Version().toString(3) == "0.0.1");
+        CHECK(Version().toString(2) == "0.0");
+        CHECK(Version().toString(1) == "0");
+        CHECK(Version().toString(0) == "");
+        CHECK(Version().toString(-1) == "");
+        CHECK(Version().toString(-2) == "");
+        CHECK(Version().toString(-3) == "");
+    }
 }
 
 TEST_CASE("Checking version ranges", "[range]")

@@ -221,8 +221,11 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
         fs::remove("x", ec);
     }
 
-    CHECK("c:/Program Files/LLVM/bin/clang++.exe" == normalize_path("c:/Program Files/LLVM/bin\\clang++.exe"));
-    CHECK(L"c:/Program Files/LLVM/bin/clang++.exe" == wnormalize_path(L"c:/Program Files/LLVM/bin\\clang++.exe"));
+    CHECK(normalize_path("c:/Program Files/LLVM/bin\\clang++.exe") == "C:/Program Files/LLVM/bin/clang++.exe");
+    CHECK(wnormalize_path(L"c:/Program Files/LLVM/bin\\clang++.exe") == L"C:/Program Files/LLVM/bin/clang++.exe");
+
+    CHECK(normalize_path_windows("c:/Program Files/LLVM/bin\\clang++.exe") == "C:\\Program Files\\LLVM\\bin\\clang++.exe");
+    CHECK(wnormalize_path_windows(L"c:/Program Files/LLVM/bin\\clang++.exe") == L"C:\\Program Files\\LLVM\\bin\\clang++.exe");
 #endif
 }
 
@@ -415,12 +418,22 @@ TEST_CASE("Checking executor", "[executor]")
     {
         Executor e;
         std::vector<Future<void>> fs;
-        fs.push_back(e.push([] { std::this_thread::sleep_for(400ms); }));
-        fs.push_back(e.push([] { std::this_thread::sleep_for(250ms); }));
-        fs.push_back(e.push([] { std::this_thread::sleep_for(300ms); }));
-        fs.push_back(e.push([] { std::this_thread::sleep_for(100ms); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(400ms * 2); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(250ms * 2); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(300ms * 2); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(100ms * 2); })); // #3
         auto f = whenAny(fs);
-        CHECK(f.get() == 3); // future #3 must be first
+        CHECK(f.get() == 3); // future #3 (the last one) must be first
+    }
+
+    {
+        Executor e;
+        auto f1 = e.push([] { std::this_thread::sleep_for(100ms * 2); });
+        auto f2 = e.push([] { std::this_thread::sleep_for(200ms * 2); });
+        auto f3 = e.push([] { std::this_thread::sleep_for(300ms * 2); });
+        auto f4 = e.push([] { std::this_thread::sleep_for(400ms * 2); });
+        auto f = whenAny(f2, f1, f3, f4);
+        CHECK(f.get() == 1);
     }
 
     {
@@ -459,16 +472,6 @@ TEST_CASE("Checking executor", "[executor]")
         auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
         auto f1 = e.push([] { std::this_thread::sleep_for(100ms); });
         REQUIRE_NOTHROW_TIME(waitAny(f1, f2, f3, f4), 250ms);
-    }
-
-    {
-        Executor e;
-        auto f1 = e.push([] { std::this_thread::sleep_for(100ms); });
-        auto f2 = e.push([] { std::this_thread::sleep_for(200ms); });
-        auto f3 = e.push([] { std::this_thread::sleep_for(300ms); });
-        auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
-        auto f = whenAny(f2, f1, f3, f4);
-        CHECK(f.get() == 1);
     }
 
     {

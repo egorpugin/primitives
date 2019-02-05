@@ -60,18 +60,8 @@ bool Extra::operator<(const Extra &rhs) const
 }
 
 GenericNumericVersion::GenericNumericVersion()
-    : GenericNumericVersion(minimum_level)
 {
-}
-
-GenericNumericVersion::GenericNumericVersion(empty_tag, Level level)
-{
-    numbers.resize(level);
-}
-
-GenericNumericVersion::GenericNumericVersion(Level level)
-{
-    numbers.resize(level - 1);
+    numbers.resize(minimum_level - 1);
     numbers.push_back(1);
 }
 
@@ -111,14 +101,18 @@ std::string GenericNumericVersion::printVersion(Level level) const
 
 std::string GenericNumericVersion::printVersion(const std::string &delimeter) const
 {
-    return printVersion(".", numbers.size());
+    return printVersion(".", (Level)numbers.size());
 }
 
 std::string GenericNumericVersion::printVersion(const String &delimeter, Level level) const
 {
     std::string s;
-    for (Level i = 0; i < level; i++)
+    Level i = 0;
+    auto until = std::min(level, (Level)numbers.size());
+    for (; i < until; i++)
         s += std::to_string(numbers[i]) + delimeter;
+    for (; i < level; i++)
+        s += std::to_string(0) + delimeter;
     if (!s.empty())
         s.resize(s.size() - delimeter.size());
     return s;
@@ -126,7 +120,7 @@ std::string GenericNumericVersion::printVersion(const String &delimeter, Level l
 
 GenericNumericVersion::Level GenericNumericVersion::getLevel() const
 {
-    return numbers.size();
+    return (Level)numbers.size();
 }
 
 void GenericNumericVersion::setLevel(Level level, Number fill)
@@ -152,8 +146,10 @@ Version::Version(const Extra &e)
 }
 
 Version::Version(const std::string &s)
-    : GenericNumericVersion(empty_tag{})
 {
+    numbers.clear();
+    numbers.resize(minimum_level);
+
     if (!parse(*this, preprocess_input(s)))
         throw_bad_version(s);
     if (isBranch() && branch.size() > 200)
@@ -162,11 +158,6 @@ Version::Version(const std::string &s)
 
 Version::Version(const char *s)
     : Version(std::string(s))
-{
-}
-
-Version::Version(Level level)
-    : GenericNumericVersion(level)
 {
 }
 
@@ -298,7 +289,7 @@ std::string Version::toString(Level level) const
 
 std::string Version::toString(const std::string &delimeter) const
 {
-    return toString(delimeter, numbers.size());
+    return toString(delimeter, (Level)numbers.size());
 }
 
 std::string Version::toString(const String &delimeter, Level level) const
@@ -314,12 +305,12 @@ std::string Version::toString(const String &delimeter, Level level) const
 
 std::string Version::toString(const Version &v) const
 {
-    return toString(v.numbers.size());
+    return toString((Level)v.numbers.size());
 }
 
 std::string Version::toString(const String &delimeter, const Version &v) const
 {
-    return toString(delimeter, v.numbers.size());
+    return toString(delimeter, (Level)v.numbers.size());
 }
 
 size_t Version::getStdHash() const
@@ -449,7 +440,11 @@ Version Version::operator--(int)
 
 Version Version::min(Level level)
 {
-    return Version(level);
+    Version v;
+    v.numbers.clear();
+    v.numbers.resize(level - 1);
+    v.numbers.push_back(1);
+    return v;
 }
 
 Version Version::min(const Version &v)

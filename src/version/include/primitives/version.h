@@ -56,10 +56,9 @@ struct PRIMITIVES_VERSION_API GenericNumericVersion
     using Numbers = std::vector<Number>;
 
     // level is indexed starting from 1
-    using Level = size_t;
+    using Level = int;
 
     GenericNumericVersion();
-    explicit GenericNumericVersion(Level level);
     explicit GenericNumericVersion(const std::initializer_list<Number> &, Level level = 0);
 
     Level getLevel() const;
@@ -72,9 +71,6 @@ struct PRIMITIVES_VERSION_API GenericNumericVersion
 #ifndef HAVE_BISON_RANGE_PARSER
 protected:
 #endif
-    struct empty_tag {};
-
-    explicit GenericNumericVersion(empty_tag, Level level = minimum_level);
 
     Numbers numbers;
 
@@ -104,7 +100,6 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     /// parse from raw string
     Version(const char *); // no explicit
 
-    explicit Version(Level level);
     Version(const std::initializer_list<Number> &); // no explicit
 
     explicit Version(int ma);
