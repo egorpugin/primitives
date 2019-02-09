@@ -493,9 +493,22 @@ FILE *fopen(const path &p, const char *mode)
 FILE *fopen_checked(const path &p, const char *mode)
 {
     auto f = fopen(p, mode);
-    if (!f)
-        throw SW_RUNTIME_ERROR("Cannot open file: " + p.u8string() + ", mode = " + mode + ", errno = " + std::to_string(errno));
-    return f;
+    if (f)
+        return f;
+    if (strchr(mode, 'w') || strchr(mode, 'a'))
+    {
+        fs::create_directories(p.parent_path());
+        f = fopen(p, mode);
+        if (f)
+            return f;
+    }
+    char buf[1024];
+#ifdef _WIN32
+    strerror_s(buf, errno);
+#else
+    strerror_r(errno, buf, sizeof(buf));
+#endif
+    throw SW_RUNTIME_ERROR("Cannot open file: " + p.u8string() + ", mode = " + mode + ", errno = " + std::to_string(errno) + ": " + buf);
 }
 
 void create(const path &p)
@@ -533,7 +546,11 @@ size_t ScopedFile::read(void *buf, size_t sz)
 
 void ScopedFile::seek(uintmax_t offset)
 {
+#ifdef _WIN32
+    _fseeki64(f, offset, SEEK_SET);
+#else
     fseek(f, offset, SEEK_SET);
+#endif
 }
 
 void ScopedFile::close()

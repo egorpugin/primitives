@@ -327,7 +327,8 @@ void build(Solution &s)
     auto &test_patch = add_test("patch");
     test_patch += sw_main, patch;
 
-    s.addTest(test_main);
+    auto tm = s.addTest(test_main);
+    tm.c->addPathDirectory(getenv("PATH"));
     auto tdb = s.addTest(test_db);
     if (s.Settings.TargetOS.Type == OSType::Windows)
     {

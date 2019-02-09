@@ -90,6 +90,18 @@ String strong_file_hash_blake2b_sha3(const path &fn);
 PRIMITIVES_HASH_API
 String shorten_hash(const String &data, size_t size);
 
+/// calculate and return strong_file_hash of data using type from hash
+template <class T>
+String get_strong_file_hash(const T &data, const String &hash)
+{
+    auto[f, s] = load_strong_hash_prefix(hash);
+    if (f == HashType::sha3_256 && s == HashType::sha2_256)
+        return strong_file_hash_sha3_sha2(data);
+    if (f == HashType::blake2b_512 && s == HashType::sha3_256)
+        return strong_file_hash_blake2b_sha3(data);
+    throw SW_RUNTIME_ERROR("Unknown hash type(s)");
+}
+
 /// calculate strong_file_hash of data and compare with procided hash
 /// returns true if equal
 template <class T>
