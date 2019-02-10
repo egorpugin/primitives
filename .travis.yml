@@ -42,6 +42,8 @@ install:
   - if [[ $LINUX ]]; then curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-linux-client.tar.gz; fi
   - if [[ $OSX ]]  ; then curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-macos-client.tar.gz; fi
   - tar -xvf sw.tar.gz
+  
+  - if [[ $OSX ]]  ; then brew update; fi
 
   #- if [[ $LINUX ]]; then sudo apt-get update; fi
   #- if [[ $LINUX ]]; then wget --no-check-certificate http://www.cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.sh; fi
