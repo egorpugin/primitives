@@ -8,6 +8,10 @@ jobs:
       - checkout
 
       - run:
+          name: Install packages
+          command: sudo apt install curl
+
+      - run:
           name: Download SW
           command: curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-linux-client.tar.gz
 
