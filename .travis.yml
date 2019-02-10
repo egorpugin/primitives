@@ -19,8 +19,6 @@ cache:
     - $HOME/.sw
     #- $HOME/Library/Caches/Homebrew
     - /usr/local/Cellar/llvm
-    #- /usr/local/Cellar/bison
-    #- /usr/local/Cellar/flex
 
 addons:
   apt:
@@ -46,26 +44,9 @@ install:
   - if [[ $OSX ]]  ; then curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-macos-client.tar.gz; fi
   - tar -xvf sw.tar.gz
   
-  #- if [[ $OSX ]]  ; then brew update; fi
-  - if [[ $OSX ]]  ; then brew install llvm; fi
-  #- if [[ $OSX ]]  ; then brew install bison flex; fi
-  #- if [[ $OSX ]]  ; then brew link bison --force; fi
-  #- if [[ $OSX ]]  ; then brew link flex --force; fi
+  #- if [[ $OSX ]]  ; then brew install llvm; fi
   - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/bison/bin:$PATH"; fi
   - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/flex/bin:$PATH"; fi
   
-  #- if [[ $LINUX ]]; then sudo apt-get update; fi
-  #- if [[ $LINUX ]]; then wget --no-check-certificate http://www.cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.sh; fi
-  #- if [[ $LINUX ]]; then sudo sh cmake-3.11.0-Linux-x86_64.sh --skip-license --prefix=/usr; fi
-  #- wget -O master.zip https://github.com/cppan/tests/archive/master.zip
-  #- unzip master.zip -d .
-  #- if [[ $LINUX ]]; then wget https://cppan.org/client/cppan-master-Linux-client.deb; fi
-  #- if [[ $LINUX ]]; then sudo dpkg -i cppan-master-Linux-client.deb; fi
-
-  #- if [[ $OSX ]]; then brew upgrade cmake; fi
-  #- if [[ $OSX ]]; then wget https://cppan.org/client/cppan-master-macOS-client.zip; fi
-  #- if [[ $OSX ]]; then unzip cppan-master-macOS-client.zip; fi
-  #- if [[ $OSX ]]; then sudo mv cppan /usr/local/bin/cppan; fi
-
 script:
   - ./sw build
