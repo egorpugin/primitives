@@ -5,11 +5,15 @@ notifications:
 
 #sudo: required
 dist: xenial
-osx_image: xcode9.2
 
 os:
-  - linux
-  #- osx
+  #- linux
+  - osx
+  
+addons:
+  homebrew:
+    packages:
+    - llvm
 
 branches:
   only:
@@ -34,7 +38,8 @@ before_install:
   - if [[ $TRAVIS_OS_NAME == osx     ]]; then OSX=true; fi
 
 install:
-  - curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/client_linux.tar.gz
+  - if [[ $LINUX ]]; then curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-linux-client.tar.gz; fi
+  - if [[ $OSX ]]  ; then curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-macos-client.tar.gz; fi
   - tar -xvf sw.tar.gz
 
   #- if [[ $LINUX ]]; then sudo apt-get update; fi
@@ -46,9 +51,9 @@ install:
   #- if [[ $LINUX ]]; then sudo dpkg -i cppan-master-Linux-client.deb; fi
 
   #- if [[ $OSX ]]; then brew upgrade cmake; fi
-  - if [[ $OSX ]]; then wget https://cppan.org/client/cppan-master-macOS-client.zip; fi
-  - if [[ $OSX ]]; then unzip cppan-master-macOS-client.zip; fi
-  - if [[ $OSX ]]; then sudo mv cppan /usr/local/bin/cppan; fi
+  #- if [[ $OSX ]]; then wget https://cppan.org/client/cppan-master-macOS-client.zip; fi
+  #- if [[ $OSX ]]; then unzip cppan-master-macOS-client.zip; fi
+  #- if [[ $OSX ]]; then sudo mv cppan /usr/local/bin/cppan; fi
 
 script:
   - ./sw build
