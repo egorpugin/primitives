@@ -6,6 +6,10 @@ jobs:
 
     steps:
       - checkout
+          
+      - restore_cache:
+          keys:
+            - storage
 
       - run:
           name: Update package db
@@ -26,3 +30,8 @@ jobs:
       - run:
           name: Build
           command: ./sw build
+          
+      - save_cache:
+          key: storage
+          paths:
+            - "~/.sw"
