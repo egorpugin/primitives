@@ -33,7 +33,7 @@ addons:
     #- postgresql-server-dev-10
   homebrew:
     packages:
-    - llvm-7
+    - llvm
     - bison
     - flex
 
