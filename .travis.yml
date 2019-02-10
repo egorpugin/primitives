@@ -18,9 +18,9 @@ cache:
   directories:
     - $HOME/.sw
     #- $HOME/Library/Caches/Homebrew
-    - /usr/local/Cellar/llvm
-    - /usr/local/Cellar/bison
-    - /usr/local/Cellar/flex
+    #- /usr/local/Cellar/llvm
+    #- /usr/local/Cellar/bison
+    #- /usr/local/Cellar/flex
 
 addons:
   apt:
