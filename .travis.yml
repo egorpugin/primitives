@@ -23,6 +23,8 @@ branches:
 cache:
   directories:
     - $HOME/.sw
+    - $HOME/Library/Caches/Homebrew
+    - /usr/local/Cellar
 
 addons:
   apt:
