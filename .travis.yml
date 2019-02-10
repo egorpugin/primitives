@@ -50,7 +50,9 @@ install:
   - if [[ $OSX ]]  ; then brew install bison flex; fi
   - if [[ $OSX ]]  ; then brew link bison --force; fi
   - if [[ $OSX ]]  ; then brew link flex --force; fi
-
+  - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/bison/bin:$PATH"; fi
+  - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/flex/bin:$PATH"; fi
+  
   #- if [[ $LINUX ]]; then sudo apt-get update; fi
   #- if [[ $LINUX ]]; then wget --no-check-certificate http://www.cmake.org/files/v3.11/cmake-3.11.0-Linux-x86_64.sh; fi
   #- if [[ $LINUX ]]; then sudo sh cmake-3.11.0-Linux-x86_64.sh --skip-license --prefix=/usr; fi
