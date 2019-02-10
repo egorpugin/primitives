@@ -9,7 +9,7 @@ jobs:
 
       - run:
           name: Install packages
-          command: sudo apt install curl
+          command: apt install curl
 
       - run:
           name: Download SW
