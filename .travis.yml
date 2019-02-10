@@ -23,8 +23,10 @@ branches:
 cache:
   directories:
     - $HOME/.sw
-    - $HOME/Library/Caches/Homebrew
-    - /usr/local/Cellar
+    #- $HOME/Library/Caches/Homebrew
+    - /usr/local/Cellar/llvm
+    - /usr/local/Cellar/bison
+    - /usr/local/Cellar/flex
 
 addons:
   apt:
@@ -48,8 +50,8 @@ install:
   #- if [[ $OSX ]]  ; then brew update; fi
   - if [[ $OSX ]]  ; then brew install llvm; fi
   - if [[ $OSX ]]  ; then brew install bison flex; fi
-  - if [[ $OSX ]]  ; then brew link bison --force; fi
-  - if [[ $OSX ]]  ; then brew link flex --force; fi
+  #- if [[ $OSX ]]  ; then brew link bison --force; fi
+  #- if [[ $OSX ]]  ; then brew link flex --force; fi
   - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/bison/bin:$PATH"; fi
   - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/flex/bin:$PATH"; fi
   
