@@ -18,7 +18,7 @@ cache:
   directories:
     - $HOME/.sw
     #- $HOME/Library/Caches/Homebrew
-    #- /usr/local/Cellar/llvm
+    - /usr/local/Cellar/llvm
     #- /usr/local/Cellar/bison
     #- /usr/local/Cellar/flex
 
@@ -33,7 +33,7 @@ addons:
     #- postgresql-server-dev-10
   homebrew:
     packages:
-    - llvm
+    #- llvm
     - bison
     - flex
 
@@ -47,7 +47,7 @@ install:
   - tar -xvf sw.tar.gz
   
   #- if [[ $OSX ]]  ; then brew update; fi
-  #- if [[ $OSX ]]  ; then brew install llvm; fi
+  - if [[ $OSX ]]  ; then brew install llvm; fi
   #- if [[ $OSX ]]  ; then brew install bison flex; fi
   #- if [[ $OSX ]]  ; then brew link bison --force; fi
   #- if [[ $OSX ]]  ; then brew link flex --force; fi
