@@ -8,6 +8,10 @@ jobs:
       - checkout
 
       - run:
+          name: Update package db
+          command: apt update
+          
+      - run:
           name: Install packages
           command: apt install curl
 
