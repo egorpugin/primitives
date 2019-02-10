@@ -50,6 +50,17 @@ TEST_CASE("Checking versions", "[version]")
     CHECK_THROWS(Version(0, "-rc2.3._a_"));
 
     {
+        CHECK_THROWS(Version(-1));
+        CHECK_THROWS(Version(-1,-1));
+        CHECK_THROWS(Version(1,-1));
+        CHECK_THROWS(Version(-1,-1,-1));
+        CHECK_THROWS(Version(1,1,-1));
+        CHECK_THROWS(Version(-1,-1,-1,-1));
+        CHECK_THROWS(Version(1,1,1,-1));
+        CHECK_THROWS(Version({ -1,-1,-1,-1,-1 }));
+    }
+
+    {
         Version v;
         Version v1;
         v = "0.0.1";
@@ -726,6 +737,27 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(Version().toString(-2) == "");
         CHECK(Version().toString(-3) == "");
     }
+
+    // min, max
+    {
+        CHECK_THROWS(Version::min(-2) == Version());
+        CHECK_THROWS(Version::min(-1) == Version());
+        CHECK_THROWS(Version::min(0) == Version());
+        CHECK(Version::min(1) == Version());
+        CHECK(Version::min(2) == Version());
+        CHECK(Version::min(3) == Version());
+        CHECK(Version::min(4) == Version(0,0,0,1));
+        CHECK(Version::min(5) == Version({ 0,0,0,0,1 }));
+
+        CHECK_THROWS(Version::max(-2) == Version(Version::maxNumber(), Version::maxNumber(), Version::maxNumber()));
+        CHECK_THROWS(Version::max(-1) == Version(Version::maxNumber(), Version::maxNumber(), Version::maxNumber()));
+        CHECK_THROWS(Version::max(0) == Version(Version::maxNumber(), Version::maxNumber(), Version::maxNumber()));
+        CHECK(Version::max(1) == Version(Version::maxNumber(), Version::maxNumber(), Version::maxNumber()));
+        CHECK(Version::max(2) == Version(Version::maxNumber(), Version::maxNumber(), Version::maxNumber()));
+        CHECK(Version::max(3) == Version(Version::maxNumber(), Version::maxNumber(), Version::maxNumber()));
+        CHECK(Version::max(4) == Version(Version::maxNumber(), Version::maxNumber(), Version::maxNumber(), Version::maxNumber()));
+        CHECK(Version::max(5) == Version({ Version::maxNumber(), Version::maxNumber(), Version::maxNumber(), Version::maxNumber(), Version::maxNumber() }));
+    }
 }
 
 TEST_CASE("Checking version ranges", "[range]")
@@ -1114,6 +1146,24 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange("1.2.3 - 2").toString() == ">=1.2.3 <3.0.0");
     CHECK(VersionRange("1.2.3.4 - 2").toString() == ">=1.2.3.4 <3.0.0.0");
 
+    // level ctor, do we really need it?
+    CHECK(VersionRange().toString() == "*");
+    CHECK_THROWS(VersionRange(-2));
+    CHECK_THROWS(VersionRange(-1));
+    CHECK_THROWS(VersionRange(0));
+    CHECK(VersionRange(1).toString() == "*");
+    CHECK(VersionRange(2).toString() == "*");
+    CHECK(VersionRange(3).toString() == "*");
+    CHECK(VersionRange(4).toString() == "*.*.*.*");
+    CHECK(VersionRange(5).toString() == "*.*.*.*.*");
+    CHECK(VersionRange(3).hasVersion(Version(0,0,1)));
+    CHECK_FALSE(VersionRange(3).hasVersion(Version(0,0,0,1)));
+    CHECK(VersionRange(3).hasVersion(Version(0,0,2)));
+    CHECK(VersionRange(4).hasVersion(Version(0, 0, 1)));
+    CHECK(VersionRange(4).hasVersion(Version(0, 0, 0, 1)));
+    CHECK_FALSE(VersionRange(4).hasVersion(Version({ 0, 0, 0, 0, 1 })));
+    CHECK(VersionRange(Version::minimum_level).toString() == "*");
+
     // from websites
     // https://docs.npmjs.com/misc/semver
     CHECK(VersionRange("^4.8.0 || ^5.7.0 || ^6.2.2 || >=8.0.0").toString() ==
@@ -1140,7 +1190,8 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange("1.2.3 - 2").toString() == ">=1.2.3 <3.0.0");
     CHECK(VersionRange("*").toString() == "*");
     CHECK(VersionRange("*").toString() == "*");
-    CHECK(VersionRange("*.x.X.*").toString() == "*");
+    CHECK(VersionRange("*.x.X.*").toString() == "*.*.*.*");
+    CHECK(VersionRange("*.x.X.x.*").toString() == "*.*.*.*.*");
     CHECK(VersionRange("1.x").toString() == ">=1.0.0 <2.0.0");
     CHECK(VersionRange("1").toString() == ">=1.0.0 <2.0.0");
     CHECK(VersionRange("1.*").toString() == ">=1.0.0 <2.0.0");

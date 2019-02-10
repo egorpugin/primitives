@@ -70,7 +70,7 @@ GenericNumericVersion::GenericNumericVersion(const std::initializer_list<Number>
 {
     if (std::any_of(numbers.begin(), numbers.end(), [](const auto &n) {return n < 0; }))
         throw SW_RUNTIME_ERROR("Version number cannot be less than 0");
-    auto l = std::max(minimum_level, level);
+    auto l = checkAndNormalizeLevel(level);
     if (numbers.size() < l)
         numbers.resize(l);
     setFirstVersion();
@@ -132,6 +132,13 @@ void GenericNumericVersion::setFirstVersion()
 {
     if (std::all_of(numbers.begin(), numbers.end(), [](const auto &n) {return n == 0; }))
         numbers.back() = 1;
+}
+
+GenericNumericVersion::Level GenericNumericVersion::checkAndNormalizeLevel(Level in)
+{
+    if (in <= 0)
+        throw SW_RUNTIME_ERROR("Bad version level (<= 0): " + std::to_string(in));
+    return std::max(in, minimum_level);
 }
 
 Version::Version()
@@ -440,6 +447,8 @@ Version Version::operator--(int)
 
 Version Version::min(Level level)
 {
+    level = checkAndNormalizeLevel(level);
+
     Version v;
     v.numbers.clear();
     v.numbers.resize(level - 1);
@@ -454,7 +463,11 @@ Version Version::min(const Version &v)
 
 Version Version::max(Level level)
 {
-    Version v(level);
+    level = checkAndNormalizeLevel(level);
+
+    Version v;
+    v.numbers.clear();
+    v.numbers.resize(level);
     v.fill(maxNumber());
     return v;
 }
@@ -706,7 +719,12 @@ void Version::format(std::string &s) const
 #undef VAR_CAP_OPT
 }
 
-VersionRange::VersionRange(GenericNumericVersion::Level level)
+VersionRange::VersionRange()
+    : VersionRange(Version::minimum_level)
+{
+}
+
+VersionRange::VersionRange(Version::Level level)
     : VersionRange(Version::min(level), Version::max(level))
 {
 }
@@ -856,7 +874,18 @@ std::string VersionRange::RangePair::toString() const
         if (second == Version::max(second))
         {
             if (s.empty())
+            {
+                if (second.getLevel() > Version::minimum_level)
+                {
+                    String s;
+                    for (int i = 0; i < second.getLevel(); i++)
+                        s += "*.";
+                    if (!s.empty())
+                        s.resize(s.size() - 1);
+                    return s;
+                }
                 return "*";
+            }
             return s;
         }
         if (second.getPatch() == Version::maxNumber() ||
@@ -909,7 +938,7 @@ std::string VersionRange::toStringV1() const
         return branch;
 
     if (range[0].first == Version::min() && range[0].second == Version::max())
-        return "*";
+        return "*"; // one star in v1!
 
     GenericNumericVersion::Numbers n;
     if (!(
