@@ -254,6 +254,12 @@ void write_file_if_different(const path &p, const String &s)
     write_file(p, s);
 }
 
+void write_file_if_not_exists(const path &p, const String &s)
+{
+    if (!fs::exists(p))
+        write_file(p, s);
+}
+
 void prepend_file(const path &p, const String &s)
 {
     auto s2 = read_file(p);

@@ -311,6 +311,26 @@ int main(int argc, char *argv[])
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
+    // fix current path:
+    //  make it canonical (big drive letter on Windows)
+    //  make it lexically normal
+    //  remove trailing slashes
+    auto cp = fs::current_path();
+    auto s = normalize_path(cp.lexically_normal());
+    while (!s.empty() && s.back() == '/')
+        s.resize(s.size() - 1);
+#ifdef _WIN32
+    s = normalize_path_windows(s);
+    // windows does not change case of the disk letter if other parts unchanged
+    cp = s;
+    // so we take parent dir first, set cd there
+    cp = cp.parent_path();
+    fs::current_path(cp);
+    // then we restore our cwd but with our changes
+#endif
+    cp = s;
+    fs::current_path(cp);
+
     // init settings early
     // e.g. before parsing command line
     sw::getSettingStorage();

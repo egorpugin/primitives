@@ -52,6 +52,9 @@ PRIMITIVES_FILESYSTEM_API
 void write_file_if_different(const path &p, const String &s);
 
 PRIMITIVES_FILESYSTEM_API
+void write_file_if_not_exists(const path &p, const String &s);
+
+PRIMITIVES_FILESYSTEM_API
 void prepend_file(const path &p, const String &s);
 
 PRIMITIVES_FILESYSTEM_API

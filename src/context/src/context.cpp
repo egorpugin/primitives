@@ -134,6 +134,8 @@ void Context::addText(const Text &s)
 {
     if (lines.empty())
         lines.emplace_back();
+    if (!s.empty() && lines.back().n_indents == 0)
+        lines.back().n_indents = n_indents;
     lines.back() += s;
 }
 
@@ -363,7 +365,7 @@ void Context::emptyLines(int n)
 
 Context &Context::operator+=(const Context &rhs)
 {
-    lines += rhs.lines;
+    addWithRelativeIndent(rhs);
     return *this;
 }
 
