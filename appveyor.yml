@@ -5,7 +5,7 @@ platform:
   - Win64
 
 cache:
-  - c:/Users/appveyor/.sw
+  - c:/Users/appveyor/.sw -> appveyor.yml
 
 configuration:
   - Release

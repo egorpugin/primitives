@@ -2,15 +2,36 @@ version: 2
 jobs:
   build:
     docker:
-      - image: debian:stretch
+      - image: ubuntu:18.04
 
     steps:
       - checkout
+          
+      - restore_cache:
+          keys:
+            - storage
 
       - run:
-          name: Greeting
-          command: echo Hello, world.
+          name: Update package db
+          command: apt update
+          
+      - run:
+          name: Install packages
+          command: apt install -y curl flex bison g++-8 libldap2-dev
 
       - run:
-          name: Print the Current Time
-          command: date
+          name: Download SW
+          command: curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-linux-client.tar.gz
+
+      - run:
+          name: Unpack
+          command: tar -xvf sw.tar.gz
+          
+      - run:
+          name: Build
+          command: ./sw build
+          
+      - save_cache:
+          key: storage
+          paths:
+            - "~/.sw"
