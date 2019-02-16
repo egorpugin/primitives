@@ -158,6 +158,12 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     bool isVersion() const;
     //bool isTag() const; todo - add tags
 
+    bool hasExtra() const;
+    bool isRelease() const;
+    bool isPreRelease() const;
+
+    Level getMatchingLevel(const Version &v) const;
+
     // operators
     bool operator<(const Version &) const;
     bool operator>(const Version &) const;
@@ -310,6 +316,42 @@ bool operator>(const VersionRange &, const Version &);
 /// Return true if version is greater than all the versions possible in the range.
 PRIMITIVES_VERSION_API
 bool operator>(const Version &, const VersionRange &);
+
+namespace detail
+{
+
+template <typename T>
+struct is_pair : std::false_type { };
+
+template <typename T, typename U>
+struct is_pair<std::pair<T, U>> : std::true_type { };
+
+template <typename T>
+constexpr bool is_pair_v = is_pair<T>::value;
+
+}
+
+template <class T>
+auto findBestMatch(const T &begin, const T &end, const Version &what)
+{
+    auto b = end;
+    Version::Level best_match = 0;
+    for (auto i = begin; i != end; i++)
+    {
+        Version::Level l;
+        //if constexpr (detail::is_pair_v<std::iterator_traits<T>::value_type>)
+        if constexpr (detail::is_pair_v<T::value_type>)
+            l = std::get<0>(*i).getMatchingLevel(what);
+        else
+            l = i->getMatchingLevel(what);
+        if (l > best_match)
+        {
+            best_match = l;
+            b = i;
+        }
+    }
+    return b;
+}
 
 }
 

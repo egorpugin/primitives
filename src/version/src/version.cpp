@@ -374,6 +374,36 @@ bool Version::isVersion() const
     return branch.empty();
 }
 
+bool Version::hasExtra() const
+{
+    return !getExtra().empty();
+}
+
+bool Version::isRelease() const
+{
+    return !isPreRelease(); // && !branch()?
+}
+
+bool Version::isPreRelease() const
+{
+    return hasExtra();
+}
+
+Version::Level Version::getMatchingLevel(const Version &v) const
+{
+    int i = 0;
+    if (isBranch() || v.isBranch())
+        return i;
+
+    auto m = std::max(getLevel(), v.getLevel());
+    for (; i < m; i++)
+    {
+        if (numbers[i] != v.numbers[i])
+            return i;
+    }
+    return i;
+}
+
 template <class F>
 bool Version::cmp(const Version &v1, const Version &v2, F f)
 {

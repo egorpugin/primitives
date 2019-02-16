@@ -82,7 +82,7 @@ primitives::SettingStorage<primitives::Settings> &getSettingStorage()
         if (prog.empty())
         {
             //LOG_TRACE(logger, "load settings: getProgramName() returned nothing. Trying to load " + sfile);
-            std::cerr << "load settings: sw.settings: calling getProgramName(), but function returned nothing; result is unknown" << std::endl;
+            //std::cerr << "load settings: sw.settings: calling getProgramName(), but function returned nothing; result is unknown" << std::endl;
         }
         path local_name = sfile;
         if (fs::exists(local_name))
