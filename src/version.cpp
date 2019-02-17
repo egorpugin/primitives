@@ -6,6 +6,7 @@
 
 #include <primitives/sw/main.h>
 #include <primitives/version.h>
+#include <primitives/version_helpers.h>
 
 #include <chrono>
 #include <iostream>
@@ -758,6 +759,62 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(Version::max(4) == Version(Version::maxNumber(), Version::maxNumber(), Version::maxNumber(), Version::maxNumber()));
         CHECK(Version::max(5) == Version({ Version::maxNumber(), Version::maxNumber(), Version::maxNumber(), Version::maxNumber(), Version::maxNumber() }));
     }
+
+    // ctors
+    {
+        Version v1;
+        CHECK(v1 == Version(v1));
+        CHECK_FALSE(v1.hasExtra());
+        CHECK(v1.isRelease());
+        CHECK_FALSE(v1.isPreRelease());
+
+        Version v2(v1, "preview");
+        CHECK(v2 == Version(v2));
+        CHECK_FALSE(v1 == Version(v2));
+        CHECK(v2.hasExtra());
+        CHECK_FALSE(v2.isRelease());
+        CHECK(v2.isPreRelease());
+
+        Version v3(v1, v2.getExtra());
+        CHECK(v3 == Version(v2));
+        CHECK(v3 == v2);
+        CHECK(v3.hasExtra());
+        CHECK_FALSE(v3.isRelease());
+        CHECK(v3.isPreRelease());
+    }
+
+    //
+    {
+        Version v1("15.9.03232.13");
+        Version v2("16.0.123.13-preview");
+
+        CHECK_FALSE(v1.hasExtra());
+        CHECK(v1.isRelease());
+        CHECK_FALSE(v1.isPreRelease());
+
+        CHECK(v2.hasExtra());
+        CHECK_FALSE(v2.isRelease());
+        CHECK(v2.isPreRelease());
+
+        CHECK(v1.getLevel() == 4);
+        CHECK(v2.getLevel() == 4);
+
+        CHECK(v1.getMatchingLevel(v1) == 4);
+        CHECK(v1.getMatchingLevel(v1) == v1.getLevel());
+        CHECK(v2.getMatchingLevel(v2) == 4);
+        CHECK(v2.getMatchingLevel(v2) == v2.getLevel());
+
+        CHECK(v1.getMatchingLevel(v2) == 0);
+        CHECK(v2.getMatchingLevel(v1) == 0);
+
+        CHECK(v1.getMatchingLevel(Version({15,9,3232,13,5,6 })) == 4);
+        CHECK(v1.getMatchingLevel(Version({15,9,3232,13,5 })) == 4);
+        CHECK(v1.getMatchingLevel(Version({15,9,3232,13 })) == 4);
+        CHECK(v1.getMatchingLevel(Version({15,9,3232 })) == 3);
+        CHECK(v1.getMatchingLevel(Version({15,9 })) == 2);
+        CHECK(v1.getMatchingLevel(Version({15 })) == 1);
+        CHECK(v1.getMatchingLevel(Version({0 })) == 0);
+    }
 }
 
 TEST_CASE("Checking version ranges", "[range]")
@@ -1453,6 +1510,359 @@ TEST_CASE("Checking version ranges", "[range]")
         CHECK(v);
         CHECK(v.value() == "2.14.0-rc16");
     }
+}
+
+TEST_CASE("Checking version helpers", "[helpers]")
+{
+    using namespace primitives::version;
+
+    // findBestMatch
+    auto test_findBestMatch_forward = [](auto vs, auto add, auto b, auto e)
+    {
+        Version v1("15.9.03232.13");
+        Version v2("16.0.123.13-preview");
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v1) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == (vs.*e)());
+
+        add(vs, v1);
+        add(vs, v2);
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v1) == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15.9") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15.9.03232") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15.9.03232.13") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 15,9,3232,13,5 }) == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 15,9,3232,13,5,6 }) == (vs.*b)());
+
+        auto v2i = std::next((vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,0,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,9,3232,13,5,6 }) == (vs.*e)());
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16-pre") == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0-x") == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.9", true) == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123", true) == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123.13-aaaa.1.e") == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,0,3232,13,5 }, true) == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,9,3232,13,5,6 }, true) == v2i);
+
+        add(vs, { 16,9,3232,13,5,6 });
+
+        v2i = std::next((vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16") == std::prev((vs.*e)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0") == std::prev((vs.*e)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0-x") == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.9") == std::prev((vs.*e)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123") == std::prev((vs.*e)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123.13") == std::prev((vs.*e)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,0,3232,13,5 }) == std::prev((vs.*e)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,9,3232,13,5,6 }) == std::prev((vs.*e)()));
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), {}) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0.9.03232") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0.9.03232.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 0,9,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 0,9,3232,13,5,6 }) == (vs.*e)());
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14.9.03232") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14.9.03232.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 14,9,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 14,9,3232,13,5,6 }) == (vs.*e)());
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17.9.03232") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17.9.03232.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 17,9,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 17,9,3232,13,5,6 }) == (vs.*e)());
+    };
+
+    auto test_findBestMatch_reverse = [](auto vs, auto add, auto b, auto e)
+    {
+        Version v1("15.9.03232.13");
+        Version v2("16.0.123.13-preview");
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v1) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == (vs.*e)());
+
+        add(vs, v1);
+        add(vs, v2);
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v1) == std::next((vs.*b)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15") == std::next((vs.*b)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15.9") == std::next((vs.*b)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15.9.03232") == std::next((vs.*b)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15.9.03232.13") == std::next((vs.*b)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 15,9,3232,13,5 }) == std::next((vs.*b)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 15,9,3232,13,5,6 }) == std::next((vs.*b)()));
+
+        auto v2i = (vs.*b)();
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,0,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,9,3232,13,5,6 }) == (vs.*e)());
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16-pre") == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0-x") == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.9", true) == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123", true) == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123.13-aaaa.1.e") == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,0,3232,13,5 }, true) == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,9,3232,13,5,6 }, true) == v2i);
+
+        add(vs, { 16,9,3232,13,5,6 });
+
+        v2i = std::next((vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0-x") == v2i);
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.9") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123.13") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,0,3232,13,5 }) == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,9,3232,13,5,6 }) == (vs.*b)());
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), {}) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0.9.03232") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0.9.03232.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 0,9,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 0,9,3232,13,5,6 }) == (vs.*e)());
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14.9.03232") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14.9.03232.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 14,9,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 14,9,3232,13,5,6 }) == (vs.*e)());
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17.9.03232") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17.9.03232.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 17,9,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 17,9,3232,13,5,6 }) == (vs.*e)());
+    };
+
+    auto test_findBestMatch_forward_my = [](auto vs, auto add, auto b, auto e)
+    {
+    };
+
+    auto test_findBestMatch_reverse_my = [](auto vs, auto add, auto b, auto e)
+    {
+        Version v1("15.9.03232.13");
+        Version v2("16.0.123.13-preview");
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v1) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == (vs.*e)());
+
+        add(vs, v1);
+        add(vs, v2);
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v1) == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15.9") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15.9.03232") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15.9.03232.13") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 15,9,3232,13,5 }) == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 15,9,3232,13,5,6 }) == (vs.*b)());
+
+        auto v2i = (vs.*b)();
+        // begin is already after 16-preview!
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,0,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,9,3232,13,5,6 }) == (vs.*e)());
+
+        // begin is already after 16-preview!
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16-pre") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0-x") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.9", true) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123", true) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123.13-aaaa.1.e") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,0,3232,13,5 }, true) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,9,3232,13,5,6 }, true) == (vs.*e)());
+
+        add(vs, { 16,9,3232,13,5,6 });
+
+        v2i = std::next((vs.*b)());
+        CHECK(v2i == std::prev((vs.*e)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == std::next((vs.*b)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0-x") == std::next((vs.*b)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.9") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123.13") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,0,3232,13,5 }) == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,9,3232,13,5,6 }) == (vs.*b)());
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), {}) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0.9.03232") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0.9.03232.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 0,9,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 0,9,3232,13,5,6 }) == (vs.*e)());
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14.9.03232") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14.9.03232.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 14,9,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 14,9,3232,13,5,6 }) == (vs.*e)());
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17.9.03232") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17.9.03232.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 17,9,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 17,9,3232,13,5,6 }) == (vs.*e)());
+    };
+
+    auto add_to_set = [](auto &a, const Version &v) { a.insert(v); };
+    auto add_to_map = [](auto &a, const Version &v) { a[v]; };
+
+    SECTION("standard")
+    {
+        SECTION("set")
+        {
+            using C = std::set<Version>;
+            C a;
+
+            using BE = C::const_iterator(C::*)() const;
+            using RBE = C::const_reverse_iterator(C::*)() const;
+            BE b = &C::begin;
+            BE e = &C::end;
+            RBE rb = &C::rbegin;
+            RBE re = &C::rend;
+
+            test_findBestMatch_forward(a, add_to_set, b, e);
+            test_findBestMatch_reverse(a, add_to_set, rb, re);
+        }
+
+        SECTION("map")
+        {
+            using C = std::map<Version, int>;
+            C a;
+
+            using BE = C::const_iterator(C::*)() const;
+            using RBE = C::const_reverse_iterator(C::*)() const;
+            BE b = &C::begin;
+            BE e = &C::end;
+            RBE rb = &C::rbegin;
+            RBE re = &C::rend;
+
+            test_findBestMatch_forward(a, add_to_map, b, e);
+            test_findBestMatch_reverse(a, add_to_map, rb, re);
+        }
+
+        SECTION("unordered_map")
+        {
+            using C = std::unordered_map<Version, int>;
+            C a;
+
+            using BE = C::const_iterator(C::*)() const;
+            BE b = &C::begin;
+            BE e = &C::end;
+
+            test_findBestMatch_forward(a, add_to_map, b, e);
+            // no reverse, um does not have
+        }
+    }
+
+    SECTION("primitives")
+    {
+        SECTION("set")
+        {
+            using C = VersionSet;
+            C a;
+
+            {
+                using BE = C::const_iterator_all(C::*)() const;
+                using RBE = C::const_reverse_iterator_all(C::*)() const;
+                BE b = &C::begin_all;
+                BE e = &C::end_all;
+                RBE rb = &C::rbegin_all;
+                RBE re = &C::rend_all;
+
+                test_findBestMatch_forward(a, add_to_set, b, e);
+                test_findBestMatch_reverse(a, add_to_set, rb, re);
+            }
+
+            {
+                using MBE = C::const_iterator(C::*)() const;
+                using MRBE = C::const_reverse_iterator(C::*)() const;
+                MBE b = &C::begin;
+                MBE e = &C::end;
+                MRBE rb = &C::rbegin;
+                MRBE re = &C::rend;
+
+                test_findBestMatch_forward(a, add_to_set, b, e); // matches common forward! :)
+                test_findBestMatch_reverse_my(a, add_to_set, rb, re);
+            }
+        }
+
+        SECTION("map")
+        {
+            using C = VersionMap<int>;
+            C a;
+
+            using BE = C::const_iterator_all(C::*)() const;
+            using RBE = C::const_reverse_iterator_all(C::*)() const;
+            BE b = &C::begin_all;
+            BE e = &C::end_all;
+            RBE rb = &C::rbegin_all;
+            RBE re = &C::rend_all;
+
+            test_findBestMatch_forward(a, add_to_map, b, e);
+            test_findBestMatch_reverse(a, add_to_map, rb, re);
+        }
+
+        SECTION("unordered_map")
+        {
+            using C = UnorderedVersionMap<int>;
+            C a;
+
+            using BE = C::const_iterator_all(C::*)() const;
+            BE b = &C::begin_all;
+            BE e = &C::end_all;
+
+            test_findBestMatch_forward(a, add_to_map, b, e);
+            // no reverse, um does not have
+        }
+    }
+
+    // TODO: we tested only non-member findBestMatch
+    // do member findBestMatch and rfindBestMatch tests
+    // do member findBestMatchFromAll and rfindBestMatchFromAll tests
+    // also range for loops
 }
 
 int main(int argc, char **argv)

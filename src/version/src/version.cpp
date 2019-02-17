@@ -145,6 +145,12 @@ Version::Version()
 {
 }
 
+Version::Version(const Version &v, const Extra &e)
+    : Version(v)
+{
+    extra = e;
+}
+
 Version::Version(const Extra &e)
     : Version()
 {
@@ -161,6 +167,17 @@ Version::Version(const std::string &s)
         throw_bad_version(s);
     if (isBranch() && branch.size() > 200)
         throw_bad_version(s + ", branch must have size <= 200");
+}
+
+Version::Version(const std::string &v, const std::string &e)
+    : Version(v + "-" + e)
+{
+}
+
+Version::Version(const Version &version, const std::string &extra)
+    : Version(version)
+{
+    parseExtra(*this, extra);
 }
 
 Version::Version(const char *s)
@@ -272,6 +289,11 @@ Version::Number Version::getPatch() const
 Version::Number Version::getTweak() const
 {
     return get(3);
+}
+
+Version::Extra &Version::getExtra()
+{
+    return extra;
 }
 
 const Version::Extra &Version::getExtra() const
@@ -395,7 +417,7 @@ Version::Level Version::getMatchingLevel(const Version &v) const
     if (isBranch() || v.isBranch())
         return i;
 
-    auto m = std::max(getLevel(), v.getLevel());
+    auto m = std::min(getLevel(), v.getLevel());
     for (; i < m; i++)
     {
         if (numbers[i] != v.numbers[i])
@@ -1178,6 +1200,13 @@ VersionRange VersionRange::operator&(const VersionRange &rhs) const
 {
     auto tmp = *this;
     tmp &= rhs;
+    return tmp;
+}
+
+VersionRange VersionRange::operator~() const
+{
+    auto tmp = *this;
+    throw SW_RUNTIME_ERROR("not implemented");
     return tmp;
 }
 

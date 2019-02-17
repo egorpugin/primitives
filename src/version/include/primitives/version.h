@@ -1,4 +1,4 @@
-// Copyright (C) 2018 Egor Pugin <egor.pugin@gmail.com>
+// Copyright (C) 2019 Egor Pugin <egor.pugin@gmail.com>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -73,6 +73,7 @@ struct PRIMITIVES_VERSION_API GenericNumericVersion
 protected:
 #endif
 
+    // data
     Numbers numbers;
 
     std::string printVersion() const;
@@ -95,8 +96,17 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     /// default is min()
     explicit Version(const Extra &);
 
+    /// construct from other version and extra
+    Version(const Version &, const Extra &);
+
+    /// construct from other version and extra
+    Version(const Version &version, const std::string &extra);
+
     /// parse from string
-    Version(const std::string &); // no explicit
+    Version(const std::string &version); // no explicit
+
+    /// parse from string + extra string
+    Version(const std::string &version, const std::string &extra);
 
     /// parse from raw string
     Version(const char *); // no explicit
@@ -124,7 +134,7 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     Number getMinor() const;
     Number getPatch() const;
     Number getTweak() const;
-    // return as copy to prevent overwrites?
+    Extra &getExtra();
     const Extra &getExtra() const;
     // return as const ref like extra?
     std::string getBranch() const;
@@ -252,6 +262,8 @@ struct PRIMITIVES_VERSION_API VersionRange
     bool operator==(const VersionRange &) const;
     bool operator!=(const VersionRange &) const;
 
+    VersionRange operator~() const;
+
     VersionRange operator|(const VersionRange &) const;
     VersionRange operator&(const VersionRange &) const;
     VersionRange &operator|=(const VersionRange &);
@@ -267,6 +279,8 @@ public:
 #ifndef HAVE_BISON_RANGE_PARSER
 private:
 #endif
+    /// [from, to] interval
+    // replace with [from, to)?
     struct RangePair : std::pair<Version, Version>
     {
         using base = std::pair<Version, Version>;
@@ -317,43 +331,7 @@ bool operator>(const VersionRange &, const Version &);
 PRIMITIVES_VERSION_API
 bool operator>(const Version &, const VersionRange &);
 
-namespace detail
-{
-
-template <typename T>
-struct is_pair : std::false_type { };
-
-template <typename T, typename U>
-struct is_pair<std::pair<T, U>> : std::true_type { };
-
-template <typename T>
-constexpr bool is_pair_v = is_pair<T>::value;
-
-}
-
-template <class T>
-auto findBestMatch(const T &begin, const T &end, const Version &what)
-{
-    auto b = end;
-    Version::Level best_match = 0;
-    for (auto i = begin; i != end; i++)
-    {
-        Version::Level l;
-        //if constexpr (detail::is_pair_v<std::iterator_traits<T>::value_type>)
-        if constexpr (detail::is_pair_v<T::value_type>)
-            l = std::get<0>(*i).getMatchingLevel(what);
-        else
-            l = i->getMatchingLevel(what);
-        if (l > best_match)
-        {
-            best_match = l;
-            b = i;
-        }
-    }
-    return b;
-}
-
-}
+} // namespace primitives::version
 
 namespace std
 {

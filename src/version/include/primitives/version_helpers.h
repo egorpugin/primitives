@@ -30,21 +30,38 @@ constexpr bool is_pair_v = is_pair<T>::value;
 } // namespace detail
 
 template <class T>
-auto findBestMatch(const T &begin, const T &end, const Version &what)
+auto findBestMatch(const T &begin, const T &end, const Version &what, bool accept_prereleases = false)
 {
-    auto i = std::max_element(begin, end, [&what](const auto &e1, const auto &e2) {
+    if (what.isPreRelease())
+        accept_prereleases = true;
+
+    Version::Level max = 0;
+    auto imax = end;
+    for (auto i = begin; i != end; ++i)
+    {
+        Version::Level l;
+
         //if constexpr (detail::is_pair_v<std::iterator_traits<T>::value_type>)
         if constexpr (detail::is_pair_v<T::value_type>)
-            return std::get<0>(e1).getMatchingLevel(what) < std::get<0>(e2).getMatchingLevel(what);
+        {
+            if (!accept_prereleases && std::get<0>(*i).isPreRelease())
+                continue;
+            l = std::get<0>(*i).getMatchingLevel(what);
+        }
         else
-            return e1.getMatchingLevel(what) < e2.getMatchingLevel(what);
-    });
-    if (i == end)
-        return i;
-    if constexpr (detail::is_pair_v<T::value_type>)
-        return std::get<0>(*i).getMatchingLevel(what) == 0 ? end : i;
-    else
-        return i->getMatchingLevel(what) == 0 ? end : i;
+        {
+            if (!accept_prereleases && i->isPreRelease())
+                continue;
+            l = i->getMatchingLevel(what);
+        }
+
+        if (l > max)
+        {
+            max = l;
+            imax = i;
+        }
+    }
+    return imax;
 }
 
 namespace detail
@@ -55,11 +72,10 @@ namespace detail
 Version container.
 
 By default performs operations only on releases.
-
     * begin(), end(), rbegin(), rend() etc.
 
 To run things on all versions, use '_all' or similar 'All' suffixes on all operations.
-Call .all() to get proxy object to iterate in range-for loops.
+    * Call .all() to get proxy object to iterate in range-for loops.
 
 */
 template <
@@ -71,9 +87,6 @@ struct VersionContainer : BaseContainer<Version, Args...>
     using Base = BaseContainer<Version, Args...>;
     using This = VersionContainer;
 
-    using iterator_all = typename Base::iterator;
-    using const_iterator_all = typename Base::const_iterator;
-
     template <class base_iterator>
     struct ReleaseIterator : base_iterator
     {
@@ -124,42 +137,37 @@ struct VersionContainer : BaseContainer<Version, Args...>
         }
     };
 
+    using iterator_all = typename Base::iterator;
+    using const_iterator_all = typename Base::const_iterator;
+
+    using iterator = ReleaseIterator<iterator_all>;
+    using const_iterator = ReleaseIterator<const_iterator_all>;
+
+public:
     using Base::Base;
 
-    // all();
+    // .all();
 
     // everything
-    auto findBestMatchFromAll(const Version &what)
+    iterator_all findBestMatchFromAll(const Version &what)
     {
         return ::primitives::version::findBestMatch(begin_all(), end_all(), what);
     }
-
-    auto findBestMatchFromAll(const Version &what) const
+    const_iterator_all findBestMatchFromAll(const Version &what) const
     {
         return ::primitives::version::findBestMatch(begin_all(), end_all(), what);
-    }
-
-    auto rfindBestMatchFromAll(const Version &what)
-    {
-        return ::primitives::version::findBestMatch(rbegin_all(), rend_all(), what);
-    }
-
-    auto rfindBestMatchFromAll(const Version &what) const
-    {
-        return ::primitives::version::findBestMatch(rbegin_all(), rend_all(), what);
     }
 
     // release only
     // but if 'what' is passed as pre prelease itself, we call all variants
-    auto findBestMatch(const Version &what)
+    iterator findBestMatch(const Version &what)
     {
         if (what.isPreRelease())
             return findBestMatchFromAll(what);
         auto i = ::primitives::version::findBestMatch(begin(), end(), what);
         return static_cast<typename Base::iterator>(i);
     }
-
-    auto findBestMatch(const Version &what) const
+    const_iterator findBestMatch(const Version &what) const
     {
         if (what.isPreRelease())
             return findBestMatchFromAll(what);
@@ -167,24 +175,8 @@ struct VersionContainer : BaseContainer<Version, Args...>
         return static_cast<typename Base::const_iterator>(i);
     }
 
-    auto rfindBestMatch(const Version &what)
-    {
-        if (what.isPreRelease())
-            return rfindBestMatchFromAll(what);
-        auto i = ::primitives::version::findBestMatch(rbegin(), rend(), what);
-        return static_cast<typename Base::reverse_iterator>(i);
-    }
-
-    auto rfindBestMatch(const Version &what) const
-    {
-        if (what.isPreRelease())
-            return rfindBestMatchFromAll(what);
-        auto i = ::primitives::version::findBestMatch(rbegin(), rend(), what);
-        return static_cast<typename Base::const_reverse_iterator>(i);
-    }
-
     // releases
-    auto begin()
+    iterator begin()
     {
         auto start = std::find_if(begin_all(), end_all(), [](const auto &e) {
             if constexpr (detail::is_pair_v<Base::value_type>)
@@ -192,10 +184,9 @@ struct VersionContainer : BaseContainer<Version, Args...>
             else
                 return e.isRelease();
             });
-        return ReleaseIterator<decltype(start)>{start, end_all()};
+        return {start, end_all()};
     }
-
-    auto begin() const
+    const_iterator begin() const
     {
         auto start = std::find_if(begin_all(), end_all(), [](const auto &e) {
             if constexpr (detail::is_pair_v<Base::value_type>)
@@ -203,162 +194,60 @@ struct VersionContainer : BaseContainer<Version, Args...>
             else
                 return e.isRelease();
             });
-        return ReleaseIterator<decltype(start)>{start, end_all()};
+        return {start, end_all()};
     }
-
-    auto end() { return ReleaseIterator<typename Base::iterator>{ end_all(), end_all() }; }
-    auto end() const { return ReleaseIterator<typename Base::const_iterator>{ end_all(), end_all() }; }
-
-    // releases, reversed
-    auto rbegin()
-    {
-        auto start = std::find_if(rbegin_all(), rend_all(), [](const auto &e) {
-            if constexpr (detail::is_pair_v<Base::value_type>)
-                return std::get<0>(e).isRelease();
-            else
-                return e.isRelease();
-            });
-        return ReleaseIterator<decltype(start)>{start, rend_all()};
-    }
-
-    auto rbegin() const
-    {
-        auto start = std::find_if(rbegin_all(), rend_all(), [](const auto &e) {
-            if constexpr (detail::is_pair_v<Base::value_type>)
-                return std::get<0>(e).isRelease();
-            else
-                return e.isRelease();
-            });
-        return ReleaseIterator<decltype(start)>{start, rend_all()};
-    }
-
-    auto rend() { return ReleaseIterator<typename Base::reverse_iterator>{ rend_all(), rend_all() }; }
-    auto rend() const { return ReleaseIterator<typename Base::const_reverse_iterator>{ rend_all(), rend_all() }; }
+    iterator end() { return { end_all(), end_all() }; }
+    const_iterator end() const { return { end_all(), end_all() }; }
 
     // pre releases
     iterator_all begin_all() { return Base::begin(); }
     const_iterator_all begin_all() const { return Base::begin(); }
     iterator_all end_all() { return Base::end(); }
     const_iterator_all end_all() const { return Base::end(); }
-
-    // pre releases, reversed
-    auto rbegin_all() { return Base::rbegin(); }
-    auto rbegin_all() const { return Base::rbegin(); }
-    auto rend_all() { return Base::rend(); }
-    auto rend_all() const { return Base::rend(); }
 
     //
     // TODO: also add range functions?
 };
 
-template <class ... Args>
-struct ReverseVersionContainer : VersionContainer<Args...>
+template <
+    template <class ...> class BaseContainer,
+    class ... Args
+>
+struct ReverseVersionContainer : VersionContainer<BaseContainer, Args...>
 {
-    using Base = VersionContainer<Args...>;
+    using Base = VersionContainer<BaseContainer, Args...>;
     using This = ReverseVersionContainer;
 
-    template <class base_iterator>
-    struct ReleaseIterator : base_iterator
-    {
-        using value_type = typename base_iterator::value_type;
+    using reverse_iterator_all = typename Base::reverse_iterator;
+    using const_reverse_iterator_all = typename Base::const_reverse_iterator;
 
-        base_iterator end;
-
-        ReleaseIterator(const base_iterator &in, const base_iterator &end)
-            : base_iterator(in), end(end)
-        {
-        }
-
-        bool operator==(const ReleaseIterator &rhs) const
-        {
-            return (const base_iterator&)(*this) == (const base_iterator&)(rhs);
-        }
-
-        bool operator!=(const ReleaseIterator &rhs) const
-        {
-            return !operator==(rhs);
-        }
-
-        ReleaseIterator &operator++()
-        {
-            move_to_next();
-            return *this;
-        }
-
-    private:
-        void move_to_next()
-        {
-            while (1)
-            {
-                ++((base_iterator&)(*this));
-                if ((base_iterator&)*this == end)
-                    return;
-                if constexpr (detail::is_pair_v<Base::value_type>)
-                {
-                    if (std::get<0>(*(*this)).isRelease())
-                        break;
-                }
-                else
-                {
-                    if ((*this)->isRelease())
-                        break;
-                }
-            }
-        }
-    };
+    using reverse_iterator = typename Base::template ReleaseIterator<reverse_iterator_all>;
+    using const_reverse_iterator = typename Base::template ReleaseIterator<const_reverse_iterator_all>;
 
     using Base::Base;
 
-    // all();
+    // .all();
 
     // everything
-    auto findBestMatchFromAll(const Version &what)
-    {
-        return ::primitives::version::findBestMatch(begin_all(), end_all(), what);
-    }
-
-    auto findBestMatchFromAll(const Version &what) const
-    {
-        return ::primitives::version::findBestMatch(begin_all(), end_all(), what);
-    }
-
-    auto rfindBestMatchFromAll(const Version &what)
+    reverse_iterator_all rfindBestMatchFromAll(const Version &what)
     {
         return ::primitives::version::findBestMatch(rbegin_all(), rend_all(), what);
     }
-
-    auto rfindBestMatchFromAll(const Version &what) const
+    const_reverse_iterator_all rfindBestMatchFromAll(const Version &what) const
     {
         return ::primitives::version::findBestMatch(rbegin_all(), rend_all(), what);
     }
 
     // release only
     // but if 'what' is passed as pre prelease itself, we call all variants
-    auto findBestMatch(const Version &what)
-    {
-        if (what.isPreRelease())
-            return findBestMatchFromAll(what);
-        auto i = ::primitives::version::findBestMatch(begin(), end(), what);
-        return static_cast<typename Base::iterator>(i);
-    }
-
-    auto findBestMatch(const Version &what) const
-    {
-        if (what.isPreRelease())
-            return findBestMatchFromAll(what);
-        auto i = ::primitives::version::findBestMatch(begin(), end(), what);
-        return static_cast<typename Base::const_iterator>(i);
-    }
-
-    auto rfindBestMatch(const Version &what)
+    reverse_iterator rfindBestMatch(const Version &what)
     {
         if (what.isPreRelease())
             return rfindBestMatchFromAll(what);
         auto i = ::primitives::version::findBestMatch(rbegin(), rend(), what);
         return static_cast<typename Base::reverse_iterator>(i);
     }
-
-    auto rfindBestMatch(const Version &what) const
+    const_reverse_iterator rfindBestMatch(const Version &what) const
     {
         if (what.isPreRelease())
             return rfindBestMatchFromAll(what);
@@ -366,34 +255,8 @@ struct ReverseVersionContainer : VersionContainer<Args...>
         return static_cast<typename Base::const_reverse_iterator>(i);
     }
 
-    // releases
-    auto begin()
-    {
-        auto start = std::find_if(begin_all(), end_all(), [](const auto &e) {
-            if constexpr (detail::is_pair_v<Base::value_type>)
-                return std::get<0>(e).isRelease();
-            else
-                return e.isRelease();
-            });
-        return ReleaseIterator<decltype(start)>{start, end_all()};
-    }
-
-    auto begin() const
-    {
-        auto start = std::find_if(begin_all(), end_all(), [](const auto &e) {
-            if constexpr (detail::is_pair_v<Base::value_type>)
-                return std::get<0>(e).isRelease();
-            else
-                return e.isRelease();
-            });
-        return ReleaseIterator<decltype(start)>{start, end_all()};
-    }
-
-    auto end() { return ReleaseIterator<typename Base::iterator>{ end_all(), end_all() }; }
-    auto end() const { return ReleaseIterator<typename Base::const_iterator>{ end_all(), end_all() }; }
-
     // releases, reversed
-    auto rbegin()
+    reverse_iterator rbegin()
     {
         auto start = std::find_if(rbegin_all(), rend_all(), [](const auto &e) {
             if constexpr (detail::is_pair_v<Base::value_type>)
@@ -401,10 +264,9 @@ struct ReverseVersionContainer : VersionContainer<Args...>
             else
                 return e.isRelease();
             });
-        return ReleaseIterator<decltype(start)>{start, rend_all()};
+        return {start, rend_all()};
     }
-
-    auto rbegin() const
+    const_reverse_iterator rbegin() const
     {
         auto start = std::find_if(rbegin_all(), rend_all(), [](const auto &e) {
             if constexpr (detail::is_pair_v<Base::value_type>)
@@ -412,23 +274,16 @@ struct ReverseVersionContainer : VersionContainer<Args...>
             else
                 return e.isRelease();
             });
-        return ReleaseIterator<decltype(start)>{start, rend_all()};
+        return {start, rend_all()};
     }
-
-    auto rend() { return ReleaseIterator<typename Base::reverse_iterator>{ rend_all(), rend_all() }; }
-    auto rend() const { return ReleaseIterator<typename Base::const_reverse_iterator>{ rend_all(), rend_all() }; }
-
-    // pre releases
-    iterator_all begin_all() { return Base::begin(); }
-    const_iterator_all begin_all() const { return Base::begin(); }
-    iterator_all end_all() { return Base::end(); }
-    const_iterator_all end_all() const { return Base::end(); }
+    reverse_iterator rend() { return { rend_all(), rend_all() }; }
+    const_reverse_iterator rend() const { return { rend_all(), rend_all() }; }
 
     // pre releases, reversed
-    auto rbegin_all() { return Base::rbegin(); }
-    auto rbegin_all() const { return Base::rbegin(); }
-    auto rend_all() { return Base::rend(); }
-    auto rend_all() const { return Base::rend(); }
+    reverse_iterator_all rbegin_all() { return Base::rbegin(); }
+    const_reverse_iterator_all rbegin_all() const { return Base::rbegin(); }
+    reverse_iterator_all rend_all() { return Base::rend(); }
+    const_reverse_iterator_all rend_all() const { return Base::rend(); }
 
     //
     // TODO: also add range functions?
