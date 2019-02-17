@@ -1665,11 +1665,89 @@ TEST_CASE("Checking version helpers", "[helpers]")
         CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 17,9,3232,13,5,6 }) == (vs.*e)());
     };
 
-    auto test_one = [&test_findBestMatch_forward, &test_findBestMatch_reverse](auto s, auto m, auto um)
+    auto test_findBestMatch_reverse_my = [](auto vs, auto add, auto b, auto e)
     {
-        auto add_to_set = [](auto &a, const Version &v) { a.insert(v); };
-        auto add_to_map = [](auto &a, const Version &v) { a[v]; };
+        Version v1("15.9.03232.13");
+        Version v2("16.0.123.13-preview");
 
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v1) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == (vs.*e)());
+
+        add(vs, v1);
+        add(vs, v2);
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v1) == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15.9") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15.9.03232") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "15.9.03232.13") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 15,9,3232,13,5 }) == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 15,9,3232,13,5,6 }) == (vs.*b)());
+
+        auto v2i = (vs.*b)();
+        // begin is already after 16-preview!
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,0,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,9,3232,13,5,6 }) == (vs.*e)());
+
+        // begin is already after 16-preview!
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16-pre") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0-x") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.9", true) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123", true) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123.13-aaaa.1.e") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,0,3232,13,5 }, true) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,9,3232,13,5,6 }, true) == (vs.*e)());
+
+        add(vs, { 16,9,3232,13,5,6 });
+
+        v2i = std::next((vs.*b)());
+        CHECK(v2i == std::prev((vs.*e)()));
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), v2) == (vs.*b)()); //
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0-x") == (vs.*b)()); //
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.9") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "16.0.123.13") == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,0,3232,13,5 }) == (vs.*b)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 16,9,3232,13,5,6 }) == (vs.*b)());
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), {}) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0.9.03232") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "0.9.03232.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 0,9,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 0,9,3232,13,5,6 }) == (vs.*e)());
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14.9.03232") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "14.9.03232.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 14,9,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 14,9,3232,13,5,6 }) == (vs.*e)());
+
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17.9") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17.9.03232") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), "17.9.03232.13") == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 17,9,3232,13,5 }) == (vs.*e)());
+        CHECK(findBestMatch((vs.*b)(), (vs.*e)(), { 17,9,3232,13,5,6 }) == (vs.*e)());
+    };
+
+    auto add_to_set = [](auto &a, const Version &v) { a.insert(v); };
+    auto add_to_map = [](auto &a, const Version &v) { a[v]; };
+
+    auto test_one = [&test_findBestMatch_forward, &test_findBestMatch_reverse,
+                     &add_to_set, &add_to_map](auto s, auto m, auto um)
+    {
         SECTION("set")
         {
             using C = decltype(s);
@@ -1724,6 +1802,51 @@ TEST_CASE("Checking version helpers", "[helpers]")
     SECTION("primitives")
     {
         test_one(VersionSet{}, VersionMap<int>{}, UnorderedVersionMap<int>{});
+
+        SECTION("set")
+        {
+            using C = VersionSet;
+            C a;
+
+            using BE = C::const_iterator_releases(C::*)() const;
+            using RBE = C::const_reverse_iterator_releases(C::*)() const;
+            BE b = &C::begin_releases;
+            BE e = &C::end_releases;
+            RBE rb = &C::rbegin_releases;
+            RBE re = &C::rend_releases;
+
+            test_findBestMatch_forward(a, add_to_set, b, e); // matches common forward! :)
+            test_findBestMatch_reverse_my(a, add_to_set, rb, re);
+        }
+
+        SECTION("map")
+        {
+            using C = VersionMap<int>;
+            C a;
+
+            using BE = C::const_iterator_releases(C::*)() const;
+            using RBE = C::const_reverse_iterator_releases(C::*)() const;
+            BE b = &C::begin_releases;
+            BE e = &C::end_releases;
+            RBE rb = &C::rbegin_releases;
+            RBE re = &C::rend_releases;
+
+            test_findBestMatch_forward(a, add_to_map, b, e);
+            test_findBestMatch_reverse_my(a, add_to_map, rb, re);
+        }
+
+        SECTION("unordered_map")
+        {
+            using C = UnorderedVersionMap<int>;
+            C a;
+
+            using BE = C::const_iterator_releases(C::*)() const;
+            BE b = &C::begin_releases;
+            BE e = &C::end_releases;
+
+            test_findBestMatch_forward(a, add_to_map, b, e);
+            // no reverse, um does not have
+        }
     }
 }
 
