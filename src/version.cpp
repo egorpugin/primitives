@@ -1808,6 +1808,27 @@ TEST_CASE("Checking version helpers", "[helpers]")
             using C = VersionSet;
             C a;
 
+            Version v1("15.9.03232.13");
+            Version v2("16.0.123.13-preview");
+
+            a.insert(v1);
+            a.insert(v2);
+            a.insert({ 16,9,3232,13,5,6 });
+
+            for (auto &v : a.releases())
+                std::cout << v.toString() << "\n";
+            //for (auto &v : a.releases())
+                    //v = Version(1);
+
+            auto f = [](const auto &a)
+            {
+                for (auto &v : a.releases())
+                    std::cout << v.toString() << "\n";
+                //for (auto &v : a.releases())
+                    //v = Version(1);
+            };
+            f(a);
+
             using BE = C::const_iterator_releases(C::*)() const;
             using RBE = C::const_reverse_iterator_releases(C::*)() const;
             BE b = &C::begin_releases;

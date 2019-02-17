@@ -150,8 +150,6 @@ public:
     using Base::begin;
     using Base::end;
 
-    // .releases();
-
     // releases
     iterator_releases begin_releases()
     {
@@ -176,8 +174,33 @@ public:
     iterator_releases end_releases() { return { end(), end() }; }
     const_iterator_releases end_releases() const { return { end(), end() }; }
 
-    //
-    // add range functions?
+private:
+    template <class T>
+    struct ReleasesProxy
+    {
+        T *ptr;
+
+        auto begin() { return ptr->begin_releases(); }
+        auto end() { return ptr->end_releases(); }
+
+        auto begin() const { return ptr->begin_releases(); }
+        auto end() const { return ptr->end_releases(); }
+    };
+
+public:
+    auto releases()
+    {
+        ReleasesProxy<This> p;
+        p.ptr = this;
+        return p;
+    }
+
+    auto releases() const
+    {
+        ReleasesProxy<const This> p;
+        p.ptr = this;
+        return p;
+    }
 };
 
 template <
@@ -197,8 +220,6 @@ public:
 
     using Base::rbegin;
     using Base::rend;
-
-    // .releases();
 
     // releases, reversed
     reverse_iterator_releases rbegin_releases()
@@ -223,9 +244,6 @@ public:
     }
     reverse_iterator_releases rend_releases() { return { rend(), rend() }; }
     const_reverse_iterator_releases rend_releases() const { return { rend(), rend() }; }
-
-    //
-    // add range functions?
 };
 
 } // namespace detail
