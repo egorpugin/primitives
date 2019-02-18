@@ -199,7 +199,10 @@ void message_box(const std::string &caption, const std::string &s)
     if (MessageBoxA(0, s.c_str(), caption.c_str(), 0) == 0)
     {
         auto e = GetLastError();
-        message_box(caption, "MessageBoxA error: " + get_last_error(e));
+        if (e == 0)
+            message_box(caption, "Message is too long to display (len = " + std::to_string(s.size()) + ").\n\n" + s.substr(0, 256));
+        else
+            message_box(caption, "MessageBoxA error: " + get_last_error(e));
     }
 }
 
@@ -209,7 +212,10 @@ void message_box(const std::string &caption, const std::wstring &s)
     if (MessageBoxW(0, s.c_str(), ws.c_str(), 0) == 0)
     {
         auto e = GetLastError();
-        message_box(caption, "MessageBoxW error: " + get_last_error(e));
+        if (e == 0)
+            message_box(caption, L"Message is too long to display (len = " + std::to_wstring(s.size()) + L").\n\n" + s.substr(0, 256));
+        else
+            message_box(caption, "MessageBoxW error: " + get_last_error(e));
     }
 }
 
