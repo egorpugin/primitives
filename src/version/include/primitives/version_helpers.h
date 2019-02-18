@@ -91,6 +91,8 @@ struct VersionContainer : BaseContainer<Version, Args...>
     using Base = BaseContainer<Version, Args...>;
     using This = VersionContainer;
 
+    // add branches iterator
+
     template <class base_iterator>
     struct ReleaseIterator : base_iterator
     {
@@ -150,6 +152,9 @@ public:
     using Base::begin;
     using Base::end;
 
+    // TODO:
+    //iterator_releases begin( releases | branches )...
+
     // releases
     iterator_releases begin_releases()
     {
@@ -175,6 +180,8 @@ public:
     const_iterator_releases end_releases() const { return { end(), end() }; }
 
 private:
+    // add branches proxy
+
     template <class T>
     struct ReleasesProxy
     {
@@ -249,6 +256,9 @@ public:
 } // namespace detail
 
 using VersionSet = detail::ReverseVersionContainer<std::set>;
+
+template <class ... Args>
+using VersionSetCustom = detail::ReverseVersionContainer<std::set, Args...>;
 
 template <class ... Args>
 using VersionMap = detail::ReverseVersionContainer<std::map, Args...>;

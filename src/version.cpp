@@ -680,19 +680,40 @@ TEST_CASE("Checking versions", "[version]")
     }
 
     // cmp
-    CHECK(Version("a") == Version("a"));
-    CHECK_FALSE(Version("a") != Version("a"));
-    CHECK(Version("a") > Version());
-    CHECK(Version() < Version("a"));
-    CHECK(Version() != Version("a"));
-    CHECK(Version("a") < Version("b"));
-    CHECK(Version(1) < Version("b"));
+    {
+        CHECK(Version("a") == Version("a"));
+        CHECK_FALSE(Version("a") != Version("a"));
+        CHECK(Version("a") < Version());
+        CHECK(Version("a") <= Version());
+        CHECK(Version() > Version("a"));
+        CHECK(Version() >= Version("a"));
+        CHECK(Version() != Version("a"));
+        CHECK(Version("a") < Version("b"));
+        CHECK(Version(1) > Version("b"));
 
-    CHECK(Version(2, 14, 0, "rc16") != Version(2, 14, 0));
-    CHECK(Version(2, 14, 0, "rc16") < Version(2, 14, 0));
-    CHECK(Version(2, 14, 0, "rc16") <= Version(2, 14, 0));
-    CHECK_FALSE(Version(2, 14, 0, "rc16") > Version(2, 14, 0));
-    CHECK_FALSE(Version(2, 14, 0, "rc16") >= Version(2, 14, 0));
+        CHECK(Version(2, 14, 0, "rc16") != Version(2, 14, 0));
+        CHECK(Version(2, 14, 0, "rc16") < Version(2, 14, 0));
+        CHECK(Version(2, 14, 0, "rc16") <= Version(2, 14, 0));
+        CHECK_FALSE(Version(2, 14, 0, "rc16") > Version(2, 14, 0));
+        CHECK_FALSE(Version(2, 14, 0, "rc16") >= Version(2, 14, 0));
+
+        VersionSet a;
+        a.insert("master");
+        a.insert("develop");
+        a.insert("57");
+        a.insert("58");
+        a.insert("59");
+
+        CHECK(*a.begin() == "develop");
+        CHECK(*std::next(a.begin()) == "master");
+        CHECK(*std::prev(a.end()) == Version(59));
+
+        VersionSetCustom<std::greater<Version>> b(a.begin(), a.end());
+
+        CHECK(*b.begin() == "59");
+        CHECK(*std::next(b.begin()) == "58");
+        CHECK(*std::prev(b.end()) == Version("develop"));
+    }
 
     // ==
     {
@@ -1808,27 +1829,6 @@ TEST_CASE("Checking version helpers", "[helpers]")
             using C = VersionSet;
             C a;
 
-            Version v1("15.9.03232.13");
-            Version v2("16.0.123.13-preview");
-
-            a.insert(v1);
-            a.insert(v2);
-            a.insert({ 16,9,3232,13,5,6 });
-
-            for (auto &v : a.releases())
-                std::cout << v.toString() << "\n";
-            //for (auto &v : a.releases())
-                    //v = Version(1);
-
-            auto f = [](const auto &a)
-            {
-                for (auto &v : a.releases())
-                    std::cout << v.toString() << "\n";
-                //for (auto &v : a.releases())
-                    //v = Version(1);
-            };
-            f(a);
-
             using BE = C::const_iterator_releases(C::*)() const;
             using RBE = C::const_reverse_iterator_releases(C::*)() const;
             BE b = &C::begin_releases;
@@ -1873,6 +1873,33 @@ TEST_CASE("Checking version helpers", "[helpers]")
 
 int main(int argc, char **argv)
 {
+    using namespace primitives::version;
+
+    VersionSet a;
+
+    VersionRange vr("15.9.03232.13 - 16.0.123.13-preview");
+
+    Version v1("15.9.03232.13");
+    Version v2("16.0.123.13-preview");
+
+    a.insert(v1);
+    a.insert(v2);
+    a.insert({ 16,9,3232,13,5,6 });
+
+    for (auto &v : a.releases())
+        std::cout << v.toString() << "\n";
+    //for (auto &v : a.releases())
+            //v = Version(1);
+
+    auto f = [](const auto &a)
+    {
+        for (auto &v : a.releases())
+            std::cout << v.toString() << "\n";
+        //for (auto &v : a.releases())
+            //v = Version(1);
+    };
+    f(a);
+
     Catch::Session s;
     auto r = s.run(argc, argv);
     return r;

@@ -262,7 +262,8 @@ struct PRIMITIVES_VERSION_API VersionRange
     bool operator==(const VersionRange &) const;
     bool operator!=(const VersionRange &) const;
 
-    VersionRange operator~() const;
+    // TODO:
+    //VersionRange operator~() const;
 
     VersionRange operator|(const VersionRange &) const;
     VersionRange operator&(const VersionRange &) const;
@@ -280,9 +281,16 @@ public:
 private:
 #endif
     /// [from, to] interval
-    // replace with [from, to)?
     struct RangePair : std::pair<Version, Version>
     {
+        // replace with [from, to)?
+        // but we do not know what is next version for "15.9.03232.13 - 16.0.123.13-preview"
+        // so we can't use [,)
+        // to do this, we must teach Extra to know it's next version
+        //
+        // Example: for string "a" next version will be "aa" - in case if we allow only [a-z]
+        //
+
         using base = std::pair<Version, Version>;
         using base::base;
 

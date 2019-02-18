@@ -438,32 +438,50 @@ bool Version::cmp(const Version &v1, const Version &v2, F f)
         v4.numbers.resize(sz);
         return cmp(v3, v4, f);
     }
-    return f(std::tie(v1.branch, v1.numbers, v1.extra), std::tie(v2.branch, v2.numbers, v2.extra));
+    return f(std::tie(v1.numbers, v1.extra), std::tie(v2.numbers, v2.extra));
 }
 
 bool Version::operator<(const Version &rhs) const
 {
-    return cmp(*this, rhs, std::less<decltype(std::tie(branch, numbers, extra))>());
+    if (isBranch() && rhs.isBranch())
+        return branch < rhs.branch;
+    if (isBranch() || rhs.isBranch())
+        return !(branch < rhs.branch);
+    return cmp(*this, rhs, std::less<decltype(std::tie(numbers, extra))>());
 }
 
 bool Version::operator>(const Version &rhs) const
 {
-    return cmp(*this, rhs, std::greater<decltype(std::tie(branch, numbers, extra))>());
+    if (isBranch() && rhs.isBranch())
+        return branch > rhs.branch;
+    if (isBranch() || rhs.isBranch())
+        return !(branch > rhs.branch);
+    return cmp(*this, rhs, std::greater<decltype(std::tie(numbers, extra))>());
 }
 
 bool Version::operator<=(const Version &rhs) const
 {
-    return cmp(*this, rhs, std::less_equal<decltype(std::tie(branch, numbers, extra))>());
+    if (isBranch() && rhs.isBranch())
+        return branch <= rhs.branch;
+    if (isBranch() || rhs.isBranch())
+        return !(branch <= rhs.branch);
+    return cmp(*this, rhs, std::less_equal<decltype(std::tie(numbers, extra))>());
 }
 
 bool Version::operator>=(const Version &rhs) const
 {
-    return cmp(*this, rhs, std::greater_equal<decltype(std::tie(branch, numbers, extra))>());
+    if (isBranch() && rhs.isBranch())
+        return branch >= rhs.branch;
+    if (isBranch() || rhs.isBranch())
+        return !(branch >= rhs.branch);
+    return cmp(*this, rhs, std::greater_equal<decltype(std::tie(numbers, extra))>());
 }
 
 bool Version::operator==(const Version &rhs) const
 {
-    return cmp(*this, rhs, std::equal_to<decltype(std::tie(branch, numbers, extra))>());
+    if (isBranch() || rhs.isBranch())
+        return branch == rhs.branch;
+    return cmp(*this, rhs, std::equal_to<decltype(std::tie(numbers, extra))>());
 }
 
 bool Version::operator!=(const Version &rhs) const
@@ -1203,12 +1221,12 @@ VersionRange VersionRange::operator&(const VersionRange &rhs) const
     return tmp;
 }
 
-VersionRange VersionRange::operator~() const
+/*VersionRange VersionRange::operator~() const
 {
     auto tmp = *this;
     throw SW_RUNTIME_ERROR("not implemented");
     return tmp;
-}
+}*/
 
 bool operator<(const VersionRange &r, const Version &v)
 {
