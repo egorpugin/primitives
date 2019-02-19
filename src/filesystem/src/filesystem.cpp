@@ -496,6 +496,22 @@ FILE *fopen(const path &p, const char *mode)
 #endif
 }
 
+static String errno2str(int e)
+{
+    char buf[1024];
+#ifdef _WIN32
+    strerror_s(buf, e);
+#else
+    strerror_r(e, buf, sizeof(buf));
+#endif
+    return String(buf);
+}
+
+static String errno2str()
+{
+    return errno2str(errno);
+}
+
 FILE *fopen_checked(const path &p, const char *mode)
 {
     auto f = fopen(p, mode);
@@ -508,13 +524,7 @@ FILE *fopen_checked(const path &p, const char *mode)
         if (f)
             return f;
     }
-    char buf[1024];
-#ifdef _WIN32
-    strerror_s(buf, errno);
-#else
-    strerror_r(errno, buf, sizeof(buf));
-#endif
-    throw SW_RUNTIME_ERROR("Cannot open file: " + p.u8string() + ", mode = " + mode + ", errno = " + std::to_string(errno) + ": " + buf);
+    throw SW_RUNTIME_ERROR("Cannot open file: " + p.u8string() + ", mode = " + mode + ", errno = " + std::to_string(errno) + ": " + errno2str());
 }
 
 void create(const path &p)
@@ -564,7 +574,7 @@ void ScopedFile::close()
     if (f)
     {
         if (fclose(f) != 0)
-            std::cerr << "Cannot close file, errno = " << std::to_string(errno) << std::endl;
+            std::cerr << "Cannot close file, errno = " << std::to_string(errno) << ": " << primitives::filesystem::errno2str() << std::endl;
         f = nullptr;
     }
 }
