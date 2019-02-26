@@ -1894,6 +1894,7 @@ void PrintVersionMessage();
 ///
 /// \param Hidden if true will print hidden options
 /// \param Categorized if true print options in categories
+PRIMITIVES_SETTINGS_API
 void PrintHelpMessage(bool Hidden = false, bool Categorized = false);
 
 //===----------------------------------------------------------------------===//

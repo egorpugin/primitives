@@ -265,7 +265,7 @@ static bool minidump_cb(const wchar_t *dump_path,
 }
 #endif
 
-int main(int argc, char *argv[])
+static int setup(int argc, char *argv[])
 {
 #ifdef _WIN32
     auto option_name = get_cl_option_base();
@@ -334,5 +334,13 @@ int main(int argc, char *argv[])
     // init settings early
     // e.g. before parsing command line
     sw::getSettingStorage();
+
+    return 0;
+}
+
+int main(int argc, char *argv[])
+{
+    if (int r = setup(argc, argv))
+        return r;
     return SW_MAIN(argc, argv);
 }

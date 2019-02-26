@@ -577,6 +577,11 @@ size_t BinaryContext::size() const
     return size_;
 }
 
+bool BinaryContext::empty() const
+{
+    return size_ == 0;
+}
+
 const std::vector<uint8_t> &BinaryContext::buf() const
 {
     if (!buf_)

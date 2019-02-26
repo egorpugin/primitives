@@ -19,7 +19,7 @@
 %locations
 %verbose
 //%no-lines
-%error-verbose
+%define parse.error verbose
 
 ////////////////////////////////////////
 

@@ -34,3 +34,10 @@ int main(int argc, char *argv[])
     exit_handler();
     return ret;
 }
+
+#ifdef _WIN32
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow)
+{
+    return main(__argc, __argv);
+}
+#endif

@@ -6,13 +6,13 @@
 
 #pragma once
 
+#include <primitives/filesystem.h>
+
 #include <list>
 #include <memory>
 #include <string>
 #include <stack>
 #include <vector>
-
-#include <primitives/filesystem.h>
 
 namespace primitives
 {
@@ -220,11 +220,15 @@ struct PRIMITIVES_CONTEXT_API BinaryContext
     void skip(int n) const;
     size_t end() const { return end_; }
     bool eof() const;
+#pragma push_macro("check") // ue4 has this macro
+#undef check
     bool check(int index) const;
+#pragma pop_macro("check")
     void reset() const;
 
     size_t index() const;
     size_t size() const;
+    bool empty() const;
     const std::vector<uint8_t> &buf() const;
 
     const uint8_t *getPtr() const { return ptr; }
