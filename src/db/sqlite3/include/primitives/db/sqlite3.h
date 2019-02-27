@@ -25,7 +25,6 @@ struct PRIMITIVES_DB_SQLITE3_API SqliteDatabase : primitives::db::LiteDatabase
 private:
     ::sqlite3 *db = nullptr;
     bool needs_close = true;
-    static inline const String service_table{ "_svc_kv_settings" };
 
     void check_error(int r, int ec);
 

@@ -25,10 +25,6 @@ struct PRIMITIVES_DB_POSTGRESQL_API PostgresqlDatabase : primitives::db::LiteDat
 private:
     std::unique_ptr<pqxx::connection> c;
 
-    static inline const String service_schema_name{ "service" };
-    static inline const String service_table_name{ "kv_settings" };
-    static inline const String service_table{ service_schema_name + "." + service_table_name };
-
     bool execute_and_check(const String &q, const String &allowed_error_code);
 
     std::optional<String> getValueByKey(const String &key) override;

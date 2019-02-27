@@ -10,6 +10,10 @@
 
 #include <pqxx/pqxx>
 
+#define service_schema_name "service"s
+#define service_table_name "kv_settings"s
+#define service_table service_schema_name + "." + service_table_name
+
 namespace primitives::db::postgresql
 {
 

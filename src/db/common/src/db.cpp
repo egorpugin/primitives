@@ -13,6 +13,13 @@
 
 #include <regex>
 
+#define version_column "version"
+#define default_schema_filename "schema.sql"
+
+#define default_diffs_spec "%06d"
+#define default_diffs_prefix "patch_"
+#define default_diffs_mask default_diffs_prefix default_diffs_spec ".sql"
+
 namespace primitives::db
 {
 
@@ -129,6 +136,11 @@ size_t FileDatabaseSchemaManager::getDiffSqlSize() const
             n++;
     }
     return n;
+}
+
+String FileDatabaseSchemaManager::getDefaultDiffsMask()
+{
+    return default_diffs_mask;
 }
 
 void createOrUpdateSchema(LiteDatabase &database, const String &latestSchema, const Strings &diffSqls)

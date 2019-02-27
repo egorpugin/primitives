@@ -7,6 +7,7 @@
 #pragma once
 
 #include <primitives/schema_manager.h>
+
 #include <optional>
 
 namespace primitives::db
@@ -77,12 +78,14 @@ PRIMITIVES_DB_COMMON_API
 void createOrUpdateSchema(LiteDatabase &database, const String &latestSchema, const Strings &diffSqls);
 
 PRIMITIVES_DB_COMMON_API
-void createOrUpdateSchema(LiteDatabase &database, const path &latestSchemaFilename, const path &diffSqlsDir, const String &diffSqlsFileMask = FileDatabaseSchemaManager::default_diffs_mask);
+void createOrUpdateSchema(LiteDatabase &database, const path &latestSchemaFilename, const path &diffSqlsDir,
+                          const String &diffSqlsFileMask = FileDatabaseSchemaManager::getDefaultDiffsMask());
 
 PRIMITIVES_DB_COMMON_API
 void createOrUpdateSchema(LiteDatabase &database, const String &latestSchema, bool split_schema_for_patches = false);
 
 PRIMITIVES_DB_COMMON_API
-void createOrUpdateSchema(LiteDatabase &database, const path &latestSchemaFilename, bool split_schema_for_patches = false);
+void createOrUpdateSchema(LiteDatabase &database, const path &latestSchemaFilename,
+                          bool split_schema_for_patches = false);
 
 }

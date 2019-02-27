@@ -10,6 +10,8 @@
 
 #include <sqlite3.h>
 
+#define service_table "_svc_kv_settings"s
+
 namespace primitives::db::sqlite3
 {
 
