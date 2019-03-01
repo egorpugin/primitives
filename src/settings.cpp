@@ -7,6 +7,8 @@
 #include <primitives/sw/main.h>
 #include <primitives/settings.h>
 #include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
+#include <primitives/sw/settings_program_name.h>
 
 #include <boost/algorithm/string.hpp>
 

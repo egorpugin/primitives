@@ -8,29 +8,7 @@
 
 #pragma once
 
-#include "settings_program_name.h"
-
 #include <primitives/settings.h>
-#include <primitives/CommandLine.h>
-
-namespace cl
-{
-
-using namespace ::primitives::cl;
-
-using ::primitives::cl::ParseCommandLineOptions;
-
-inline bool ParseCommandLineOptions(const Strings &args,
-    llvm::StringRef Overview = "",
-    llvm::raw_ostream *Errs = nullptr)
-{
-    std::vector<const char *> argv;
-    for (auto &a : args)
-        argv.push_back(a.data());
-    return ParseCommandLineOptions(argv.size(), argv.data(), Overview, Errs);
-}
-
-}
 
 namespace sw
 {

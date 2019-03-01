@@ -15,6 +15,7 @@
 #include <primitives/filesystem.h>
 #include <primitives/hash.h>
 #include <primitives/sw/main.h>
+#include <primitives/sw/cl.h>
 
 #include <chrono>
 #include <iostream>

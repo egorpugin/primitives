@@ -6,6 +6,10 @@
 
 #include "primitives/sw/settings.h"
 
+// this file provides definition to sw::getProgramName()
+// do not remove
+#include <primitives/sw/settings_program_name.h>
+
 #define YAML_SETTINGS_FILENAME "settings.yml"
 
 #if defined(_WIN32)

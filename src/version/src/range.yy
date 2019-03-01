@@ -26,6 +26,8 @@
 %define api.value.type { MY_STORAGE }
 %code provides { #include <primitives/helper/bison_yy.h> }
 
+%expect 3
+
 %{
 #include <primitives/version.h>
 using namespace primitives::version;

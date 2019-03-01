@@ -23,10 +23,11 @@ THE SOFTWARE.
 #include <boost/algorithm/string.hpp>
 #include <primitives/filesystem.h>
 #include <primitives/sw/main.h>
-#include <primitives/sw/settings.h>
+#include <primitives/sw/cl.h>
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <regex>
 
 struct File
