@@ -18,7 +18,6 @@ cache:
   directories:
     - $HOME/.sw
     - $HOME/Library/Caches/Homebrew
-    #- /usr/local/Cellar/llvm
 
 addons:
   apt:
@@ -47,7 +46,7 @@ install:
   - if [[ $OSX ]]  ; then curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-macos-client.tar.gz; fi
   - tar -xvf sw.tar.gz
   
-  #- export HOMEBREW_NO_AUTO_UPDATE=1
+  - export HOMEBREW_NO_AUTO_UPDATE=1
   - if [[ $OSX ]]  ; then brew install llvm; fi
   - if [[ $OSX ]]  ; then brew install bison; fi
   - if [[ $OSX ]]  ; then brew install flex; fi
