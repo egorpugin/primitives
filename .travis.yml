@@ -48,10 +48,10 @@ install:
   - tar -xvf sw.tar.gz
   
   #- export HOMEBREW_NO_AUTO_UPDATE=1
-  #- if [[ $OSX ]]  ; then brew install llvm; fi
+  - if [[ $OSX ]]  ; then brew install llvm; fi
   - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/bison/bin:$PATH"; fi
   - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/flex/bin:$PATH"; fi
   
 script:
   - clang-7 --version
-  - ./sw build
+  #- ./sw build
