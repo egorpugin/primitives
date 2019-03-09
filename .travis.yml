@@ -17,7 +17,7 @@ branches:
 cache:
   directories:
     - $HOME/.sw
-    #- $HOME/Library/Caches/Homebrew
+    - $HOME/Library/Caches/Homebrew
     #- /usr/local/Cellar/llvm
 
 addons:
@@ -34,7 +34,10 @@ addons:
     #- llvm@7
     - bison
     - flex
-
+    
+before_cache:
+  - brew cleanup
+  
 before_install:
   - if [[ $TRAVIS_OS_NAME == linux   ]]; then LINUX=true; fi
   - if [[ $TRAVIS_OS_NAME == osx     ]]; then OSX=true; fi
@@ -44,10 +47,10 @@ install:
   - if [[ $OSX ]]  ; then curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-macos-client.tar.gz; fi
   - tar -xvf sw.tar.gz
   
-  - export HOMEBREW_NO_AUTO_UPDATE=1
-  - if [[ $OSX ]]  ; then brew install llvm@7; fi
+  #- export HOMEBREW_NO_AUTO_UPDATE=1
+  - if [[ $OSX ]]  ; then brew install llvm; fi
   - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/bison/bin:$PATH"; fi
   - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/flex/bin:$PATH"; fi
   
-script:
-  - ./sw build
+#script:
+  #- ./sw build
