@@ -17,7 +17,7 @@ branches:
 cache:
   directories:
     - $HOME/.sw
-    - $HOME/Library/Caches/Homebrew
+    #- $HOME/Library/Caches/Homebrew
 
 addons:
   apt:
