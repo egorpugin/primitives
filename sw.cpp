@@ -147,6 +147,7 @@ void build(Solution &s)
 
     auto &templates = p.addTarget<StaticLibraryTarget>("templates");
     setup_primitives(templates);
+    templates -= "org.sw.demo.boost.stacktrace-1"_dep;
     if (s.Settings.Native.ConfigurationType != ConfigurationType::Release &&
         s.Settings.Native.ConfigurationType != ConfigurationType::MinimalSizeRelease
         )
