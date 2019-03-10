@@ -47,7 +47,7 @@ install:
   - tar -xvf sw.tar.gz
   
   - export HOMEBREW_NO_AUTO_UPDATE=1
-  - if [[ $OSX ]]  ; then brew install llvm@7; fi
+  - if [[ $OSX ]]  ; then brew install llvm; fi
   - if [[ $OSX ]]  ; then brew install bison; fi
   - if [[ $OSX ]]  ; then brew install flex; fi
   - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/bison/bin:$PATH"; fi
