@@ -147,6 +147,15 @@ void build(Solution &s)
 
     auto &templates = p.addTarget<StaticLibraryTarget>("templates");
     setup_primitives(templates);
+    if (s.Settings.Native.ConfigurationType != ConfigurationType::Release &&
+        s.Settings.Native.ConfigurationType != ConfigurationType::MinimalSizeRelease
+        )
+    {
+        templates += "USE_STACKTRACE"_def;
+        templates += "org.sw.demo.boost.stacktrace-1"_dep;
+        //if (s.Settings.TargetOS.Type == OSType::Windows)
+            //templates += "dbgeng.lib"_slib;
+    }
 
     ADD_LIBRARY(string);
     string.Public += "org.sw.demo.boost.algorithm-1"_dep;
@@ -250,6 +259,7 @@ void build(Solution &s)
     //sw_settings.Interface += "src/sw.settings.program_name.cpp";
 
     ADD_LIBRARY(version);
+    version.Public += "src/version.natvis";
     version.Public += string, templates,
         "org.sw.demo.fmt-*"_dep,
         "org.sw.demo.boost.container_hash-1"_dep,

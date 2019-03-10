@@ -6,21 +6,23 @@
 
 #pragma once
 
-#include <exception>
+#include <stdexcept>
 #include <string>
 
-#define SW_BASE_EXCEPTION(t, msg) t(__FILE__, __func__, __LINE__, msg)
-#define SW_EXCEPTION(t, msg) SW_BASE_EXCEPTION(sw::Exception, msg)
-#define SW_RUNTIME_ERROR(msg) SW_BASE_EXCEPTION(sw::RuntimeError, msg)
+#define SW_BASE_EXCEPTION(t, msg, st) t(__FILE__, __func__, __LINE__, msg, st)
+#define SW_EXCEPTION(msg) SW_BASE_EXCEPTION(sw::Exception, msg, true)
+#define SW_EXCEPTION_CUSTOM(msg, st) SW_BASE_EXCEPTION(sw::Exception, msg, st)
+#define SW_RUNTIME_ERROR(msg) SW_BASE_EXCEPTION(sw::RuntimeError, msg, true)
+#define SW_RUNTIME_ERROR_CUSTOM(msg, st) SW_BASE_EXCEPTION(sw::RuntimeError, msg, st)
 
 namespace sw
 {
 
-struct Exception : std::exception
+struct BaseException
 {
-    Exception(const char* file, const char* function, int line, const std::string &msg);
+    BaseException(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
 
-    const char* what() const noexcept override;
+    const char *getMessage() const;
 
 protected:
     //std::string ex_type; // ?
@@ -33,9 +35,14 @@ protected:
     std::string format() const;
 };
 
-struct RuntimeError : Exception
+struct Exception : private BaseException, std::exception
 {
-    using Exception::Exception;
+    Exception(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
+};
+
+struct RuntimeError : private BaseException, std::runtime_error
+{
+    RuntimeError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
 };
 
 }

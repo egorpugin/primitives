@@ -611,9 +611,9 @@ struct OptionEnumValue {
 };
 
 #define clEnumVal(ENUMVAL, DESC)                                               \
-  llvm::cl::OptionEnumValue { #ENUMVAL, int(ENUMVAL), DESC }
+  cl::OptionEnumValue { #ENUMVAL, int(ENUMVAL), DESC }
 #define clEnumValN(ENUMVAL, FLAGNAME, DESC)                                    \
-  llvm::cl::OptionEnumValue { FLAGNAME, int(ENUMVAL), DESC }
+  cl::OptionEnumValue { FLAGNAME, int(ENUMVAL), DESC }
 
 // values - For custom data types, allow specifying a group of values together
 // as the values that go into the mapping that the option handler uses.
