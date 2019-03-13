@@ -33,14 +33,14 @@ String getAutoProxy()
     return proxy_addr;
 }
 
-size_t curl_write_file(char *ptr, size_t size, size_t nmemb, void *userdata)
+static size_t curl_write_file(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
     auto read = size * nmemb;
     fwrite(ptr, read, 1, (FILE *)userdata);
     return read;
 }
 
-int curl_transfer_info(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
+static int curl_transfer_info(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
 {
     int64_t file_size_limit = *(int64_t*)clientp;
     if (dlnow > file_size_limit)
@@ -48,7 +48,7 @@ int curl_transfer_info(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl
     return 0;
 }
 
-size_t curl_write_string(char *ptr, size_t size, size_t nmemb, String *s)
+static size_t curl_write_string(char *ptr, size_t size, size_t nmemb, String *s)
 {
     auto read = size * nmemb;
     try

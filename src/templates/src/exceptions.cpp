@@ -11,6 +11,8 @@
 
 #include <sstream>
 
+bool gUseStackTrace;
+
 namespace sw
 {
 
@@ -18,9 +20,9 @@ BaseException::BaseException(const char *file, const char *function, int line, c
     : file(file), function(function), line(line), message(msg)
 {
 #ifdef USE_STACKTRACE
-    if (stacktrace)
+    if (stacktrace && gUseStackTrace)
     {
-        boost::stacktrace::stacktrace t(4 /* skip */, -1 /* till the end */);
+        boost::stacktrace::stacktrace t(3 /* skip */, -1 /* till the end */);
         std::ostringstream ss;
         ss << t;
         message += "\nStacktrace:\n" + ss.str();
@@ -49,7 +51,11 @@ std::string BaseException::format() const
 }
 
 Exception::Exception(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
-    : BaseException(file, function, line, msg, stacktrace), std::exception(getMessage())
+    : BaseException(file, function, line, msg, stacktrace), std::exception(
+#ifdef _MSC_VER
+        getMessage()
+#endif
+    )
 {
 }
 
