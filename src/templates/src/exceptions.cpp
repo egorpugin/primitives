@@ -16,6 +16,9 @@ bool gUseStackTrace;
 namespace sw
 {
 
+namespace detail
+{
+
 BaseException::BaseException(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
     : file(file), function(function), line(line), message(msg)
 {
@@ -50,6 +53,8 @@ std::string BaseException::format() const
     return s;
 }
 
+}
+
 Exception::Exception(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
     : BaseException(file, function, line, msg, stacktrace), std::exception(
 #ifdef _MSC_VER
@@ -60,8 +65,13 @@ Exception::Exception(const char *file, const char *function, int line, const std
 }
 
 RuntimeError::RuntimeError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
-    : BaseException(file, function, line, msg, stacktrace), std::runtime_error(getMessage())
+    : BaseException/*Exception*/(file, function, line, msg, stacktrace), std::runtime_error(getMessage())
 {
 }
+
+/*RuntimeError::RuntimeError(const RuntimeError &rhs)
+    : Exception(rhs), std::runtime_error(rhs)
+{
+}*/
 
 } // namespace sw

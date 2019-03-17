@@ -10,12 +10,17 @@
 #include <string>
 
 #define SW_BASE_EXCEPTION(t, msg, st) t(__FILE__, __func__, __LINE__, msg, st)
-#define SW_EXCEPTION(msg) SW_BASE_EXCEPTION(sw::Exception, msg, true)
+
 #define SW_EXCEPTION_CUSTOM(msg, st) SW_BASE_EXCEPTION(sw::Exception, msg, st)
-#define SW_RUNTIME_ERROR(msg) SW_BASE_EXCEPTION(sw::RuntimeError, msg, true)
 #define SW_RUNTIME_ERROR_CUSTOM(msg, st) SW_BASE_EXCEPTION(sw::RuntimeError, msg, st)
 
+#define SW_EXCEPTION(msg) SW_EXCEPTION_CUSTOM(msg, true)
+#define SW_RUNTIME_ERROR(msg) SW_RUNTIME_ERROR_CUSTOM(msg, true)
+
 namespace sw
+{
+
+namespace detail
 {
 
 struct BaseException
@@ -35,14 +40,17 @@ protected:
     std::string format() const;
 };
 
-struct Exception : private BaseException, std::exception
+}
+
+struct Exception : detail::BaseException, /*virtual*/ std::exception
 {
     Exception(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
 };
 
-struct RuntimeError : private BaseException, std::runtime_error
+struct RuntimeError : detail::BaseException, /*Exception, virtual*/ std::runtime_error
 {
     RuntimeError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
+    //RuntimeError(const RuntimeError &);
 };
 
 }

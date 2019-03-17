@@ -597,6 +597,81 @@ TEST_CASE("Checking templates", "[templates]")
     }
 }
 
+TEST_CASE("Checking exceptions", "[templates.exceptions]")
+{
+    {
+        int i = 0;
+        try { throw SW_EXCEPTION("e"); }
+        catch (const sw::Exception &e) { i = 1; }
+        catch (const std::exception &e) { i = 2; }
+        catch (...) { i = 3; }
+        CHECK(i == 1);
+    }
+    {
+        int i = 0;
+        try { throw SW_EXCEPTION("e"); }
+        catch (const sw::detail::BaseException &e) { i = 1; }
+        catch (const std::exception &e) { i = 2; }
+        catch (...) { i = 3; }
+        CHECK(i == 1);
+    }
+    {
+        int i = 0;
+        try { throw SW_EXCEPTION("e"); }
+        catch (const std::exception &e) { i = 2; }
+        catch (...) { i = 3; }
+        CHECK(i == 2);
+    }
+
+    {
+        int i = 0;
+        try { throw SW_RUNTIME_ERROR("e"); }
+        catch (const sw::RuntimeError &e) { i = 1; }
+        catch (const std::exception &e) { i = 2; }
+        catch (...) { i = 3; }
+        CHECK(i == 1);
+    }
+    {
+        int i = 0;
+        try { throw SW_RUNTIME_ERROR("e"); }
+        catch (const sw::Exception &e) { i = 1; }
+        catch (const std::exception &e) { i = 2; }
+        catch (...) { i = 3; }
+        //CHECK(i == 1); // available when complex ex hierarcy will be implemented
+        CHECK(i == 2);
+    }
+    {
+        int i = 0;
+        try { throw SW_RUNTIME_ERROR("e"); }
+        catch (const sw::detail::BaseException &e) { i = 1; }
+        catch (const std::exception &e) { i = 2; }
+        catch (...) { i = 3; }
+        CHECK(i == 1);
+    }
+    {
+        int i = 0;
+        try { throw SW_RUNTIME_ERROR("e"); }
+        catch (const std::runtime_error &e) { i = 2; }
+        catch (const std::exception &e) { i = 4; }
+        catch (...) { i = 3; }
+        CHECK(i == 2);
+    }
+    {
+        int i = 0;
+        try { throw SW_RUNTIME_ERROR("e"); }
+        catch (const std::runtime_error &e) { i = 2; }
+        catch (...) { i = 3; }
+        CHECK(i == 2);
+    }
+    {
+        int i = 0;
+        try { throw SW_RUNTIME_ERROR("e"); }
+        catch (const std::exception &e) { i = 2; }
+        catch (...) { i = 3; }
+        CHECK(i == 2);
+    }
+}
+
 TEST_CASE("Checking context", "[context]")
 {
     using namespace primitives;
@@ -607,15 +682,8 @@ TEST_CASE("Checking context", "[context]")
     CHECK(ctx.getText() == "\n\n");
 }
 
-#include <primitives/http.h>
-#include <nlohmann/json.hpp>
-
 int main(int argc, char **argv)
 {
-    /*String url = "";
-    auto j = nlohmann::json::parse(download_file(url));
-    double temp = j["main"]["temp"];*/
-
     auto r = Catch::Session().run(argc, argv);
     return r;
 }

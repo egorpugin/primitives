@@ -110,7 +110,7 @@ void configure(Build &s)
 void build(Solution &s)
 {
     auto &p = s.addProject("primitives", "master");
-    p += Git("https://github.com/egorpugin/primitives", "", "master");
+    p += Git("https://github.com/egorpugin/primitives");
 
     auto setup_primitives_no_all_sources = [](auto &t)
     {
