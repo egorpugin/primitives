@@ -766,7 +766,9 @@ void Version::format(std::string &s) const
         //
         fmt::arg("e", printExtra()),
         fmt::arg("b", branch),
-        fmt::arg("v", toString())//,
+        fmt::arg("v", toString()),
+        fmt::arg("Mm", toString(2)) // equals to {M}.{m}
+        //,
 
         // extended
         /*fmt::arg("5", get(4)),
@@ -903,8 +905,8 @@ bool VersionRange::hasVersion(const Version &v) const
 
 bool VersionRange::RangePair::hasVersion(const Version &v) const
 {
-    if (v.getLevel() > std::max(first.getLevel(), second.getLevel()))
-        return false;
+    //if (v.getLevel() > std::max(first.getLevel(), second.getLevel()))
+        //return false;
     return first <= v && v <= second;
 }
 
@@ -945,7 +947,7 @@ std::string VersionRange::RangePair::toString() const
         {
             if (s.empty())
             {
-                if (second.getLevel() > Version::minimum_level)
+                /*if (second.getLevel() > Version::minimum_level)
                 {
                     String s;
                     for (int i = 0; i < second.getLevel(); i++)
@@ -953,7 +955,7 @@ std::string VersionRange::RangePair::toString() const
                     if (!s.empty())
                         s.resize(s.size() - 1);
                     return s;
-                }
+                }*/
                 return "*";
             }
             return s;

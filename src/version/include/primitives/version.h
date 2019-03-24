@@ -40,7 +40,10 @@ struct comparable_variant : std::variant<Args...>
 };
 
 // enough numbers, here string goes first
-struct Extra : std::vector<comparable_variant<std::string, Number>>
+// TODO: add any extra (non-release)
+// maybe special '*' sign
+// e.g.: any non release is *-*
+struct Extra : std::vector<comparable_variant<std::string, Number/*, any flag */>>
 {
     using Base = std::vector<comparable_variant<std::string, Number>>;
 

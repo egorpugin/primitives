@@ -12,6 +12,13 @@
 #include <sstream>
 
 bool gUseStackTrace;
+std::string gSymbolPath;
+
+#ifdef USE_STACKTRACE
+#ifdef _WIN32
+#include "exceptions_msvc.h"
+#endif
+#endif
 
 namespace sw
 {
@@ -26,9 +33,14 @@ BaseException::BaseException(const char *file, const char *function, int line, c
     if (stacktrace && gUseStackTrace)
     {
         boost::stacktrace::stacktrace t(3 /* skip */, -1 /* till the end */);
+        message += "\nStacktrace:\n";
+#ifdef _WIN32
+        message += ::to_string(t);
+#else
         std::ostringstream ss;
         ss << t;
-        message += "\nStacktrace:\n" + ss.str();
+        message += ss.str();
+#endif
     }
 #endif
 }

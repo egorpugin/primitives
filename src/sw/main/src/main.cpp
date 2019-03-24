@@ -26,6 +26,9 @@ extern bool gUseStackTrace;
 static ::cl::opt<bool, true> bt("bt", ::cl::desc("Print backtrace"), ::cl::location(gUseStackTrace));
 static ::cl::alias bt2("st", ::cl::desc("Alias for -bt"), ::cl::aliasopt(bt));
 
+extern std::string gSymbolPath;
+static ::cl::opt<std::string, true> symbol_path("symbol-path", ::cl::desc("Set symbol path for backtrace"), ::cl::location(gSymbolPath), ::cl::Hidden);
+
 static path temp_directory_path(const path &subdir)
 {
     return fs::temp_directory_path() / "sw" / subdir;
@@ -271,6 +274,37 @@ static bool minidump_cb(const wchar_t *dump_path,
 }
 #endif
 
+void sw_append_symbol_path(const path &in)
+{
+    // bt is not available at this time
+    //if (!bt)
+        //return;
+
+    // not working atm
+    return;
+
+#ifdef _WIN32
+    const auto nt_symbol_path = L"_NT_SYMBOL_PATH";
+    const auto delim = L";";
+    const auto max_env_var_size = 32'767;
+
+    WCHAR buf[max_env_var_size];
+    if (!GetEnvironmentVariableW(nt_symbol_path, buf, max_env_var_size))
+    {
+        auto e = GetLastError();
+        if (e != ERROR_ENVVAR_NOT_FOUND)
+        {
+            printf("GetEnvironmentVariableW failed: %d", e);
+            return;
+        }
+    }
+
+    std::wstring p = buf;
+    p += delim + in.wstring();
+    SetEnvironmentVariableW(nt_symbol_path, p.c_str());
+#endif
+}
+
 static int setup(int argc, char *argv[])
 {
 #ifdef _WIN32
@@ -336,6 +370,10 @@ static int setup(int argc, char *argv[])
 #endif
     cp = s;
     fs::current_path(cp);
+
+    //
+    sw_append_symbol_path(boost::dll::program_location().parent_path().wstring());
+    sw_append_symbol_path(fs::current_path());
 
     // init settings early
     // e.g. before parsing command line

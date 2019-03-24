@@ -19,12 +19,12 @@ TEST_CASE("Checking versions", "[version]")
     using namespace primitives::version;
 
     // valid branches
-    REQUIRE_NOTHROW(Version("a"));
-    REQUIRE_NOTHROW(Version("ab"));
-    REQUIRE_NOTHROW(Version("abc123___"));
+    CHECK_NOTHROW(Version("a"));
+    CHECK_NOTHROW(Version("ab"));
+    CHECK_NOTHROW(Version("abc123___"));
     CHECK_THROWS(Version("1abc123___"));
-    REQUIRE_NOTHROW(Version("abc123___-"));
-    REQUIRE_NOTHROW(Version("a-a"));
+    CHECK_NOTHROW(Version("abc123___-"));
+    CHECK_NOTHROW(Version("a-a"));
     CHECK_THROWS(Version("1..1"));
     CHECK_THROWS(Version("1.1-2..2"));
     CHECK_THROWS(Version("1.1-2-2"));
@@ -33,22 +33,27 @@ TEST_CASE("Checking versions", "[version]")
     CHECK_THROWS(Version("-"));
     CHECK_THROWS(Version("."));
 
-    REQUIRE_NOTHROW(Version("1"));
-    REQUIRE_NOTHROW(Version("1-alpha1")); // with extra
-    REQUIRE_NOTHROW(Version("1.2"));
-    REQUIRE_NOTHROW(Version("1.2-rc2.3.a")); // with extra
+    CHECK_NOTHROW(Version("1"));
+    CHECK_NOTHROW(Version("1-alpha1")); // with extra
+    CHECK_NOTHROW(Version("1.2"));
+    CHECK_NOTHROW(Version("1.2-rc2.3.a")); // with extra
     CHECK_THROWS(Version("1.2--rc2.3.a")); // with extra
     CHECK_THROWS(Version("1.2-rc2.3.a-")); // with extra
     CHECK_THROWS(Version("1.2-rc2.3.-a")); // with extra
-    REQUIRE_NOTHROW(Version("1.2.3"));
-    REQUIRE_NOTHROW(Version("1.2.3.4"));
+    CHECK_NOTHROW(Version("1.2.3"));
+    CHECK_NOTHROW(Version("1.2.3.4"));
     CHECK_THROWS(Version("1.2.*"));
     CHECK_THROWS(Version("1.2.x"));
     CHECK_THROWS(Version("1.2.X"));
-    CHECK_THROWS(Version("1.2.3.4.5"));
-    CHECK_THROWS(Version("1.2.3.4.5.6"));
-    CHECK_THROWS(Version("1.2.3.4.5.6.7"));
     CHECK_THROWS(Version(0, "-rc2.3._a_"));
+
+    // we allowed now versions with numbers > 4
+    //CHECK_THROWS(Version("1.2.3.4.5"));
+    //CHECK_THROWS(Version("1.2.3.4.5.6"));
+    //CHECK_THROWS(Version("1.2.3.4.5.6.7"));
+    CHECK_NOTHROW(Version("1.2.3.4.5"));
+    CHECK_NOTHROW(Version("1.2.3.4.5.6"));
+    CHECK_NOTHROW(Version("1.2.3.4.5.6.7"));
 
     {
         CHECK_THROWS(Version(-1));
@@ -1232,8 +1237,10 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange(1).toString() == "*");
     CHECK(VersionRange(2).toString() == "*");
     CHECK(VersionRange(3).toString() == "*");
-    CHECK(VersionRange(4).toString() == "*.*.*.*");
-    CHECK(VersionRange(5).toString() == "*.*.*.*.*");
+    //CHECK(VersionRange(4).toString() == "*.*.*.*"); // changed
+    //CHECK(VersionRange(5).toString() == "*.*.*.*.*"); // changed
+    CHECK(VersionRange(4).toString() == "*");
+    CHECK(VersionRange(5).toString() == "*");
     CHECK(VersionRange(3).hasVersion(Version(0,0,1)));
     CHECK_FALSE(VersionRange(3).hasVersion(Version(0,0,0,1)));
     CHECK(VersionRange(3).hasVersion(Version(0,0,2)));
@@ -1268,8 +1275,10 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange("1.2.3 - 2").toString() == ">=1.2.3 <3.0.0");
     CHECK(VersionRange("*").toString() == "*");
     CHECK(VersionRange("*").toString() == "*");
-    CHECK(VersionRange("*.x.X.*").toString() == "*.*.*.*");
-    CHECK(VersionRange("*.x.X.x.*").toString() == "*.*.*.*.*");
+    //CHECK(VersionRange("*.x.X.*").toString() == "*.*.*.*"); // changed
+    //CHECK(VersionRange("*.x.X.x.*").toString() == "*.*.*.*.*"); // changed
+    CHECK(VersionRange("*.x.X.*").toString() == "*");
+    CHECK(VersionRange("*.x.X.x.*").toString() == "*");
     CHECK(VersionRange("1.x").toString() == ">=1.0.0 <2.0.0");
     CHECK(VersionRange("1").toString() == ">=1.0.0 <2.0.0");
     CHECK(VersionRange("1.*").toString() == ">=1.0.0 <2.0.0");
@@ -1474,7 +1483,7 @@ TEST_CASE("Checking version ranges", "[range]")
         CHECK_THROWS(VersionRange(v, v2));
         CHECK_THROWS(VersionRange(v, v3));
         CHECK_THROWS(VersionRange(v3, v));
-        REQUIRE_NOTHROW(VersionRange(v, v));
+        CHECK_NOTHROW(VersionRange(v, v));
         CHECK_NOTHROW(VersionRange(v2, v2));
         VersionRange vr(v, v);
         CHECK(vr.hasVersion("master"));
@@ -1495,6 +1504,62 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange() < VersionRange("a"));
     CHECK(VersionRange() != VersionRange("a"));
     CHECK_THROWS(VersionRange("a") < VersionRange("b || c d"));
+
+    // hasVersion
+    {
+        VersionRange vr("*");
+        CHECK(vr.hasVersion("1"));
+        CHECK(vr.hasVersion("1.2"));
+        CHECK(vr.hasVersion("1.2.3"));
+        CHECK(vr.hasVersion("1.2.3.4"));
+        CHECK(vr.hasVersion("1.2.3.4.5"));
+        CHECK(vr.hasVersion("1.2.3.4.5-rc1")); // change this?
+        //CHECK_FALSE(vr.hasVersion("1.2.3.4.5-rc1"));
+    }
+
+    {
+        VersionRange vr("*.*.*.*");
+        CHECK(vr.hasVersion("1"));
+        CHECK(vr.hasVersion("1.2"));
+        CHECK(vr.hasVersion("1.2.3"));
+        CHECK(vr.hasVersion("1.2.3.4"));
+        CHECK(vr.hasVersion("1.2.3.4.5"));
+    }
+
+    {
+        VersionRange vr(">=1.2.0 <=2.3.4");
+        CHECK(vr.hasVersion("1.2.3"));
+        CHECK(vr.hasVersion("1.2.3.4"));
+        CHECK(vr.hasVersion("1.2.3.4.5"));
+        CHECK(vr.hasVersion("1.2.0"));
+        CHECK(vr.hasVersion("1.2.0.0"));
+        CHECK(vr.hasVersion("1.2.0.0.0"));
+        CHECK(vr.hasVersion("2.3.4"));
+        CHECK(vr.hasVersion("2.3.4.0"));
+        CHECK(vr.hasVersion("2.3.4.0.0"));
+        CHECK_FALSE(vr.hasVersion("2.3.4.0.1"));
+    }
+
+    {
+        VersionRange vr("1.2.0");
+        CHECK(vr.hasVersion("1.2.0"));
+        CHECK(vr.hasVersion("1.2.0.0"));
+        CHECK_FALSE(vr.hasVersion("1.2.3"));
+        CHECK_FALSE(vr.hasVersion("1.2.0.4"));
+    }
+
+    {
+        VersionRange vr("1.2.0.4");
+        CHECK(vr.hasVersion("1.2.0.4"));
+        CHECK(vr.hasVersion("1.2.0.4.0"));
+        CHECK_FALSE(vr.hasVersion("1.2.0.5"));
+        CHECK_FALSE(vr.hasVersion("1.2.0.4.1"));
+    }
+}
+
+TEST_CASE("Checking version ranges v1", "[ranges_v1]")
+{
+    using namespace primitives::version;
 
     // v1 ranges
     {
@@ -1873,33 +1938,6 @@ TEST_CASE("Checking version helpers", "[helpers]")
 
 int main(int argc, char **argv)
 {
-    using namespace primitives::version;
-
-    VersionSet a;
-
-    VersionRange vr("15.9.03232.13 - 16.0.123.13-preview");
-
-    Version v1("15.9.03232.13");
-    Version v2("16.0.123.13-preview");
-
-    a.insert(v1);
-    a.insert(v2);
-    a.insert({ 16,9,3232,13,5,6 });
-
-    for (auto &v : a.releases())
-        std::cout << v.toString() << "\n";
-    //for (auto &v : a.releases())
-            //v = Version(1);
-
-    auto f = [](const auto &a)
-    {
-        for (auto &v : a.releases())
-            std::cout << v.toString() << "\n";
-        //for (auto &v : a.releases())
-            //v = Version(1);
-    };
-    f(a);
-
     Catch::Session s;
     auto r = s.run(argc, argv);
     return r;
