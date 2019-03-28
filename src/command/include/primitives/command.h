@@ -47,6 +47,7 @@ struct PRIMITIVES_COMMAND_API Command
     Stream out;
     Stream err;
     // more streams
+    // generalize to custom fds?
 
     // properties
     int32_t pid = -1;

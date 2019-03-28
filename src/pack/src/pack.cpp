@@ -9,8 +9,8 @@
 #include <primitives/exceptions.h>
 #include <primitives/templates.h>
 
-#include <libarchive/archive.h>
-#include <libarchive/archive_entry.h>
+#include <archive.h>
+#include <archive_entry.h>
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 #include <linux/limits.h>

@@ -246,6 +246,7 @@ void build(Solution &s)
     main.Public += error_handling;
 
     ADD_LIBRARY(settings);
+    settings.Public += "include"_idir;
     settings.Public += yaml, filesystem, templates,
         "pub.egorpugin.llvm_project.llvm.support_lite-master"_dep;
     gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison-master"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/settings");
@@ -260,7 +261,9 @@ void build(Solution &s)
     //sw_settings.Interface += "src/sw.settings.program_name.cpp";
 
     ADD_LIBRARY(version);
-    version.Public += "src/version.natvis";
+    version.Public += "include"_idir;
+    //version.Public += "src/version.natvis";
+    version += "src/version.natvis";
     version.Public += string, templates,
         "org.sw.demo.fmt-*"_dep,
         "org.sw.demo.boost.container_hash-1"_dep,
