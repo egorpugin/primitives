@@ -30,6 +30,7 @@ struct PRIMITIVES_COMMAND_API Command
         path file;
         //bool capture = true; // by default - we can make redirect to null by default instead
         bool inherit = false;
+        bool append = false;
         std::function<ActionType> action;
         char buf[8192];
     };
@@ -59,6 +60,7 @@ struct PRIMITIVES_COMMAND_API Command
     //bool capture = true; // by default - we can make redirect to null by default instead
     bool inherit = false; // inherit everything (out+err)
 
+public:
     Command();
     virtual ~Command();
 
@@ -68,8 +70,8 @@ struct PRIMITIVES_COMMAND_API Command
     virtual void execute() { execute1(); }
     virtual void execute(std::error_code &ec) { execute1(&ec); }
 
-    virtual void onBeforeRun() {}
-    virtual void onEnd() {}
+    virtual void onBeforeRun() noexcept {}
+    virtual void onEnd() noexcept {}
 
     virtual path resolveProgram(const path &p) const;
 
@@ -80,6 +82,13 @@ struct PRIMITIVES_COMMAND_API Command
     virtual path getProgram() const;
 
     //void setInteractive(bool i);
+
+    // hide? no, but add control over chaining
+    // e.g. redirect stderr etc.
+    void appendPipeCommand(Command &);
+
+    Command &operator|(Command &);
+    Command &operator|=(Command &);
 
 public:
     static void execute(const path &p);
@@ -94,7 +103,13 @@ public:
 private:
     Strings errors;
 
+    // chaining, make public?
+    Command *prev = nullptr;
+    Command *next = nullptr;
+
+    void preExecute(std::error_code *ec);
     void execute1(std::error_code *ec = nullptr);
+    std::vector<Command*> execute2(std::error_code *ec);
 
     static void execute1(const path &p, const Strings &args = Strings(), std::error_code *ec = nullptr);
 };

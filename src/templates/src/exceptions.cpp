@@ -86,4 +86,9 @@ RuntimeError::RuntimeError(const char *file, const char *function, int line, con
 {
 }*/
 
+LogicError::LogicError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
+    : BaseException/*Exception*/(file, function, line, msg, stacktrace), std::logic_error(getMessage())
+{
+}
+
 } // namespace sw

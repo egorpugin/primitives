@@ -13,9 +13,11 @@
 
 #define SW_EXCEPTION_CUSTOM(msg, st) SW_BASE_EXCEPTION(sw::Exception, msg, st)
 #define SW_RUNTIME_ERROR_CUSTOM(msg, st) SW_BASE_EXCEPTION(sw::RuntimeError, msg, st)
+#define SW_LOGIC_ERROR_CUSTOM(msg, st) SW_BASE_EXCEPTION(sw::LogicError, msg, st)
 
 #define SW_EXCEPTION(msg) SW_EXCEPTION_CUSTOM(msg, true)
 #define SW_RUNTIME_ERROR(msg) SW_RUNTIME_ERROR_CUSTOM(msg, true)
+#define SW_LOGIC_ERROR(msg) SW_LOGIC_ERROR_CUSTOM(msg, true)
 
 namespace sw
 {
@@ -51,6 +53,11 @@ struct RuntimeError : detail::BaseException, /*Exception, virtual*/ std::runtime
 {
     RuntimeError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
     //RuntimeError(const RuntimeError &);
+};
+
+struct LogicError : detail::BaseException, std::logic_error
+{
+    LogicError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
 };
 
 }

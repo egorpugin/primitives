@@ -107,6 +107,46 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
 
 #ifdef _WIN32
     auto p = dir / "1.bat";
+    write_file(p, "@echo hello");
+
+    auto pipeline_test = [&p](int n)
+    {
+        if (n < 2)
+            n = 2;
+
+        write_file(p, "@echo hello");
+
+        String single = "\r\n";
+        String end = single;
+        std::vector<Command> c(n);
+        c[0].program = p;
+        for (int i = 1; i < n; i++)
+        {
+            c[i].program = "more";
+            c[i - 1] | c[i];
+            end += single;
+
+            CHECK_THROWS(c[i].execute());
+        }
+
+        CHECK_NOTHROW(c[0].execute());
+        CHECK(c.back().out.text == "hello" + end);
+    };
+
+    // pipeline test, 2 processes in chain
+    {
+        pipeline_test(2);
+        pipeline_test(3);
+        pipeline_test(10);
+    }
+
+    //
+    {
+        Command c;
+        c.program = p;
+        CHECK_NOTHROW(c.execute());
+        CHECK(c.out.text == "hello\r\n");
+    }
 
     {
         write_file(p, "@echo hello world");
@@ -117,6 +157,14 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
         CHECK(read_file(dir / "1.txt") == "hello world\r\n");
         CHECK(read_file_without_bom(dir / "1.txt") == "hello world\r\n");
         CHECK(read_file_from_offset(dir / "1.txt", 1) == "ello world\r\n");
+    }
+
+    {
+        Command c2;
+        c2.program = "more";
+        c2.in.file = p;
+        CHECK_NOTHROW(c2.execute());
+        CHECK(c2.out.text == "@echo hello world\r\n");
     }
 
     {
@@ -226,6 +274,15 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
 
     CHECK(normalize_path_windows("c:/Program Files/LLVM/bin\\clang++.exe") == "C:\\Program Files\\LLVM\\bin\\clang++.exe");
     CHECK(wnormalize_path_windows(L"c:/Program Files/LLVM/bin\\clang++.exe") == L"C:\\Program Files\\LLVM\\bin\\clang++.exe");
+
+    // input stream
+    {
+        Command c2;
+        c2.program = "more";
+        c2.in.text = "hello";
+        CHECK_NOTHROW(c2.execute());
+        CHECK(c2.out.text == "hello\r\n");
+    }
 #endif
 }
 
