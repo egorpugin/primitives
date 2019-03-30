@@ -60,6 +60,10 @@ struct PRIMITIVES_COMMAND_API Command
     //bool capture = true; // by default - we can make redirect to null by default instead
     bool inherit = false; // inherit everything (out+err)
 
+    // chaining
+    Command *prev = nullptr;
+    Command *next = nullptr;
+
 public:
     Command();
     virtual ~Command();
@@ -102,10 +106,6 @@ public:
 
 private:
     Strings errors;
-
-    // chaining, make public?
-    Command *prev = nullptr;
-    Command *next = nullptr;
 
     void preExecute(std::error_code *ec);
     void execute1(std::error_code *ec = nullptr);

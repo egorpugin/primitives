@@ -679,7 +679,8 @@ std::vector<Command*> Command::execute2(std::error_code *ec_in)
         auto &c1 = *(cmds.end() - 2);
         auto &c2 = cmds.back();
 
-        c2->streams[0]->set_redirect_pipe(c1->streams[1]->get_redirect_pipe(), false);
+        auto pipe = c1->streams[1]->get_redirect_pipe();
+        c2->streams[0]->set_redirect_pipe(pipe, false);
     }
 
     for (auto &c : cmds)
@@ -708,7 +709,8 @@ std::vector<Command*> Command::execute2(std::error_code *ec_in)
 void Command::execute1(std::error_code *ec_in)
 {
     if (prev)
-        throw SW_RUNTIME_ERROR("Do not run piped commands manually");
+        return prev->execute1(ec_in);
+        //throw SW_RUNTIME_ERROR("Do not run piped commands manually");
 
     auto cmds = execute2(ec_in);
     if (ec_in && *ec_in)

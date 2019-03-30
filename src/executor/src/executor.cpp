@@ -6,6 +6,7 @@
 
 #include <primitives/executor.h>
 
+#include <primitives/debug.h>
 #include <primitives/exceptions.h>
 #include <primitives/thread.h>
 
@@ -85,7 +86,10 @@ bool Executor::try_run_one()
 
 void Executor::run(size_t i, const std::string &name)
 {
-    auto n = name + " " + std::to_string(i);
+    auto n = name;
+    if (!n.empty())
+        n += " ";
+    n += std::to_string(i);
     set_thread_name(n);
     {
         std::unique_lock<std::mutex> lk(m);
@@ -265,29 +269,7 @@ void Executor::set_thread_name(const std::string &name) const
 {
     if (name.empty())
         return;
-
-#if defined(_MSC_VER)
-#pragma pack(push, 8)
-    struct THREADNAME_INFO
-    {
-        DWORD dwType = 0x1000;  // Must be 0x1000.
-        LPCSTR szName;          // Pointer to thread name
-        DWORD dwThreadId = -1;  // Thread ID (-1 == current thread)
-        DWORD dwFlags = 0;      // Reserved.  Do not use.
-    };
-#pragma pack(pop)
-
-    THREADNAME_INFO info;
-    info.szName = name.c_str();
-
-    __try
-    {
-        ::RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR *)&info);
-    }
-    __except (EXCEPTION_EXECUTE_HANDLER)
-    {
-    }
-#endif
+    primitives::setThreadName(name);
 }
 
 bool Executor::empty() const

@@ -7,6 +7,22 @@ namespace primitives
 
 bool isDebuggerAttached();
 
+std::string getThreadName();
+
+// returns old name
+std::string appendThreadName(const std::string &name);
+std::string setThreadName(const std::string &name);
+
+struct ScopedThreadName
+{
+    ScopedThreadName(const std::string &name, bool append = false);
+    ~ScopedThreadName();
+
+private:
+    bool dbg;
+    std::string old_thread_name;
+};
+
 }
 
 #define PRIMITIVES_DO_WHILE(x) \
