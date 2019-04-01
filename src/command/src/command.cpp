@@ -592,14 +592,29 @@ path Command::resolveProgram(const path &in) const
 
 String Command::print() const
 {
-    String s;
-    s += "\"" + program.u8string() + "\" ";
-    for (auto &a : getArgs())
+    if (prev)
+        return prev->print();
+
+    auto prnt = [](auto &c)
     {
-        s += "\"" + a + "\"";
-        s += " ";
+        String s;
+        s += "\"" + c.program.u8string() + "\" ";
+        for (auto &a : c.getArgs())
+        {
+            s += "\"" + a + "\"";
+            s += " ";
+        }
+        s.resize(s.size() - 1);
+        return s;
+    };
+
+    auto s = prnt(*this);
+    auto p = next;
+    while (p)
+    {
+        s += " | " + prnt(*p);
+        p = p->next;
     }
-    s.resize(s.size() - 1);
     return s;
 }
 
@@ -752,12 +767,7 @@ void Command::execute1(std::error_code *ec_in)
         }
     }
 
-    for (auto &c : cmds)
-    {
-        if (c->exit_code && *c->exit_code == 0)
-            continue;
-        throw SW_RUNTIME_ERROR(getError());
-    }
+    throw SW_RUNTIME_ERROR(getError());
 }
 
 String Command::getError() const
