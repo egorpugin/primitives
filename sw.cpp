@@ -169,7 +169,7 @@ void build(Solution &s)
 
     ADD_LIBRARY(file_monitor);
     file_monitor.Public += filesystem,
-        "org.sw.demo.libuv-1"_dep;
+        "pub.egorpugin.libuv"_dep;
 
     ADD_LIBRARY(context);
     context.Public += filesystem;
@@ -270,6 +270,9 @@ void build(Solution &s)
         "org.sw.demo.imageworks.pystring-1"_dep;
     gen_ragel("org.sw.demo.ragel-6"_dep, version, "src/version.rl");
     gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison-master"_dep, version, "GLR_CPP_PARSER", "src/range");
+
+    //ADD_LIBRARY(object_path);
+    //object_path.Public += string, templates;
 
     auto &sw_main = p.addTarget<StaticLibraryTarget>("sw.main");
     setup_primitives(sw_main);

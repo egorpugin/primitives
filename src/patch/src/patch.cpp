@@ -26,7 +26,7 @@ void add_line(String &r, int &ni, const String &s)
 }
 
 static
-std::optional<String> patch_hunk(
+std::pair<bool, String> patch_hunk(
     const Strings &lines, Strings::iterator &i, const Strings::iterator end, int options,
     size_t &oi, int &ni, int os, int ns)
 {
@@ -39,15 +39,15 @@ std::optional<String> patch_hunk(
         EMPTY_ACTION(*i);
 
         if (os == 0 && ns == 0)
-            return r;
+            return { true, r };
         if (os < 0 || ns < 0)
-            return {}; // hunk info is bad
+            return { false, "bad hunk info" };
 
         switch ((*i)[0])
         {
         case ' ':
             if (lines[oi] != i->substr(1))
-                return {}; // context lines do not match
+                return { false, "context lines do not match" };
             add_line(r, ni, lines[oi]);
             os--;
             ns--;
@@ -59,21 +59,27 @@ std::optional<String> patch_hunk(
             break;
         case '-':
             if (lines[oi] != i->substr(1))
-                return {}; // context lines do not match
+                return { false, "context lines do not match" };
             os--;
             oi++;
             break;
         default:
-            return {}; // bad symbol
+            if (os == 0 && ns == 0)
+                return { true, r };
+            // actually this is ok, but we fall for now
+            return { false, "bad symbol "s + (*i)[0] +
+                ", os = " + std::to_string(os) +
+                ", ns = " + std::to_string(ns) };
         }
     }
 
     if (os == 0 && ns == 0)
-        return r;
-    return {}; // hunk info is bad
+        return { true, r };
+    return { false, "bad hunk info" };
 }
 
-static std::optional<String> patch_file(
+static
+std::pair<bool, String> patch_file(
     const Strings &lines, Strings::iterator &i, const Strings::iterator end, int options,
     size_t &oi)
 {
@@ -90,18 +96,18 @@ static std::optional<String> patch_file(
         case '+':
             if (i->find("+++") == 0)
                 continue;
-            return {}; // + is out of hunk
+            return { false, "+ is out of hunk" };
         case '-':
             if (i->find("---") == 0)
                 continue;
-            return {}; // - is out of hunk
+            return { false, "- is out of hunk" };
         case '@':
         {
             // @@ -1,3 +1,9 @@ some extra info here (git uses this)
             static const std::regex r_hunk("@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@.*");
             std::smatch m;
             if (!std::regex_match(*i, m, r_hunk))
-                return {}; // bad hunk description
+                return { false, "bad hunk description" };
 
             auto ol = std::stoi(m[1].str()) - 1;
             auto os = std::stoi(m[2].str());
@@ -113,12 +119,12 @@ static std::optional<String> patch_file(
                 add_line(r, ni, lines[oi]);
 
             if (nl != ni)
-                return {}; // nl is wrong
+                return { false, "nl is wrong: " + std::to_string(nl + 1) };
 
             auto r2 = patch_hunk(lines, ++i, end, options, oi, ni, os, ns);
-            if (!r2)
-                return {}; // bad hunk
-            r += *r2;
+            if (!r2.first)
+                return { false, "bad hunk " + std::to_string(nl + 1) + ": " + r2.second };
+            r += r2.second;
             --i;
         }
             break;
@@ -126,13 +132,13 @@ static std::optional<String> patch_file(
         case 'd':
         case 'i':
             if (options & PatchOption::Git)
-                return r; // handle outside
+                return { true, r }; // handle outside
         default:
-            return {};
+            return { false, "unknown action" };
         }
     }
 
-    return r;
+    return { true, r };
 }
 
 static
@@ -149,27 +155,27 @@ auto prepare_lines(const String &s)
 }
 
 static
-std::optional<String> patch(const String &text, Strings::iterator &i, const Strings::iterator end, int options)
+std::pair<bool, String> patch(const String &text, Strings::iterator &i, const Strings::iterator end, int options)
 {
     auto lines = prepare_lines(text);
 
     size_t oi = 0; // old index
     auto r = patch_file(lines, i, end, options, oi);
 
-    if (!r)
-        return {}; // bad file
+    if (!r.first)
+        return { false, "bad file: " + r.second }; // bad file
 
     // add rest of the file
     for (; oi < lines.size(); oi++)
-        *r += lines[oi] + "\n";
+        r.second += lines[oi] + "\n";
 
-    if (!r->empty())
-        r->resize(r->size() - 1); // remove last '\n'
+    if (!r.second.empty())
+        r.second.resize(r.second.size() - 1); // remove last '\n'
 
     return r;
 }
 
-std::optional<String> patch(const String &text, const String &unidiff, int options)
+std::pair<bool, String> patch(const String &text, const String &unidiff, int options)
 {
     auto diff = prepare_lines(unidiff);
 
@@ -177,7 +183,7 @@ std::optional<String> patch(const String &text, const String &unidiff, int optio
     return patch(text, begin, diff.end(), options);
 }
 
-static
+/*static
 bool patch(const path &root_dir, Strings::iterator &i, const Strings::iterator end, int options)
 {
     for (; i != end; i++)
@@ -218,16 +224,16 @@ bool patch(const path &root_dir, Strings::iterator &i, const Strings::iterator e
     }
 
     return true;
-}
+}*/
 
 bool patch(const path &root_dir, const String &unidiff, int options)
 {
     throw SW_RUNTIME_ERROR("not tested");
 
-    auto diff = prepare_lines(unidiff);
+    /*auto diff = prepare_lines(unidiff);
 
     auto begin = diff.begin();
-    return patch(root_dir, begin, diff.end(), options);
+    return patch(root_dir, begin, diff.end(), options);*/
 }
 
 }

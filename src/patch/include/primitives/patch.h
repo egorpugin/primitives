@@ -20,7 +20,7 @@ enum PatchOption
 };
 
 PRIMITIVES_PATCH_API
-std::optional<String> patch(const String &text, const String &unidiff, int options = 0);
+std::pair<bool, String> patch(const String &text, const String &unidiff, int options = 0);
 
 PRIMITIVES_PATCH_API
 bool patch(const path &root_dir, const String &unidiff, int options = 0);
