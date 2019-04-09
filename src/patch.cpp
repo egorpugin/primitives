@@ -130,8 +130,8 @@ to this document.)";
     // basic
     {
         auto r = patch(in, diff);
-        REQUIRE(r);
-        CHECK(*r == out);
+        REQUIRE(r.first);
+        CHECK(r.second == out);
     }
 
     // check rest of the file saving
@@ -139,8 +139,8 @@ to this document.)";
         in += "\n";
         out += "\n";
         auto r = patch(in, diff);
-        REQUIRE(r);
-        CHECK(*r == out);
+        REQUIRE(r.first);
+        CHECK(r.second == out);
     }
 }
 

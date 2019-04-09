@@ -6,7 +6,7 @@
 
 #define NOMINMAX
 #include <primitives/command.h>
-#include <primitives/context.h>
+#include <primitives/emitter.h>
 #include <primitives/date_time.h>
 #include <primitives/executor.h>
 #include <primitives/filesystem.h>
@@ -729,11 +729,11 @@ TEST_CASE("Checking exceptions", "[templates.exceptions]")
     }
 }
 
-TEST_CASE("Checking context", "[context]")
+TEST_CASE("Checking emitter", "[emitter]")
 {
     using namespace primitives;
 
-    Context ctx;
+    Emitter ctx;
     ctx.addLine();
     ctx.addLine();
     CHECK(ctx.getText() == "\n\n");

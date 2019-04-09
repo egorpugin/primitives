@@ -17,24 +17,24 @@
 namespace primitives
 {
 
-struct Context;
+struct Emitter;
 
 namespace detail
 {
 
-struct PRIMITIVES_CONTEXT_API Line
+struct PRIMITIVES_EMITTER_API Line
 {
     using Text = std::string;
 
     int n_indents = 0;
-    const Context *context = nullptr;
+    const Emitter *context = nullptr;
 
     Line() = default;
     Line(const Line &) = default;
     Line &operator=(const Line &t) = default;
     Line(Line &&);
     Line(const Text &t, int n = 0);
-    Line(const Context &ctx, int n = 0);
+    Line(const Emitter &ctx, int n = 0);
     ~Line();
 
     Line &operator+=(const Text &t);
@@ -50,17 +50,17 @@ private:
 
 }
 
-struct PRIMITIVES_CONTEXT_API Context
+struct PRIMITIVES_EMITTER_API Emitter
 {
     using Line = detail::Line;
     using Text = Line::Text;
     using Lines = std::list<Line>;
 
     //
-    Context(const Text &indent = "    ", const Text &newline = "\n");
-    //Context(const Context &ctx);
-    //Context &operator=(const Context &ctx);
-    virtual ~Context();
+    Emitter(const Text &indent = "    ", const Text &newline = "\n");
+    //Emitter(const Emitter &ctx);
+    //Emitter &operator=(const Emitter &ctx);
+    virtual ~Emitter();
 
     void initFromString(const std::string &s);
 
@@ -77,8 +77,8 @@ struct PRIMITIVES_CONTEXT_API Context
     void addText(const Text &s);
     void addText(const char* str, int n);
 
-    void addLine(const Context &);
-    void addContext(const Context &);
+    void addLine(const Emitter &);
+    void addContext(const Emitter &);
 
     void increaseIndent(int n = 1);
     void decreaseIndent(int n = 1);
@@ -97,9 +97,9 @@ struct PRIMITIVES_CONTEXT_API Context
     void emptyLines(int n = 1);
 
     // add with "as is" indent
-    Context &operator+=(const Context &rhs);
+    Emitter &operator+=(const Emitter &rhs);
     // add with relative indent
-    void addWithRelativeIndent(const Context &rhs);
+    void addWithRelativeIndent(const Emitter &rhs);
 
     bool empty() const
     {
@@ -119,7 +119,7 @@ protected:
     Text indent;
     Text newline;
 
-    //void copy_from(const Context &ctx);
+    //void copy_from(const Emitter &ctx);
 
 private:
     void addLine(Line &&);
@@ -127,9 +127,9 @@ private:
     friend struct detail::Line;
 };
 
-struct PRIMITIVES_CONTEXT_API CppContext : Context
+struct PRIMITIVES_EMITTER_API CppEmitter : Emitter
 {
-    using Base = Context;
+    using Base = Emitter;
 
     void beginBlock(const Text &s = "", bool indent = true);
     void endBlock(bool semicolon = false);
@@ -151,14 +151,14 @@ private:
     std::stack<Text> namespaces;
 };
 
-struct PRIMITIVES_CONTEXT_API BinaryContext
+struct PRIMITIVES_EMITTER_API BinaryStream
 {
-    BinaryContext();
-    BinaryContext(size_t size);
-    BinaryContext(const std::string &s);
-    BinaryContext(const std::vector<uint8_t> &buf, size_t data_offset = 0);
-    BinaryContext(const BinaryContext &rhs, size_t size);
-    BinaryContext(const BinaryContext &rhs, size_t size, size_t offset);
+    BinaryStream();
+    BinaryStream(size_t size);
+    BinaryStream(const std::string &s);
+    BinaryStream(const std::vector<uint8_t> &buf, size_t data_offset = 0);
+    BinaryStream(const BinaryStream &rhs, size_t size);
+    BinaryStream(const BinaryStream &rhs, size_t size, size_t offset);
 
     template <typename T>
     size_t read(T &dst, size_t size = 1) const

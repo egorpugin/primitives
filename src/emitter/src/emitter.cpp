@@ -4,13 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <primitives/context.h>
+#include <primitives/emitter.h>
 
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
 
-primitives::Context::Lines &operator+=(primitives::Context::Lines &s1, const primitives::Context::Lines &s2)
+primitives::Emitter::Lines &operator+=(primitives::Emitter::Lines &s1, const primitives::Emitter::Lines &s2)
 {
     s1.insert(s1.end(), s2.begin(), s2.end());
     return s1;
@@ -26,7 +26,7 @@ Line::Line(const Text &t, int n)
     : text(t), n_indents(n)
 {}
 
-Line::Line(const Context &ctx, int n)
+Line::Line(const Emitter &ctx, int n)
     : context(&ctx), n_indents(n)
 {
     context->parent_ = this;
@@ -73,23 +73,23 @@ Line::Text Line::getText() const
 
 }
 
-Context::Context(const Text &indent, const Text &newline)
+Emitter::Emitter(const Text &indent, const Text &newline)
     : indent(indent), newline(newline)
 {
 }
 
-/*Context::Context(const Context &ctx)
+/*Emitter::Emitter(const Emitter &ctx)
 {
     copy_from(ctx);
 }
 
-Context &Context::operator=(const Context &ctx)
+Emitter &Emitter::operator=(const Emitter &ctx)
 {
     copy_from(ctx);
     return *this;
 }*/
 
-Context::~Context()
+Emitter::~Emitter()
 {
     if (parent_)
     {
@@ -98,7 +98,7 @@ Context::~Context()
     }
 }
 
-/*void Context::copy_from(const Context &ctx)
+/*void Emitter::copy_from(const Emitter &ctx)
 {
     lines = ctx.lines;
     n_indents = ctx.n_indents;
@@ -106,7 +106,7 @@ Context::~Context()
     newline = ctx.newline;
 }*/
 
-void Context::initFromString(const std::string &s)
+void Emitter::initFromString(const std::string &s)
 {
     size_t p = 0;
     while (1)
@@ -130,7 +130,7 @@ void Context::initFromString(const std::string &s)
     }
 }
 
-void Context::addText(const Text &s)
+void Emitter::addText(const Text &s)
 {
     if (lines.empty())
         lines.emplace_back();
@@ -139,22 +139,22 @@ void Context::addText(const Text &s)
     lines.back() += s;
 }
 
-void Context::addText(const char* str, int n)
+void Emitter::addText(const char* str, int n)
 {
     addText(Text(str, str + n));
 }
 
-void Context::addNoNewLine(const Text &s)
+void Emitter::addNoNewLine(const Text &s)
 {
     addLineWithIndent(s);
 }
 
-void Context::addLineWithIndent(const Text &s)
+void Emitter::addLineWithIndent(const Text &s)
 {
     addLineWithIndent(s, n_indents);
 }
 
-void Context::addLineWithIndent(const Text &text, int n)
+void Emitter::addLineWithIndent(const Text &text, int n)
 {
     auto p = text.find(newline);
     if (p == text.npos)
@@ -180,17 +180,17 @@ void Context::addLineWithIndent(const Text &text, int n)
     lines.insert(lines.end(), ls.begin(), ls.end());
 }
 
-void Context::addLineNoSpace(const Text &s)
+void Emitter::addLineNoSpace(const Text &s)
 {
     addLineWithIndent(s, 0);
 }
 
-void Context::addLine(Line &&l)
+void Emitter::addLine(Line &&l)
 {
     lines.emplace_back(std::move(l));
 }
 
-void Context::addLine(const Text &s)
+void Emitter::addLine(const Text &s)
 {
     if (s.empty())
         addLine(Line{});
@@ -198,50 +198,50 @@ void Context::addLine(const Text &s)
         addLineWithIndent(s);
 }
 
-void Context::addLine(const Context &ctx)
+void Emitter::addLine(const Emitter &ctx)
 {
     addContext(ctx);
 }
 
-void Context::addContext(const Context &ctx)
+void Emitter::addContext(const Emitter &ctx)
 {
     addLine(Line{ ctx, n_indents });
 }
 
-void Context::removeLine()
+void Emitter::removeLine()
 {
     removeLines(1);
 }
 
-void Context::removeLines(int n)
+void Emitter::removeLines(int n)
 {
     n = std::max(0, (int)lines.size() - n);
     lines.resize(n);
 }
 
-void Context::increaseIndent(int n)
+void Emitter::increaseIndent(int n)
 {
     n_indents += n;
 }
 
-void Context::decreaseIndent(int n)
+void Emitter::decreaseIndent(int n)
 {
     n_indents -= n;
 }
 
-void Context::increaseIndent(const Text &s, int n)
+void Emitter::increaseIndent(const Text &s, int n)
 {
     addLine(s);
     increaseIndent(n);
 }
 
-void Context::decreaseIndent(const Text &s, int n)
+void Emitter::decreaseIndent(const Text &s, int n)
 {
     decreaseIndent(n);
     addLine(s);
 }
 
-void Context::trimEnd(size_t n)
+void Emitter::trimEnd(size_t n)
 {
     if (lines.empty())
         return;
@@ -252,7 +252,7 @@ void Context::trimEnd(size_t n)
     t.resize(sz - n);
 }
 
-Context::Text Context::getText() const
+Emitter::Text Emitter::getText() const
 {
     Text s;
     auto lines = getLines();
@@ -271,7 +271,7 @@ Context::Text Context::getText() const
     return s;
 }
 
-Context::Lines Context::getLines() const
+Emitter::Lines Emitter::getLines() const
 {
     Lines lines;
     lines += this->lines;
@@ -290,12 +290,12 @@ Context::Lines Context::getLines() const
     return lines;
 }
 
-/*void Context::setLines(const Lines &lines)
+/*void Emitter::setLines(const Lines &lines)
 {
     this->lines = lines;
 }*/
 
-void Context::setMaxEmptyLines(int n)
+void Emitter::setMaxEmptyLines(int n)
 {
     // remove all empty lines at begin
     while (1)
@@ -342,7 +342,7 @@ void Context::setMaxEmptyLines(int n)
     }
 }
 
-void Context::emptyLines(int n)
+void Emitter::emptyLines(int n)
 {
     int e = 0;
     for (auto i = lines.rbegin(); i != lines.rend(); ++i)
@@ -363,13 +363,13 @@ void Context::emptyLines(int n)
     }
 }
 
-Context &Context::operator+=(const Context &rhs)
+Emitter &Emitter::operator+=(const Emitter &rhs)
 {
     addWithRelativeIndent(rhs);
     return *this;
 }
 
-void Context::addWithRelativeIndent(const Context &rhs)
+void Emitter::addWithRelativeIndent(const Emitter &rhs)
 {
     auto addWithRelativeIndent = [this](Lines &l1, Lines l2)
     {
@@ -381,7 +381,7 @@ void Context::addWithRelativeIndent(const Context &rhs)
     addWithRelativeIndent(lines, rhs.lines);
 }
 
-void CppContext::beginBlock(const Text &s, bool indent)
+void CppEmitter::beginBlock(const Text &s, bool indent)
 {
     if (!s.empty())
         addLine(s);
@@ -390,25 +390,25 @@ void CppContext::beginBlock(const Text &s, bool indent)
         increaseIndent();
 }
 
-void CppContext::endBlock(bool semicolon)
+void CppEmitter::endBlock(bool semicolon)
 {
     decreaseIndent();
     emptyLines(0);
     addLine(semicolon ? "};" : "}");
 }
 
-void CppContext::beginFunction(const Text &s)
+void CppEmitter::beginFunction(const Text &s)
 {
     beginBlock(s);
 }
 
-void CppContext::endFunction()
+void CppEmitter::endFunction()
 {
     endBlock();
     addLine();
 }
 
-void CppContext::beginNamespace(const Text &s)
+void CppEmitter::beginNamespace(const Text &s)
 {
     addLineNoSpace("namespace " + s);
     addLineNoSpace("{");
@@ -416,7 +416,7 @@ void CppContext::beginNamespace(const Text &s)
     namespaces.push(s);
 }
 
-void CppContext::endNamespace(const Text &ns)
+void CppEmitter::endNamespace(const Text &ns)
 {
     Text s = ns;
     if (!namespaces.empty() && ns.empty())
@@ -428,21 +428,21 @@ void CppContext::endNamespace(const Text &ns)
     addLine();
 }
 
-void CppContext::ifdef(const Text &s)
+void CppEmitter::ifdef(const Text &s)
 {
     addLineNoSpace("#ifdef " + s);
 }
 
-void CppContext::endif()
+void CppEmitter::endif()
 {
     addLineNoSpace("#endif");
 }
 
-BinaryContext::BinaryContext()
+BinaryStream::BinaryStream()
 {
 }
 
-BinaryContext::BinaryContext(size_t size)
+BinaryStream::BinaryStream(size_t size)
     : buf_(new std::vector<uint8_t>())
 {
     buf_->reserve(size);
@@ -450,7 +450,7 @@ BinaryContext::BinaryContext(size_t size)
     skip(0);
 }
 
-BinaryContext::BinaryContext(const std::string &s)
+BinaryStream::BinaryStream(const std::string &s)
     : buf_(new std::vector<uint8_t>(&s[0], &s[s.size()]))
 {
     skip(0);
@@ -458,7 +458,7 @@ BinaryContext::BinaryContext(const std::string &s)
     end_ = index_ + size_;
 }
 
-BinaryContext::BinaryContext(const std::vector<uint8_t> &buf, size_t data_offset)
+BinaryStream::BinaryStream(const std::vector<uint8_t> &buf, size_t data_offset)
     : buf_(new std::vector<uint8_t>(buf)), data_offset(data_offset)
 {
     skip(0);
@@ -466,7 +466,7 @@ BinaryContext::BinaryContext(const std::vector<uint8_t> &buf, size_t data_offset
     end_ = index_ + size_;
 }
 
-BinaryContext::BinaryContext(const BinaryContext &rhs, size_t size)
+BinaryStream::BinaryStream(const BinaryStream &rhs, size_t size)
     : buf_(rhs.buf_)
 {
     index_ = rhs.index_;
@@ -477,7 +477,7 @@ BinaryContext::BinaryContext(const BinaryContext &rhs, size_t size)
     rhs.skip((int)size);
 }
 
-BinaryContext::BinaryContext(const BinaryContext &rhs, size_t size, size_t offset)
+BinaryStream::BinaryStream(const BinaryStream &rhs, size_t size, size_t offset)
     : buf_(rhs.buf_)
 {
     index_ = offset;
@@ -487,7 +487,7 @@ BinaryContext::BinaryContext(const BinaryContext &rhs, size_t size, size_t offse
     end_ = index_ + size_;
 }
 
-size_t BinaryContext::_read(void *dst, size_t size, size_t offset) const
+size_t BinaryStream::_read(void *dst, size_t size, size_t offset) const
 {
     if (!buf_)
         throw std::logic_error("BinaryContext: not initialized");
@@ -500,12 +500,12 @@ size_t BinaryContext::_read(void *dst, size_t size, size_t offset) const
     return size;
 }
 
-bool BinaryContext::has(size_t size) const
+bool BinaryStream::has(size_t size) const
 {
     return index_ + size <= end_;
 }
 
-size_t BinaryContext::_write(const void *src, size_t size)
+size_t BinaryStream::_write(const void *src, size_t size)
 {
     if (!buf_)
     {
@@ -524,7 +524,7 @@ size_t BinaryContext::_write(const void *src, size_t size)
     return size;
 }
 
-size_t BinaryContext::read(std::string &s)
+size_t BinaryStream::read(std::string &s)
 {
     s.clear();
     while (*ptr)
@@ -533,7 +533,7 @@ size_t BinaryContext::read(std::string &s)
     return s.size();
 }
 
-void BinaryContext::skip(int n) const
+void BinaryStream::skip(int n) const
 {
     if (!buf_)
         throw std::logic_error("BinaryContext: not initialized");
@@ -542,7 +542,7 @@ void BinaryContext::skip(int n) const
     ptr = (uint8_t *)buf_->data() + index_;
 }
 
-void BinaryContext::reset() const
+void BinaryStream::reset() const
 {
     index_ = 0;
     data_offset = 0;
@@ -551,50 +551,50 @@ void BinaryContext::reset() const
         ptr = (uint8_t *)buf_->data();
 }
 
-void BinaryContext::seek(size_t size) const
+void BinaryStream::seek(size_t size) const
 {
     reset();
     skip((int)size);
 }
 
-bool BinaryContext::check(int index) const
+bool BinaryStream::check(int index) const
 {
     return index_ == index;
 }
 
-bool BinaryContext::eof() const
+bool BinaryStream::eof() const
 {
     return index_ == end_;
 }
 
-size_t BinaryContext::index() const
+size_t BinaryStream::index() const
 {
     return index_;
 }
 
-size_t BinaryContext::size() const
+size_t BinaryStream::size() const
 {
     return size_;
 }
 
-bool BinaryContext::empty() const
+bool BinaryStream::empty() const
 {
     return size_ == 0;
 }
 
-const std::vector<uint8_t> &BinaryContext::buf() const
+const std::vector<uint8_t> &BinaryStream::buf() const
 {
     if (!buf_)
         throw std::logic_error("BinaryContext: not initialized");
     return *buf_;
 }
 
-void BinaryContext::load(const path &fn)
+void BinaryStream::load(const path &fn)
 {
     *this = read_file(fn);
 }
 
-void BinaryContext::save(const path &fn)
+void BinaryStream::save(const path &fn)
 {
     ScopedFile f(fn, "wb");
     fwrite(buf_->data(), 1, data_offset, f.getHandle());

@@ -174,6 +174,9 @@ void build(Solution &s)
     ADD_LIBRARY(context);
     context.Public += filesystem;
 
+    ADD_LIBRARY(emitter);
+    emitter.Public += filesystem;
+
     ADD_LIBRARY(executor);
     executor.Public += templates,
         "org.sw.demo.boost.asio-1"_dep,
@@ -298,7 +301,7 @@ void build(Solution &s)
     auto &tools_sqlite2cpp = p.addTarget<ExecutableTarget>("tools.sqlpp11.sqlite2cpp");
     setup_primitives_no_all_sources(tools_sqlite2cpp);
     tools_sqlite2cpp += "src/tools/sqlpp11.sqlite2cpp.cpp";
-    tools_sqlite2cpp += filesystem, context, sw_main, "org.sw.demo.sqlite3"_dep;
+    tools_sqlite2cpp += filesystem, emitter, sw_main, "org.sw.demo.sqlite3"_dep;
 
     auto &tools_syncqt = p.addTarget<ExecutableTarget>("tools.syncqt");
     setup_primitives_no_all_sources(tools_syncqt);
@@ -327,7 +330,7 @@ void build(Solution &s)
 
     auto &test_main = add_test("main");
     test_main += sw_main, command, date_time,
-        executor, hash, yaml, context, http,
+        executor, hash, yaml, emitter, http,
         "org.sw.demo.nlohmann.json-*"_dep;
 
     auto &test_db = add_test("db");

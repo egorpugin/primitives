@@ -15,7 +15,7 @@
  */
 
 #include <boost/algorithm/string.hpp>
-#include <primitives/context.h>
+#include <primitives/emitter.h>
 #include <primitives/filesystem.h>
 #include <primitives/sw/main.h>
 #include <primitives/sw/settings.h>
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
     sqlite3_open(":memory:", &db);
     execute(db, sql.c_str());
 
-    primitives::CppContext ctx;
+    primitives::CppEmitter ctx;
 
     // start printing
     ctx.addLine("// generated file, do not edit");

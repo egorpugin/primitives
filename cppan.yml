@@ -31,7 +31,9 @@ local_settings:
             c_compiler: clang-cl
             cxx_compiler: clang-cl
             use_cache: false
+
 root_project: pvt.egorpugin.primitives
+
 common_settings:
     c++: 17
     create_default_api: true
@@ -49,6 +51,7 @@ common_settings:
                         -   -Wno-assume
                         -   -Wno-delete-non-virtual-dtor
                         -   -Wno-potentially-evaluated-expression
+
 projects:
     command:
         name: command
@@ -73,7 +76,7 @@ projects:
         name: context
         type: library
 
-        root_directory: src/context
+        root_directory: src/emitter
 
         dependencies:
             filesystem:
