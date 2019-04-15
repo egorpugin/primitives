@@ -73,7 +73,7 @@ static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Str
 
     Files out;
     auto i = t.BinaryDir / "include";
-    auto v = t.pkg.version.toString();
+    auto v = t.getPackage().version.toString();
     for (auto &m : modules)
     {
         fs::create_directories(i / m / v / m);
@@ -125,6 +125,8 @@ void build(Solution &s)
         t.ApiName = "PRIMITIVES_" + boost::to_upper_copy(n2.toString("_")) + "_API";
         t.CPPVersion = CPPLanguageStandard::CPP17;
         t.PackageDefinitions = true;
+        // not all code works with this yet (e.g. hh.date)
+        //t.Public.CompileOptions.push_back("-Zc:__cplusplus");
         return p;
     };
 
@@ -170,9 +172,6 @@ void build(Solution &s)
     ADD_LIBRARY(file_monitor);
     file_monitor.Public += filesystem,
         "pub.egorpugin.libuv"_dep;
-
-    ADD_LIBRARY(context);
-    context.Public += filesystem;
 
     ADD_LIBRARY(emitter);
     emitter.Public += filesystem;
@@ -225,6 +224,7 @@ void build(Solution &s)
         "org.sw.demo.openssl.crypto-1.*.*.*"_dep;
 
     ADD_LIBRARY(win32helpers);
+    win32helpers.Public += "BOOST_DLL_USE_STD_FS"_def;
     win32helpers.Public += filesystem,
         "org.sw.demo.boost.dll-1"_dep,
         "org.sw.demo.boost.algorithm-1"_dep;
@@ -256,6 +256,7 @@ void build(Solution &s)
     gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison-master"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/path");
 
     ADD_LIBRARY(symbol);
+    symbol.Public += "BOOST_DLL_USE_STD_FS"_def;
     symbol.Public += filesystem, "org.sw.demo.boost.dll-1"_dep;
 
     ADD_LIBRARY_WITH_NAME(sw_settings, "sw.settings");
@@ -279,6 +280,7 @@ void build(Solution &s)
 
     auto &sw_main = p.addTarget<StaticLibraryTarget>("sw.main");
     setup_primitives(sw_main);
+    sw_main.Public += "BOOST_DLL_USE_STD_FS"_def;
     sw_main.Public += main, sw_settings,
         "org.sw.demo.boost.dll-1"_dep;
     sw_main.Interface.LinkLibraries.push_back(main.getImportLibrary()); // main itself

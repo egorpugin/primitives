@@ -19,6 +19,8 @@
 #define SW_RUNTIME_ERROR(msg) SW_RUNTIME_ERROR_CUSTOM(msg, true)
 #define SW_LOGIC_ERROR(msg) SW_LOGIC_ERROR_CUSTOM(msg, true)
 
+#define SW_UNIMPLEMENTED throw SW_RUNTIME_ERROR("TODO: unimplemented")
+
 namespace sw
 {
 
