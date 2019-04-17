@@ -45,8 +45,8 @@ struct PRIMITIVES_SOURCE_API Source
     /// download files to destination directory
     void download(const path &dir) const;
 
-    ///
-    std::unique_ptr<Source> clone() const;
+    /// clone
+    virtual std::unique_ptr<Source> clone() const = 0;
 
     // save
 
@@ -64,6 +64,9 @@ struct PRIMITIVES_SOURCE_API Source
     ///
     virtual void applyVersion(const Version &v) = 0;
 
+    ///
+    virtual SourceType getType() const = 0;
+
     // static
 
     /// load from current (passed) object, detects 'getString()' subobject
@@ -73,7 +76,6 @@ struct PRIMITIVES_SOURCE_API Source
     static std::unique_ptr<Source> load(const yaml &root);
 
 protected:
-    virtual SourceType getType() const = 0; // make public?
     String getString() const;
     virtual void save1(SourceKvMap &m) const;
 
@@ -82,6 +84,7 @@ private:
     virtual void download1(const path &dir) const = 0;
     virtual void save1(nlohmann::json &j) const = 0;
     virtual void save1(yaml &root) const = 0;
+    virtual void checkUrl() const = 0;
 };
 
 using SourcePtr = std::unique_ptr<Source>;
@@ -101,6 +104,8 @@ private:
     void download1(const path &dir) const override {}
     void save1(nlohmann::json &p) const override {}
     void save1(yaml &root) const override {}
+    void checkUrl() const override {}
+    std::unique_ptr<Source> clone() const override { return std::make_unique<EmptySource>(*this); }
 };
 
 struct PRIMITIVES_SOURCE_API SourceUrl : Source
@@ -121,7 +126,7 @@ protected:
     void save1(SourceKvMap &m) const override;
 
 private:
-    virtual void checkUrl() const;
+    void checkUrl() const override;
 };
 
 struct PRIMITIVES_SOURCE_API Git : SourceUrl
@@ -143,15 +148,17 @@ protected:
     Git(const nlohmann::json &j, bool unchecked);
     Git(const yaml &root, bool unchecked);
 
+    void checkValid() const;
+
     String print1() const override;
     void save1(nlohmann::json &p) const override;
     void save1(yaml &root) const override;
     void save1(SourceKvMap &m) const override;
 
 private:
-    void checkValid() const;
     SourceType getType() const override { return SourceType::Git; }
     void download1(const path &dir) const override;
+    std::unique_ptr<Source> clone() const override { return std::make_unique<Git>(*this); }
 };
 
 struct PRIMITIVES_SOURCE_API Hg : Git
@@ -171,6 +178,7 @@ private:
     void save1(nlohmann::json &p) const override;
     void save1(yaml &root) const override;
     void save1(SourceKvMap &m) const override;
+    std::unique_ptr<Source> clone() const override { return std::make_unique<Hg>(*this); }
 };
 
 using Mercurial = Hg;
@@ -195,6 +203,7 @@ private:
     void save1(nlohmann::json &p) const override;
     void save1(yaml &root) const override;
     void save1(SourceKvMap &m) const override;
+    std::unique_ptr<Source> clone() const override { return std::make_unique<Bzr>(*this); }
 };
 
 using Bazaar = Bzr;
@@ -206,6 +215,7 @@ struct PRIMITIVES_SOURCE_API Fossil : Git
 private:
     SourceType getType() const override { return SourceType::Fossil; }
     void download1(const path &dir) const override;
+    std::unique_ptr<Source> clone() const override { return std::make_unique<Fossil>(*this); }
 };
 
 struct PRIMITIVES_SOURCE_API Cvs : SourceUrl
@@ -231,6 +241,7 @@ private:
     void save1(nlohmann::json &p) const override;
     void save1(yaml &root) const override;
     void save1(SourceKvMap &m) const override;
+    std::unique_ptr<Source> clone() const override { return std::make_unique<Cvs>(*this); }
 };
 
 struct Svn : SourceUrl
@@ -254,6 +265,7 @@ private:
     void save1(nlohmann::json &p) const override;
     void save1(yaml &root) const override;
     void save1(SourceKvMap &m) const override;
+    std::unique_ptr<Source> clone() const override { return std::make_unique<Svn>(*this); }
 };
 
 struct PRIMITIVES_SOURCE_API RemoteFile : SourceUrl
@@ -263,6 +275,7 @@ struct PRIMITIVES_SOURCE_API RemoteFile : SourceUrl
 private:
     SourceType getType() const override { return SourceType::RemoteFile; }
     void download1(const path &dir) const override;
+    std::unique_ptr<Source> clone() const override { return std::make_unique<RemoteFile>(*this); }
 };
 
 struct PRIMITIVES_SOURCE_API RemoteFiles : Source
@@ -277,13 +290,14 @@ struct PRIMITIVES_SOURCE_API RemoteFiles : Source
     void applyVersion(const Version &v) override;
 
 private:
-    void checkValid() const;
     SourceType getType() const override { return SourceType::RemoteFiles; }
     String print1() const override;
     void download1(const path &dir) const override;
     void save1(nlohmann::json &p) const override;
     void save1(yaml &root) const override;
     void save1(SourceKvMap &m) const override;
+    void checkUrl() const override;
+    std::unique_ptr<Source> clone() const override { return std::make_unique<RemoteFiles>(*this); }
 };
 
 } // namespace primitives::source

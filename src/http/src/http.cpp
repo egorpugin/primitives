@@ -255,7 +255,7 @@ bool isUrl(const String &s)
         s.find("https://") == 0 ||
         s.find("ftp://") == 0 ||
         s.find("git://") == 0 ||
-        // could be dangerous in case of vulnerabilities on client side?
+        // could be dangerous in case of vulnerabilities on client side? why?
         //s.find("ssh://") == 0 ||
         0
         )

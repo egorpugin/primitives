@@ -57,9 +57,6 @@ static bool isValidSourceUrl(const String &url)
         return false;
     if (url.find_first_of(R"bbb('"`\|;$ @!#^*()<>[],)bbb") != url.npos)
         return false;
-    // remove? will fail: ssh://name:pass@web.site
-    if (std::count(url.begin(), url.end(), ':') > 1)
-        return false;
     if (url.find("&&") != url.npos)
         return false;
 #ifndef CPPAN_TEST
@@ -202,6 +199,12 @@ String Source::print() const
 
 void Source::download(const path &dir) const
 {
+    // main entry point and main purpose of all sources
+
+    // so we check url validity here
+    // (before this place url may contain tricky format things from fmt lib etc.)
+    checkUrl();
+
     fs::create_directories(dir);
     download1(dir);
 }
@@ -279,35 +282,19 @@ std::unique_ptr<Source> Source::load(const yaml &root)
     SW_UNREACHABLE;
 }
 
-std::unique_ptr<Source> Source::clone() const
-{
-    // funny non-virtual (but switch-style) clone
-    switch (getType())
-    {
-#define SOURCE(e, s) case SourceType::e: return std::make_unique<e>(static_cast<const e &>(*this));
-#include <primitives/source.inl>
-#undef SOURCE
-    }
-
-    SW_UNREACHABLE;
-}
-
 SourceUrl::SourceUrl(const String &url)
     : url(url)
 {
-    checkUrl();
 }
 
 SourceUrl::SourceUrl(const nlohmann::json &j)
 {
     JSON_GET_STRING(url);
-    checkUrl();
 }
 
 SourceUrl::SourceUrl(const yaml &root)
 {
     YAML_EXTRACT_AUTO(url);
-    checkUrl();
 }
 
 void SourceUrl::checkUrl() const
@@ -851,23 +838,20 @@ void RemoteFile::download1(const path &dir) const
 RemoteFiles::RemoteFiles(const StringSet &urls)
     : urls(urls)
 {
-    checkValid();
 }
 
 RemoteFiles::RemoteFiles(const nlohmann::json &j)
 {
     Strings s = j["url"];
     urls.insert(s.begin(), s.end());
-    checkValid();
 }
 
 RemoteFiles::RemoteFiles(const yaml &root)
 {
     urls = get_sequence_set<String>(root);
-    checkValid();
 }
 
-void RemoteFiles::checkValid() const
+void RemoteFiles::checkUrl() const
 {
     for (auto &url : urls)
         checkSourceUrl(url);
