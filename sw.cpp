@@ -275,6 +275,10 @@ void build(Solution &s)
     gen_ragel("org.sw.demo.ragel-6"_dep, version, "src/version.rl");
     gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison-master"_dep, version, "GLR_CPP_PARSER", "src/range");
 
+    ADD_LIBRARY(source);
+    source.Public += command, hash, http, pack, version, yaml,
+        "org.sw.demo.nlohmann.json"_dep;
+
     //ADD_LIBRARY(object_path);
     //object_path.Public += string, templates;
 
@@ -317,7 +321,7 @@ void build(Solution &s)
     auto &test = p.addDirectory("test");
     test.Scope = TargetScope::Test;
 
-    auto add_test = [&test, &s](const String &name) -> decltype(auto)
+    auto add_test = [&test, &s, &sw_main](const String &name) -> decltype(auto)
     {
         auto &t = test.addTarget<ExecutableTarget>(name);
         t.CPPVersion = CPPLanguageStandard::CPP17;
@@ -327,27 +331,31 @@ void build(Solution &s)
             t.CompileOptions.push_back("-bigobj");
         //else if (s.Settings.Native.CompilerType == CompilerType::GNU)
             //t.CompileOptions.push_back("-Wa,-mbig-obj");
+        t += sw_main;
         return t;
     };
 
     auto &test_main = add_test("main");
-    test_main += sw_main, command, date_time,
+    test_main += command, date_time,
         executor, hash, yaml, emitter, http,
         "org.sw.demo.nlohmann.json-*"_dep;
 
     auto &test_db = add_test("db");
-    test_db += sw_main, command, db_sqlite3, db_postgresql, date_time,
+    test_db += command, db_sqlite3, db_postgresql, date_time,
         executor, hash, yaml;
 
     auto &test_settings = add_test("settings");
     test_settings.PackageDefinitions = true;
-    test_settings += sw_main, settings;
+    test_settings += settings;
 
     auto &test_version = add_test("version");
-    test_version += sw_main, version;
+    test_version += version;
+
+    auto &test_source = add_test("source");
+    test_source += source;
 
     auto &test_patch = add_test("patch");
-    test_patch += sw_main, patch;
+    test_patch += patch;
 
     auto tm = s.addTest(test_main);
     tm.c->addPathDirectory(getenv("PATH"));

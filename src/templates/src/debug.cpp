@@ -35,6 +35,15 @@ static std::wstring to_wstring(const std::string &s)
 namespace primitives
 {
 
+void debugBreak()
+{
+#ifdef _WIN32
+    DebugBreak();
+#else
+    __asm__("int3");
+#endif
+}
+
 bool isDebuggerAttached()
 {
 #ifdef _WIN32

@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include "debug.h"
+
 #include <stdexcept>
 #include <string>
 
@@ -19,7 +21,19 @@
 #define SW_RUNTIME_ERROR(msg) SW_RUNTIME_ERROR_CUSTOM(msg, true)
 #define SW_LOGIC_ERROR(msg) SW_LOGIC_ERROR_CUSTOM(msg, true)
 
-#define SW_UNIMPLEMENTED throw SW_RUNTIME_ERROR("TODO: unimplemented")
+#define SW_UNIMPLEMENTED                                                                                               \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        DEBUG_BREAK;                                                                                                   \
+        throw SW_RUNTIME_ERROR("TODO: unimplemented");                                                                 \
+    } while (0)
+
+#define SW_UNREACHABLE                                                                                                 \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        DEBUG_BREAK;                                                                                                   \
+        throw SW_RUNTIME_ERROR("unreachable code");                                                                    \
+    } while (0)
 
 namespace sw
 {
