@@ -120,6 +120,8 @@ std::string setThreadName(const std::string &name)
         set_thread_description_func(::GetCurrentThread(),
             to_wstring(name).c_str());
     }
+#else
+    //pthread_setname_np(thread_pool[i].t.native_handle(), name.c_str());
 #endif
 
     return old;

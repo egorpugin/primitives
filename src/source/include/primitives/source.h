@@ -87,8 +87,6 @@ private:
     virtual void checkUrl() const = 0;
 };
 
-using SourcePtr = std::unique_ptr<Source>;
-
 struct EmptySource : Source
 {
     EmptySource() {}
@@ -301,16 +299,3 @@ private:
 };
 
 } // namespace primitives::source
-
-namespace std
-{
-
-template<> struct hash<::primitives::source::SourcePtr>
-{
-    size_t operator()(const ::primitives::source::SourcePtr &p) const
-    {
-        return hash<String>()(p->print());
-    }
-};
-
-}

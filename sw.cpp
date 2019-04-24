@@ -1,4 +1,4 @@
-#pragma sw require header org.sw.demo.ragel-6
+#pragma sw require header org.sw.demo.ragel
 #pragma sw require header org.sw.demo.lexxmark.winflexbison.bison-master
 
 #pragma sw header on
