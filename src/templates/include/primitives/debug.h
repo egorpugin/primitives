@@ -32,12 +32,12 @@ private:
         x;                     \
     } while (0)
 
-#if !defined(NDEBUG)
+#if !defined(NDEBUG) || _MSC_VER
 
 #define DEBUG_BREAK_INTERNAL()                                                           \
     static auto ANONYMOUS_VARIABLE_LINE(primitives_debug) = 1;                           \
-    if (ANONYMOUS_VARIABLE_LINE(primitives_debug) && ::primitives::isDebuggerAttached()) \
-    ::primitives::debugBreak()
+    if (::primitives::isDebuggerAttached() && ANONYMOUS_VARIABLE_LINE(primitives_debug)) \
+        ::primitives::debugBreak()
 
 #define DEBUG_BREAK PRIMITIVES_DO_WHILE(DEBUG_BREAK_INTERNAL())
 

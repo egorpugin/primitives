@@ -7,7 +7,7 @@ static void gen_stamp(const DependencyPtr &tools_stamp_gen, NativeExecutedTarget
 {
     {
         auto d = t + tools_stamp_gen;
-        d->Dummy = true;
+        d->setDummy(true);
     }
 
     auto out = t.BinaryPrivateDir / "stamp.h.in";
@@ -24,7 +24,7 @@ static void gen_sqlite2cpp(const DependencyPtr &tools_sqlite2cpp, NativeExecuted
 {
     {
         auto d = t + tools_sqlite2cpp;
-        d->Dummy = true;
+        d->setDummy(true);
     }
 
     auto out = t.BinaryDir / out_file;
@@ -46,7 +46,7 @@ static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const 
 
     {
         auto d = t + embedder;
-        d->Dummy = true;
+        d->setDummy(true);
     }
 
     auto f = t.SourceDir / in;
@@ -68,7 +68,7 @@ static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Str
 {
     {
         auto d = t + sqt;
-        d->Dummy = true;
+        d->setDummy(true);
     }
 
     Files out;
