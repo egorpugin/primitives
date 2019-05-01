@@ -334,6 +334,9 @@ projects:
                 main:
                     version: "*"
                     ref: main
+                # fixes linux build
+                filesystem:
+                    version: "*"
 
             private:
                 pvt.cppan.demo.google.breakpad.client.windows.handler:

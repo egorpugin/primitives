@@ -173,7 +173,10 @@ struct UvCommand
             this->out = out;
             auto f = file.u8string();
 
-            int flags = O_BINARY;
+            int flags = 0;
+#ifdef _WIN32
+            flags = O_BINARY;
+#endif
             if (out)
                 flags |= (append ? O_APPEND : O_CREAT) | O_RDWR;
             else
