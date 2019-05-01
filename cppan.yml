@@ -9,14 +9,8 @@ local_settings:
     #use_shared_libs: false
     rc_enabled: false
     builds:
-        vs_release64:
-            generator: Visual Studio 15 2017 Win64
         vs_release:
-            generator: Visual Studio 15 2017
-        vs_preview:
-            c_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
-            cxx_compiler: c:/Program Files (x86)/Microsoft Visual Studio/Preview/Community/VC/Tools/MSVC/14.11.25325/bin/HostX64/x86/cl.exe
-            cxx_flags: /std:c++17
+            generator: Visual Studio 16 2019
         gcc8:
             c_compiler: gcc-8
             cxx_compiler: g++-8
@@ -71,16 +65,6 @@ projects:
                     version: "*"
                 pvt.cppan.demo.boost.process:
                     version: 1
-
-    context:
-        name: context
-        type: library
-
-        root_directory: src/emitter
-
-        dependencies:
-            filesystem:
-                version: "*"
 
     cron:
         name: cron
@@ -137,6 +121,16 @@ projects:
                     version: 1
                 string:
                     version: "*"
+
+    emitter:
+        name: emitter
+        type: library
+
+        root_directory: src/emitter
+
+        dependencies:
+            filesystem:
+                version: "*"
 
     error_handling:
         name: error_handling
@@ -265,6 +259,26 @@ projects:
         dependencies:
             public:
                 error_handling:
+                    version: "*"
+
+    source:
+        type: library
+        root_directory: src/source
+        dependencies:
+            public:
+                command:
+                    version: "*"
+                hash:
+                    version: "*"
+                http:
+                    version: "*"
+                pack:
+                    version: "*"
+                version:
+                    version: "*"
+                yaml:
+                    version: "*"
+                pvt.cppan.demo.nlohmann.json:
                     version: "*"
 
     settings:
@@ -468,7 +482,7 @@ projects:
                     version: "*"
                 command:
                     version: "*"
-                context:
+                emitter:
                     version: "*"
                 date_time:
                     version: "*"
@@ -623,7 +637,7 @@ projects:
         files: src/tools/sqlpp11.sqlite2cpp.cpp
 
         dependencies:
-            context:
+            emitter:
                 version: "*"
             sw.main:
                 version: "*"
