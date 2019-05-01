@@ -49,9 +49,13 @@ int main(int argc, char *argv[])
     {
         String str;
         str = m.prefix();
-        str += preprocess_file(read_file(m[1].str()));
+        // make a copy here, because when str is changed, m[1].str() will point to new string
+        String fn = m[1].str();
+        str += preprocess_file(read_file(fn));
         str += m.suffix();
         s = str;
+        // print inputs for consumers
+        std::cout << "embedding: " << (fs::current_path() / fn).u8string() << "\n";
     }
 
     write_file(OutputFilename, s);
