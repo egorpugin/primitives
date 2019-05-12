@@ -7,6 +7,7 @@
 #include <primitives/version.h>
 
 #include <algorithm>
+#include <charconv>
 
 namespace primitives::version
 {
@@ -36,14 +37,11 @@ bool Version::parse(Version &v, const std::string &s)
 
         action ADD_EXTRA
         {
-            try
-            {
-                v.extra.emplace_back(std::stoll(std::string{sb, p}));
-            }
-            catch (...)
-            {
+            primitives::version::detail::Number n;
+            if (auto [ptr, ec] = std::from_chars(sb, p, n); ptr == p && ec == std::errc())
+                v.extra.emplace_back(n);
+            else
                 v.extra.emplace_back(std::string{sb, p});
-            }
         }
 
         action ADD_PART

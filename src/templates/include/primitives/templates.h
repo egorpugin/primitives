@@ -14,9 +14,9 @@
 #define ANONYMOUS_VARIABLE_LINE(s) CONCATENATE(CONCATENATE(s, _), __LINE__)
 
 #ifdef __COUNTER__
-#define ANONYMOUS_VARIABLE(s) ANONYMOUS_VARIABLE_COUNTER(s)
+#define PRIMITIVES_ANONYMOUS_VARIABLE(s) ANONYMOUS_VARIABLE_COUNTER(s)
 #else
-#define ANONYMOUS_VARIABLE(s) ANONYMOUS_VARIABLE_LINE(s)
+#define PRIMITIVES_ANONYMOUS_VARIABLE(s) ANONYMOUS_VARIABLE_LINE(s)
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -31,7 +31,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #define SCOPE_EXIT \
-    auto ANONYMOUS_VARIABLE(SCOPE_EXIT_STATE) = SCOPE_EXIT_NAMED
+    auto PRIMITIVES_ANONYMOUS_VARIABLE(SCOPE_EXIT_STATE) = SCOPE_EXIT_NAMED
 
 #define SCOPE_EXIT_NAMED \
     ::detail::ScopeGuardOnExit() + [&]()
