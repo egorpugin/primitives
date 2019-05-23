@@ -22,7 +22,7 @@ static cl::opt<String> crash_server_pipe_name(CRASH_SERVER_OPTION_START,
     cl::ReallyHidden);
 
 extern bool gUseStackTrace;
-static ::cl::opt<bool, true> bt("bt", ::cl::desc("Print backtrace"), ::cl::location(gUseStackTrace));
+static ::cl::opt<bool, true> bt("bt", ::cl::desc("Print backtrace"), ::cl::location(gUseStackTrace), ::cl::Hidden);
 static ::cl::alias bt2("st", ::cl::desc("Alias for -bt"), ::cl::aliasopt(bt));
 
 extern std::string gSymbolPath;

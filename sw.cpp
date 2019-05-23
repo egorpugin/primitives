@@ -340,6 +340,8 @@ void build(Solution &s)
     setup_primitives_no_all_sources(stamp_gen);
     stamp_gen += "src/tools/stamp_gen.cpp";
 
+    return;
+
     auto &test = p.addDirectory("test");
     test.Scope = TargetScope::Test;
 
@@ -379,22 +381,18 @@ void build(Solution &s)
     auto &test_patch = add_test("patch");
     test_patch += patch;
 
-    return;
-
-    SW_UNIMPLEMENTED;
-
-    /*auto tm = s.addTest(test_main);
+    auto tm = s.addTest(test_main);
     tm.c->addPathDirectory(getenv("PATH"));
-    auto tdb = s.addTest(test_db);
-    if (tdb.getSettings().TargetOS.Type == OSType::Windows)
+    /*auto tdb = s.addTest(test_db);
+    if (test_db.getSettings().TargetOS.Type == OSType::Windows)
     {
         tdb.c->addLazyAction([&s, c = tdb.c]
         {
             auto &pq = s.getTarget<LibraryTarget>(PackageId{"org.sw.demo.find.libpq", "master"});
             c->addPathDirectory(pq.LinkDirectories.begin()->parent_path() / "bin");
         });
-    }
+    }*/
     s.addTest(test_patch);
     s.addTest(test_settings);
-    s.addTest(test_version);*/
+    s.addTest(test_version);
 }

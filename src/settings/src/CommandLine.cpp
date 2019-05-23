@@ -111,6 +111,7 @@ template class basic_parser<bool>;
 template class basic_parser<boolOrDefault>;
 template class basic_parser<int>;
 template class basic_parser<unsigned>;
+template class basic_parser<long long>;
 template class basic_parser<unsigned long long>;
 template class basic_parser<double>;
 template class basic_parser<float>;
@@ -139,6 +140,7 @@ void parser<bool>::anchor() {}
 void parser<boolOrDefault>::anchor() {}
 void parser<int>::anchor() {}
 void parser<unsigned>::anchor() {}
+void parser<long long>::anchor() {}
 void parser<unsigned long long>::anchor() {}
 void parser<double>::anchor() {}
 void parser<float>::anchor() {}
@@ -1706,6 +1708,17 @@ bool parser<unsigned>::parse(Option &O, StringRef ArgName, StringRef Arg,
   return false;
 }
 
+// parser<long long> implementation
+//
+bool parser<long long>::parse(Option &O, StringRef ArgName,
+    StringRef Arg,
+    long long &Value) {
+
+    if (Arg.getAsInteger(0, Value))
+        return O.error("'" + Arg + "' value invalid for uint argument!");
+    return false;
+}
+
 // parser<unsigned long long> implementation
 //
 bool parser<unsigned long long>::parse(Option &O, StringRef ArgName,
@@ -1856,6 +1869,7 @@ PRINT_OPT_DIFF(bool)
 PRINT_OPT_DIFF(boolOrDefault)
 PRINT_OPT_DIFF(int)
 PRINT_OPT_DIFF(unsigned)
+PRINT_OPT_DIFF(long long)
 PRINT_OPT_DIFF(unsigned long long)
 PRINT_OPT_DIFF(double)
 PRINT_OPT_DIFF(float)

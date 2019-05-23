@@ -114,6 +114,7 @@ class Option;
 ///
 /// Literal options are used by some parsers to register special option values.
 /// This is how the PassNameParser registers pass names for opt.
+PRIMITIVES_SETTINGS_API
 void AddLiteralOption(Option &O, StringRef Name);
 
 //===----------------------------------------------------------------------===//
@@ -749,7 +750,7 @@ protected:
 // command line option for -help.  Because this is a simple mapping parser, the
 // data type can be any unsupported type.
 //
-template <class DataType> class PRIMITIVES_SETTINGS_API parser : public generic_parser_base {
+template <class DataType> class parser : public generic_parser_base {
 protected:
   class OptionInfo : public GenericOptionInfo {
   public:
@@ -847,7 +848,7 @@ public:
   virtual void anchor();
 
 protected:
-  ~basic_parser_impl() = default;
+  virtual ~basic_parser_impl() = default;
 
   // A helper for basic_parser::printOptionDiff.
   void printOptionName(const Option &O, size_t GlobalWidth) const;
@@ -856,7 +857,7 @@ protected:
 // basic_parser - The real basic parser is just a template wrapper that provides
 // a typedef for the provided data type.
 //
-template <class DataType> class PRIMITIVES_SETTINGS_API basic_parser : public basic_parser_impl {
+template <class DataType> class basic_parser : public basic_parser_impl {
 public:
   using parser_data_type = DataType;
   using OptVal = OptionValue<DataType>;
@@ -864,7 +865,7 @@ public:
   basic_parser(Option &O) : basic_parser_impl(O) {}
 
 protected:
-  ~basic_parser() = default;
+  virtual ~basic_parser() = default;
 };
 
 #if __clang__ && defined(_MSC_VER)
@@ -983,6 +984,31 @@ public:
 };
 
 EXTERN_PARSER_TEMPLATE(unsigned);
+
+//--------------------------------------------------
+// parser<long long>
+//
+template <>
+class parser<long long> final
+    : public basic_parser<long long> {
+public:
+    parser(Option &O) : basic_parser(O) {}
+
+    // parse - Return true on error.
+    bool parse(Option &O, StringRef ArgName, StringRef Arg,
+        long long &Val);
+
+    // getValueName - Overload in subclass to provide a better default value.
+    StringRef getValueName() const override { return "int"; }
+
+    void printOptionDiff(const Option &O, long long V, OptVal Default,
+        size_t GlobalWidth) const;
+
+    // An out-of-line virtual method to provide a 'home' for this class.
+    void anchor() override;
+};
+
+EXTERN_PARSER_TEMPLATE(long long);
 
 //--------------------------------------------------
 // parser<unsigned long long>

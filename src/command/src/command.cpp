@@ -735,12 +735,12 @@ void Command::execute1(std::error_code *ec_in)
         return;
 
     // TODO: use sync ostream from C++20
-    for (auto &e : errors)
+    /*for (auto &e : errors)
     {
         static std::mutex m;
         std::unique_lock lk(m);
         std::cerr << "error in cmd: " << e << std::endl;
-    }
+    }*/
 
     // check all errors in chain
     if (std::all_of(cmds.begin(), cmds.end(), [](auto &c)
