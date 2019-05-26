@@ -126,9 +126,12 @@ std::wstring wnormalize_path_windows(const path &p)
     return s;
 }
 
-String read_file_bytes_unchecked(const path &p, uintmax_t offset, uintmax_t count)
+String read_file(const path &p, uintmax_t offset, uintmax_t count)
 {
     ScopedFile ifile(p, "rb");
+
+    if (count == UINTMAX_MAX)
+        count = fs::file_size(p) - offset;
 
     String f;
     f.resize(count);
@@ -137,33 +140,7 @@ String read_file_bytes_unchecked(const path &p, uintmax_t offset, uintmax_t coun
     return f;
 }
 
-String read_file_bytes(const path &p, uintmax_t offset, uintmax_t count)
-{
-    error_code ec;
-    if (!fs::exists(p, ec))
-        throw SW_RUNTIME_ERROR("File '" + p.u8string() + "' does not exist");
-    return read_file_bytes_unchecked(p, offset, count);
-}
-
-String read_file_from_offset(const path &p, uintmax_t offset, uintmax_t max_size)
-{
-    error_code ec;
-    if (!fs::exists(p, ec))
-        throw SW_RUNTIME_ERROR("File '" + p.u8string() + "' does not exist");
-
-    auto sz = fs::file_size(p) - offset;
-    if (sz > max_size)
-        throw SW_RUNTIME_ERROR("File " + p.u8string() + " is bigger than allowed limit (" + std::to_string(max_size) + " bytes)");
-
-    return read_file_bytes_unchecked(p, offset, sz);
-}
-
-String read_file(const path &p, uintmax_t max_size)
-{
-    return read_file_from_offset(p, 0, max_size);
-}
-
-String read_file_without_bom(const path &p, uintmax_t max_size)
+String read_file_without_bom(const path &p, uintmax_t offset_after_bom, uintmax_t count)
 {
     static const std::vector<std::vector<uint8_t>> boms
     {
@@ -205,15 +182,16 @@ String read_file_without_bom(const path &p, uintmax_t max_size)
         [](const auto &e1, const auto &e2) { return e1.size() < e2.size(); })->size();
 
     // read max bom length
-    auto s = read_file_bytes(p, 0, max_len);
+    auto s = read_file(p, 0, max_len);
 
     for (auto &b : boms)
     {
         if (s.size() >= b.size() && memcmp(s.data(), b.data(), b.size()) == 0)
-            return read_file_from_offset(p, b.size(), max_size);
+            return read_file(p, b.size() + offset_after_bom, count);
     }
 
-    return read_file(p, max_size);
+    // no bom detected
+    return read_file(p, offset_after_bom, count);
 }
 
 Strings read_lines(const path &p)
@@ -244,8 +222,7 @@ void write_file(const path &p, const std::vector<uint8_t> &s)
 
 void write_file_if_different(const path &p, const String &s)
 {
-    error_code ec;
-    if (fs::exists(p, ec))
+    if (fs::exists(p))
     {
         auto s2 = read_file(p);
         if (s == s2)
@@ -303,8 +280,7 @@ void remove_files_like(const path &dir, const String &regex, bool recursive)
 Files enumerate_files(const path &dir, bool recursive)
 {
     Files files;
-    error_code ec;
-    if (!fs::exists(dir, ec))
+    if (!fs::exists(dir))
         return files;
     if (recursive)
     {
@@ -355,7 +331,7 @@ bool is_under_root(path p, const path &root_dir)
     if (p.empty())
         return false;
     error_code ec;
-    if (fs::exists(p, ec))
+    if (fs::exists(p))
         // Converts p, which must exist, to an absolute path
         // that has no symbolic link, dot, or dot-dot elements.
         p = fs::canonical(p);
@@ -384,8 +360,7 @@ bool compare_dirs(const path &dir1, const path &dir2)
     auto traverse_dir = [](const auto &dir)
     {
         std::vector<path> files;
-        error_code ec;
-        if (fs::exists(dir, ec))
+        if (fs::exists(dir))
         {
             for (auto &f : fs::recursive_directory_iterator(dir))
             {

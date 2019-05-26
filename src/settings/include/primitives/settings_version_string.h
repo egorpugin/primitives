@@ -11,7 +11,7 @@
 #include <string>
 
 #ifdef _WIN32
-#if defined(CPPAN_EXECUTABLE)
+#if defined(CPPAN_EXECUTABLE) || defined(SW_EXECUTABLE)
 #define EXPORT_FROM_EXECUTABLE __declspec(dllexport)
 #endif
 #else

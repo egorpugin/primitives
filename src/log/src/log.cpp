@@ -108,7 +108,7 @@ void initLogger(LoggerSettings &s)
             {
                 auto backend = boost::make_shared<tfb>
                     (
-                        boost::log::keywords::file_name = s.log_file + ".log." + s.log_level,
+                        boost::log::keywords::file_name = s.log_file + ".log." + s.log_level + ".txt",
                         boost::log::keywords::rotation_size = 10 * 1024 * 1024,
                         boost::log::keywords::open_mode = open_mode//,
                                                                    //boost::log::keywords::auto_flush = true
@@ -130,7 +130,7 @@ void initLogger(LoggerSettings &s)
                 {
                     auto backend = boost::make_shared<tfb>
                         (
-                            boost::log::keywords::file_name = s.log_file + ".log." + name,
+                            boost::log::keywords::file_name = s.log_file + ".log." + name + ".txt",
                             boost::log::keywords::rotation_size = 10 * 1024 * 1024,
                             // always append to trace, do not recreate
                             boost::log::keywords::open_mode = app_mode//,

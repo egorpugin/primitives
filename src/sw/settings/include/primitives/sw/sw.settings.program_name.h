@@ -1,6 +1,6 @@
 #include <primitives/sw/settings_program_name.h>
 
-#if defined(CPPAN_EXECUTABLE)
+#if defined(CPPAN_EXECUTABLE) || defined(SW_EXECUTABLE)
 namespace sw
 {
 
