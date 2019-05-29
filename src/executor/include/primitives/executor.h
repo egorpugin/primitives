@@ -25,7 +25,7 @@
 //
 using Task = std::function<void()>;
 
-class Executor;
+struct Executor;
 
 template <class Ret>
 struct Future;
@@ -290,7 +290,7 @@ enum class WaitStatus
     RejectIncoming,
 };
 
-class PRIMITIVES_EXECUTOR_API Executor
+struct PRIMITIVES_EXECUTOR_API Executor
 {
     struct Thread
     {
