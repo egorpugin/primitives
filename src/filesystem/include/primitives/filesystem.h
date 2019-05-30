@@ -58,9 +58,6 @@ PRIMITIVES_FILESYSTEM_API
 Strings read_lines(const path &p);
 
 PRIMITIVES_FILESYSTEM_API
-void remove_file(const path &p);
-
-PRIMITIVES_FILESYSTEM_API
 void remove_all_from_dir(const path &dir);
 
 PRIMITIVES_FILESYSTEM_API
@@ -110,6 +107,14 @@ bool compare_dirs(const path &dir1, const path &dir2);
 
 PRIMITIVES_FILESYSTEM_API
 path unique_path(const path &p = "%%%%-%%%%-%%%%-%%%%");
+
+namespace primitives::filesystem
+{
+
+PRIMITIVES_FILESYSTEM_API
+void remove_file(const path &p);
+
+}
 
 namespace std
 {

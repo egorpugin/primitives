@@ -17,12 +17,26 @@ namespace primitives
 struct Command;
 using Commands = std::unordered_set<Command*>;
 
+namespace detail
+{
+
+struct PRIMITIVES_COMMAND_API Args : Strings
+{
+    using Strings::Strings;
+    using Strings::push_back;
+
+    void push_back(const path &p);
+};
+
+}
+
 // return value:
 //   1. throw if exit_code != 0
 //   2. no throw when ec is provided
 struct PRIMITIVES_COMMAND_API Command
 {
     using ActionType = void(const String &, bool /* eof */);
+    using Args = detail::Args;
 
     struct Stream
     {
@@ -37,7 +51,7 @@ struct PRIMITIVES_COMMAND_API Command
 
     // input
     path program;
-    Strings args;
+    detail::Args args;
     bool inherit_current_evironment = true;
     StringMap<String> environment;
     path working_directory;
@@ -68,8 +82,8 @@ public:
     Command();
     virtual ~Command();
 
-    virtual Strings &getArgs() { return args; }
-    virtual const Strings &getArgs() const { return const_cast<Command*>(this)->getArgs(); }
+    virtual Args &getArgs() { return args; }
+    virtual const Args &getArgs() const { return const_cast<Command*>(this)->getArgs(); }
 
     virtual void execute() { execute1(); }
     virtual void execute(std::error_code &ec) { execute1(&ec); }
@@ -97,10 +111,10 @@ public:
 public:
     static void execute(const path &p);
     static void execute(const path &p, std::error_code &ec);
-    static void execute(const path &p, const Strings &args);
-    static void execute(const path &p, const Strings &args, std::error_code &ec);
-    static void execute(const Strings &args);
-    static void execute(const Strings &args, std::error_code &ec);
+    static void execute(const path &p, const Args &args);
+    static void execute(const path &p, const Args &args, std::error_code &ec);
+    static void execute(const Args &args);
+    static void execute(const Args &args, std::error_code &ec);
     static void execute(const std::initializer_list<String> &args);
     static void execute(const std::initializer_list<String> &args, std::error_code &ec);
 
@@ -111,7 +125,7 @@ private:
     void execute1(std::error_code *ec = nullptr);
     std::vector<Command*> execute2(std::error_code *ec);
 
-    static void execute1(const path &p, const Strings &args = Strings(), std::error_code *ec = nullptr);
+    static void execute1(const path &p, const Args &args = {}, std::error_code *ec = nullptr);
 };
 
 /// return empty when file not found

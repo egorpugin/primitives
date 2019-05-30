@@ -114,7 +114,7 @@ static void downloadRepository(F &&f)
     }
 }
 
-static void execute_command_in_dir(const path &dir, const Strings &args)
+static void execute_command_in_dir(const path &dir, const Command::Args &args)
 {
     Command c;
     c.working_directory = dir;

@@ -60,12 +60,17 @@ path current_thread_path(const path &p)
     return thread_working_dir = fs::canonical(p);
 }
 
+namespace primitives::filesystem
+{
+
 void remove_file(const path &p)
 {
     error_code ec;
     fs::remove(p, ec);
     if (ec)
         std::cerr << "Cannot remove file: " << p.u8string() << "\n";
+}
+
 }
 
 void remove_all_from_dir(const path &dir)

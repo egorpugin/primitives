@@ -534,6 +534,16 @@ public:
 namespace primitives
 {
 
+namespace detail
+{
+
+void Args::push_back(const path &p)
+{
+    push_back(normalize_path(p));
+}
+
+} // namespace detail
+
 path resolve_executable(const path &p)
 {
 #ifdef _WIN32
@@ -825,7 +835,7 @@ Command &Command::operator|=(Command &c2)
     return *this | c2;
 }
 
-void Command::execute1(const path &p, const Strings &args, std::error_code *ec)
+void Command::execute1(const path &p, const Args &args, std::error_code *ec)
 {
     Command c;
     c.program = p;
@@ -840,27 +850,27 @@ void Command::execute(const path &p)
 
 void Command::execute(const path &p, std::error_code &ec)
 {
-    execute1(p, Strings(), &ec);
+    execute1(p, {}, &ec);
 }
 
-void Command::execute(const path &p, const Strings &args)
+void Command::execute(const path &p, const Args &args)
 {
     execute1(p, args);
 }
 
-void Command::execute(const path &p, const Strings &args, std::error_code &ec)
+void Command::execute(const path &p, const Args &args, std::error_code &ec)
 {
     execute1(p, args, &ec);
 }
 
-void Command::execute(const Strings &args)
+void Command::execute(const Args &args)
 {
     Command c;
     c.args = args;
     c.execute();
 }
 
-void Command::execute(const Strings &args, std::error_code &ec)
+void Command::execute(const Args &args, std::error_code &ec)
 {
     Command c;
     c.args = args;
@@ -869,12 +879,12 @@ void Command::execute(const Strings &args, std::error_code &ec)
 
 void Command::execute(const std::initializer_list<String> &args)
 {
-    execute(Strings(args.begin(), args.end()));
+    execute(Args(args.begin(), args.end()));
 }
 
 void Command::execute(const std::initializer_list<String> &args, std::error_code &ec)
 {
-    execute(Strings(args.begin(), args.end()), ec);
+    execute(Args(args.begin(), args.end()), ec);
 }
 
 }
