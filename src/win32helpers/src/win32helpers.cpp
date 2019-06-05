@@ -194,29 +194,33 @@ std::string get_last_error()
     return get_last_error(GetLastError());
 }
 
-void message_box(const std::string &caption, const std::string &s)
+static void message_box(const std::string &caption, std::wstring s, int maxlen)
 {
-    if (MessageBoxA(0, s.c_str(), caption.c_str(), 0) == 0)
+    if (s.size() > maxlen)
+        s = s.substr(0, maxlen / 2) + L"..." + s.substr(s.size() - maxlen / 2);
+
+    if (MessageBoxW(0, s.c_str(), to_wstring(caption).c_str(), 0) == 0)
     {
         auto e = GetLastError();
         if (e == 0)
-            message_box(caption, "Message is too long to display (len = " + std::to_string(s.size()) + ").\n\n" + s.substr(0, 256));
+        {
+            message_box(caption,
+                L"Message is too long to display (len = " + std::to_wstring(s.size()) + L").\n\n" + s.substr(0, maxlen),
+                maxlen / 2);
+        }
         else
-            message_box(caption, "MessageBoxA error: " + get_last_error(e));
+            message_box(caption, L"MessageBox error: " + to_wstring(get_last_error(e)), maxlen);
     }
+}
+
+void message_box(const std::string &caption, const std::string &s)
+{
+    message_box(caption, to_wstring(s));
 }
 
 void message_box(const std::string &caption, const std::wstring &s)
 {
-    auto ws = to_wstring(caption);
-    if (MessageBoxW(0, s.c_str(), ws.c_str(), 0) == 0)
-    {
-        auto e = GetLastError();
-        if (e == 0)
-            message_box(caption, L"Message is too long to display (len = " + std::to_wstring(s.size()) + L").\n\n" + s.substr(0, 256));
-        else
-            message_box(caption, "MessageBoxW error: " + get_last_error(e));
-    }
+    message_box(caption, s, 2048);
 }
 
 void message_box(const std::string &s)

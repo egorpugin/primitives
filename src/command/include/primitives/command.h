@@ -24,6 +24,7 @@ struct PRIMITIVES_COMMAND_API Args : Strings
 {
     using Strings::Strings;
     using Strings::push_back;
+    using Strings::operator=;
 
     void push_back(const path &p);
 };

@@ -10,6 +10,7 @@
 #endif
 
 #include <sstream>
+#include <string>
 
 bool gUseStackTrace;
 std::string gSymbolPath;
@@ -32,7 +33,9 @@ BaseException::BaseException(const char *file, const char *function, int line, c
 #ifdef USE_STACKTRACE
     if (stacktrace && gUseStackTrace)
     {
-        boost::stacktrace::stacktrace t(3 /* skip */, -1 /* till the end */);
+        // skip 3 frames
+        // -1 means till the end
+        boost::stacktrace::stacktrace t(3, -1);
         message += "\nStacktrace:\n";
 #ifdef _WIN32
         message += ::to_string(t);
@@ -77,17 +80,21 @@ Exception::Exception(const char *file, const char *function, int line, const std
 }
 
 RuntimeError::RuntimeError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
-    : BaseException/*Exception*/(file, function, line, msg, stacktrace), std::runtime_error(getMessage())
+    : BaseException
+    //Exception
+    (file, function, line, msg, stacktrace), std::runtime_error(getMessage())
 {
 }
 
-/*RuntimeError::RuntimeError(const RuntimeError &rhs)
-    : Exception(rhs), std::runtime_error(rhs)
-{
-}*/
+//RuntimeError::RuntimeError(const RuntimeError &rhs)
+//    : Exception(rhs), std::runtime_error(rhs)
+//{
+//}
 
 LogicError::LogicError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
-    : BaseException/*Exception*/(file, function, line, msg, stacktrace), std::logic_error(getMessage())
+    : BaseException
+    //Exception
+    (file, function, line, msg, stacktrace), std::logic_error(getMessage())
 {
 }
 
