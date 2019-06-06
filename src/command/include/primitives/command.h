@@ -6,10 +6,12 @@
 
 #pragma once
 
+#include "argument.h"
+
 #include <primitives/filesystem.h>
-#include <optional>
 
 #include <functional>
+#include <optional>
 
 namespace primitives
 {
@@ -17,27 +19,13 @@ namespace primitives
 struct Command;
 using Commands = std::unordered_set<Command*>;
 
-namespace detail
-{
-
-struct PRIMITIVES_COMMAND_API Args : Strings
-{
-    using Strings::Strings;
-    using Strings::push_back;
-    using Strings::operator=;
-
-    void push_back(const path &p);
-};
-
-}
-
 // return value:
 //   1. throw if exit_code != 0
 //   2. no throw when ec is provided
 struct PRIMITIVES_COMMAND_API Command
 {
     using ActionType = void(const String &, bool /* eof */);
-    using Args = detail::Args;
+    using Args = command::Arguments;
 
     struct Stream
     {
@@ -52,7 +40,7 @@ struct PRIMITIVES_COMMAND_API Command
 
     // input
     path program;
-    detail::Args args;
+    Args args;
     bool inherit_current_evironment = true;
     StringMap<String> environment;
     path working_directory;
