@@ -374,7 +374,29 @@ void Git::checkValid() const
     checkOne(getString(), tag, branch, commit);
 }
 
+void Git::tryVTagPrefixDuringDownload(bool in_try_v_tag_prefix)
+{
+    try_v_tag_prefix = in_try_v_tag_prefix;
+}
+
 void Git::download1(const path &dir) const
+{
+    try
+    {
+        download2(dir, tag);
+    }
+    catch (...)
+    {
+        if (!try_v_tag_prefix)
+            throw;
+        if (tag.empty())
+            throw SW_RUNTIME_ERROR("empty tag, but try_v_tag_prefix is specified");
+        //LOG_INFO(logger, "git: tag '" + tag + "' download failed, trying with prefix: v" + tag);
+        download2(dir, "v" + tag);
+    }
+}
+
+void Git::download2(const path &dir, const String &tag) const
 {
     // try to speed up git downloads from github
     // add more sites below
@@ -419,13 +441,7 @@ void Git::download1(const path &dir) const
         }
     }
 
-    // usual git download1 via clone
-#ifdef CPPAN_TEST
-    if (fs::exists(".git"))
-        return;
-#endif
-
-    downloadRepository([this, dir]()
+    downloadRepository([this, dir, &tag]()
     {
         execute_command_in_dir(dir, { "git", "init" });
         execute_command_in_dir(dir, { "git", "remote", "add", "origin", url });

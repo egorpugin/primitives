@@ -139,6 +139,7 @@ struct PRIMITIVES_SOURCE_API Git : SourceUrl
     Git(const yaml &root);
 
     void applyVersion(const Version &v) override;
+    void tryVTagPrefixDuringDownload(bool try_v_tag_prefix = true);
 
 protected:
     Git(const String &url, const String &tag, const String &branch, const String &commit, bool unchecked);
@@ -154,6 +155,9 @@ protected:
     void save1(SourceKvMap &m) const override;
 
 private:
+    bool try_v_tag_prefix = false;
+
+    void download2(const path &dir, const String &tag) const;
     SourceType getType() const override { return SourceType::Git; }
     void download1(const path &dir) const override;
     std::unique_ptr<Source> clone() const override { return std::make_unique<Git>(*this); }
