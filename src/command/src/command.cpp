@@ -368,6 +368,7 @@ struct UvCommand
     String prog;
     String wdir;
 
+    Strings args;
     std::vector<char*> uv_args;
 
     // i/o
@@ -388,12 +389,15 @@ public:
     UvCommand(uv_loop_t *loop, primitives::Command &c)
         : loop(loop), c(c)
     {
-        prog = c.program.u8string();
+        auto &arguments = c.getArguments();
+
+        prog = arguments[0]->toString();
         wdir = c.working_directory.u8string();
 
         // args
-        uv_args.push_back(prog.data()); // this name arg, win only?
-        for (const auto &a : c.getArgs())
+        for (const auto &a : c.getArguments())
+            args.push_back(a->toString());
+        for (const auto &a : args)
             uv_args.push_back((char *)a.data());
         uv_args.push_back(nullptr); // last null
 
@@ -588,6 +592,39 @@ Command::~Command()
 {
 }
 
+void Command::setProgram(const path &p)
+{
+    if (program_set)
+    {
+        getArguments()[0] = std::make_unique<command::SimpleArgument>(p);
+        return;
+    }
+    getArguments().push_front(normalize_path(p));
+    program_set = true;
+}
+
+String Command::getProgram() const
+{
+    if (!program_set && getArguments().empty())
+        throw SW_RUNTIME_ERROR("program is not set");
+    return getArguments()[0]->toString();
+}
+
+Command::Arguments &Command::getArguments()
+{
+    return arguments;
+}
+
+const Command::Arguments &Command::getArguments() const
+{
+    return arguments;
+}
+
+void Command::setArguments(const Arguments &args)
+{
+    arguments = args;
+}
+
 path Command::resolveProgram(const path &in) const
 {
     return resolve_executable(in);
@@ -601,10 +638,9 @@ String Command::print() const
     auto prnt = [](auto &c)
     {
         String s;
-        s += "\"" + c.program.u8string() + "\" ";
-        for (auto &a : c.getArgs())
+        for (auto &a : c.getArguments())
         {
-            s += a.quote();
+            s += a->quote();
             s += " ";
         }
         s.resize(s.size() - 1);
@@ -621,40 +657,23 @@ String Command::print() const
     return s;
 }
 
-path Command::getProgram() const
-{
-    if (!program.empty())
-        return program;
-    if (getArgs().empty())
-        throw SW_RUNTIME_ERROR("No program was set");
-    return getArgs()[0];
-}
-
 void Command::preExecute(std::error_code *ec_in)
 {
-    // try to use first arg as a program
-    if (program.empty())
-    {
-        if (getArgs().empty())
-            throw SW_RUNTIME_ERROR("No program was set");
-        program = getArgs()[0];
-        getArgs().shift();
-    }
-
     // resolve exe
     {
         // remove this? underlying libuv could resolve itself
-        auto p = resolveProgram(program);
+        auto p = resolveProgram(getProgram());
         if (p.empty())
         {
-            auto e = "Cannot resolve executable: " + program.u8string();
+            auto e = "Cannot resolve executable: " + getProgram();
             if (!ec_in)
                 throw SW_RUNTIME_ERROR(e);
             *ec_in = std::make_error_code(std::errc::no_such_file_or_directory);
             err.text = e;
             return;
         }
-        program = p;
+        program_set = true;
+        setProgram(p);
     }
 
     if (working_directory.empty())
@@ -824,11 +843,11 @@ Command &Command::operator|=(Command &c2)
     return *this | c2;
 }
 
-void Command::execute1(const path &p, const Args &args, std::error_code *ec)
+void Command::execute1(const path &p, const Arguments &args, std::error_code *ec)
 {
     Command c;
-    c.program = p;
-    c.args = args;
+    c.setProgram(p);
+    c.setArguments(args);
     c.execute1(ec);
 }
 
@@ -842,38 +861,38 @@ void Command::execute(const path &p, std::error_code &ec)
     execute1(p, {}, &ec);
 }
 
-void Command::execute(const path &p, const Args &args)
+void Command::execute(const path &p, const Arguments &args)
 {
     execute1(p, args);
 }
 
-void Command::execute(const path &p, const Args &args, std::error_code &ec)
+void Command::execute(const path &p, const Arguments &args, std::error_code &ec)
 {
     execute1(p, args, &ec);
 }
 
-void Command::execute(const Args &args)
+void Command::execute(const Arguments &args)
 {
     Command c;
-    c.args = args;
+    c.arguments = args;
     c.execute();
 }
 
-void Command::execute(const Args &args, std::error_code &ec)
+void Command::execute(const Arguments &args, std::error_code &ec)
 {
     Command c;
-    c.args = args;
+    c.arguments = args;
     c.execute(ec);
 }
 
 void Command::execute(const std::initializer_list<String> &args)
 {
-    execute(Args(args));
+    execute(Arguments(args));
 }
 
 void Command::execute(const std::initializer_list<String> &args, std::error_code &ec)
 {
-    execute(Args(args), ec);
+    execute(Arguments(args), ec);
 }
 
 }

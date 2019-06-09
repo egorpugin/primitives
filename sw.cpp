@@ -22,21 +22,11 @@ static void gen_stamp(const DependencyPtr &tools_stamp_gen, NativeExecutedTarget
 
 static void gen_sqlite2cpp(const DependencyPtr &tools_sqlite2cpp, NativeExecutedTarget &t, const path &sql_file, const path &out_file, const String &ns)
 {
-    {
-        auto d = t + tools_sqlite2cpp;
-        d->setDummy(true);
-    }
-
-    auto out = t.BinaryDir / out_file;
-
-    SW_MAKE_COMMAND_AND_ADD(c, t);
-    c->setProgram(tools_sqlite2cpp);
-    c->args.push_back(sql_file.u8string());
-    c->args.push_back(out.u8string());
-    c->args.push_back(ns);
-    c->addInput(sql_file);
-    c->addOutput(out);
-    t += out;
+    auto c = t.addCommand();
+    c << cmd::prog(tools_sqlite2cpp)
+        << cmd::in(sql_file)
+        << cmd::out(out_file)
+        << ns;
 }
 
 static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const path &in)
@@ -72,17 +62,16 @@ static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const 
     }
 
     auto f = t.SourceDir / in;
-    auto wdir = f.parent_path();
     auto out = t.BinaryDir / in.parent_path() / in.filename().stem();
 
-    SW_MAKE_CUSTOM_COMMAND_AND_ADD(EmbedCommand, c, t);
-    c->setProgram(embedder);
-    c->working_directory = wdir;
-    c->args.push_back(f.u8string());
-    c->args.push_back(out.u8string());
-    c->addInput(f);
-    c->addOutput(out);
-    t += in, out;
+    auto c = t.addCommand();
+    c.c = std::make_shared<EmbedCommand>(c.c->swctx);
+    SW_INTERNAL_INIT_COMMAND(c.c, t);
+    c << cmd::prog(embedder)
+        << cmd::wdir(f.parent_path())
+        << cmd::in(in)
+        << cmd::out(out)
+        ;
     t += IncludeDirectory(out.parent_path()); // but remove this later
 }
 

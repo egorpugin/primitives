@@ -8,6 +8,8 @@
 
 #include <primitives/filesystem.h>
 
+#include <deque>
+
 namespace primitives::command
 {
 
@@ -19,7 +21,10 @@ enum class QuoteType
     /// Add " to begin and end
     Simple,
 
-    /// Simple plus escape " inside string
+    /// Escape " and \ inside string
+    Escape,
+
+    /// Simple plus Escape
     SimpleAndEscape,
 
     // cmd
@@ -30,62 +35,51 @@ enum class QuoteType
 
 struct PRIMITIVES_COMMAND_API Argument
 {
-    using Element = String;
+    virtual ~Argument() = 0;
 
-    static inline const size_t npos = -1;
+    virtual String toString() const = 0;
+    virtual std::unique_ptr<Argument> clone() const = 0;
 
-    Argument() = default;
-    Argument(const Element &);
-    Argument(const path &);
+    String quote(QuoteType type = QuoteType::Simple) const;
+    static String quote(const String &, QuoteType type = QuoteType::Simple);
+};
 
-    const char *data() const;
-    Element quote(QuoteType type = QuoteType::Simple) const;
-    size_t size() const;
-    size_t find(const Element &) const;
-    Element substr(size_t pos, size_t count = npos) const;
+struct PRIMITIVES_COMMAND_API SimpleArgument : Argument
+{
+    SimpleArgument() = default;
+    SimpleArgument(const String &);
+    SimpleArgument(const path &);
 
-    Element &get();
-    const Element &get() const;
-    operator const Element &() const;
-    operator path() const;
-
-    char &operator[](int i);
-    const char &operator[](int i) const;
-
-    bool operator==(const Argument &) const;
-    bool operator!=(const Argument &) const;
-    // other ops
+    String toString() const override;
+    std::unique_ptr<Argument> clone() const override;
 
 private:
-    Element a;
-
-    friend bool operator==(const Argument &, const Element &);
-    friend bool operator!=(const Argument &, const Element &);
-    friend bool operator==(const Element &, const Argument &);
-    friend bool operator!=(const Element &, const Argument &);
+    String a;
 };
 
 struct PRIMITIVES_COMMAND_API Arguments
 {
-    using Element = Argument;
-    using Storage = std::vector<Element>;
+    using Element = std::unique_ptr<Argument>;
+    using Storage = std::deque<Element>;
     using iterator = Storage::iterator;
     using const_iterator = Storage::const_iterator;
 
     Arguments() = default;
-    Arguments(const std::initializer_list<Element::Element> &);
-    Arguments(const Storage &);
+    Arguments(const std::initializer_list<String> &);
     Arguments(const Strings &);
 
-    void push_back(const Element &);
+    Arguments(const Arguments &);
+    Arguments &operator=(const Arguments &);
+
+    void push_back(Element);
     void push_back(const char *);
-    void push_back(const Element::Element &);
+    void push_back(const String &);
     void push_back(const path &);
     void push_back(const Arguments &);
+    void push_front(const path &);
 
     bool empty() const { return args.empty(); }
     size_t size() const;
-    void shift(int n = 1);
 
     Element &operator[](int i);
     const Element &operator[](int i) const;
@@ -98,30 +92,5 @@ struct PRIMITIVES_COMMAND_API Arguments
 private:
     Storage args;
 };
-
-// make dll?
-inline
-bool operator==(const Argument &a, const Argument::Element &s)
-{
-    return a.a == s;
-}
-
-inline
-bool operator!=(const Argument &a, const Argument::Element &s)
-{
-    return a.a != s;
-}
-
-inline
-bool operator==(const Argument::Element &s, const Argument &a)
-{
-    return s == a.a;
-}
-
-inline
-bool operator!=(const Argument::Element &s, const Argument &a)
-{
-    return s != a.a;
-}
 
 }

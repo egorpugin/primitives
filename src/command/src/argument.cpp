@@ -6,100 +6,63 @@
 
 #include <primitives/argument.h>
 
+#include <boost/algorithm/string.hpp>
 #include <primitives/exceptions.h>
 
 namespace primitives::command
 {
 
-Argument::Argument(const Element &s) : a(s)
+Argument::~Argument()
 {
 }
 
-// do not normalize, get as is
-Argument::Argument(const path &p) : a(p.u8string())
+String Argument::quote(QuoteType type) const
 {
+    return quote(toString(), type);
 }
 
-const char *Argument::data() const
-{
-    return a.data();
-}
-
-Argument::Element Argument::substr(size_t pos, size_t count) const
-{
-    return a.substr(pos, count);
-}
-
-Argument::Element Argument::quote(QuoteType type) const
+String Argument::quote(const String &in_s, QuoteType type)
 {
     switch (type)
     {
     case QuoteType::None:
-        return a;
+        return in_s;
     case QuoteType::Simple:
-        return "\"" + a + "\"";
+        return "\"" + in_s + "\"";
+    case QuoteType::Escape:
+    {
+        auto s = in_s;
+        boost::replace_all(s, "\\", "\\\\");
+        boost::replace_all(s, "\"", "\\\"");
+        return s;
+    }
+    case QuoteType::SimpleAndEscape:
+        return quote(quote(in_s, QuoteType::Escape), QuoteType::Simple);
     default:
         SW_UNIMPLEMENTED;
     }
 }
 
-size_t Argument::find(const Element &s) const
+SimpleArgument::SimpleArgument(const String &s) : a(s)
 {
-    return a.find(s);
 }
 
-char &Argument::operator[](int i)
+// do not normalize, get as is
+SimpleArgument::SimpleArgument(const path &p) : a(p.u8string())
 {
-    return a[i];
 }
 
-const char &Argument::operator[](int i) const
-{
-    return a[i];
-}
-
-Argument::operator path() const
+String SimpleArgument::toString() const
 {
     return a;
 }
 
-Argument::operator const Element &() const
+std::unique_ptr<Argument> SimpleArgument::clone() const
 {
-    return a;
-}
-
-Argument::Element &Argument::get()
-{
-    return a;
-}
-
-const Argument::Element &Argument::get() const
-{
-    return a;
-}
-
-size_t Argument::size() const
-{
-    return a.size();
-}
-
-bool Argument::operator==(const Argument &rhs) const
-{
-    return a == rhs.a;
-}
-
-bool Argument::operator!=(const Argument &rhs) const
-{
-    return a != rhs.a;
+    return std::make_unique<SimpleArgument>(a);
 }
 
 Arguments::Arguments(const std::initializer_list<String> &l)
-{
-    for (auto &e : l)
-        push_back(e);
-}
-
-Arguments::Arguments(const Storage &l)
 {
     for (auto &e : l)
         push_back(e);
@@ -109,6 +72,18 @@ Arguments::Arguments(const Strings &l)
 {
     for (auto &e : l)
         push_back(e);
+}
+
+Arguments::Arguments(const Arguments &rhs)
+{
+    operator=(rhs);
+}
+
+Arguments &Arguments::operator=(const Arguments &rhs)
+{
+    for (auto &e : rhs)
+        push_back(e->clone());
+    return *this;
 }
 
 Arguments::Element &Arguments::operator[](int i)
@@ -121,30 +96,30 @@ const Arguments::Element &Arguments::operator[](int i) const
     return args[i];
 }
 
-void Arguments::push_back(const Element &s)
+void Arguments::push_back(Element e)
 {
-    args.push_back(s);
+    args.push_back(std::move(e));
 }
 
 void Arguments::push_back(const char *s)
 {
-    args.push_back(String(s));
+    push_back(String(s));
 }
 
 void Arguments::push_back(const String &s)
 {
-    args.push_back(s);
+    push_back(std::make_unique<SimpleArgument>(s));
 }
 
 void Arguments::push_back(const path &p)
 {
-    args.push_back(p);
+    push_back(std::make_unique<SimpleArgument>(p));
 }
 
 void Arguments::push_back(const Arguments &args2)
 {
     for (auto &a : args2)
-        args.push_back(a);
+        args.push_back(a->clone());
 }
 
 size_t Arguments::size() const
@@ -172,12 +147,9 @@ Arguments::const_iterator Arguments::end() const
     return args.end();
 }
 
-void Arguments::shift(int n)
+void Arguments::push_front(const path &p)
 {
-    if (n > args.size())
-        throw SW_RUNTIME_ERROR("shift: n > size()");
-    auto t = std::move(args);
-    args.assign(t.begin() + n, t.end());
+    args.push_front(std::make_unique<SimpleArgument>(p));
 }
 
 } // namespace primitives::command

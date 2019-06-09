@@ -25,7 +25,8 @@ using Commands = std::unordered_set<Command*>;
 struct PRIMITIVES_COMMAND_API Command
 {
     using ActionType = void(const String &, bool /* eof */);
-    using Args = command::Arguments;
+    using Argument = command::Argument;
+    using Arguments = command::Arguments;
 
     struct Stream
     {
@@ -38,9 +39,8 @@ struct PRIMITIVES_COMMAND_API Command
         char buf[8192];
     };
 
+    Arguments arguments; // hide?
     // input
-    path program;
-    Args args;
     bool inherit_current_evironment = true;
     StringMap<String> environment;
     path working_directory;
@@ -59,7 +59,6 @@ struct PRIMITIVES_COMMAND_API Command
     bool detached = false;
     bool create_new_console = false;
     void *attribute_list = nullptr; // win32 STARTUPINFOEX
-    //bool protect_args_with_quotes = true;
     //bool capture = true; // by default - we can make redirect to null by default instead
     bool inherit = false; // inherit everything (out+err)
 
@@ -71,8 +70,12 @@ public:
     Command();
     virtual ~Command();
 
-    virtual Args &getArgs() { return args; }
-    virtual const Args &getArgs() const { return const_cast<Command*>(this)->getArgs(); }
+    bool isProgramSet() const { return program_set; }
+    void setProgram(const path &);
+    String getProgram() const;
+    virtual Arguments &getArguments();
+    virtual const Arguments &getArguments() const;
+    void setArguments(const Arguments &);
 
     virtual void execute() { execute1(); }
     virtual void execute(std::error_code &ec) { execute1(&ec); }
@@ -86,8 +89,6 @@ public:
     String print() const;
     String getError() const;
 
-    virtual path getProgram() const;
-
     //void setInteractive(bool i);
 
     // hide? no, but add control over chaining
@@ -100,21 +101,22 @@ public:
 public:
     static void execute(const path &p);
     static void execute(const path &p, std::error_code &ec);
-    static void execute(const path &p, const Args &args);
-    static void execute(const path &p, const Args &args, std::error_code &ec);
-    static void execute(const Args &args);
-    static void execute(const Args &args, std::error_code &ec);
+    static void execute(const path &p, const Arguments &);
+    static void execute(const path &p, const Arguments &, std::error_code &ec);
+    static void execute(const Arguments &);
+    static void execute(const Arguments &, std::error_code &ec);
     static void execute(const std::initializer_list<String> &args);
     static void execute(const std::initializer_list<String> &args, std::error_code &ec);
 
 private:
+    bool program_set = false;
     Strings errors;
 
     void preExecute(std::error_code *ec);
     void execute1(std::error_code *ec = nullptr);
     std::vector<Command*> execute2(std::error_code *ec);
 
-    static void execute1(const path &p, const Args &args = {}, std::error_code *ec = nullptr);
+    static void execute1(const path &p, const Arguments & = {}, std::error_code *ec = nullptr);
 };
 
 /// return empty when file not found

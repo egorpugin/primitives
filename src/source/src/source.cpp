@@ -114,11 +114,11 @@ static void downloadRepository(F &&f)
     }
 }
 
-static void execute_command_in_dir(const path &dir, const Command::Args &args)
+static void execute_command_in_dir(const path &dir, const Command::Arguments &args)
 {
     Command c;
     c.working_directory = dir;
-    c.args = args;
+    c.setArguments(args);
     c.out.inherit = true;
     c.err.inherit = true;
     c.execute();
