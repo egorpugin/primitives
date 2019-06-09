@@ -56,11 +56,6 @@ static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const 
     if (in.is_absolute())
         throw std::runtime_error("embed: in must be relative to SourceDir");
 
-    {
-        auto d = t + embedder;
-        d->setDummy(true);
-    }
-
     auto f = t.SourceDir / in;
     auto out = t.BinaryDir / in.parent_path() / in.filename().stem();
 
@@ -77,11 +72,6 @@ static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const 
 
 static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Strings &modules)
 {
-    {
-        auto d = t + sqt;
-        d->setDummy(true);
-    }
-
     Files out;
     auto i = t.BinaryDir / "include";
     auto v = t.getPackage().version.toString();
