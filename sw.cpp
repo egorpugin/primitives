@@ -5,19 +5,11 @@
 
 static void gen_stamp(const DependencyPtr &tools_stamp_gen, NativeExecutedTarget &t)
 {
-    {
-        auto d = t + tools_stamp_gen;
-        d->setDummy(true);
-    }
-
-    auto out = t.BinaryPrivateDir / "stamp.h.in";
-
-    SW_MAKE_COMMAND_AND_ADD(c, t);
-    c->always = true;
-    c->setProgram(tools_stamp_gen);
-    c->redirectStdout(out);
-    c->addOutput(out);
-    t += out;
+    auto c = t.addCommand();
+    c.c->always = true;
+    c << cmd::prog(tools_stamp_gen)
+        << cmd::std_out(t.BinaryPrivateDir / "stamp.h.in")
+        ;
 }
 
 static void gen_sqlite2cpp(const DependencyPtr &tools_sqlite2cpp, NativeExecutedTarget &t, const path &sql_file, const path &out_file, const String &ns)
@@ -54,7 +46,7 @@ static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const 
     };
 
     if (in.is_absolute())
-        throw std::runtime_error("embed: in must be relative to SourceDir");
+        throw SW_RUNTIME_ERROR("embed: in must be relative to SourceDir");
 
     auto f = t.SourceDir / in;
     auto out = t.BinaryDir / in.parent_path() / in.filename().stem();
@@ -62,6 +54,7 @@ static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const 
     auto c = t.addCommand();
     c.c = std::make_shared<EmbedCommand>(c.c->swctx);
     SW_INTERNAL_INIT_COMMAND(c.c, t);
+    SW_INTERNAL_ADD_COMMAND(c.c, t);
     c << cmd::prog(embedder)
         << cmd::wdir(f.parent_path())
         << cmd::in(in)
