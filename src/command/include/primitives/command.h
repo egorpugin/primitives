@@ -89,6 +89,12 @@ public:
     String print() const;
     String getError() const;
 
+    void push_back(Arguments::Element);
+    void push_back(const char *);
+    void push_back(const String &);
+    void push_back(const path &);
+    void push_back(const Arguments &);
+
     //void setInteractive(bool i);
 
     // hide? no, but add control over chaining

@@ -592,6 +592,31 @@ Command::~Command()
 {
 }
 
+void Command::push_back(Arguments::Element in)
+{
+    arguments.push_back(std::move(in));
+}
+
+void Command::push_back(const char *in)
+{
+    arguments.push_back(in);
+}
+
+void Command::push_back(const String &in)
+{
+    arguments.push_back(in);
+}
+
+void Command::push_back(const path &in)
+{
+    arguments.push_back(in);
+}
+
+void Command::push_back(const Arguments &in)
+{
+    arguments.push_back(in);
+}
+
 void Command::setProgram(const path &p)
 {
     if (program_set)
