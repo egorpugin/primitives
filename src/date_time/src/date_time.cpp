@@ -16,7 +16,9 @@ TimePoint getUtc()
 
 TimePoint string2timepoint(const String &s)
 {
-    auto t = boost::posix_time::time_from_string(s);
+    boost::posix_time::ptime t;
+    std::istringstream ss(s);
+    ss >> t;
     return Clock::from_time_t(boost::posix_time::to_time_t(t));
 }
 
