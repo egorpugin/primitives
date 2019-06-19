@@ -342,7 +342,7 @@ std::string Version::toString(const String &delimeter, const Version &v) const
     return toString(delimeter, (Level)v.numbers.size());
 }
 
-size_t Version::getStdHash() const
+size_t Version::getHash() const
 {
     if (isBranch())
         return std::hash<std::string>()(getBranch());
@@ -973,11 +973,27 @@ std::string VersionRange::RangePair::toString() const
     return s + "<=" + second.toString(level);
 }
 
-size_t VersionRange::RangePair::getStdHash() const
+std::optional<Version> VersionRange::toVersion() const
+{
+    if (isBranch())
+        return branch;
+    if (size() != 1)
+        return {};
+    return range.begin()->toVersion();
+}
+
+std::optional<Version> VersionRange::RangePair::toVersion() const
+{
+    if (first != second)
+        return {};
+    return first;
+}
+
+size_t VersionRange::RangePair::getHash() const
 {
     size_t h = 0;
-    hash_combine(h, first.getStdHash());
-    hash_combine(h, second.getStdHash());
+    hash_combine(h, first.getHash());
+    hash_combine(h, second.getHash());
     return h;
 }
 
@@ -1031,13 +1047,13 @@ std::string VersionRange::toStringV1() const
     return v.toString();
 }
 
-size_t VersionRange::getStdHash() const
+size_t VersionRange::getHash() const
 {
     if (isBranch())
         return std::hash<std::string>()(branch);
     size_t h = 0;
     for (auto &n : range)
-        hash_combine(h, n.getStdHash());
+        hash_combine(h, n.getHash());
     return h;
 }
 

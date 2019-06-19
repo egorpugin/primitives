@@ -149,7 +149,7 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     std::string toString(const Version &v) const;
     std::string toString(const std::string &delimeter, const Version &v) const;
 
-    size_t getStdHash() const;
+    size_t getHash() const;
 
     // modificators
     void decrementVersion();
@@ -244,13 +244,17 @@ struct PRIMITIVES_VERSION_API VersionRange
     /// parse from string
     VersionRange(const std::string &); // no explicit
 
+    /// convert to single version if possible
+    /// consists of one range and first == second
+    std::optional<Version> toVersion() const;
+
     /// convert to string
     std::string toString() const;
 
     /// call to cppan1
     std::string toStringV1() const;
 
-    size_t getStdHash() const;
+    size_t getHash() const;
 
     bool isEmpty() const;
     bool isOutside(const Version &) const;
@@ -300,7 +304,8 @@ private:
         std::string toString() const;
         bool hasVersion(const Version &v) const;
         bool isBranch() const;
-        size_t getStdHash() const;
+        size_t getHash() const;
+        std::optional<Version> toVersion() const;
 
         std::optional<RangePair> operator&(const RangePair &) const;
     };
@@ -351,7 +356,7 @@ template<> struct hash<primitives::version::Version>
 {
     size_t operator()(const primitives::version::Version &v) const
     {
-        return v.getStdHash();
+        return v.getHash();
     }
 };
 
@@ -359,7 +364,7 @@ template<> struct hash<primitives::version::VersionRange>
 {
     size_t operator()(const primitives::version::VersionRange &v) const
     {
-        return v.getStdHash();
+        return v.getHash();
     }
 };
 
