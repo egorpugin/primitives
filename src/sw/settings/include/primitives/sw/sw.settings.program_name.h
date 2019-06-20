@@ -1,19 +1,13 @@
 #include <primitives/sw/settings_program_name.h>
 
 #if defined(CPPAN_EXECUTABLE) || defined(SW_EXECUTABLE)
-namespace sw
-{
-
+EXPORT_FROM_EXECUTABLE
 std::string getProgramName()
 {
     return PACKAGE_NAME_CLEAN;
 }
 
-}
-
-namespace primitives
-{
-
+EXPORT_FROM_EXECUTABLE
 std::string getVersionString()
 {
     std::string s;
@@ -23,7 +17,5 @@ std::string getVersionString()
     s += "\n";
     s += "assembled " __DATE__ " " __TIME__;
     return s;
-}
-
 }
 #endif
