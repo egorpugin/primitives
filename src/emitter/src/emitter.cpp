@@ -27,23 +27,23 @@ Line::Line(const Text &t, int n)
 {}
 
 Line::Line(const Emitter &ctx, int n)
-    : context(&ctx), n_indents(n)
+    : emitter(&ctx), n_indents(n)
 {
-    context->parent_ = this;
+    emitter->parent_ = this;
 }
 
 Line::Line(Line &&l)
 {
     text = std::move(l.text);
     n_indents = l.n_indents;
-    context = l.context;
-    l.context = nullptr;
+    emitter = l.emitter;
+    l.emitter = nullptr;
 }
 
 Line::~Line()
 {
-    if (context)
-        context->parent_ = nullptr;
+    if (emitter)
+        emitter->parent_ = nullptr;
 }
 
 Line& Line::operator+=(const Text &t)
@@ -59,15 +59,15 @@ void Line::setText(const Text &t)
 
 Line::Text &Line::back()
 {
-    if (context)
-        return context->lines.back().back();
+    if (emitter)
+        return emitter->lines.back().back();
     return text;
 }
 
 Line::Text Line::getText() const
 {
-    if (context)
-        return context->getText();
+    if (emitter)
+        return emitter->getText();
     return text;
 }
 
@@ -94,7 +94,7 @@ Emitter::~Emitter()
     if (parent_)
     {
         parent_->setText(getText());
-        parent_->context = nullptr;
+        parent_->emitter = nullptr;
     }
 }
 
@@ -200,10 +200,10 @@ void Emitter::addLine(const Text &s)
 
 void Emitter::addLine(const Emitter &ctx)
 {
-    addContext(ctx);
+    addEmitter(ctx);
 }
 
-void Emitter::addContext(const Emitter &ctx)
+void Emitter::addEmitter(const Emitter &ctx)
 {
     addLine(Line{ ctx, n_indents });
 }
@@ -264,8 +264,8 @@ Emitter::Text Emitter::getText() const
             for (int i = 0; i < line.n_indents; i++)
                 space += indent;
         }
-        else if (line.context)
-            continue; // we do not add empty line on empty existing context
+        else if (line.emitter)
+            continue; // we do not add empty line on empty existing emitter
         s += space + line.getText() + newline;
     }
     return s;
@@ -277,9 +277,9 @@ Emitter::Lines Emitter::getLines() const
     lines += this->lines;
     for (auto i = lines.begin(); i != lines.end(); i++)
     {
-        if (i->context)
+        if (i->emitter)
         {
-            auto l2 = i->context->getLines();
+            auto l2 = i->emitter->getLines();
             for (auto &l : l2)
                 l.n_indents += i->n_indents;
             i = lines.erase(i);

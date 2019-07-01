@@ -27,7 +27,7 @@ struct PRIMITIVES_EMITTER_API Line
     using Text = std::string;
 
     int n_indents = 0;
-    const Emitter *context = nullptr;
+    const Emitter *emitter = nullptr;
 
     Line() = default;
     Line(const Line &) = default;
@@ -78,7 +78,7 @@ struct PRIMITIVES_EMITTER_API Emitter
     void addText(const char* str, int n);
 
     void addLine(const Emitter &);
-    void addContext(const Emitter &);
+    void addEmitter(const Emitter &);
 
     void increaseIndent(int n = 1);
     void decreaseIndent(int n = 1);
