@@ -39,8 +39,9 @@ static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const 
             {
                 static const auto prefix = "embedding: "s;
                 boost::trim(line);
-                for (auto &f : outputs)
-                    File(f, *fs).addImplicitDependency(line.substr(prefix.size()));
+                addImplicitInput(line.substr(prefix.size()));
+                //for (auto &f : outputs)
+                    //File(f, *fs).addImplicitDependency(line.substr(prefix.size()));
             }
         }
     };
