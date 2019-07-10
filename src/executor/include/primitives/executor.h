@@ -378,7 +378,6 @@ private:
     Task get_task(size_t i);
     Task get_task_non_stealing();
     Task get_task_non_stealing(size_t i);
-    void set_thread_name(const std::string &name) const;
 
     void push(Task &&t);
     Task try_pop();

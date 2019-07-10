@@ -90,7 +90,8 @@ void Executor::run(size_t i, const std::string &name)
     if (!n.empty())
         n += " ";
     n += std::to_string(i);
-    set_thread_name(n);
+    primitives::setThreadName(n);
+
     {
         std::unique_lock<std::mutex> lk(m);
         thread_ids[std::this_thread::get_id()] = i;
@@ -128,6 +129,8 @@ bool Executor::run_task(size_t i)
 
 void Executor::run_task(size_t i, Task &t) noexcept
 {
+    primitives::ScopedThreadName stn(std::to_string(i) + " busy");
+
     auto &thr = thread_pool[i];
     t();
     thr.busy = false;
@@ -263,13 +266,6 @@ Task Executor::try_pop(size_t i)
             break;
     }
     return t;
-}
-
-void Executor::set_thread_name(const std::string &name) const
-{
-    if (name.empty())
-        return;
-    primitives::setThreadName(name);
 }
 
 bool Executor::empty() const
