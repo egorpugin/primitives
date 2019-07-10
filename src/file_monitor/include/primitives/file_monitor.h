@@ -35,7 +35,7 @@ class PRIMITIVES_FILE_MONITOR_API FileMonitor
 {
     struct record
     {
-        using Callback = std::function<void(const path &)>;
+        using Callback = std::function<void(const path &, int event)>;
 
         const FileMonitor *mon;
         path dir;
