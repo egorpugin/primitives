@@ -54,7 +54,6 @@ static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const 
 
     auto c = t.addCommand();
     c.c = std::make_shared<EmbedCommand>(c.c->swctx);
-    SW_INTERNAL_INIT_COMMAND(c.c, t);
     SW_INTERNAL_ADD_COMMAND(c.c, t);
     c << cmd::prog(embedder)
         << cmd::wdir(f.parent_path())
