@@ -29,7 +29,7 @@
 %expect 3
 
 %{
-#include <primitives/version.h>
+#include <primitives/version_range.h>
 using namespace primitives::version;
 
 enum : Version::Number { ANY = -2, UNSET = -1, };
