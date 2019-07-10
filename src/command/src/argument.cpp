@@ -12,8 +12,28 @@
 namespace primitives::command
 {
 
+bool ArgumentPosition::operator<(const ArgumentPosition &rhs) const
+{
+    auto max = std::min(positions.size(), rhs.positions.size());
+    auto v1 = positions;
+    auto v2 = rhs.positions;
+    v1.resize(max);
+    v2.resize(max);
+    return v1 < v2;
+}
+
+void ArgumentPosition::push_back(int v)
+{
+    positions.push_back(v);
+}
+
 Argument::~Argument()
 {
+}
+
+ArgumentPosition Argument::getPosition() const
+{
+    return {};
 }
 
 String Argument::quote(QuoteType type) const
@@ -28,6 +48,8 @@ String Argument::quote(const String &in_s, QuoteType type)
     case QuoteType::None:
         return in_s;
     case QuoteType::Simple:
+        if (!in_s.empty() && in_s[0] == '\"')
+            return in_s;
         return "\"" + in_s + "\"";
     case QuoteType::Escape:
     {

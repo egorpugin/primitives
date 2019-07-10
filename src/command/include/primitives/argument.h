@@ -33,12 +33,22 @@ enum class QuoteType
     // batch
 };
 
+struct PRIMITIVES_COMMAND_API ArgumentPosition
+{
+    bool operator<(const ArgumentPosition &) const;
+    void push_back(int);
+
+private:
+    std::vector<int> positions;
+};
+
 struct PRIMITIVES_COMMAND_API Argument
 {
     virtual ~Argument() = 0;
 
     virtual String toString() const = 0;
     virtual std::unique_ptr<Argument> clone() const = 0;
+    virtual ArgumentPosition getPosition() const;
 
     String quote(QuoteType type = QuoteType::Simple) const;
     static String quote(const String &, QuoteType type = QuoteType::Simple);
