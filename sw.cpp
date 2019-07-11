@@ -253,6 +253,10 @@ void build(Solution &s)
     symbol.Public += "BOOST_DLL_USE_STD_FS"_def;
     symbol.Public += filesystem, "org.sw.demo.boost.dll-1"_dep;
 
+    ADD_LIBRARY(xml);
+    xml.Public += string, templates,
+        "org.sw.demo.xmlsoft.libxml2"_dep;
+
     ADD_LIBRARY_WITH_NAME(sw_settings, "sw.settings");
     sw_settings.Public += settings;
     sw_settings -= "src/sw.settings.program_name.cpp";

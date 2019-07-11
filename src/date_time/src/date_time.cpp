@@ -14,6 +14,14 @@ TimePoint getUtc()
     return Clock::from_time_t(boost::posix_time::to_time_t(t));
 }
 
+TimePoint getLocalTime()
+{
+    boost::posix_time::ptime t(
+        boost::gregorian::day_clock::local_day(),
+        boost::posix_time::second_clock::local_time().time_of_day());
+    return Clock::from_time_t(boost::posix_time::to_time_t(t));
+}
+
 TimePoint string2timepoint(const String &s)
 {
     boost::posix_time::ptime t;

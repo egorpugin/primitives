@@ -89,7 +89,13 @@ void FileMonitor::record::cb(uv_fs_event_t* handle, const char* filename, int ev
         return;
     auto fn = fs::u8path(filename);
     if (r->mon->has_file(r->dir, fn) && r->callback)
-        r->callback(r->dir / fn, event);
+    {
+        // protected add dir
+        auto p = r->dir;
+        p += "/";
+        p += fn;
+        r->callback(p, event);
+    }
 }
 
 FileMonitor::FileMonitor()

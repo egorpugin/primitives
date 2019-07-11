@@ -24,6 +24,9 @@ PRIMITIVES_DATE_TIME_API
 TimePoint getUtc();
 
 PRIMITIVES_DATE_TIME_API
+TimePoint getLocalTime();
+
+PRIMITIVES_DATE_TIME_API
 TimePoint string2timepoint(const String &s);
 
 PRIMITIVES_DATE_TIME_API

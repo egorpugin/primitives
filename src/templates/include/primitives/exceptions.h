@@ -11,7 +11,11 @@
 #include <stdexcept>
 #include <string>
 
+#ifdef SW_EXCEPTIONS_NO_SOURCE_INFO
+#define SW_BASE_EXCEPTION(t, msg, st) t("", "", 0, msg, st)
+#else
 #define SW_BASE_EXCEPTION(t, msg, st) t(__FILE__, __func__, __LINE__, msg, st)
+#endif
 
 #define SW_EXCEPTION_CUSTOM(msg, st) SW_BASE_EXCEPTION(sw::Exception, msg, st)
 #define SW_RUNTIME_ERROR_CUSTOM(msg, st) SW_BASE_EXCEPTION(sw::RuntimeError, msg, st)

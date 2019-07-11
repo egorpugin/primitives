@@ -61,10 +61,12 @@ std::string BaseException::format() const
     //s += ex_type;
 #ifdef USE_STACKTRACE
     //s += "Exception: " + message; // disabled for now, too poor :(
-    s += "Exception in file " + file + ":" + std::to_string(line) + ", function " + function + ": " + message;
 #else
-    s += "Exception in file " + file + ":" + std::to_string(line) + ", function " + function + ": " + message;
 #endif
+    if (file.empty() && function.empty() && line == 0)
+        s += "Exception: " + message;
+    else
+        s += "Exception in file " + file + ":" + std::to_string(line) + ", function " + function + ": " + message;
     return s;
 }
 
