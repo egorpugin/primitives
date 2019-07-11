@@ -114,6 +114,9 @@ namespace primitives::filesystem
 PRIMITIVES_FILESYSTEM_API
 void remove_file(const path &p);
 
+PRIMITIVES_FILESYSTEM_API
+path canonical(const path &p);
+
 }
 
 namespace std

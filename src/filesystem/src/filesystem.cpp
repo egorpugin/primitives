@@ -54,10 +54,10 @@ path get_home_directory()
 
 path current_thread_path(const path &p)
 {
-    thread_local path thread_working_dir = p.empty() ? fs::current_path() : fs::canonical(p);
+    thread_local path thread_working_dir = p.empty() ? fs::current_path() : primitives::filesystem::canonical(p);
     if (p.empty())
         return thread_working_dir;
-    return thread_working_dir = fs::canonical(p);
+    return thread_working_dir = primitives::filesystem::canonical(p);
 }
 
 namespace primitives::filesystem
@@ -69,6 +69,28 @@ void remove_file(const path &p)
     fs::remove(p, ec);
     if (ec)
         std::cerr << "Cannot remove file: " << p.u8string() << "\n";
+}
+
+path canonical(const path &p)
+{
+#ifdef _WIN32
+    try
+    {
+        return fs::canonical(p);
+    }
+    catch (const std::system_error &e)
+    {
+        if (e.code().value() != 1)
+            throw;
+        // WINDOWS BUG: ram disk
+    }
+    auto r = fs::absolute(p);
+    r = r.lexically_normal();
+    r = fs::u8path(normalize_path_windows(r));
+    return r;
+#else
+    return fs::canonical(p);
+#endif
 }
 
 }
@@ -339,7 +361,7 @@ bool is_under_root(path p, const path &root_dir)
     if (fs::exists(p))
         // Converts p, which must exist, to an absolute path
         // that has no symbolic link, dot, or dot-dot elements.
-        p = fs::canonical(p);
+        p = primitives::filesystem::canonical(p);
     while (!p.empty() && p != p.root_path())
     {
         if (fs::equivalent(p, root_dir, ec))
