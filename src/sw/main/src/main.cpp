@@ -354,20 +354,23 @@ static int setup(int argc, char *argv[])
     //  make it canonical (big drive letter on Windows)
     //  make it lexically normal
     //  remove trailing slashes
+
+    // we also use fs::u8path() here, because normalize_path() converts it to utf-8
+
     auto cp = fs::current_path();
     auto s = normalize_path(cp.lexically_normal());
     while (!s.empty() && s.back() == '/')
         s.resize(s.size() - 1);
 #ifdef _WIN32
-    s = normalize_path_windows(s);
+    s = normalize_path_windows(fs::u8path(s));
     // windows does not change case of the disk letter if other parts unchanged
-    cp = s;
+    cp = fs::u8path(s);
     // so we take parent dir first, set cd there
     cp = cp.parent_path();
     fs::current_path(cp);
     // then we restore our cwd but with our changes
 #endif
-    cp = s;
+    cp = fs::u8path(s);
     fs::current_path(cp);
 
     //
