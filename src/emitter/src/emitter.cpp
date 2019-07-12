@@ -168,7 +168,7 @@ void Emitter::addLineWithIndent(const Text &text, int n)
     while (1)
     {
         ls.push_back(Line{text.substr(old_pos, p - old_pos), n});
-        p++;
+        p += newline.size();
         old_pos = p;
         p = text.find(newline, p);
         if (p == text.npos)
@@ -255,6 +255,14 @@ void Emitter::trimEnd(size_t n)
 Emitter::Text Emitter::getText() const
 {
     Text s;
+    for (auto &line : getStrings())
+        s += line;
+    return s;
+}
+
+Strings Emitter::getStrings() const
+{
+    Strings s;
     auto lines = getLines();
     for (auto &line : lines)
     {
@@ -266,7 +274,7 @@ Emitter::Text Emitter::getText() const
         }
         else if (line.emitter)
             continue; // we do not add empty line on empty existing emitter
-        s += space + line.getText() + newline;
+        s.push_back(space + line.getText() + newline);
     }
     return s;
 }

@@ -88,6 +88,7 @@ struct PRIMITIVES_EMITTER_API Emitter
     void trimEnd(size_t n);
 
     virtual Text getText() const;
+    Strings getStrings() const; // virtual?
 
     //void setLines(const Lines &lines);
     Lines getLines() const;
