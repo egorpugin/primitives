@@ -103,7 +103,11 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, ofile.getHandle());
     curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, curl_transfer_info);
     curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &file_size_limit);
-    if (url.find("https") == 0)
+
+#ifdef _WIN32
+    if (!httpSettings.certs_file.empty())
+        curl_easy_setopt(curl, CURLOPT_CAINFO, httpSettings.certs_file.c_str());
+    else if (url.find("https") == 0)
     {
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
@@ -113,6 +117,7 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
             //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
         }
     }
+#endif
 
     auto res = curl_easy_perform(curl);
 
@@ -201,7 +206,10 @@ HttpResponse url_request(const HttpRequest &request)
         break;
     }
 
-    if (request.url.find("https") == 0)
+#ifdef _WIN32
+    if (!httpSettings.certs_file.empty())
+        curl_easy_setopt(curl, CURLOPT_CAINFO, httpSettings.certs_file.c_str());
+    else if (request.url.find("https") == 0)
     {
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
@@ -211,6 +219,7 @@ HttpResponse url_request(const HttpRequest &request)
             //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
         }
     }
+#endif
 
     HttpResponse response;
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response.response);
