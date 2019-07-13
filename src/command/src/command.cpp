@@ -861,6 +861,14 @@ void Command::appendPipeCommand(Command &c2)
     c2.prev = this;
 }
 
+Command *Command::getFirstCommand() const
+{
+    auto p = prev;
+    while (p && p->prev)
+        p = p->prev;
+    return p;
+}
+
 Command &Command::operator|(Command &c2)
 {
     appendPipeCommand(c2);

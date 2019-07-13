@@ -100,6 +100,7 @@ public:
     // hide? no, but add control over chaining
     // e.g. redirect stderr etc.
     void appendPipeCommand(Command &);
+    Command *getFirstCommand() const;
 
     Command &operator|(Command &);
     Command &operator|=(Command &);
