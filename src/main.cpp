@@ -119,10 +119,10 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
         String single = "\r\n";
         String end = single;
         std::vector<Command> c(n);
-        c[0].program = p;
+        c[0].setProgram(p);
         for (int i = 1; i < n; i++)
         {
-            c[i].program = "more";
+            c[i].setProgram("more");
             c[i - 1] | c[i];
             end += single;
 
@@ -143,7 +143,7 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
     //
     {
         Command c;
-        c.program = p;
+        c.setProgram(p);
         CHECK_NOTHROW(c.execute());
         CHECK(c.out.text == "hello\r\n");
     }
@@ -151,17 +151,17 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
     {
         write_file(p, "@echo hello world");
         Command c;
-        c.program = p;
+        c.setProgram(p);
         c.out.file = dir / "1.txt";
         REQUIRE_NOTHROW(c.execute());
         CHECK(read_file(dir / "1.txt") == "hello world\r\n");
         CHECK(read_file_without_bom(dir / "1.txt") == "hello world\r\n");
-        CHECK(read_file_from_offset(dir / "1.txt", 1) == "ello world\r\n");
+        CHECK(read_file(dir / "1.txt", 1) == "ello world\r\n");
     }
 
     {
         Command c2;
-        c2.program = "more";
+        c2.setProgram("more");
         c2.in.file = p;
         CHECK_NOTHROW(c2.execute());
         CHECK(c2.out.text == "@echo hello world\r\n");
@@ -170,18 +170,18 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
     {
         write_file(p, "@echo hello world\n@echo hello world\n@echo hello world");
         Command c;
-        c.program = p;
+        c.setProgram(p);
         REQUIRE_NOTHROW(c.execute());
         REQUIRE((c.out.text == "hello world\r\nhello world\r\nhello world\r\n"));
     }
 
     write_file(p, "@echo hello world");
     Command c;
-    c.program = p;
+    c.setProgram(p);
     REQUIRE_NOTHROW(c.execute());
 
     auto pbad = dir / "2";
-    c.program = pbad;
+    c.setProgram(pbad);
     REQUIRE_THROWS(c.execute());
     REQUIRE_NOTHROW(c.execute(ec));
     CHECK(ec);
@@ -198,8 +198,8 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
     CHECK(ec);
     {
         Command c;
-        c.program = "cmake";
-        c.args.push_back("--version");
+        c.setProgram("cmake");
+        c.push_back("--version");
         c.out.file = "1.txt";
         REQUIRE_NOTHROW(c.execute());
         CHECK(fs::exists("1.txt"));
@@ -278,7 +278,7 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
     // input stream
     {
         Command c2;
-        c2.program = "more";
+        c2.setProgram("more");
         c2.in.text = "hello";
         CHECK_NOTHROW(c2.execute());
         CHECK(c2.out.text == "hello\r\n");
