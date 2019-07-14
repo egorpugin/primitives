@@ -349,7 +349,7 @@ public:
     }
 
     void join(); // wait & terminate all workers
-    void stop(); // wait and
+    void stop();
     void wait(WaitStatus p = WaitStatus::BlockIncoming);
     bool stopped() const { return stopped_; }
 
@@ -399,7 +399,7 @@ void SharedState<T>::wait()
         // so we workaround with wait_for()
         const auto max_delay = 1s;
         auto delay = 100ms;
-        while (!set)
+        while (!set && !e.stopped())
         {
             std::unique_lock<std::mutex> lk(m);
             cv.wait_for(lk, delay, [this] { return set.load(); });
@@ -411,7 +411,7 @@ void SharedState<T>::wait()
     // continue executor business
     const auto max_delay = 1s;
     auto delay = 100ms;
-    while (!set)
+    while (!set && !e.stopped())
     {
         if (!e.try_run_one())
         {
