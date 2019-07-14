@@ -11,6 +11,27 @@
 namespace primitives::version
 {
 
+enum class VersionRangePairStringRepresentationType
+{
+    // examples provided with with default_level == 3
+    // SameDefaultLevel equals to SameRealLevel when default_level >= 3
+
+    // >1.0.0 <2.0.0 becomes >1.0.0 <2.0.0
+    // >1.1.0 <2.0.0 becomes >1.1.0 <2.0.0
+    // >1.2.3.4 <2.0.0 becomes >1.2.3.4 <2.0.0.0
+    SameDefaultLevel        = 0,
+
+    // >1.0.0 <2.0.0 becomes >1 <2
+    // >1.1.0 <2.0.0 becomes >1.1 <2.0
+    // >1.2.3.4 <2.0.0 becomes >1.2.3.4 <2.0.0.0
+    SameRealLevel           = 1,
+
+    // >1 <2         becomes >1 <2
+    // >1.1.0 <2.0.0 becomes >1.1 <2
+    // >1.2.3.4 <2.0.0 becomes >1.2.3.4 <2
+    IndividualRealLevel     = 2,
+};
+
 struct PRIMITIVES_VERSION_API VersionRange
 {
     /// default is any version or * or Version::min() - Version::max()
@@ -36,10 +57,15 @@ struct PRIMITIVES_VERSION_API VersionRange
     /// consists of one range and first == second
     std::optional<Version> toVersion() const;
 
-    /// convert to string
+    // maybe merge two toString()s?
+
+    /// convert to string, default is SameDefaultLevel
     std::string toString() const;
 
-    /// call to cppan1
+    /// convert to string
+    std::string toString(VersionRangePairStringRepresentationType) const;
+
+    /// call for cppan (sw v1)
     std::string toStringV1() const;
 
     size_t getHash() const;
@@ -89,7 +115,7 @@ private:
         using base = std::pair<Version, Version>;
         using base::base;
 
-        std::string toString() const;
+        std::string toString(VersionRangePairStringRepresentationType) const;
         bool hasVersion(const Version &v) const;
         bool isBranch() const;
         size_t getHash() const;

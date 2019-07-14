@@ -154,7 +154,7 @@ std::optional<VersionRange::RangePair> VersionRange::RangePair::operator&(const 
     return rp;
 }
 
-std::string VersionRange::RangePair::toString() const
+std::string VersionRange::RangePair::toString(VersionRangePairStringRepresentationType t) const
 {
     if (first.isBranch())
         return first.toString();
@@ -162,32 +162,33 @@ std::string VersionRange::RangePair::toString() const
         return second.toString();
 
     auto level = std::max(first.getLevel(), second.getLevel());
+    if (t == VersionRangePairStringRepresentationType::SameRealLevel)
+        level = std::max(first.getRealLevel(), second.getRealLevel());
     if (first == second)
-        return first.toString(level);
+    {
+        if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
+            return first.toString(first.getRealLevel());
+        else
+            return first.toString(level);
+    }
     std::string s;
     if (first != Version::min(first))
     {
         s += ">=";
-        s += first.toString(level);
+        if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
+            s += first.toString(first.getRealLevel());
+        else
+            s += first.toString(level);
     }
+    // reconsider?
+    // probably wrong now: 1.MAX.3
     if (std::any_of(second.numbers.begin(), second.numbers.end(),
         [](const auto &n) {return n == Version::maxNumber(); }))
     {
         if (second == Version::max(second))
         {
             if (s.empty())
-            {
-                /*if (second.getLevel() > Version::minimum_level)
-                {
-                    String s;
-                    for (int i = 0; i < second.getLevel(); i++)
-                        s += "*.";
-                    if (!s.empty())
-                        s.resize(s.size() - 1);
-                    return s;
-                }*/
                 return "*";
-            }
             return s;
         }
         if (second.getPatch() == Version::maxNumber() ||
@@ -195,12 +196,33 @@ std::string VersionRange::RangePair::toString() const
         {
             if (!s.empty())
                 s += " ";
-            return s + "<" + second.getNextVersion(level).toString(level);
+            if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
+            {
+                auto nv = second.getNextVersion(second.getRealLevel());
+                return s + "<" + nv.toString(nv.getRealLevel());
+            }
+            auto nv = second.getNextVersion(level);
+            if (t == VersionRangePairStringRepresentationType::SameRealLevel)
+            {
+                level = std::max(first.getRealLevel(), nv.getRealLevel());
+                s.clear();
+                if (first != Version::min(first))
+                {
+                    s += ">=";
+                    s += first.toString(level);
+                    if (!s.empty())
+                        s += " ";
+                }
+            }
+            return s + "<" + nv.toString(level);
         }
     }
     if (!s.empty())
         s += " ";
-    return s + "<=" + second.toString(level);
+    if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
+        return s + "<=" + second.toString(second.getRealLevel());
+    else
+        return s + "<=" + second.toString(level);
 }
 
 std::optional<Version> VersionRange::toVersion() const
@@ -239,12 +261,17 @@ bool VersionRange::isBranch() const
 
 std::string VersionRange::toString() const
 {
+    return toString(VersionRangePairStringRepresentationType::SameDefaultLevel);
+}
+
+std::string VersionRange::toString(VersionRangePairStringRepresentationType t) const
+{
     if (isBranch())
         return branch;
 
     std::string s;
     for (auto &p : range)
-        s += p.toString() + " || ";
+        s += p.toString(t) + " || ";
     if (!s.empty())
         s.resize(s.size() - 4);
     return s;
@@ -323,7 +350,7 @@ VersionRange &VersionRange::operator|=(const RangePair &rhs)
             throw SW_RUNTIME_ERROR("Cannot |= with branch on RHS");
 
         range.clear();
-        branch = rhs.toString();
+        branch = rhs.toString(VersionRangePairStringRepresentationType::IndividualRealLevel);
         return *this;
     }
 
@@ -387,7 +414,7 @@ VersionRange &VersionRange::operator&=(const RangePair &rhs)
             throw SW_RUNTIME_ERROR("Cannot &= with branch on RHS");
 
         range.clear();
-        branch = rhs.toString();
+        branch = rhs.toString(VersionRangePairStringRepresentationType::IndividualRealLevel);
         return *this;
     }
 

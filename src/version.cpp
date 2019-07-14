@@ -5,8 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <primitives/sw/main.h>
-#include <primitives/version.h>
-#include <primitives/version_helpers.h>
+#include <primitives/version_range.h>
 
 #include <chrono>
 #include <iostream>
@@ -854,8 +853,12 @@ TEST_CASE("Checking version ranges", "[range]")
         vr2 = " > 1 < 3 || >5 <7 ";
         vr1 = vr2;
         CHECK(vr1.toString() == ">=1.0.1 <3.0.0 || >=5.0.1 <7.0.0");
+        CHECK(vr1.toString(VersionRangePairStringRepresentationType::SameRealLevel) == vr1.toString());
+        CHECK(vr1.toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">=1.0.1 <3 || >=5.0.1 <7");
         vr1 |= ">2 <4||>4 <6";
         CHECK(vr1.toString() == ">=1.0.1 <4.0.0 || >=4.0.1 <7.0.0");
+        CHECK(vr1.toString(VersionRangePairStringRepresentationType::SameRealLevel) == vr1.toString());
+        CHECK(vr1.toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">=1.0.1 <4 || >=4.0.1 <7");
     }
 
     // VersionRange ops
@@ -1167,6 +1170,7 @@ TEST_CASE("Checking version ranges", "[range]")
     {
         VersionRange vr("1.2.3.4 - 2");
         CHECK(vr.toString() == ">=1.2.3.4 <3.0.0.0");
+        CHECK(vr.toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">=1.2.3.4 <3");
     }
 
     {
@@ -1188,6 +1192,7 @@ TEST_CASE("Checking version ranges", "[range]")
     {
         VersionRange vr(">=7 >8 >=9");
         CHECK(vr.toString() == ">=9.0.0");
+        CHECK(vr.toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">=9");
     }
 
     {
@@ -1223,9 +1228,14 @@ TEST_CASE("Checking version ranges", "[range]")
     // from simple to complex
     CHECK(VersionRange("1").toString() == ">=1.0.0 <2.0.0");
     CHECK(VersionRange("1.0.0").toString() == "1.0.0");
+    CHECK(VersionRange("1.0.0").toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == "1");
     CHECK(VersionRange("1.0.0.01").toString() == "1.0.0.1");
     CHECK(VersionRange("1 - 2").toString() == ">=1.0.0 <3.0.0");
+    CHECK(VersionRange("1 - 2").toString(VersionRangePairStringRepresentationType::SameRealLevel) == ">=1 <3");
+    CHECK(VersionRange("1 - 2.2").toString() == ">=1.0.0 <2.3.0");
     CHECK(VersionRange("1.2 - 2").toString() == ">=1.2.0 <3.0.0");
+    CHECK(VersionRange("1.2 - 2").toString(VersionRangePairStringRepresentationType::SameRealLevel) == ">=1.2 <3.0");
+    CHECK(VersionRange("1.2 - 2").toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">=1.2 <3");
     CHECK(VersionRange("1.2.3 - 2").toString() == ">=1.2.3 <3.0.0");
     CHECK(VersionRange("1.2.3.4 - 2").toString() == ">=1.2.3.4 <3.0.0.0");
 

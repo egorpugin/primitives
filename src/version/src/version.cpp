@@ -118,6 +118,18 @@ GenericNumericVersion::Level GenericNumericVersion::getLevel() const
     return (Level)numbers.size();
 }
 
+GenericNumericVersion::Level GenericNumericVersion::getRealLevel() const
+{
+    auto l = numbers.size();
+    for (auto i = numbers.rbegin(); i != numbers.rend(); i++)
+    {
+        if (*i)
+            return l;
+        l--;
+    }
+    return l;
+}
+
 void GenericNumericVersion::setLevel(Level level, Number fill)
 {
     numbers.resize(level, fill);
@@ -134,6 +146,12 @@ GenericNumericVersion::Level GenericNumericVersion::checkAndNormalizeLevel(Level
     if (in <= 0)
         throw SW_RUNTIME_ERROR("Bad version level (<= 0): " + std::to_string(in));
     return std::max(in, minimum_level);
+}
+
+GenericNumericVersion::Number GenericNumericVersion::maxNumber()
+{
+    // currently set a limit up to 1 billion excluding
+    return 999'999'999;
 }
 
 Version::Version()
@@ -540,12 +558,6 @@ Version Version::max(Level level)
 Version Version::max(const Version &v)
 {
     return max(v.getLevel());
-}
-
-Version::Number Version::maxNumber()
-{
-    // currently set a limit up to 1 billion excluding
-    return 999'999'999;
 }
 
 void Version::decrementVersion()
