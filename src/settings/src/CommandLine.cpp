@@ -1373,7 +1373,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
     if (!Handler) {
       if (SinkOpts.empty()) {
         *Errs << ProgramName << ": Unknown command line argument '" << argv[i]
-              << "'.  Try: '" << argv[0] << " --help'\n";
+              << "'. Try: '" << argv[0] << " --help'\n";
 
         if (NearestHandler) {
           // If we know a near match, report it as well.
