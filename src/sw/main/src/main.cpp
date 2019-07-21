@@ -1,3 +1,9 @@
+// Copyright (C) 2019 Egor Pugin <egor.pugin@gmail.com>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 #define SW_MAIN_IMPL
 #include <primitives/sw/main.h>
 
@@ -27,6 +33,8 @@ static ::cl::alias bt2("st", ::cl::desc("Alias for -bt"), ::cl::aliasopt(bt));
 
 extern std::string gSymbolPath;
 static ::cl::opt<std::string, true> symbol_path("symbol-path", ::cl::desc("Set symbol path for backtrace"), ::cl::location(gSymbolPath), ::cl::Hidden);
+
+static ::cl::opt<int> sleep_seconds("sleep", ::cl::desc("Sleep on startup"), ::cl::Hidden);
 
 static path temp_directory_path(const path &subdir)
 {
@@ -304,8 +312,11 @@ void sw_append_symbol_path(const path &in)
 #endif
 }
 
-static int setup(int argc, char *argv[])
+static int startup(int argc, char *argv[])
 {
+    if (sleep_seconds > 0)
+        std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
+
 #ifdef _WIN32
     auto option_name = get_cl_option_base();
     if (argc > 1 && argv[1] == option_name)
@@ -386,7 +397,7 @@ static int setup(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-    if (int r = setup(argc, argv))
+    if (int r = startup(argc, argv))
         return r;
     return SW_MAIN(argc, argv);
 }
