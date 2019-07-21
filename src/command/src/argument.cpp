@@ -103,6 +103,7 @@ Arguments::Arguments(const Arguments &rhs)
 
 Arguments &Arguments::operator=(const Arguments &rhs)
 {
+    args.clear();
     for (auto &e : rhs)
         push_back(e->clone());
     return *this;
