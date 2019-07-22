@@ -88,6 +88,9 @@ typedef HRESULT(WINAPI* SetThreadDescription)(HANDLE hThread,
 
 std::string getThreadName()
 {
+    // disable for now, very very very slow
+    return {};
+
     std::string name;
 #ifdef _WIN32
     auto get_thread_description_func =
@@ -109,6 +112,9 @@ std::string getThreadName()
 
 std::string setThreadName(const std::string &name)
 {
+    // disable for now, very very very slow
+    return {};
+
     auto old = getThreadName();
 
 #ifdef _WIN32
