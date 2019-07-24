@@ -15,7 +15,7 @@ static size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp)
 {
     upload_status *upload_ctx = (upload_status *)userp;
 
-    if ((size == 0) || (nmemb == 0) || ((size * nmemb) < 1))
+    if (size == 0 || nmemb == 0)
         return 0;
 
     if (upload_ctx->lines_read >= upload_ctx->payload.size())
@@ -28,7 +28,7 @@ static size_t payload_source(void *ptr, size_t size, size_t nmemb, void *userp)
     return s.size();
 }
 
-String Smtp::sendEmail(const Email &e)
+String Smtp::sendEmail(const Email &e) const
 {
     CURL *curl;
     CURLcode res = CURLE_OK;
@@ -63,16 +63,16 @@ String Smtp::sendEmail(const Email &e)
     curl_easy_setopt(curl, CURLOPT_READDATA, &uctx);
     curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 
-    auto pwd = e.from.email + ":" + password;
+    auto pwd = user + ":" + password;
     curl_easy_setopt(curl, CURLOPT_USERNAME, pwd.c_str()); // must go twice!
     curl_easy_setopt(curl, CURLOPT_USERPWD, pwd.c_str());
-    curl_easy_setopt(curl, CURLOPT_LOGIN_OPTIONS, "AUTH=LOGIN");
+    curl_easy_setopt(curl, CURLOPT_LOGIN_OPTIONS, auth.c_str());
 
-    curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
+    curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)ssl);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
     //curl_easy_setopt(curl, CURLOPT_CAINFO, "certs/roots.pem");
 
-    curl_easy_setopt(curl, CURLOPT_VERBOSE, 0);
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, verbose);
 
     res = curl_easy_perform(curl);
 

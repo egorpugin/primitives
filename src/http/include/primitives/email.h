@@ -22,11 +22,22 @@ struct Email
 
 struct Smtp
 {
+    enum
+    {
+        SSL_NONE,
+        SSL_TRY,
+        SSL_CONTROL,
+        SSL_ALL,
+    };
+
     String server;
     String user;
     String password;
+    int ssl = SSL_ALL;
+    String auth = "AUTH=LOGIN";
+    int verbose = 0;
 
-    String sendEmail(const Email &);
+    String sendEmail(const Email &) const;
     void setAuth(const String &);
 };
 
