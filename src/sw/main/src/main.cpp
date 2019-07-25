@@ -15,6 +15,7 @@
 #include <boost/dll.hpp>
 
 #include <random>
+#include <thread>
 
 #define CRASH_SERVER_OPTION "internal-with-crash-server"
 #define CRASH_SERVER_OPTION_START "internal-with-crash-server-start-server"

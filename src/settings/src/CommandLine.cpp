@@ -82,7 +82,7 @@ std::string getVersionString()
     auto h = dlopen(0, RTLD_LAZY);
     if (!h)
     {
-        std::cerr << "settings: dlopen error" << std::endl;
+        std::cerr << "settings: dlopen error: " << dlerror() << std::endl;
         return "version information is missing";
     }
     //auto f = (String(*)())dlsym(h, "_ZN10primitives16getVersionStringB5cxx11Ev");

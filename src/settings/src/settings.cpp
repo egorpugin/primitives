@@ -393,7 +393,7 @@ T &SettingStorage<T>::get(SettingsType type)
     return s;
 }
 
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__) || defined(__clang__)
 template struct SettingStorage<primitives::Settings>;
 #endif
 

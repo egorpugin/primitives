@@ -218,6 +218,8 @@ void build(Solution &s)
         "org.sw.demo.openssl.crypto-1.*.*.*"_dep;
 
     ADD_LIBRARY(win32helpers);
+    if (!win32helpers.getSettings().TargetOS.is(OSType::Windows))
+        win32helpers.DryRun = true;
     win32helpers.Public += "BOOST_DLL_USE_STD_FS"_def;
     win32helpers.Public += filesystem,
         "org.sw.demo.boost.dll-1"_dep,

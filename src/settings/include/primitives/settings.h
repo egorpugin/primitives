@@ -597,7 +597,9 @@ template struct PRIMITIVES_SETTINGS_API SettingStorage<::primitives::Settings>;
 extern
 template struct PRIMITIVES_SETTINGS_API SettingStorage<::primitives::Settings>;
 #else
-//extern
+#ifdef __clang__
+extern
+#endif
 template struct PRIMITIVES_SETTINGS_API SettingStorage<::primitives::Settings>;
 #endif
 

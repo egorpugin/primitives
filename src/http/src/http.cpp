@@ -117,6 +117,9 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
             //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
         }
     }
+#else
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
 #endif
 
     auto res = curl_easy_perform(curl);
@@ -219,6 +222,9 @@ HttpResponse url_request(const HttpRequest &request)
             //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
         }
     }
+#else
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
 #endif
 
     HttpResponse response;

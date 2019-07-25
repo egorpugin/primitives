@@ -36,7 +36,7 @@ String Smtp::sendEmail(const Email &e) const
 
     curl = curl_easy_init();
     if (!curl)
-        return false;
+        return {};
 
     curl_easy_setopt(curl, CURLOPT_URL, server.c_str());
     curl_easy_setopt(curl, CURLOPT_MAIL_FROM, e.from.email.c_str());
