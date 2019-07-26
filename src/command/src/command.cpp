@@ -182,7 +182,7 @@ struct UvCommand
             flags = O_BINARY;
 #endif
             if (out)
-                flags |= (append ? O_APPEND : O_CREAT) | O_RDWR;
+                flags |= (append ? O_APPEND : (O_CREAT | O_TRUNC)) | O_WRONLY;
             else
                 flags |= O_RDONLY;
 
