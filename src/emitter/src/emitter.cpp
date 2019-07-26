@@ -6,14 +6,36 @@
 
 #include <primitives/emitter.h>
 
+#include <primitives/exceptions.h>
+
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
 
-primitives::Emitter::Lines &operator+=(primitives::Emitter::Lines &s1, const primitives::Emitter::Lines &s2)
+static Strings splitWithIndent(const String &text, const String &newline)
 {
-    s1.insert(s1.end(), s2.begin(), s2.end());
-    return s1;
+    Strings s;
+    auto p = text.find(newline);
+    if (p == text.npos)
+    {
+        s.push_back(text);
+        return s;
+    }
+
+    size_t old_pos = 0;
+    while (1)
+    {
+        s.push_back(text.substr(old_pos, p - old_pos));
+        p += newline.size();
+        old_pos = p;
+        p = text.find(newline, p);
+        if (p == text.npos)
+        {
+            s.push_back(text.substr(old_pos));
+            break;
+        }
+    }
+    return s;
 }
 
 namespace primitives
@@ -24,26 +46,11 @@ namespace detail
 
 Line::Line(const Text &t, int n)
     : text(t), n_indents(n)
-{}
-
-Line::Line(const Emitter &ctx, int n)
-    : emitter(&ctx), n_indents(n)
 {
-    emitter->parent_ = this;
-}
-
-Line::Line(Line &&l)
-{
-    text = std::move(l.text);
-    n_indents = l.n_indents;
-    emitter = l.emitter;
-    l.emitter = nullptr;
 }
 
 Line::~Line()
 {
-    if (emitter)
-        emitter->parent_ = nullptr;
 }
 
 Line& Line::operator+=(const Text &t)
@@ -57,17 +64,8 @@ void Line::setText(const Text &t)
     text = t;
 }
 
-Line::Text &Line::back()
-{
-    if (emitter)
-        return emitter->lines.back().back();
-    return text;
-}
-
 Line::Text Line::getText() const
 {
-    if (emitter)
-        return emitter->getText();
     return text;
 }
 
@@ -78,65 +76,17 @@ Emitter::Emitter(const Text &indent, const Text &newline)
 {
 }
 
-/*Emitter::Emitter(const Emitter &ctx)
-{
-    copy_from(ctx);
-}
-
-Emitter &Emitter::operator=(const Emitter &ctx)
-{
-    copy_from(ctx);
-    return *this;
-}*/
-
 Emitter::~Emitter()
 {
-    if (parent_)
-    {
-        parent_->setText(getText());
-        parent_->emitter = nullptr;
-    }
-}
-
-/*void Emitter::copy_from(const Emitter &ctx)
-{
-    lines = ctx.lines;
-    n_indents = ctx.n_indents;
-    indent = ctx.indent;
-    newline = ctx.newline;
-}*/
-
-void Emitter::initFromString(const std::string &s)
-{
-    size_t p = 0;
-    while (1)
-    {
-        size_t p2 = s.find(newline, p);
-        if (p2 == s.npos)
-            break;
-        auto line = s.substr(p, p2 - p);
-        int space = 0;
-        for (auto i = line.rbegin(); i != line.rend(); ++i)
-        {
-            if (isspace(*i))
-                space++;
-            else
-                break;
-        }
-        if (space)
-            line.resize(line.size() - space);
-        lines.push_back({ line });
-        p = p2 + 1;
-    }
 }
 
 void Emitter::addText(const Text &s)
 {
     if (lines.empty())
         lines.emplace_back();
-    if (!s.empty() && lines.back().n_indents == 0)
-        lines.back().n_indents = n_indents;
-    lines.back() += s;
+    if (!s.empty() && lines.back()->n_indents == 0)
+        lines.back()->n_indents = n_indents;
+    lines.back()->setText(lines.back()->getText() += s);
 }
 
 void Emitter::addText(const char* str, int n)
@@ -156,28 +106,8 @@ void Emitter::addLineWithIndent(const Text &s)
 
 void Emitter::addLineWithIndent(const Text &text, int n)
 {
-    auto p = text.find(newline);
-    if (p == text.npos)
-    {
-        addLine(Line{ text, n });
-        return;
-    }
-
-    size_t old_pos = 0;
-    Lines ls;
-    while (1)
-    {
-        ls.push_back(Line{text.substr(old_pos, p - old_pos), n});
-        p += newline.size();
-        old_pos = p;
-        p = text.find(newline, p);
-        if (p == text.npos)
-        {
-            ls.push_back(Line{text.substr(old_pos), n});
-            break;
-        }
-    }
-    lines.insert(lines.end(), ls.begin(), ls.end());
+    for (auto &s : splitWithIndent(text, newline))
+        addLine(std::make_unique<Line>(s, n + n_indents));
 }
 
 void Emitter::addLineNoSpace(const Text &s)
@@ -185,7 +115,7 @@ void Emitter::addLineNoSpace(const Text &s)
     addLineWithIndent(s, 0);
 }
 
-void Emitter::addLine(Line &&l)
+void Emitter::addLine(LinePtr &&l)
 {
     lines.emplace_back(std::move(l));
 }
@@ -193,19 +123,9 @@ void Emitter::addLine(Line &&l)
 void Emitter::addLine(const Text &s)
 {
     if (s.empty())
-        addLine(Line{});
+        addLine(std::make_unique<Line>());
     else
         addLineWithIndent(s);
-}
-
-void Emitter::addLine(const Emitter &ctx)
-{
-    addEmitter(ctx);
-}
-
-void Emitter::addEmitter(const Emitter &ctx)
-{
-    addLine(Line{ ctx, n_indents });
 }
 
 void Emitter::removeLine()
@@ -245,11 +165,12 @@ void Emitter::trimEnd(size_t n)
 {
     if (lines.empty())
         return;
-    auto &t = lines.back().back();
+    auto t = lines.back()->getText();
     auto sz = t.size();
     if (n > sz)
         n = sz;
     t.resize(sz - n);
+    lines.back()->setText(t);
 }
 
 Emitter::Text Emitter::getText() const
@@ -263,91 +184,21 @@ Emitter::Text Emitter::getText() const
 Strings Emitter::getStrings() const
 {
     Strings s;
-    auto lines = getLines();
     for (auto &line : lines)
     {
+        if (line->empty())
+            continue;
+        auto t = line->getText();
         Text space;
-        if (!line.getText().empty())
+        if (!t.empty())
         {
-            for (int i = 0; i < line.n_indents; i++)
+            for (int i = 0; i < line->n_indents; i++)
                 space += indent;
         }
-        else if (line.emitter)
-            continue; // we do not add empty line on empty existing emitter
-        s.push_back(space + line.getText() + newline);
+        for (auto &p : splitWithIndent(t, newline))
+            s.push_back(space + p + newline);
     }
     return s;
-}
-
-Emitter::Lines Emitter::getLines() const
-{
-    Lines lines;
-    lines += this->lines;
-    for (auto i = lines.begin(); i != lines.end(); i++)
-    {
-        if (i->emitter)
-        {
-            auto l2 = i->emitter->getLines();
-            for (auto &l : l2)
-                l.n_indents += i->n_indents;
-            i = lines.erase(i);
-            i = lines.insert(i, l2.begin(), l2.end());
-            i--;
-        }
-    }
-    return lines;
-}
-
-/*void Emitter::setLines(const Lines &lines)
-{
-    this->lines = lines;
-}*/
-
-void Emitter::setMaxEmptyLines(int n)
-{
-    // remove all empty lines at begin
-    while (1)
-    {
-        auto line = lines.begin();
-        if (line == lines.end())
-            break;
-        bool empty = true;
-        for (auto &c : line->getText())
-        {
-            if (!isspace(c))
-            {
-                empty = false;
-                break;
-            }
-        }
-        if (empty)
-            lines.erase(line);
-        else
-            break;
-    }
-
-    int el = 0;
-    for (auto line = lines.begin(); line != lines.end(); ++line)
-    {
-        bool empty = true;
-        for (auto &c : line->getText())
-        {
-            if (!isspace(c))
-            {
-                empty = false;
-                break;
-            }
-        }
-        if (empty)
-            el++;
-        else
-            el = 0;
-        if (el > n)
-        {
-            line = lines.erase(line);
-            --line;
-        }
-    }
 }
 
 void Emitter::emptyLines(int n)
@@ -355,7 +206,7 @@ void Emitter::emptyLines(int n)
     int e = 0;
     for (auto i = lines.rbegin(); i != lines.rend(); ++i)
     {
-        if (i->getText().empty())
+        if ((*i)->getText().empty())
             e++;
         else
             break;
@@ -373,20 +224,18 @@ void Emitter::emptyLines(int n)
 
 Emitter &Emitter::operator+=(const Emitter &rhs)
 {
-    addWithRelativeIndent(rhs);
-    return *this;
-}
-
-void Emitter::addWithRelativeIndent(const Emitter &rhs)
-{
-    auto addWithRelativeIndent = [this](Lines &l1, Lines l2)
+    auto addWithRelativeIndent = [this](Lines &l1, const Lines &l2)
     {
         for (auto &l : l2)
-            l.n_indents += n_indents;
-        l1 += l2;
+        {
+            if (l->empty())
+                continue;
+            l1.emplace_back(std::make_unique<detail::Line>(l->getText(), l->n_indents + n_indents));
+        }
     };
 
     addWithRelativeIndent(lines, rhs.lines);
+    return *this;
 }
 
 void CppEmitter::beginBlock(const Text &s, bool indent)

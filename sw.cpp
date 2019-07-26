@@ -266,8 +266,7 @@ void build(Solution &s)
 
     ADD_LIBRARY(version);
     version.Public += "include"_idir;
-    //version.Public += "src/version.natvis";
-    version += "src/version.natvis";
+    version.Public += "src/version.natvis";
     version.Public += string, templates,
         "org.sw.demo.fmt-*"_dep,
         "org.sw.demo.boost.container_hash-1"_dep,

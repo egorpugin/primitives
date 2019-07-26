@@ -17,35 +17,53 @@
 namespace primitives
 {
 
-struct Emitter;
-
 namespace detail
 {
 
 struct PRIMITIVES_EMITTER_API Line
 {
-    using Text = std::string;
-
-    int n_indents = 0;
-    const Emitter *emitter = nullptr;
+    using Text = String;
 
     Line() = default;
-    Line(const Line &) = default;
-    Line &operator=(const Line &t) = default;
-    Line(Line &&);
     Line(const Text &t, int n = 0);
-    Line(const Emitter &ctx, int n = 0);
-    ~Line();
+    virtual ~Line();
+
+    int n_indents = 0;
 
     Line &operator+=(const Text &t);
 
-    Text &back();
+    virtual Text getText() const;
+    void setText(const Text &t); // virtual?
 
-    Text getText() const;
-    void setText(const Text &t);
+    virtual bool empty() const { return false; }
 
 private:
     Text text;
+};
+
+template <class Emitter>
+struct EmitterLine : Line
+{
+    template <class ... Args>
+    EmitterLine(Args && ... args)
+        : emitter(std::forward<Args>(args)...)
+    {
+    }
+
+    Text getText() const override
+    {
+        auto t = getEmitter().getText();
+        t.resize(t.size() - getEmitter().getNewline().size());
+        return t;
+    }
+
+    bool empty() const override { return emitter.getLines().empty(); }
+
+    Emitter &getEmitter() { return emitter; }
+    const Emitter &getEmitter() const { return emitter; }
+
+private:
+    Emitter emitter;
 };
 
 }
@@ -53,16 +71,12 @@ private:
 struct PRIMITIVES_EMITTER_API Emitter
 {
     using Line = detail::Line;
+    using LinePtr = std::unique_ptr<Line>;
     using Text = Line::Text;
-    using Lines = std::list<Line>;
+    using Lines = std::vector<LinePtr>;
 
-    //
     Emitter(const Text &indent = "    ", const Text &newline = "\n");
-    //Emitter(const Emitter &ctx);
-    //Emitter &operator=(const Emitter &ctx);
     virtual ~Emitter();
-
-    void initFromString(const std::string &s);
 
     void addLine(const Text &s = Text());
     void addNoNewLine(const Text &s); // deprecated, use addLineWithIndent()
@@ -77,8 +91,15 @@ struct PRIMITIVES_EMITTER_API Emitter
     void addText(const Text &s);
     void addText(const char* str, int n);
 
-    void addLine(const Emitter &);
-    void addEmitter(const Emitter &);
+    template <class U = Emitter, class ... Args>
+    U &addEmitter(Args && ... args)
+    {
+        auto e = std::make_unique<detail::EmitterLine<U>>(std::forward<Args>(args)...);
+        e->n_indents = n_indents;
+        auto &ref = *e;
+        addLine(std::move(e));
+        return ref.getEmitter();
+    }
 
     void increaseIndent(int n = 1);
     void decreaseIndent(int n = 1);
@@ -88,19 +109,10 @@ struct PRIMITIVES_EMITTER_API Emitter
     void trimEnd(size_t n);
 
     virtual Text getText() const;
-    Strings getStrings() const; // virtual?
-
-    //void setLines(const Lines &lines);
-    Lines getLines() const;
-    Lines &getLinesRef() { return lines; }
-
-    void setMaxEmptyLines(int n);
+    Strings getStrings() const;
     void emptyLines(int n = 1);
 
-    // add with "as is" indent
     Emitter &operator+=(const Emitter &rhs);
-    // add with relative indent
-    void addWithRelativeIndent(const Emitter &rhs);
 
     bool empty() const
     {
@@ -112,20 +124,21 @@ struct PRIMITIVES_EMITTER_API Emitter
         lines.clear();
     }
 
+    Lines &getLines() { return lines; }
+    const Lines &getLines() const { return lines; }
+
+    const Text &getNewline() const { return newline; }
+
 protected:
-    mutable Lines lines;
-    mutable Line *parent_ = nullptr;
+    Lines lines;
+    int insert_before = -1;
 
     int n_indents = 0;
     Text indent;
     Text newline;
 
-    //void copy_from(const Emitter &ctx);
-
 private:
-    void addLine(Line &&);
-
-    friend struct detail::Line;
+    void addLine(LinePtr &&);
 };
 
 struct PRIMITIVES_EMITTER_API CppEmitter : Emitter
