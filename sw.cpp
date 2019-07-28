@@ -188,6 +188,8 @@ void build(Solution &s)
     ADD_LIBRARY(lock);
     lock.Public += filesystem,
         "org.sw.demo.boost.interprocess-1"_dep;
+    if (lock.getSettings().TargetOS.Type == OSType::Windows)
+        lock += "Advapi32.lib"_slib;
 
     ADD_LIBRARY(log);
     log.Public += "org.sw.demo.boost.log-1"_dep;
@@ -227,7 +229,7 @@ void build(Solution &s)
     if (win32helpers.getSettings().TargetOS.Type == OSType::Windows)
     {
         win32helpers.Public += "UNICODE"_d;
-        win32helpers += "Shell32.lib"_slib, "Ole32.lib"_slib, "Advapi32.lib"_slib, "user32.lib"_slib;
+        win32helpers += "Shell32.lib"_slib, "Ole32.lib"_slib, "Advapi32.lib"_slib, "user32.lib"_slib, "uuid.lib"_slib;
     }
 
     ADD_LIBRARY_WITH_NAME(db_common, "db.common");

@@ -76,6 +76,8 @@ struct PRIMITIVES_EMITTER_API Emitter
     using Lines = std::vector<LinePtr>;
 
     Emitter(const Text &indent = "    ", const Text &newline = "\n");
+    Emitter(const Emitter &) = delete;
+    Emitter &operator=(const Emitter &) = delete;
     virtual ~Emitter();
 
     void addLine(const Text &s = Text());
