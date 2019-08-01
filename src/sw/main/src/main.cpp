@@ -315,8 +315,15 @@ void sw_append_symbol_path(const path &in)
 
 static int startup(int argc, char *argv[])
 {
-    if (sleep_seconds > 0)
-        std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
+    for (int i = 1; i < argc - 1; i++)
+    {
+        if (argv[i] == "-sleep"s || argv[i] == "--sleep"s)
+        {
+            int v;
+            sleep_seconds.getParser().parse(sleep_seconds, argv[i], argv[i + 1], v);
+            std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
+        }
+    }
 
 #ifdef _WIN32
     auto option_name = get_cl_option_base();

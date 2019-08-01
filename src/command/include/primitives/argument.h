@@ -81,7 +81,7 @@ struct PRIMITIVES_COMMAND_API Arguments
     Arguments(const Arguments &);
     Arguments &operator=(const Arguments &);
 
-    void push_back(Element);
+    void push_back(Element &&);
     void push_back(const char *);
     void push_back(const String &);
     void push_back(const path &);

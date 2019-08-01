@@ -119,7 +119,7 @@ const Arguments::Element &Arguments::operator[](int i) const
     return args[i];
 }
 
-void Arguments::push_back(Element e)
+void Arguments::push_back(Element &&e)
 {
     args.push_back(std::move(e));
 }

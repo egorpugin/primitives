@@ -101,7 +101,7 @@ void Emitter::addNoNewLine(const Text &s)
 
 void Emitter::addLineWithIndent(const Text &s)
 {
-    addLineWithIndent(s, n_indents);
+    addLineWithIndent(s, 0);
 }
 
 void Emitter::addLineWithIndent(const Text &text, int n)
