@@ -67,7 +67,7 @@ static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Str
 {
     Files out;
     auto i = t.BinaryDir / "include";
-    auto v = t.getPackage().version.toString();
+    auto v = t.getPackage().getVersion().toString();
     for (auto &m : modules)
     {
         fs::create_directories(i / m / v / m);
@@ -109,7 +109,7 @@ void build(Solution &s)
     auto setup_primitives_no_all_sources = [](auto &t)
     {
         path p = "src";
-        auto n = t.getPackage().ppath.slice(t.getPackage().ppath.isAbsolute() ? 3 : 1);
+        auto n = t.getPackage().getPath().slice(t.getPackage().getPath().isAbsolute() ? 3 : 1);
         auto n2 = n;
         while (!n.empty())
         {
@@ -160,8 +160,10 @@ void build(Solution &s)
     ADD_LIBRARY(filesystem);
     filesystem.Public += string, templates,
         "org.sw.demo.boost.filesystem-1"_dep,
-        "org.sw.demo.boost.thread-1"_dep,
-        "org.sw.demo.grisumbras.enum_flags-master"_dep;
+        "org.sw.demo.boost.thread-1"_dep
+        ;
+    if (filesystem.getSettings().TargetOS.Type != OSType::Windows)
+        filesystem += "m"_slib;
 
     ADD_LIBRARY(file_monitor);
     file_monitor.Public += filesystem,

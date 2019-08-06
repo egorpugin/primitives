@@ -547,6 +547,67 @@ void create(const path &p)
 
 }
 
+ScopedCurrentPath::ScopedCurrentPath(CurrentPathScope scope)
+    : ctp(scope)
+{
+    if (bitmask_includes_all(ctp, CurrentPathScope::Thread))
+        old[(int)CurrentPathScope::Thread] = current_thread_path();
+    if (bitmask_includes_all(ctp, CurrentPathScope::Process))
+        old[(int)CurrentPathScope::Process] = fs::current_path();
+
+    set_cwd();
+}
+
+ScopedCurrentPath::ScopedCurrentPath(const path &p, CurrentPathScope scope)
+    : ScopedCurrentPath(scope)
+{
+    if (!p.empty())
+    {
+        if (bitmask_includes_all(ctp, CurrentPathScope::Thread))
+            current_thread_path(p);
+        if (bitmask_includes_all(ctp, CurrentPathScope::Process))
+            fs::current_path(p);
+
+        set_cwd();
+    }
+}
+ScopedCurrentPath::~ScopedCurrentPath()
+{
+    return_back();
+}
+
+void ScopedCurrentPath::return_back()
+{
+    if (!active)
+        return;
+
+    if (bitmask_includes_all(ctp, CurrentPathScope::Thread))
+        current_thread_path(cwd = old[(int)CurrentPathScope::Thread]);
+    if (bitmask_includes_all(ctp, CurrentPathScope::Process))
+        fs::current_path(cwd = old[(int)CurrentPathScope::Process]);
+
+    active = false;
+}
+
+path ScopedCurrentPath::get_cwd() const
+{
+    return cwd;
+}
+
+path ScopedCurrentPath::get_old(CurrentPathScope scope) const
+{
+    return old[(int)scope];
+}
+
+void ScopedCurrentPath::set_cwd()
+{
+    // abs path, not possibly relative p
+    if (bitmask_includes_all(ctp, CurrentPathScope::Thread))
+        cwd = current_thread_path();
+    if (bitmask_includes_all(ctp, CurrentPathScope::Process))
+        cwd = fs::current_path();
+}
+
 ScopedFile::ScopedFile(const path &p, const char *mode)
 {
     f = primitives::filesystem::fopen_checked(p, mode);
