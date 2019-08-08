@@ -144,14 +144,17 @@ void build(Solution &s)
     auto &templates = p.addTarget<StaticLibraryTarget>("templates");
     setup_primitives(templates);
     templates -= "org.sw.demo.boost.stacktrace-1"_dep;
-    if (templates.getSettings().Native.ConfigurationType != ConfigurationType::Release &&
-        templates.getSettings().Native.ConfigurationType != ConfigurationType::MinimalSizeRelease
+    if (templates.getBuildSettings().Native.ConfigurationType != ConfigurationType::Release &&
+        templates.getBuildSettings().Native.ConfigurationType != ConfigurationType::MinimalSizeRelease
         )
     {
         templates += "USE_STACKTRACE"_def;
         templates += "org.sw.demo.boost.stacktrace-1"_dep;
-        //if (s.getSettings().TargetOS.Type == OSType::Windows)
-            //templates += "dbgeng.lib"_slib;
+    }
+    if (templates.getBuildSettings().TargetOS.Type == OSType::Windows)
+    {
+        templates += "dbgeng.lib"_slib;
+        templates += "Ole32.lib"_slib;
     }
 
     ADD_LIBRARY(string);
@@ -162,7 +165,7 @@ void build(Solution &s)
         "org.sw.demo.boost.filesystem-1"_dep,
         "org.sw.demo.boost.thread-1"_dep
         ;
-    if (filesystem.getSettings().TargetOS.Type != OSType::Windows)
+    if (filesystem.getBuildSettings().TargetOS.Type != OSType::Windows)
         filesystem += "m"_slib;
 
     ADD_LIBRARY(file_monitor);
@@ -180,7 +183,7 @@ void build(Solution &s)
     ADD_LIBRARY(command);
     command.Public += file_monitor,
         "org.sw.demo.boost.process-1"_dep;
-    if (command.getSettings().TargetOS.Type == OSType::Windows)
+    if (command.getBuildSettings().TargetOS.Type == OSType::Windows)
         command.Public += "Shell32.lib"_slib;
 
     ADD_LIBRARY(date_time);
@@ -190,7 +193,7 @@ void build(Solution &s)
     ADD_LIBRARY(lock);
     lock.Public += filesystem,
         "org.sw.demo.boost.interprocess-1"_dep;
-    if (lock.getSettings().TargetOS.Type == OSType::Windows)
+    if (lock.getBuildSettings().TargetOS.Type == OSType::Windows)
         lock += "Advapi32.lib"_slib;
 
     ADD_LIBRARY(log);
@@ -213,7 +216,7 @@ void build(Solution &s)
     ADD_LIBRARY(http);
     http.Public += filesystem, templates,
         "org.sw.demo.badger.curl.libcurl-7"_dep;
-    if (http.getSettings().TargetOS.Type == OSType::Windows)
+    if (http.getBuildSettings().TargetOS.Type == OSType::Windows)
         http.Public += "Winhttp.lib"_slib;
 
     ADD_LIBRARY(hash);
@@ -222,13 +225,13 @@ void build(Solution &s)
         "org.sw.demo.openssl.crypto-1.*.*.*"_dep;
 
     ADD_LIBRARY(win32helpers);
-    if (!win32helpers.getSettings().TargetOS.is(OSType::Windows))
+    if (!win32helpers.getBuildSettings().TargetOS.is(OSType::Windows))
         win32helpers.DryRun = true;
     win32helpers.Public += "BOOST_DLL_USE_STD_FS"_def;
     win32helpers.Public += filesystem,
         "org.sw.demo.boost.dll-1"_dep,
         "org.sw.demo.boost.algorithm-1"_dep;
-    if (win32helpers.getSettings().TargetOS.Type == OSType::Windows)
+    if (win32helpers.getBuildSettings().TargetOS.Type == OSType::Windows)
     {
         win32helpers.Public += "UNICODE"_d;
         win32helpers += "Shell32.lib"_slib, "Ole32.lib"_slib, "Advapi32.lib"_slib, "user32.lib"_slib, "uuid.lib"_slib;
@@ -293,7 +296,7 @@ void build(Solution &s)
     sw_main.Interface.LinkLibraries.push_back(main.getImportLibrary()); // main itself
     sw_main.Interface.LinkLibraries.push_back(sw_main.getImportLibrary()); // then me (self, sw.main)
     sw_main.Interface.LinkLibraries.push_back(sw_settings.getImportLibrary()); // then sw.settings
-    if (sw_main.getSettings().TargetOS.Type == OSType::Windows)
+    if (sw_main.getBuildSettings().TargetOS.Type == OSType::Windows)
     {
         sw_main.Public +=
             "org.sw.demo.google.breakpad.client.windows.handler-master"_dep,
@@ -365,7 +368,7 @@ void build(Solution &s)
     auto tm = s.addTest(test_main);
     tm.c->addPathDirectory(getenv("PATH"));
     /*auto tdb = s.addTest(test_db);
-    if (test_db.getSettings().TargetOS.Type == OSType::Windows)
+    if (test_db.getBuildSettings().TargetOS.Type == OSType::Windows)
     {
         tdb.c->addLazyAction([&s, c = tdb.c]
         {

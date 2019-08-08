@@ -89,9 +89,13 @@ std::string getVersionString()
     auto f = (String(*)())dlsym(h, "_Z16getVersionStringB5cxx11v");
     if (!f)
     {
-        dlclose(h);
-        std::cerr << "settings: calling getVersionString(), but function is not defined; result is unknown" << std::endl;
-        return "version information is missing";
+        f = (String(*)())dlsym(h, "_Z16getVersionStringv");
+        if (!f)
+        {
+            dlclose(h);
+            std::cerr << "settings: calling getVersionString(), but function is not defined; result is unknown" << std::endl;
+            return "version information is missing";
+        }
     }
     auto s = f();
     dlclose(h);

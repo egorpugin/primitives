@@ -2,6 +2,8 @@
 
 #include <curl/curl.h>
 
+#include <string.h>
+
 namespace primitives
 {
 

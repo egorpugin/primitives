@@ -49,9 +49,13 @@ std::string getProgramName()
     auto f = (String(*)())dlsym(h, "_Z14getProgramNameB5cxx11v");
     if (!f)
     {
-        dlclose(h);
-        //std::cerr << "sw.settings: calling getProgramName(), but function is not defined; result is unknown" << std::endl;
-        return {};
+        f = (String(*)())dlsym(h, "_Z14getProgramNamev");
+        if (!f)
+        {
+            dlclose(h);
+            //std::cerr << "sw.settings: calling getProgramName(), but function is not defined; result is unknown" << std::endl;
+            return {};
+        }
     }
     auto s = f();
     dlclose(h);
