@@ -110,7 +110,7 @@ std::string getVersionString()
 //
 namespace primitives {
 namespace cl {
-//#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__)
 template class basic_parser<bool>;
 template class basic_parser<boolOrDefault>;
 template class basic_parser<int>;
@@ -130,7 +130,7 @@ template class opt<int>;
 template class opt<std::string>;
 template class opt<char>;
 template class opt<bool>;
-//#endif
+#endif
 }
 } // end namespace primitives::cl
 
