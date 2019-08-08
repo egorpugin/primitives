@@ -143,18 +143,22 @@ void build(Solution &s)
 
     auto &templates = p.addTarget<StaticLibraryTarget>("templates");
     setup_primitives(templates);
-    templates -= "org.sw.demo.boost.stacktrace-1"_dep;
+    templates -= "org.sw.demo.boost.stacktrace"_dep;
     if (templates.getBuildSettings().Native.ConfigurationType != ConfigurationType::Release &&
         templates.getBuildSettings().Native.ConfigurationType != ConfigurationType::MinimalSizeRelease
         )
     {
         templates += "USE_STACKTRACE"_def;
-        templates += "org.sw.demo.boost.stacktrace-1"_dep;
+        templates += "org.sw.demo.boost.stacktrace"_dep;
     }
     if (templates.getBuildSettings().TargetOS.Type == OSType::Windows)
     {
         templates += "dbgeng.lib"_slib;
         templates += "Ole32.lib"_slib;
+    }
+    else
+    {
+        templates += "dl"_slib;
     }
 
     ADD_LIBRARY(string);
@@ -184,7 +188,7 @@ void build(Solution &s)
     command.Public += file_monitor,
         "org.sw.demo.boost.process-1"_dep;
     if (command.getBuildSettings().TargetOS.Type == OSType::Windows)
-        command.Public += "Shell32.lib"_slib;
+        command += "Shell32.lib"_slib;
 
     ADD_LIBRARY(date_time);
     date_time.Public += string,
@@ -217,7 +221,7 @@ void build(Solution &s)
     http.Public += filesystem, templates,
         "org.sw.demo.badger.curl.libcurl-7"_dep;
     if (http.getBuildSettings().TargetOS.Type == OSType::Windows)
-        http.Public += "Winhttp.lib"_slib;
+        http += "Winhttp.lib"_slib;
 
     ADD_LIBRARY(hash);
     hash.Public += filesystem,
