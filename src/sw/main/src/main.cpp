@@ -319,9 +319,8 @@ static int startup(int argc, char *argv[])
     {
         if (argv[i] == "-sleep"s || argv[i] == "--sleep"s)
         {
-            int v;
-            sleep_seconds.getParser().parse(sleep_seconds, argv[i], argv[i + 1], v);
-            std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
+            std::this_thread::sleep_for(std::chrono::seconds(std::stoi(argv[i + 1])));
+            break;
         }
     }
 

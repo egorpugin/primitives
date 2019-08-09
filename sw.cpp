@@ -162,12 +162,12 @@ void build(Solution &s)
     }
 
     ADD_LIBRARY(string);
-    string.Public += "org.sw.demo.boost.algorithm-1"_dep;
+    string.Public += "org.sw.demo.boost.algorithm"_dep;
 
     ADD_LIBRARY(filesystem);
     filesystem.Public += string, templates,
-        "org.sw.demo.boost.filesystem-1"_dep,
-        "org.sw.demo.boost.thread-1"_dep
+        "org.sw.demo.boost.filesystem"_dep,
+        "org.sw.demo.boost.thread"_dep
         ;
     if (filesystem.getBuildSettings().TargetOS.Type != OSType::Windows)
         filesystem += "m"_slib;
@@ -181,27 +181,27 @@ void build(Solution &s)
 
     ADD_LIBRARY(executor);
     executor.Public += templates,
-        "org.sw.demo.boost.asio-1"_dep,
-        "org.sw.demo.boost.system-1"_dep;
+        "org.sw.demo.boost.asio"_dep,
+        "org.sw.demo.boost.system"_dep;
 
     ADD_LIBRARY(command);
     command.Public += file_monitor,
-        "org.sw.demo.boost.process-1"_dep;
+        "org.sw.demo.boost.process"_dep;
     if (command.getBuildSettings().TargetOS.Type == OSType::Windows)
         command += "Shell32.lib"_slib;
 
     ADD_LIBRARY(date_time);
     date_time.Public += string,
-        "org.sw.demo.boost.date_time-1"_dep;
+        "org.sw.demo.boost.date_time"_dep;
 
     ADD_LIBRARY(lock);
     lock.Public += filesystem,
-        "org.sw.demo.boost.interprocess-1"_dep;
+        "org.sw.demo.boost.interprocess"_dep;
     if (lock.getBuildSettings().TargetOS.Type == OSType::Windows)
         lock += "Advapi32.lib"_slib;
 
     ADD_LIBRARY(log);
-    log.Public += "org.sw.demo.boost.log-1"_dep;
+    log.Public += "org.sw.demo.boost.log"_dep;
 
     ADD_LIBRARY(cron);
     cron.Public += executor, log;
@@ -225,16 +225,16 @@ void build(Solution &s)
 
     ADD_LIBRARY(hash);
     hash.Public += filesystem,
-        "org.sw.demo.aleksey14.rhash-1"_dep,
-        "org.sw.demo.openssl.crypto-1.*.*.*"_dep;
+        "org.sw.demo.aleksey14.rhash"_dep,
+        "org.sw.demo.openssl.crypto"_dep;
 
     ADD_LIBRARY(win32helpers);
     if (!win32helpers.getBuildSettings().TargetOS.is(OSType::Windows))
         win32helpers.DryRun = true;
     win32helpers.Public += "BOOST_DLL_USE_STD_FS"_def;
     win32helpers.Public += filesystem,
-        "org.sw.demo.boost.dll-1"_dep,
-        "org.sw.demo.boost.algorithm-1"_dep;
+        "org.sw.demo.boost.dll"_dep,
+        "org.sw.demo.boost.algorithm"_dep;
     if (win32helpers.getBuildSettings().TargetOS.Type == OSType::Windows)
     {
         win32helpers.Public += "UNICODE"_d;
@@ -243,7 +243,7 @@ void build(Solution &s)
 
     ADD_LIBRARY_WITH_NAME(db_common, "db.common");
     db_common.Public += filesystem, templates,
-        "org.sw.demo.imageworks.pystring-1"_dep;
+        "org.sw.demo.imageworks.pystring"_dep;
 
     ADD_LIBRARY_WITH_NAME(db_sqlite3, "db.sqlite3");
     db_sqlite3.Public += db_common, "org.sw.demo.sqlite3"_dep;
@@ -264,7 +264,7 @@ void build(Solution &s)
 
     ADD_LIBRARY(symbol);
     symbol.Public += "BOOST_DLL_USE_STD_FS"_def;
-    symbol.Public += filesystem, "org.sw.demo.boost.dll-1"_dep;
+    symbol.Public += filesystem, "org.sw.demo.boost.dll"_dep;
 
     ADD_LIBRARY(xml);
     xml.Public += string, templates,
@@ -280,8 +280,8 @@ void build(Solution &s)
     version.Public += "src/version.natvis";
     version.Public += string, templates,
         "org.sw.demo.fmt-*"_dep,
-        "org.sw.demo.boost.container_hash-1"_dep,
-        "org.sw.demo.imageworks.pystring-1"_dep;
+        "org.sw.demo.boost.container_hash"_dep,
+        "org.sw.demo.imageworks.pystring"_dep;
     gen_ragel("org.sw.demo.ragel-6"_dep, version, "src/version.rl");
     gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison-master"_dep, version, "GLR_CPP_PARSER", "src/range");
 
@@ -296,7 +296,7 @@ void build(Solution &s)
     setup_primitives(sw_main);
     sw_main.Public += "BOOST_DLL_USE_STD_FS"_def;
     sw_main.Public += main, sw_settings,
-        "org.sw.demo.boost.dll-1"_dep;
+        "org.sw.demo.boost.dll"_dep;
     sw_main.Interface.LinkLibraries.push_back(main.getImportLibrary()); // main itself
     sw_main.Interface.LinkLibraries.push_back(sw_main.getImportLibrary()); // then me (self, sw.main)
     sw_main.Interface.LinkLibraries.push_back(sw_settings.getImportLibrary()); // then sw.settings
