@@ -261,6 +261,8 @@ void build(Solution &s)
         "pub.egorpugin.llvm_project.llvm.support_lite-master"_dep;
     gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison-master"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/settings");
     gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison-master"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/path");
+    if (settings.getBuildSettings().TargetOS.Type != OSType::Windows)
+        settings += "dl"_slib;
 
     ADD_LIBRARY(symbol);
     symbol.Public += "BOOST_DLL_USE_STD_FS"_def;
@@ -274,6 +276,8 @@ void build(Solution &s)
     sw_settings.Public += settings;
     sw_settings -= "src/sw.settings.program_name.cpp";
     //sw_settings.Interface += "src/sw.settings.program_name.cpp";
+    if (sw_settings.getBuildSettings().TargetOS.Type != OSType::Windows)
+        sw_settings += "dl"_slib;
 
     ADD_LIBRARY(version);
     version.Public += "include"_idir;
