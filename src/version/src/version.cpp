@@ -66,7 +66,7 @@ GenericNumericVersion::GenericNumericVersion(const std::initializer_list<Number>
     if (std::any_of(numbers.begin(), numbers.end(), [](const auto &n) {return n < 0; }))
         throw SW_RUNTIME_ERROR("Version number cannot be less than 0");
     auto l = checkAndNormalizeLevel(level);
-    if (numbers.size() < l)
+    if ((Level)numbers.size() < l)
         numbers.resize(l);
     setFirstVersion();
 }
@@ -78,7 +78,7 @@ void GenericNumericVersion::fill(Number n)
 
 GenericNumericVersion::Number GenericNumericVersion::get(Level level) const
 {
-    if (numbers.size() <= level)
+    if ((Level)numbers.size() <= level)
         return 0;
         //throw SW_RUNTIME_ERROR("There is no that much numbers");
     return numbers[level];
@@ -96,7 +96,7 @@ std::string GenericNumericVersion::printVersion(Level level) const
 
 std::string GenericNumericVersion::printVersion(const std::string &delimeter) const
 {
-    return printVersion(".", (Level)numbers.size());
+    return printVersion(delimeter, (Level)numbers.size());
 }
 
 std::string GenericNumericVersion::printVersion(const String &delimeter, Level level) const
@@ -663,13 +663,13 @@ void Version::format(std::string &s) const
 
     auto get_optional_number = [this](Level level) -> std::optional<Number>
     {
-        if (level > numbers.size())
+        if (level > (Level)numbers.size())
             return {};
 
         level--;
 
         bool has_number = false;
-        auto sz = numbers.size();
+        auto sz = (Level)numbers.size();
         for (auto i = sz - 1; i >= level; i--)
         {
             if (numbers[i] == 0)
@@ -684,7 +684,7 @@ void Version::format(std::string &s) const
         return {};
     };
 
-    auto get_optional = [this](const auto &n) -> String
+    auto get_optional = [](const auto &n) -> String
     {
         if (n)
             return "." + std::to_string(n.value());

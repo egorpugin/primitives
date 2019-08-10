@@ -121,6 +121,12 @@ void build(Solution &s)
         t.PackageDefinitions = true;
         // not all code works with this yet (e.g. hh.date)
         //t.Public.CompileOptions.push_back("-Zc:__cplusplus");
+        if (t.getCompilerType() != CompilerType::MSVC)
+        {
+            //t.CompileOptions.push_back("-Werror");
+            t.CompileOptions.push_back("-Wall");
+            t.CompileOptions.push_back("-Wextra");
+        }
         return p;
     };
 
