@@ -45,7 +45,7 @@ namespace sw
 namespace detail
 {
 
-struct BaseException
+struct PRIMITIVES_TEMPLATES_API BaseException
 {
     BaseException(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
 
@@ -64,18 +64,18 @@ protected:
 
 }
 
-struct Exception : detail::BaseException, /*virtual*/ std::exception
+struct PRIMITIVES_TEMPLATES_API Exception : detail::BaseException, /*virtual*/ std::exception
 {
     Exception(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
 };
 
-struct RuntimeError : detail::BaseException, /*Exception, virtual*/ std::runtime_error
+struct PRIMITIVES_TEMPLATES_API RuntimeError : detail::BaseException, /*Exception, virtual*/ std::runtime_error
 {
     RuntimeError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
     //RuntimeError(const RuntimeError &);
 };
 
-struct LogicError : detail::BaseException, std::logic_error
+struct PRIMITIVES_TEMPLATES_API LogicError : detail::BaseException, std::logic_error
 {
     LogicError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
 };
