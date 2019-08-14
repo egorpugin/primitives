@@ -127,6 +127,11 @@ void build(Solution &s)
             t.CompileOptions.push_back("-Wall");
             t.CompileOptions.push_back("-Wextra");
         }
+        else
+        {
+            t.Public += "_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS"_def;
+            t.Public.CompileOptions.push_back("-wd4251");
+        }
         return p;
     };
 
@@ -307,9 +312,9 @@ void build(Solution &s)
     sw_main.Public += "BOOST_DLL_USE_STD_FS"_def;
     sw_main.Public += main, sw_settings,
         "org.sw.demo.boost.dll"_dep;
-    sw_main.Interface.LinkLibraries.push_back(main.getImportLibrary()); // main itself
-    sw_main.Interface.LinkLibraries.push_back(sw_main.getImportLibrary()); // then me (self, sw.main)
-    sw_main.Interface.LinkLibraries.push_back(sw_settings.getImportLibrary()); // then sw.settings
+    //sw_main.Interface.LinkLibraries.push_back(main.getImportLibrary()); // main itself
+    //sw_main.Interface.LinkLibraries.push_back(sw_main.getImportLibrary()); // then me (self, sw.main)
+    //sw_main.Interface.LinkLibraries.push_back(sw_settings.getImportLibrary()); // then sw.settings
     if (sw_main.getBuildSettings().TargetOS.Type == OSType::Windows)
     {
         sw_main.Public +=

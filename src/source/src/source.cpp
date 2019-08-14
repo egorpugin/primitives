@@ -432,7 +432,7 @@ void Git::download2(const path &dir, const String &tag) const
             download_and_unpack(github_url, fn, dir);
             return;
         }
-        catch (std::exception &e)
+        catch (std::exception &)
         {
             // go to usual git download1
             //LOG_WARN(logger, e.what());

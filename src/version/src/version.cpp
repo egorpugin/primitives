@@ -120,10 +120,10 @@ GenericNumericVersion::Level GenericNumericVersion::getLevel() const
 
 GenericNumericVersion::Level GenericNumericVersion::getRealLevel() const
 {
-    auto l = numbers.size();
+    auto l = (Level)numbers.size();
     for (auto i = numbers.rbegin(); i != numbers.rend(); i++)
     {
-        if (*i)
+        if (*i != 0)
             return l;
         l--;
     }

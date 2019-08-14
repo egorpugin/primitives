@@ -35,9 +35,17 @@
 path get_home_directory()
 {
 #ifdef _WIN32
-    auto home = _wgetenv(L"USERPROFILE");
-    if (!home)
+
+    wchar_t *w;
+    size_t len;
+    auto err = _wdupenv_s(&w, &len, L"USERPROFILE");
+    if (err)
+    {
         std::cerr << "Cannot get user's home directory (%USERPROFILE%)\n";
+        return "";
+    }
+    path home = w;
+    free(w);
 #else
     // prefer this way
     auto p = getpwuid(getuid());
@@ -46,9 +54,9 @@ path get_home_directory()
     auto home = getenv("HOME");
     if (!home)
         std::cerr << "Cannot get user's home directory ($HOME)\n";
-#endif
     if (home == nullptr)
         return "";
+#endif
     return home;
 }
 
@@ -492,7 +500,11 @@ FILE *fopen(const path &p, const char *mode)
         s = L"\\\\?\\" + s;
         boost::replace_all(s, L"/", L"\\");
     }
-    return _wfopen(s.c_str(), path(mode).wstring().c_str());
+    FILE *f;
+    auto err = _wfopen_s(&f, s.c_str(), path(mode).wstring().c_str());
+    if (err)
+        return nullptr;
+    return f;
 #else
     return ::fopen(p.u8string().c_str(), mode);
 #endif

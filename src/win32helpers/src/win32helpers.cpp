@@ -239,9 +239,10 @@ void message_box(const std::wstring &s)
 void BindStdHandlesToConsole()
 {
     // Redirect the CRT standard input, output, and error handles to the console
-    freopen("CONIN$", "r", stdin);
-    freopen("CONOUT$", "w", stdout);
-    freopen("CONOUT$", "w", stderr);
+    FILE *stream;
+    freopen_s(&stream, "CONIN$", "r", stdin);
+    freopen_s(&stream, "CONOUT$", "w", stdout);
+    freopen_s(&stream, "CONOUT$", "w", stderr);
 
     /*setvbuf(stdin, NULL, _IONBF, 0);
     setvbuf(stdout, NULL, _IONBF, 0);

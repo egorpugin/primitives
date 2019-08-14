@@ -189,7 +189,7 @@ struct UvCommand
             uv_fs_open(c.loop, &file_req, f.c_str(), flags, 0644, NULL);
             uv_fs_req_cleanup(&file_req);
 
-            fd = file_req.result;
+            fd = (int)file_req.result;
         }
         // add set redirect for fd r/w
 
@@ -208,14 +208,7 @@ struct UvCommand
 
         void clear(int t)
         {
-            auto oldt = type;
             set_type(t);
-
-            switch (oldt)
-            {
-            default:
-                break;
-            }
 
             out = true;
             fd = -1;
@@ -238,7 +231,7 @@ struct UvCommand
 #if UV_VERSION_MAJOR > 1
                 uv_fs_close(c.loop, &file_req, uv_get_osfhandle(file_req.result), 0);
 #else
-                uv_fs_close(c.loop, &file_req, file_req.result, 0);
+                uv_fs_close(c.loop, &file_req, (uv_file)file_req.result, 0);
 #endif
                 break;
 
@@ -310,7 +303,7 @@ struct UvCommand
             {
                 auto s = ((primitives::Command::Stream *)p.data);
                 wbuf.base = s->text.data();
-                wbuf.len = s->text.size();
+                wbuf.len = (decltype(wbuf.len))s->text.size();
                 wreq.data = this;
                 if (auto r = uv_write(&wreq, (uv_stream_t *)&p, &wbuf, 1, on_write); r)
                     errors.push_back("cannot start write from string to fd" + std::to_string(fd) + ": " + uv_strerror(r));
@@ -501,7 +494,7 @@ public:
     {
         child_stdio = streams.get_child_stdio();
         options.stdio = child_stdio.data();
-        options.stdio_count = child_stdio.size();
+        options.stdio_count = (int)child_stdio.size();
 
         c.onBeforeRun();
 
@@ -547,7 +540,13 @@ path resolve_executable(const path &p)
 #ifdef _WIN32
     static const std::vector<String> exts = []
     {
-        String s = getenv("PATHEXT");
+        char *buf;
+        size_t len;
+        auto err = _dupenv_s(&buf, &len, "PATHEXT");
+        if (err)
+            throw SW_RUNTIME_ERROR("getenv(\"PATHEXT\") failed");
+        String s = buf;
+        free(buf);
         boost::to_lower(s);
         std::vector<String> exts;
         boost::split(exts, s, boost::is_any_of(";"));
