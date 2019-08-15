@@ -107,6 +107,12 @@ bool compare_dirs(const path &dir1, const path &dir2);
 PRIMITIVES_FILESYSTEM_API
 path unique_path(const path &p = "%%%%-%%%%-%%%%-%%%%");
 
+PRIMITIVES_FILESYSTEM_API
+time_t file_time_type2time_t(fs::file_time_type);
+
+PRIMITIVES_FILESYSTEM_API
+fs::file_time_type time_t2file_time_type(time_t);
+
 namespace primitives::filesystem
 {
 

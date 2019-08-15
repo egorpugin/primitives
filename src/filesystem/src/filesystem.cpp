@@ -488,6 +488,26 @@ path unique_path(const path &p)
     return boost::filesystem::unique_path(p.u8string()).wstring();
 }
 
+time_t file_time_type2time_t(fs::file_time_type t)
+{
+#ifdef __APPLE__
+    return fs::file_time_type::clock::to_time_t(t);
+#else
+    return *(time_t *)&t;
+#endif
+}
+
+fs::file_time_type time_t2file_time_type(time_t t)
+{
+#ifdef __APPLE__
+    return fs::file_time_type::clock::from_time_t(t);
+#else
+    fs::file_time_type ft;
+    *(time_t*)&ft = t;
+    return ft;
+#endif
+}
+
 namespace primitives::filesystem
 {
 
