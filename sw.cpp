@@ -130,6 +130,7 @@ void build(Solution &s)
         else
         {
             t.Public += "_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS"_def;
+            t.Public += "_CRT_SECURE_NO_WARNINGS"_def;
             t.Public.CompileOptions.push_back("-wd4251");
         }
         return p;

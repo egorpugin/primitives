@@ -770,6 +770,23 @@ std::vector<Command*> Command::execute2(std::error_code *ec_in)
     return cmds_big;
 }
 
+static String getStringFromErrorCode(int exit_code)
+{
+    String err = "exit code = " + std::to_string(exit_code);
+#ifdef _WIN32
+    if (exit_code > 256)
+    {
+        std::ostringstream stream;
+        stream << "0x" << std::hex << std::uppercase << exit_code;
+        err += " (" + stream.str() + ")";
+        auto e = FormatNtStatus((NTSTATUS)exit_code);
+        if (!e.empty())
+            err += ": " + e;
+    }
+#endif
+    return err;
+}
+
 void Command::execute1(std::error_code *ec_in)
 {
     if (prev)
@@ -779,14 +796,6 @@ void Command::execute1(std::error_code *ec_in)
     auto cmds = execute2(ec_in);
     if (ec_in && *ec_in)
         return;
-
-    // TODO: use sync ostream from C++20
-    /*for (auto &e : errors)
-    {
-        static std::mutex m;
-        std::unique_lock lk(m);
-        std::cerr << "error in cmd: " << e << std::endl;
-    }*/
 
     // check all errors in chain
     if (std::all_of(cmds.begin(), cmds.end(), [](auto &c)
@@ -809,6 +818,9 @@ void Command::execute1(std::error_code *ec_in)
                 if (c->exit_code.value() == 0)
                     continue;
                 ec_in->assign((int)c->exit_code.value(), std::generic_category());
+
+                // prepend exit code
+                errors.insert(errors.begin(), getStringFromErrorCode((int)c->exit_code.value()));
             }
             else // default error
                 ec_in->assign(1, std::generic_category());
@@ -816,25 +828,16 @@ void Command::execute1(std::error_code *ec_in)
         }
     }
 
+    // prepend exit code
+    if (exit_code)
+        errors.insert(errors.begin(), getStringFromErrorCode((int)exit_code.value()));
+
     throw SW_RUNTIME_ERROR(getError());
 }
 
 String Command::getError() const
 {
     auto err = "command failed: " + print();
-    if (exit_code)
-        err += ", exit code = " + std::to_string(exit_code.value());
-#ifdef _WIN32
-    if (exit_code > 256)
-    {
-        std::ostringstream stream;
-        stream << "0x" << std::hex << std::uppercase << exit_code.value();
-        err += " (" + stream.str() + ")";
-        auto e = FormatNtStatus((NTSTATUS)exit_code.value());
-        if (!e.empty())
-            err += ": " + e;
-    }
-#endif
     for (auto &e : errors)
         err += ", " + e;
     return err;

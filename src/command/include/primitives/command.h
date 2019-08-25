@@ -88,6 +88,7 @@ public:
     void write(path p) const;
     String print() const;
     String getError() const;
+    Strings getErrors() const { return errors; }
 
     void push_back(Arguments::Element);
     void push_back(const char *);
