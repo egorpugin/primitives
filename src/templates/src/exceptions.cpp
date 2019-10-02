@@ -9,10 +9,16 @@
 #include <boost/stacktrace.hpp>
 #endif
 
+#include <primitives/debug.h>
+
+#include <chrono>
+#include <iostream>
 #include <sstream>
 #include <string>
+#include <thread>
 
 bool gUseStackTrace;
+bool gDebugOnException;
 std::string gSymbolPath;
 
 #ifdef USE_STACKTRACE
@@ -20,6 +26,8 @@ std::string gSymbolPath;
 #include "exceptions_msvc.h"
 #endif
 #endif
+
+using namespace std::chrono_literals;
 
 namespace sw
 {
@@ -81,23 +89,31 @@ Exception::Exception(const char *file, const char *function, int line, const std
 {
 }
 
+static void doe(const std::string &msg)
+{
+    if (!gDebugOnException)
+        return;
+
+    std::cerr << msg << "\n";
+    std::cerr << "Waiting for debugger..." << "\n";
+    while (!primitives::isDebuggerAttached())
+        std::this_thread::sleep_for(100ms);
+}
+
 RuntimeError::RuntimeError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
     : BaseException
     //Exception
     (file, function, line, msg, stacktrace), std::runtime_error(getMessage())
 {
+    doe(getMessage());
 }
-
-//RuntimeError::RuntimeError(const RuntimeError &rhs)
-//    : Exception(rhs), std::runtime_error(rhs)
-//{
-//}
 
 LogicError::LogicError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
     : BaseException
     //Exception
     (file, function, line, msg, stacktrace), std::logic_error(getMessage())
 {
+    doe(getMessage());
 }
 
 } // namespace sw

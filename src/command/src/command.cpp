@@ -114,15 +114,15 @@ struct UvCommand
 
         UvCommand &c;
         int type = T_EMPTY;
-        uv_fs_t file_req; // redirect
-        uv_pipe_t p; // capture
+        uv_fs_t file_req = { 0 }; // redirect
+        uv_pipe_t p = { 0 }; // capture
         uv_pipe_t *p_provided = nullptr; // capture other's stream
         int fd; // inherit
         bool out = true; // direction, rename to read?
 
         // write (stdin) operations
-        uv_buf_t wbuf;
-        uv_write_t wreq;
+        uv_buf_t wbuf = { 0 };
+        uv_write_t wreq = { 0 };
 
     public:
         io_data(UvCommand &c)
@@ -441,6 +441,8 @@ public:
 #ifdef _WIN32
             if (c.create_new_console)
                 options.flags |= UV_PROCESS_WINDOWS_ALLOC_CONSOLE;
+            else
+                options.flags |= UV_PROCESS_WINDOWS_HIDE_CONSOLE;
 #endif
             //if (!detached)
             options.exit_cb = on_exit;
