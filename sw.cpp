@@ -215,6 +215,9 @@ void build(Solution &s)
     ADD_LIBRARY(log);
     log.Public += "org.sw.demo.boost.log"_dep;
 
+    ADD_LIBRARY(grpc_helpers);
+    grpc_helpers.Public += "org.sw.demo.google.grpc.cpp"_dep, templates, log;
+
     ADD_LIBRARY(cron);
     cron.Public += executor, log;
 
