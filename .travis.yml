@@ -19,10 +19,10 @@ cache:
     - $HOME/.sw
     #- $HOME/Library/Caches/Homebrew
 
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
+#addons:
+  #apt:
+    #sources:
+    #- ubuntu-toolchain-r-test
     #packages:
     #- gcc-9
     #- g++-9
