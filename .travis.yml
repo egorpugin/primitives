@@ -21,11 +21,11 @@ cache:
 
 addons:
   apt:
-    #sources:
-    #- ubuntu-toolchain-r-test
+    sources:
+    - ppa:ubuntu-toolchain-r-test
     packages:
     #- gcc-9
-    - g++
+    - g++-9
     #- postgresql
     #- postgresql-server-dev-10
   #homebrew:
