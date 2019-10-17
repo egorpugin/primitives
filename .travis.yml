@@ -22,10 +22,9 @@ cache:
 addons:
   apt:
     sources:
-    - ppa:ubuntu-toolchain-r-test
+    - ubuntu-toolchain-r-test
     packages:
-    #- gcc-9
-    - g++-9
+    - gcc-9
     #- postgresql
     #- postgresql-server-dev-10
   #homebrew:
