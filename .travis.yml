@@ -23,9 +23,9 @@ addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
-    packages:
-    - gcc-9
-    - g++-9
+    #packages:
+    #- gcc-9
+    #- g++-9
     #- postgresql
     #- postgresql-server-dev-10
   #homebrew:
