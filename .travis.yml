@@ -45,6 +45,7 @@ install:
   - if [[ $LINUX ]]; then curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-linux-client.tar.gz; fi
   - if [[ $OSX ]]  ; then curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-macos-client.tar.gz; fi
   - tar -xvf sw.tar.gz
+  - chmod 755 sw
   
   - export HOMEBREW_NO_AUTO_UPDATE=1
   - if [[ $OSX ]]  ; then brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/master/Formula/llvm.rb; fi
