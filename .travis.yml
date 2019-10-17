@@ -19,13 +19,13 @@ cache:
     - $HOME/.sw
     #- $HOME/Library/Caches/Homebrew
 
-#addons:
-  #apt:
+addons:
+  apt:
     #sources:
     #- ubuntu-toolchain-r-test
-    #packages:
+    packages:
     #- gcc-9
-    #- g++-9
+    - g++-9
     #- postgresql
     #- postgresql-server-dev-10
   #homebrew:
