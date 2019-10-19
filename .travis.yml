@@ -53,11 +53,11 @@ install:
   - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/bison/bin:$PATH"; fi
   - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/flex/bin:$PATH"; fi
   
-  - sudo sed -i "329a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
-  - sudo sed -i "355a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
-  - sudo sed -i "359a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
-  - sudo sed -i "639a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
-  - sudo sed -i "1356s/;/ noexcept;/" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
+  #- sudo sed -i "329a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
+  #- sudo sed -i "355a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
+  #- sudo sed -i "359a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
+  #- sudo sed -i "639a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
+  - sudo sed -i "1352s/;/ noexcept;/" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
   
   - cat /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
   
