@@ -21,7 +21,8 @@ cache:
 addons:
   apt:
     sources:
-    - sourceline: 'ppa:ubuntu-toolchain-r/test'
+    #- sourceline: 'ppa:ubuntu-toolchain-r/test'
+    - sourceline: 'ppa:jonathonf/gcc'
     packages:
     - gcc-9
     - g++-9
