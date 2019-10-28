@@ -78,6 +78,8 @@ struct PRIMITIVES_EMITTER_API Emitter
     Emitter(const Text &indent = "    ", const Text &newline = "\n");
     Emitter(const Emitter &) = delete;
     Emitter &operator=(const Emitter &) = delete;
+    Emitter(Emitter &&) = default;
+    Emitter &operator=(Emitter &&) = default;
     virtual ~Emitter();
 
     void addLine(const Text &s = Text());
