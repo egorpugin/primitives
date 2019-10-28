@@ -3,12 +3,11 @@ language: cpp
 notifications:
   email: false
 
-#sudo: required
-dist: xenial
+dist: bionic
 
 os:
-  #- linux
-  - osx
+  - linux
+  #- osx
 
 branches:
   only:
@@ -22,10 +21,11 @@ cache:
 addons:
   apt:
     sources:
-    - ubuntu-toolchain-r-test
+    #- sourceline: 'ppa:ubuntu-toolchain-r/test'
+    - sourceline: 'ppa:jonathonf/gcc'
     packages:
-    - gcc-8
-    - g++-8
+    - gcc-9
+    - g++-9
     #- postgresql
     #- postgresql-server-dev-10
   #homebrew:
@@ -45,6 +45,7 @@ install:
   - if [[ $LINUX ]]; then curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-linux-client.tar.gz; fi
   - if [[ $OSX ]]  ; then curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-macos-client.tar.gz; fi
   - tar -xvf sw.tar.gz
+  - chmod 755 sw
   
   - export HOMEBREW_NO_AUTO_UPDATE=1
   - if [[ $OSX ]]  ; then brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/master/Formula/llvm.rb; fi
@@ -52,6 +53,14 @@ install:
   - if [[ $OSX ]]  ; then brew install flex; fi
   - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/bison/bin:$PATH"; fi
   - if [[ $OSX ]]  ; then export PATH="/usr/local/opt/flex/bin:$PATH"; fi
+  
+  #- sudo sed -i "329a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
+  #- sudo sed -i "355a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
+  #- sudo sed -i "359a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
+  #- sudo sed -i "639a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
+  #- sudo sed -i "1352s/;/ noexcept;/" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
+  
+  #- cat /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
   
 script:
   #- true
