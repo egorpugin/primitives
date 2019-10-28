@@ -44,6 +44,11 @@ private:
 template <class Emitter>
 struct EmitterLine : Line
 {
+    EmitterLine(Emitter &&emitter)
+        : emitter(std::move(emitter))
+    {
+    }
+
     template <class ... Args>
     EmitterLine(Args && ... args)
         : emitter(std::forward<Args>(args)...)
@@ -96,13 +101,22 @@ struct PRIMITIVES_EMITTER_API Emitter
     void addText(const char* str, int n);
 
     template <class U = Emitter, class ... Args>
-    U &addEmitter(Args && ... args)
+    U &createInlineEmitter(Args && ... args)
     {
         auto e = std::make_unique<detail::EmitterLine<U>>(std::forward<Args>(args)...);
         e->n_indents = n_indents;
         auto &ref = *e;
         addLine(std::move(e));
         return ref.getEmitter();
+    }
+
+    template <class U>
+    void addEmitter(U &&emitter)
+    {
+        auto e = std::make_unique<detail::EmitterLine<U>>(std::forward<U>(emitter));
+        e->n_indents = n_indents;
+        auto &ref = *e;
+        addLine(std::move(e));
     }
 
     void increaseIndent(int n = 1);
