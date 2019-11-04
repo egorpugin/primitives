@@ -38,6 +38,8 @@ extern std::string gSymbolPath;
 static ::cl::opt<std::string, true> symbol_path("symbol-path", ::cl::desc("Set symbol path for backtrace"), ::cl::location(gSymbolPath), ::cl::Hidden);
 
 static ::cl::opt<int> sleep_seconds("sleep", ::cl::desc("Sleep on startup"), ::cl::Hidden);
+extern bool gPauseOnError;
+static ::cl::opt<bool, true> pause_on_error("pause-on-error", ::cl::desc("Pause on program error"), ::cl::Hidden, ::cl::location(gPauseOnError));
 
 static path temp_directory_path(const path &subdir)
 {

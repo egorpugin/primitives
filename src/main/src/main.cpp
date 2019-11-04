@@ -11,10 +11,11 @@
 #endif
 
 static int error = 1;
+bool gPauseOnError;
 
 void exit_handler()
 {
-    if (error)
+    if (error && !gPauseOnError)
         debug_break_if_debugger_attached();
     error = 0; // clear flag to prevent double break
 }
@@ -30,6 +31,12 @@ int main(int argc, char *argv[])
     catch (const std::exception &e)
     {
         std::cerr << e.what() << std::endl;
+
+        if (gPauseOnError)
+        {
+            std::cout << "Stopped on error as you asked. Press any key to continue..." << std::endl;
+            getchar();
+        }
     }
     exit_handler();
     return ret;
