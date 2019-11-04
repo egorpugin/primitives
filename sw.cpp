@@ -328,6 +328,11 @@ void build(Solution &s)
             ;
     }
 
+    ADD_LIBRARY(wt);
+    wt.Public += string, "org.sw.demo.emweb.wt.wt"_dep;
+
+    // tools
+
     auto &tools_embedder = p.addTarget<ExecutableTarget>("tools.embedder");
     setup_primitives_no_all_sources(tools_embedder);
     tools_embedder += "src/tools/embedder.cpp";
