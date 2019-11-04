@@ -57,7 +57,7 @@ void get_scalar_f(const yaml &node, const String &key, F &&f)
     }
 }
 
-template <class T>
+template <class T = String>
 auto get_sequence(const yaml &node)
 {
     std::vector<T> result;
@@ -65,11 +65,11 @@ auto get_sequence(const yaml &node)
     if (!n.IsDefined())
         return result;
     if (n.IsScalar())
-        result.push_back(n.as<String>());
+        result.push_back(n.template as<T>());
     else if (n.IsSequence())
     {
         for (const auto &v : n)
-            result.push_back(v.as<String>());
+            result.push_back(v.template as<T>());
     }
     return result;
 }
