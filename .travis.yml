@@ -60,7 +60,7 @@ install:
   #- sudo sed -i "639a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
   #- sudo sed -i "1352s/;/ noexcept;/" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
   
-  - wget https://raw.githubusercontent.com/gcc-mirror/gcc/3e7b85061947bdc7c7465743ba90734566860821/libstdc%2B%2B-v3/include/std/variant
+  - wget https://raw.githubusercontent.com/gcc-mirror/gcc/master/libstdc%2B%2B-v3/include/std/variant
   - sudo cp variant /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
   #- cat /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
   
