@@ -73,4 +73,4 @@ install:
   
 script:
   #- true
-  - ./sw -v build
+  - ./sw -checks-st -v build
