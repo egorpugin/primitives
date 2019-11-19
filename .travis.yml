@@ -20,8 +20,8 @@ cache:
 
 addons:
   apt:
-    #sources:
-    #- sourceline: 'ppa:ubuntu-toolchain-r/test'
+    sources:
+    - sourceline: 'ppa:ubuntu-toolchain-r/test'
     #- sourceline: 'ppa:jonathonf/gcc'
     packages:
     #- gcc-9
@@ -43,6 +43,10 @@ before_install:
   - if [[ $TRAVIS_OS_NAME == osx     ]]; then OSX=true; fi
 
 install:
+  #- sudo deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main
+  #- sudo deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main
+  #- sudo apt install clang-9
+
   - if [[ $LINUX ]]; then curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-linux-client.tar.gz; fi
   - if [[ $OSX ]]  ; then curl -fsS -L -o sw.tar.gz https://github.com/SoftwareNetwork/binaries/raw/master/sw-master-macos-client.tar.gz; fi
   - tar -xvf sw.tar.gz
