@@ -21,8 +21,9 @@ cache:
 addons:
   apt:
     sources:
-    - sourceline: 'ppa:ubuntu-toolchain-r/test'
+    #- sourceline: 'ppa:ubuntu-toolchain-r/test'
     #- sourceline: 'ppa:jonathonf/gcc'
+    - llvm-toolchain-bionic-9
     packages:
     #- gcc-9
     #- g++-9
