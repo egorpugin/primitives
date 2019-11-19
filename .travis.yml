@@ -20,12 +20,13 @@ cache:
 
 addons:
   apt:
-    sources:
+    #sources:
     #- sourceline: 'ppa:ubuntu-toolchain-r/test'
-    - sourceline: 'ppa:jonathonf/gcc'
+    #- sourceline: 'ppa:jonathonf/gcc'
     packages:
-    - gcc-9
-    - g++-9
+    #- gcc-9
+    #- g++-9
+    - clang-9
     #- postgresql
     #- postgresql-server-dev-10
   #homebrew:
@@ -60,8 +61,8 @@ install:
   #- sudo sed -i "639a noexcept" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
   #- sudo sed -i "1352s/;/ noexcept;/" /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
   
-  - wget https://raw.githubusercontent.com/gcc-mirror/gcc/master/libstdc%2B%2B-v3/include/std/variant
-  - sudo cp variant /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
+  #- wget https://raw.githubusercontent.com/gcc-mirror/gcc/master/libstdc%2B%2B-v3/include/std/variant
+  #- sudo cp variant /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
   #- cat /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/variant
   
 script:
