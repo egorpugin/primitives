@@ -65,6 +65,9 @@ static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const 
 
 static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Strings &modules)
 {
+    if (t.DryRun)
+        return {};
+
     Files out;
     auto i = t.BinaryDir / "include";
     auto v = t.getPackage().getVersion().toString();
