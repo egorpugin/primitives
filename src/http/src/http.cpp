@@ -33,11 +33,9 @@ String getAutoProxy()
     return proxy_addr;
 }
 
-static size_t curl_write_file(char *ptr, size_t size, size_t nmemb, void *userdata)
+static auto curl_write_file(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
-    auto read = size * nmemb;
-    fwrite(ptr, read, 1, (FILE *)userdata);
-    return read;
+    return fwrite(ptr, size, nmemb, (FILE *)userdata);
 }
 
 static int curl_transfer_info(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
@@ -99,7 +97,7 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
             curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, httpSettings.proxy.user.c_str());
     }
 
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_file);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_file); // must be set! see CURLOPT_WRITEDATA api desc
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, ofile.getHandle());
     curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, curl_transfer_info);
     curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &file_size_limit);
@@ -128,16 +126,30 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
     curl_easy_cleanup(curl);
 
-    if (res == CURLE_ABORTED_BY_CALLBACK)
+    // manual close
+    ofile.close();
+
+    auto on_error = [&fn]()
     {
         fs::remove(fn);
+    };
+
+    if (res == CURLE_ABORTED_BY_CALLBACK)
+    {
+        on_error();
         throw SW_RUNTIME_ERROR("File '" + url + "' is too big. Limit is " + std::to_string(file_size_limit) + " bytes.");
     }
     if (res != CURLE_OK)
+    {
+        on_error();
         throw SW_RUNTIME_ERROR("url = " + url + ", curl error: "s + curl_easy_strerror(res));
+    }
 
     if (http_code / 100 != 2)
+    {
+        on_error();
         throw SW_RUNTIME_ERROR("url = " + url + ", http returned " + std::to_string(http_code));
+    }
 }
 
 HttpResponse url_request(const HttpRequest &request)
