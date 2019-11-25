@@ -73,6 +73,7 @@ struct PRIMITIVES_VERSION_API VersionRange
     bool isEmpty() const;
     bool isOutside(const Version &) const;
     bool hasVersion(const Version &) const;
+    bool isBranch() const;
     size_t size() const;
 
     std::optional<Version> getMinSatisfyingVersion(const std::set<Version> &) const;
@@ -129,8 +130,6 @@ private:
     // always sorted with less
     Range range;
     std::string branch;
-
-    bool isBranch() const;
 
     VersionRange &operator|=(const RangePair &);
     VersionRange &operator&=(const RangePair &);
