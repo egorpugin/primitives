@@ -91,6 +91,46 @@ namespace detail
     }
 }
 
+namespace primitives
+{
+
+struct ExtendedScopeExit
+{
+    using F = std::function<void(void)>;
+
+    F on_error;
+    F on_success;
+    F finally;
+
+    ExtendedScopeExit(F init = {})
+    {
+        n_exceptions = std::uncaught_exceptions();
+        if (init)
+            init();
+    }
+    ExtendedScopeExit(ExtendedScopeExit &&) = default;
+    ~ExtendedScopeExit()
+    {
+        if (std::uncaught_exceptions()/* == n_exceptions + 1*/)
+        {
+            if (on_error)
+                on_error();
+        }
+        else
+        {
+            if (on_success)
+                on_success();
+        }
+        if (finally)
+            finally();
+    }
+
+private:
+    int n_exceptions;
+};
+
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // tuple for_each

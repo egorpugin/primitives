@@ -35,7 +35,10 @@ String getAutoProxy()
 
 static auto curl_write_file(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
-    return fwrite(ptr, size, nmemb, (FILE *)userdata);
+    auto n = fwrite(ptr, size, nmemb, (FILE *)userdata);
+    if (n != nmemb)
+        perror("Cannot write to disk");
+    return n;
 }
 
 static int curl_transfer_info(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
