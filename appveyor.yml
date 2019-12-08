@@ -20,7 +20,7 @@ before_build:
   - set PATH=%PATH%;%cd%
 
 build_script:
-  - sw -platform %platform% build -time-limit 10
+  - sw -platform %platform% build -time-limit 10m
   #- sw -internal-with-crash-server=1 -platform %platform% build || dir C:\Users\appveyor\AppData\Local\Temp\1\sw\cppan2.client.client\dump && 7z a dump.zip C:\Users\appveyor\AppData\Local\Temp\1\sw\cppan2.client.client\dump\* & appveyor PushArtifact -Path dump.zip
   # test
 
