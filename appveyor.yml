@@ -6,6 +6,9 @@ platform:
 
 cache:
   - c:/Users/appveyor/.sw -> appveyor.yml
+  
+environment:
+  - APPVEYOR_SAVE_CACHE_ON_ERROR: true
 
 configuration:
   - Release
@@ -20,7 +23,7 @@ before_build:
   - set PATH=%PATH%;%cd%
 
 build_script:
-  - sw -platform %platform% build -time-limit 50m
+  - sw -platform %platform% build -time-limit 45m
   #- sw -internal-with-crash-server=1 -platform %platform% build || dir C:\Users\appveyor\AppData\Local\Temp\1\sw\cppan2.client.client\dump && 7z a dump.zip C:\Users\appveyor\AppData\Local\Temp\1\sw\cppan2.client.client\dump\* & appveyor PushArtifact -Path dump.zip
   # test
 
