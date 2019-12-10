@@ -35,7 +35,7 @@ void DatabaseSchemaManager::createOrUpdate() const
     auto v = database->getValue<int>(version_column);
     if (!v || v == -1)
         create();
-    else
+    else if (getDiffSqlSize())
         update();
 }
 
@@ -49,8 +49,6 @@ void DatabaseSchemaManager::create() const
 
 void DatabaseSchemaManager::update() const
 {
-    if (getDiffSqlSize() == 0)
-        return;
     database->execute("BEGIN");
     auto scope = SCOPE_EXIT_NAMED
     {
