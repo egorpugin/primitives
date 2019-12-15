@@ -99,6 +99,8 @@ const StringMap<path> module_dirs {
     {"QtNfc" , "src/nfc"},
     {"QtDataVisualization" , "src/datavisualization"},
     {"QtQml" , "src/qml"},
+    {"QtQmlModels" , "src/qmlmodels"},
+    {"QtQmlWorkerScript" , "src/qmlworkerscript"},
     {"QtQuick" , "src/quick"},
     {"QtQuickWidgets" , "src/quickwidgets"},
     {"QtQuickParticles" , "src/particles"},
@@ -149,7 +151,10 @@ const StringMap<String> moduleheaders {
 };
 
 const StringMap<StringSet> classnames {
+
+   { "qscopeguard.h", {"QScopeGuard"} },
    { "qshareddata.h", {"QSharedData"} },
+
    { "qglobal.h", {"QtGlobal"} },
    { "qendian.h", {"QtEndian"} },
    { "qconfig.h", {"QtConfig"} },
