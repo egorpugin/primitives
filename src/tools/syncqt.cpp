@@ -149,6 +149,7 @@ const StringMap<String> moduleheaders {
 };
 
 const StringMap<StringSet> classnames {
+   { "qshareddata.h", {"QSharedData"} },
    { "qglobal.h", {"QtGlobal"} },
    { "qendian.h", {"QtEndian"} },
    { "qconfig.h", {"QtConfig"} },
