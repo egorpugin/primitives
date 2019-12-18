@@ -26,14 +26,16 @@ std::unordered_map<path, path> prepare_files(const Files &files, const path &roo
     std::unordered_map<path, path> files2;
     for (auto &f : files)
     {
-        if (!fs::exists(f))
+        auto s = fs::status(f);
+
+        if (s.type() == fs::file_type::not_found)
         {
             files2[f]; // still add to return false later
             continue; // report error?
         }
 
         // skip symlinks too
-        if (!fs::is_regular_file(f))
+        if (s.type() != fs::file_type::regular && s.type() != fs::file_type::directory)
             continue; // report error?
 
         auto r = fs::relative(f, root_dir);
@@ -78,7 +80,9 @@ bool pack_files(const path &fn, const std::unordered_map<path, path> &files, Str
 
     for (auto &[f, n] : files)
     {
-        if (!fs::exists(f))
+        auto s = fs::status(f);
+
+        if (s.type() == fs::file_type::not_found)
         {
             result = false;
             if (error)
@@ -87,21 +91,30 @@ bool pack_files(const path &fn, const std::unordered_map<path, path> &files, Str
         }
 
         // skip symlinks too
-        if (!fs::is_regular_file(f))
-            continue;
-
-        ScopedFile fp(f);
-        auto sz = fs::file_size(f);
-        auto e = archive_entry_new();
-        archive_entry_set_pathname(e, n.u8string().c_str());
-        archive_entry_set_size(e, sz);
-        archive_entry_set_filetype(e, AE_IFREG);
-        archive_entry_set_perm(e, 0644);
-        archive_write_header(a, e);
-        char buff[BLOCK_SIZE];
-        while (auto len = fread(buff, 1, sizeof(buff), fp.getHandle()))
-            archive_write_data(a, buff, len);
-        archive_entry_free(e);
+        if (s.type() == fs::file_type::regular)
+        {
+            ScopedFile fp(f);
+            auto sz = fs::file_size(f);
+            auto e = archive_entry_new();
+            archive_entry_set_pathname(e, n.u8string().c_str());
+            archive_entry_set_size(e, sz);
+            archive_entry_set_filetype(e, AE_IFREG);
+            archive_entry_set_perm(e, 0644);
+            archive_write_header(a, e);
+            char buff[BLOCK_SIZE];
+            while (auto len = fread(buff, 1, sizeof(buff), fp.getHandle()))
+                archive_write_data(a, buff, len);
+            archive_entry_free(e);
+        }
+        else if (s.type() == fs::file_type::directory)
+        {
+            auto e = archive_entry_new();
+            archive_entry_set_pathname(e, n.u8string().c_str());
+            archive_entry_set_filetype(e, AE_IFDIR);
+            archive_entry_set_perm(e, 0644);
+            archive_write_header(a, e);
+            archive_entry_free(e);
+        }
     }
     return result;
 }
