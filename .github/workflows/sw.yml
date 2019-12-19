@@ -9,5 +9,14 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
+      
+    - name: Download Qt
+      shell: cmake -P {0}
+      run: |
+        file(DOWNLOAD "https://software-network.org/client/sw-master-windows-client.zip" sw.zip SHOW_PROGRESS)
+      
+    - name: Download Qt
+      shell: cmake -E tar xvf sw.zip
+        
     - name: build
-      run: sw build
+      run: ./sw build
