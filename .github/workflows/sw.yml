@@ -10,6 +10,12 @@ jobs:
     steps:
     - uses: actions/checkout@v1
       
+    - name: SW Cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.sw
+        key: ${{ runner.os }}-sw-storage
+      
     - name: Download SW
       shell: cmake -P {0}
       run: |
