@@ -10,6 +10,12 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: egorpugin/sw-action@master
+
+    - name: SW Cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.sw
+        key: ${{ runner.os }}-sw-storage
         
     - name: build
       run: ./sw build
