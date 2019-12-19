@@ -7,7 +7,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [ubuntu-latest]
+        #os: [windows-latest, ubuntu-latest, macOS-latest]
     
     steps:
     - uses: actions/checkout@v1
@@ -23,8 +24,13 @@ jobs:
         else()
           file(DOWNLOAD "https://software-network.org/client/sw-master-linux-client.tar.gz" ./sw.zip)
         endif()
+        
     - name: Unpack SW
       run: cmake -E tar xvf sw.zip
+      
+    - name: chmod
+      run: chmod 755 sw
+      shell: sh
 
     - name: SW Cache
       uses: actions/cache@v1
