@@ -13,7 +13,7 @@ jobs:
     - name: Download Qt
       shell: cmake -P {0}
       run: |
-        file(DOWNLOAD "https://software-network.org/client/sw-master-windows-client.zip" sw.zip SHOW_PROGRESS)
+        file(DOWNLOAD "https://software-network.org/client/sw-master-windows-client.zip" ./sw.zip SHOW_PROGRESS)
       
     - name: Download Qt
       run: cmake -E tar xvf sw.zip
