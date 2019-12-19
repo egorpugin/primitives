@@ -9,20 +9,7 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-      
-    - name: SW Cache
-      uses: actions/cache@v1
-      with:
-        path: ~/.sw
-        key: ${{ runner.os }}-sw-storage
-      
-    - name: Download SW
-      shell: cmake -P {0}
-      run: |
-        file(DOWNLOAD "https://software-network.org/client/sw-master-windows-client.zip" ./sw.zip SHOW_PROGRESS)
-      
-    - name: Unpack SW
-      run: cmake -E tar xvf sw.zip
+    - uses: egorpugin/sw-action@v1
         
     - name: build
       run: ./sw build
