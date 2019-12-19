@@ -15,7 +15,7 @@ jobs:
       run: |
         file(DOWNLOAD "https://software-network.org/client/sw-master-windows-client.zip" ./sw.zip SHOW_PROGRESS)
       
-    - name: Download Qt
+    - name: Unpack SW
       run: cmake -E tar xvf sw.zip
         
     - name: build
