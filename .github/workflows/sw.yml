@@ -4,8 +4,10 @@ on: [push]
 
 jobs:
   build:
-
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
     
     steps:
     - uses: actions/checkout@v1
@@ -14,7 +16,13 @@ jobs:
     - name: Download SW
       shell: cmake -P {0}
       run: |
-        file(DOWNLOAD "https://software-network.org/client/sw-master-windows-client.zip" ./sw.zip SHOW_PROGRESS)
+        if (WIN32)
+          file(DOWNLOAD "https://software-network.org/client/sw-master-windows-client.zip" ./sw.zip)
+        elseif (APPLE)
+          file(DOWNLOAD "https://software-network.org/client/sw-master-macos-client.tar.gz" ./sw.zip)
+        else()
+          file(DOWNLOAD "https://software-network.org/client/sw-master-linux-client.tar.gz" ./sw.zip)
+        endif()
     - name: Unpack SW
       run: cmake -E tar xvf sw.zip
 
