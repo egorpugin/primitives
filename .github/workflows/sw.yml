@@ -9,7 +9,7 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-    - uses: egorpugin/sw-action@master
+    - uses: egorpugin/sw-action@1.0.0
         
     - name: build
       run: ./sw build
