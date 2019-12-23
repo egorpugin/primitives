@@ -359,7 +359,7 @@ static int startup(int argc, char *argv[])
             filter_cb, minidump_cb, nullptr, google_breakpad::ExceptionHandler::HANDLER_ALL,
             (MINIDUMP_TYPE)t, client_pipe_name_prepared_c_str, nullptr);
     }
-    else
+    else if (!IsDebuggerPresent())
     {
         // client
         client_pipe_name = std::to_string(std::random_device()());
