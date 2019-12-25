@@ -776,7 +776,7 @@ static String getStringFromErrorCode(int exit_code)
 {
     String err = "exit code = " + std::to_string(exit_code);
 #ifdef _WIN32
-    if (exit_code > 256)
+    if (exit_code > 256 || exit_code < 0)
     {
         std::ostringstream stream;
         stream << "0x" << std::hex << std::uppercase << exit_code;
