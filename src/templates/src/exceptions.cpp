@@ -93,6 +93,8 @@ static void doe(const std::string &msg)
 {
     if (!gDebugOnException)
         return;
+    if (primitives::isDebuggerAttached())
+        return;
 
     std::cerr << msg << "\n";
     std::cerr << "Waiting for debugger..." << "\n";
