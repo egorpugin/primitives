@@ -13,7 +13,7 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-    #- uses: egorpugin/sw-action@master      
+    - uses: egorpugin/sw-action@master      
     
     - name: Download SW
       shell: cmake -P {0}
@@ -33,11 +33,11 @@ jobs:
       run: chmod 755 sw
       shell: sh
 
-    - name: SW Cache
-      uses: actions/cache@v1
-      with:
-        path: ~/.sw
-        key: ${{ runner.os }}-sw-storage
+    #- name: SW Cache
+      #uses: actions/cache@v1
+      #with:
+        #path: ~/.sw
+        #key: ${{ runner.os }}-sw-storage
         
     - name: build
       run: ./sw build
