@@ -1,5 +1,5 @@
 #pragma sw require header org.sw.demo.ragel
-#pragma sw require header org.sw.demo.lexxmark.winflexbison.bison-master
+#pragma sw require header org.sw.demo.lexxmark.winflexbison.bison
 
 #pragma sw header on
 
@@ -277,8 +277,8 @@ void build(Solution &s)
     settings.Public += "include"_idir;
     settings.Public += yaml, filesystem, templates,
         "pub.egorpugin.llvm_project.llvm.support_lite-master"_dep;
-    gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison-master"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/settings");
-    gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison-master"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/path");
+    gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/settings");
+    gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/path");
     if (settings.getBuildSettings().TargetOS.Type != OSType::Windows)
         settings += "dl"_slib;
 
@@ -305,7 +305,7 @@ void build(Solution &s)
         "org.sw.demo.boost.container_hash"_dep,
         "org.sw.demo.imageworks.pystring"_dep;
     gen_ragel("org.sw.demo.ragel-6"_dep, version, "src/version.rl");
-    gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison-master"_dep, version, "GLR_CPP_PARSER", "src/range");
+    gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison"_dep, version, "GLR_CPP_PARSER", "src/range");
 
     ADD_LIBRARY(source);
     source.Public += command, hash, http, pack, version, yaml,
