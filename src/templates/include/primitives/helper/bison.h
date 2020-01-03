@@ -219,76 +219,83 @@ struct base_parser : BaseParser
 
 // parser
 
+#define THIS_PARSER2 THIS_PARSER::parser
+
 // bison is missing this definition
-#define BISON_PARSER_ERROR_FUNCTION                                                          \
-    inline void THIS_PARSER::parser::error(const location_type &loc, const std::string &msg) \
-    {                                                                                        \
-        std::ostringstream ss;                                                               \
-        ss << loc << " " << msg;                                                             \
-        auto self = (primitives::bison::BASE_PARSER_NAME<THIS_PARSER::parser> *)(this);      \
-        self->bb.error_msg = ss.str();                                                       \
-        if (!self->bb.bad_symbol.empty())                                                    \
-            self->bb.error_msg += ", bad symbol = '" + self->bb.bad_symbol + "'";            \
-        self->bb.error_msg += "\n";                                                          \
-        if (self->bb.can_throw)                                                              \
-            throw SW_RUNTIME_ERROR("Error during parse: " + ss.str());                     \
+#define BISON_PARSER_ERROR_FUNCTION                                                                                    \
+    inline void THIS_PARSER2::error(const location_type &loc, const std::string &msg)                                  \
+    {                                                                                                                  \
+        std::ostringstream ss;                                                                                         \
+        ss << loc << " " << msg;                                                                                       \
+        auto self = (primitives::bison::BASE_PARSER_NAME<THIS_PARSER2> *)(this);                                       \
+        self->bb.error_msg = ss.str();                                                                                 \
+        if (!self->bb.bad_symbol.empty())                                                                              \
+            self->bb.error_msg += ", bad symbol = '" + self->bb.bad_symbol + "'";                                      \
+        self->bb.error_msg += "\n";                                                                                    \
+        if (self->bb.can_throw)                                                                                        \
+            throw SW_RUNTIME_ERROR("Error during parse: " + ss.str());                                                 \
     }
 
 // debug level
 #define SET_DEBUG_LEVEL
 
-#define MY_PARSER_PARSER_DECLARATIONS                                                      \
-    LEXER_FUNCTION;                                                                        \
-    BISON_PARSER_ERROR_FUNCTION                                                            \
-                                                                                           \
-    int LEXER_NAME(lex_init)(void **scanner);                                              \
-    int LEXER_NAME(lex_destroy)(void *yyscanner);                                          \
-    struct yy_buffer_state *LEXER_NAME(_scan_string)(const char *yy_str, void *yyscanner); \
+#define MY_PARSER_DECLARATIONS                                                                                         \
+    LEXER_FUNCTION;                                                                                                    \
+    BISON_PARSER_ERROR_FUNCTION                                                                                        \
+                                                                                                                       \
+    int LEXER_NAME(lex_init)(void **scanner);                                                                          \
+    int LEXER_NAME(lex_destroy)(void *yyscanner);                                                                      \
+    struct yy_buffer_state *LEXER_NAME(_scan_string)(const char *yy_str, void *yyscanner);                             \
     void LEXER_NAME(set_in)(FILE * f, void *yyscanner)
 
-#define MY_PARSER_PARSE_FUNCTION             \
-    int parse(const std::string &s)          \
-    {                                        \
-        bb = basic_block_type{};             \
-        raii holder(bb);                     \
-        LEXER_NAME(_scan_string)             \
-        (s.c_str(), bb.scanner);             \
-        SET_DEBUG_LEVEL;                     \
-        return THIS_PARSER::parser::parse(); \
-    }                                        \
-                                             \
-    int parse(FILE *f)                       \
-    {                                        \
-        bb = basic_block_type{};             \
-        raii holder(bb);                     \
-        LEXER_NAME(set_in)                   \
-        (f, bb.scanner);                     \
-        SET_DEBUG_LEVEL;                     \
-        return THIS_PARSER::parser::parse(); \
+#define MY_PARSER_PARSE_FUNCTION_PROLOGUE                                                                              \
+    bb = basic_block_type{};                                                                                           \
+    raii holder(bb)
+
+#define MY_PARSER_PARSE_FUNCTION_EPILOGUE                                                                              \
+    SET_DEBUG_LEVEL;                                                                                                   \
+    return THIS_PARSER2::parse()
+
+#define MY_PARSER_PARSE_FUNCTION                                                                                       \
+    int parse(const std::string &s)                                                                                    \
+    {                                                                                                                  \
+        MY_PARSER_PARSE_FUNCTION_PROLOGUE;                                                                             \
+        LEXER_NAME(_scan_string)(s.c_str(), bb.scanner);                                                               \
+        MY_PARSER_PARSE_FUNCTION_EPILOGUE;                                                                             \
+    }                                                                                                                  \
+                                                                                                                       \
+    int parse(FILE *f)                                                                                                 \
+    {                                                                                                                  \
+        MY_PARSER_PARSE_FUNCTION_PROLOGUE;                                                                             \
+        LEXER_NAME(set_in)(f, bb.scanner);                                                                             \
+        MY_PARSER_PARSE_FUNCTION_EPILOGUE;                                                                             \
     }
 
-#define DECLARE_PARSER                                                          \
-    MY_PARSER_PARSER_DECLARATIONS;                                              \
-                                                                                \
-    struct MY_PARSER : primitives::bison::BASE_PARSER_NAME<THIS_PARSER::parser> \
-    {                                                                           \
-        struct raii                                                             \
-        {                                                                       \
-            basic_block_type &bb;                                               \
-            raii(basic_block_type &bb) : bb(bb)                                 \
-            {                                                                   \
-                LEXER_NAME(lex_init)                                            \
-                (&bb.scanner);                                                  \
-            }                                                                   \
-            ~raii()                                                             \
-            {                                                                   \
-                LEXER_NAME(lex_destroy)                                         \
-                (bb.scanner);                                                   \
-            }                                                                   \
-        };                                                                      \
-                                                                                \
-        MY_PARSER_PARSE_FUNCTION                                                \
-        MY_LEXER_FUNCTION                                                       \
+#define DECLARE_PARSER_BASE                                                                                            \
+    MY_PARSER_DECLARATIONS;                                                                                            \
+                                                                                                                       \
+    struct MY_PARSER : primitives::bison::BASE_PARSER_NAME<THIS_PARSER2>                                               \
+    {                                                                                                                  \
+        struct raii                                                                                                    \
+        {                                                                                                              \
+            basic_block_type &bb;                                                                                      \
+            raii(basic_block_type &bb) : bb(bb)                                                                        \
+            {                                                                                                          \
+                LEXER_NAME(lex_init)                                                                                   \
+                (&bb.scanner);                                                                                         \
+            }                                                                                                          \
+            ~raii()                                                                                                    \
+            {                                                                                                          \
+                LEXER_NAME(lex_destroy)                                                                                \
+                (bb.scanner);                                                                                          \
+            }                                                                                                          \
+        }
+
+#define DECLARE_PARSER                                                                                                 \
+    DECLARE_PARSER_BASE;                                                                                               \
+                                                                                                                       \
+    MY_PARSER_PARSE_FUNCTION                                                                                           \
+    MY_LEXER_FUNCTION                                                                                                  \
     }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -330,20 +337,31 @@ struct base_parser : BaseParser
 #define SET_PARSER_RESULT(v) MY_PARSER_CAST_BB.setResult(*v)
 
 // lexer
-#define LEXER_FUNCTION std::tuple<int, std::any> LEXER_NAME(lex)(void *yyscanner, THIS_PARSER::parser::location_type &loc)
-#define MAKE(x) {THIS_PARSER::parser::token::x, {}}
-#define MAKE_VALUE(x, v) {THIS_PARSER::parser::token::x, v}
+#define LEXER_RETURN_VALUE std::tuple<int, std::any>
+#define LEXER_FUNCTION LEXER_RETURN_VALUE LEXER_NAME(lex)(void *yyscanner, THIS_PARSER2::location_type &loc)
+#define MAKE(x) {THIS_PARSER2::token::x, {}}
+#define MAKE_VALUE(x, v) {THIS_PARSER2::token::x, v}
 
-#define MY_LEXER_FUNCTION                                     \
-    int lex(PARSER_NAME_UP(STYPE) * val, location_type * loc) \
-    {                                                         \
-        auto ret = LEXER_NAME(lex)(bb.scanner, *loc);         \
-        if (std::get<1>(ret).has_value())                     \
-            val->v = bb.add_data(std::get<1>(ret));           \
-        return std::get<0>(ret);                              \
+#define MY_LEXER_FUNCTION_SIGNATURE_RETURN_VALUE int
+#define MY_LEXER_FUNCTION_SIGNATURE_BODY lex(PARSER_NAME_UP(STYPE) * val, THIS_PARSER2::location_type * loc)
+#define MY_LEXER_FUNCTION_SIGNATURE MY_LEXER_FUNCTION_SIGNATURE_RETURN_VALUE MY_LEXER_FUNCTION_SIGNATURE_BODY
+#define MY_LEXER_FUNCTION_SIGNATURE_CLASS(x) MY_LEXER_FUNCTION_SIGNATURE_RETURN_VALUE x::MY_LEXER_FUNCTION_SIGNATURE_BODY
+
+#define MY_LEXER_FUNCTION_EPILOGUE                                                                                     \
+    if (std::get<0>(ret) == THIS_PARSER2::token::ERROR_SYMBOL && std::get<1>(ret).has_value())                         \
+        bb.bad_symbol = std::any_cast<std::string>(std::get<1>(ret));                                                  \
+    if (std::get<1>(ret).has_value())                                                                                  \
+        val->v = bb.add_data(std::get<1>(ret));                                                                        \
+    return std::get<0>(ret)
+
+#define MY_LEXER_FUNCTION                                                                                              \
+    MY_LEXER_FUNCTION_SIGNATURE                                                                                        \
+    {                                                                                                                  \
+        auto ret = LEXER_NAME(lex)(bb.scanner, *loc);                                                                  \
+        MY_LEXER_FUNCTION_EPILOGUE;                                                                                    \
     }
 
-#endif
+#endif // GLR_CPP_PARSER
 
 ////////////////////////////////////////////////////////////////////////////////
 // LALR(1) parser in C++ with bison variants
@@ -356,9 +374,10 @@ struct base_parser : BaseParser
 #define yylex() ((MY_PARSER_DRIVER*)this)->lex()
 
 // lexer
-#define LEXER_FUNCTION THIS_PARSER::parser::symbol_type LEXER_NAME(lex)(void *yyscanner, THIS_PARSER::parser::location_type &loc, MY_PARSER_DRIVER &driver)
-#define MAKE(x) THIS_PARSER::parser::make_ ## x(loc)
-#define MAKE_VALUE(x, v) THIS_PARSER::parser::make_ ## x((v), loc)
+#define LEXER_RETURN_VALUE THIS_PARSER2::symbol_type
+#define LEXER_FUNCTION LEXER_RETURN_VALUE LEXER_NAME(lex)(void *yyscanner, THIS_PARSER2::location_type &loc, MY_PARSER_DRIVER &driver)
+#define MAKE(x) THIS_PARSER2::make_ ## x(loc)
+#define MAKE_VALUE(x, v) THIS_PARSER2::make_ ## x((v), loc)
 
 #define YY_FATAL_ERROR(msg) throw std::logic_error(msg)
 
@@ -384,12 +403,12 @@ struct BASE_PARSER_NAME : BaseParser
 }
 
 #define MY_LEXER_FUNCTION                                                   \
-    THIS_PARSER::parser::symbol_type lex()                                  \
+    LEXER_RETURN_VALUE lex()                                                \
     {                                                                       \
         return LEXER_NAME(lex)(bb.scanner, loc, (MY_PARSER_DRIVER &)*this); \
     }
 
-#endif
+#endif // LALR1_CPP_VARIANT_PARSER
 
 ////////////////////////////////////////////////////////////////////////////////
 //

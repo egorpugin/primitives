@@ -50,7 +50,7 @@ struct MY_PARSER_DRIVER : MY_PARSER
 
 // tokens and types
 %token EOQ 0 "end of file"
-%token ERROR_SYMBOL LL_FATAL_ERROR
+%token ERROR_SYMBOL
 
 %token POINT
 

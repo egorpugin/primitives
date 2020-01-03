@@ -86,7 +86,7 @@ auto prepare_pair(VersionRange::RangePair &p)
 
 // tokens and types
 %token EOQ 0 "end of file"
-%token ERROR_SYMBOL LL_FATAL_ERROR
+%token ERROR_SYMBOL
 
 %token SPACE
 %token LT GT LE GE EQ NE

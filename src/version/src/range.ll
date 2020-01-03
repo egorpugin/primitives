@@ -70,7 +70,7 @@ branch [_a-zA-Z][_a-zA-Z0-9]*
 {branch}                return MAKE_VALUE(BRANCH, std::string(yytext));
 {extra}                 return MAKE_VALUE(EXTRA, std::string(yytext));
 
-<*>(?s:.)               { return MAKE(ERROR_SYMBOL); }
+<*>(?s:.)               { return MAKE_VALUE(ERROR_SYMBOL, std::string(yytext)); }
 <*><<EOF>>              return MAKE(EOQ);
 
 %%
