@@ -216,7 +216,7 @@ struct UvCommand
 
         void clean() noexcept
         {
-            if (c.c.detached)
+            if (c.c.detached || c.c.create_new_console)
                 return;
 
             switch (type)
@@ -245,7 +245,7 @@ struct UvCommand
             uv_stdio_container_t s;
             memset(&s, 0, sizeof(s));
 
-            if (c.c.detached)
+            if (c.c.detached || c.c.create_new_console)
                 return s;
 
             switch (type)
@@ -290,7 +290,7 @@ struct UvCommand
 
         void start_capture(Strings &errors)
         {
-            if (c.c.detached)
+            if (c.c.detached || c.c.create_new_console)
                 return;
             if (type != T_CAPTURE)
                 return;
@@ -809,7 +809,9 @@ void Command::execute1(std::error_code *ec_in)
     }
     // now do detached check only for the first (current) command
     else if (detached)
+    {
         return;
+    }
 
     if (ec_in)
     {
