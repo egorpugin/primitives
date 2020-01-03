@@ -311,6 +311,11 @@ void build(Solution &s)
     source.Public += command, hash, http, pack, version, yaml,
         "org.sw.demo.nlohmann.json"_dep;
 
+    // experimental
+    /*ADD_LIBRARY_WITH_NAME(cl, "experimental.cl");
+    cl.Public += templates, string;
+    gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison"_dep, cl, "GLR_CPP_PARSER", "src/cl");*/
+
     //ADD_LIBRARY(object_path);
     //object_path.Public += string, templates;
 
@@ -355,8 +360,6 @@ void build(Solution &s)
     setup_primitives_no_all_sources(stamp_gen);
     stamp_gen += "src/tools/stamp_gen.cpp";
 
-    return;
-
     auto &test = p.addDirectory("test");
     test.Scope = TargetScope::Test;
 
@@ -396,6 +399,10 @@ void build(Solution &s)
     auto &test_patch = add_test("patch");
     test_patch += patch;
 
+    /*auto &test_cl = add_test("cl");
+    test_cl += cl;*/
+
+#if 0
     auto tm = s.addTest(test_main);
     tm.c->addPathDirectory(getenv("PATH"));
     /*auto tdb = s.addTest(test_db);
@@ -410,4 +417,5 @@ void build(Solution &s)
     s.addTest(test_patch);
     s.addTest(test_settings);
     s.addTest(test_version);
+#endif
 }
