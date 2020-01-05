@@ -450,11 +450,24 @@ public:
 
         // set env
         {
+#ifdef _WIN32
+            // must be case insensitive on windows
+            struct CaseInsensitiveComparator
+            {
+                bool operator()(const std::string &a, const std::string &b) const noexcept
+                {
+                    return ::_stricmp(a.c_str(), b.c_str()) < 0;
+                }
+            };
+            std::map<std::string, std::string, CaseInsensitiveComparator> env_map;
+#else
             StringMap<String> env_map;
+#endif
             if (!c.environment.empty())
             {
 #ifdef _WIN32
-                auto lpvEnv = GetEnvironmentStrings();
+                // TODO: switch to GetEnvironmentStringsW
+                auto lpvEnv = GetEnvironmentStringsA();
                 if (!lpvEnv)
                     throw SW_RUNTIME_ERROR("GetEnvironmentStrings failed: " + std::to_string(GetLastError()));
 
@@ -463,9 +476,9 @@ public:
                 {
                     String s(lpszVariable);
                     env_map[s.substr(0, s.find('='))] = s.substr(s.find('=') + 1);
-                    lpszVariable += lstrlen(lpszVariable) + 1;
+                    lpszVariable += lstrlenA(lpszVariable) + 1;
                 }
-                FreeEnvironmentStrings(lpvEnv);
+                FreeEnvironmentStringsA(lpvEnv);
 #else
                 for (int i = 0; environ[i]; i++)
                 {
@@ -474,15 +487,19 @@ public:
                 }
 #endif
             }
+
+            // fill combined map
             for (auto &[k, v] : c.environment)
                 env_map[k] = v;
+
+            // fill env data
             for (auto &[k, v] : env_map)
                 env_data.push_back(k + "=" + v);
             for (auto &e : env_data)
                 env.push_back(e.data());
             if (!env.empty() || !c.inherit_current_evironment)
             {
-                env.push_back(0);
+                env.push_back(0); // end of env block
                 options.env = env.data();
             }
         }
