@@ -590,7 +590,7 @@ private:
 #if defined(_WIN32)
 #pragma warning(push)
 #pragma warning(disable : 4661)
-PRIMITIVES_SETTINGS_API_EXTERN
+extern
 template struct PRIMITIVES_SETTINGS_API SettingStorage<::primitives::Settings>;
 #pragma warning(pop)
 #elif defined(__APPLE__)

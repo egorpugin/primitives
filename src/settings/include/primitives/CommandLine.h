@@ -875,8 +875,8 @@ protected:
     extern template class parser<type>
 #elif defined(_MSC_VER)
 #define EXTERN_PARSER_TEMPLATE(type) \
-    PRIMITIVES_SETTINGS_API_EXTERN template class PRIMITIVES_SETTINGS_API basic_parser<type>; \
-    PRIMITIVES_SETTINGS_API_EXTERN template class PRIMITIVES_SETTINGS_API parser<type>
+    extern template class PRIMITIVES_SETTINGS_API basic_parser<type>; \
+    extern template class PRIMITIVES_SETTINGS_API parser<type>
 #elif defined(__APPLE__)
 #define EXTERN_PARSER_TEMPLATE(type) \
     extern template class PRIMITIVES_SETTINGS_API basic_parser<type>; \
@@ -1459,7 +1459,7 @@ public:
 #if defined(_WIN32)
 #pragma warning(push)
 #pragma warning(disable : 4661)
-PRIMITIVES_SETTINGS_API_EXTERN
+extern
 template PRIMITIVES_SETTINGS_API class opt<unsigned>;
 #pragma warning(pop)
 #elif defined(__APPLE__)
@@ -1472,7 +1472,7 @@ template class opt<unsigned>;
 #if defined(_WIN32)
 #pragma warning(push)
 #pragma warning(disable : 4661)
-PRIMITIVES_SETTINGS_API_EXTERN
+extern
 template PRIMITIVES_SETTINGS_API class opt<int>;
 #pragma warning(pop)
 #elif defined(__APPLE__)
@@ -1485,7 +1485,7 @@ template class opt<int>;
 #if defined(_WIN32)
 #pragma warning(push)
 #pragma warning(disable : 4661)
-PRIMITIVES_SETTINGS_API_EXTERN
+extern
 template PRIMITIVES_SETTINGS_API class opt<std::string>;
 #pragma warning(pop)
 #elif defined(__APPLE__)
@@ -1498,7 +1498,7 @@ template class opt<std::string>;
 #if defined(_WIN32)
 #pragma warning(push)
 #pragma warning(disable : 4661)
-PRIMITIVES_SETTINGS_API_EXTERN
+extern
 template PRIMITIVES_SETTINGS_API class opt<char>;
 #pragma warning(pop)
 #elif defined(__APPLE__)
@@ -1511,7 +1511,7 @@ template class opt<char>;
 #if defined(_WIN32)
 #pragma warning(push)
 #pragma warning(disable : 4661)
-PRIMITIVES_SETTINGS_API_EXTERN
+extern
 template PRIMITIVES_SETTINGS_API class opt<bool>;
 #pragma warning(pop)
 #elif defined(__APPLE__)

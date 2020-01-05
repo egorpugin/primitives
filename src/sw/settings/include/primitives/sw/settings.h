@@ -26,7 +26,7 @@ struct SettingStorage : public ::primitives::SettingStorage<T>
 #if defined(_WIN32)
 #pragma warning(push)
 #pragma warning(disable : 4910) // was 4661
-PRIMITIVES_SETTINGS_API_EXTERN
+extern
 template struct PRIMITIVES_SW_SETTINGS_API SettingStorage<::primitives::Settings>;
 #pragma warning(pop)
 #elif defined(__APPLE__)
