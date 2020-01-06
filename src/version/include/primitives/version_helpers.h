@@ -192,6 +192,8 @@ private:
 
         auto begin() const { return ptr->begin_releases(); }
         auto end() const { return ptr->end_releases(); }
+
+        bool empty() const { return ptr->empty_releases(); }
     };
 
 public:
