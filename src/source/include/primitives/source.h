@@ -22,9 +22,12 @@ using primitives::version::Version;
 
 enum class SourceType
 {
+// qt moc fails here
+#ifndef Q_MOC_RUN
 #define SOURCE(e, s) e,
 #include "source.inl"
 #undef SOURCE
+#endif
 
     // aliases
     Hg = Mercurial,
