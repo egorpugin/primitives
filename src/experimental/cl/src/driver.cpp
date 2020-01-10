@@ -60,7 +60,10 @@ int MY_PARSER::parse()
 
 void MY_PARSER::set_next_buf()
 {
-    LEXER_NAME(_scan_string)(pd.args[argi++].c_str(), bb.scanner);
+    if (argi >= pd.args.size())
+        LEXER_NAME(_scan_string)("", bb.scanner);
+    else
+        LEXER_NAME(_scan_string)(pd.args[argi++].c_str(), bb.scanner);
 }
 
 std::ostream &operator<<(std::ostream &o, const MyLocation &loc)
