@@ -1138,7 +1138,7 @@ public:
 
     // parse - Return true on error.
     bool parse(Option &, StringRef, StringRef Arg, path &Value) {
-        Value = Arg.str();
+        Value = fs::u8path(Arg.str());
         return false;
     }
 

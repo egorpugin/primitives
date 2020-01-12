@@ -15,7 +15,10 @@ namespace cl
 
 using namespace ::primitives::cl;
 
-using ::primitives::cl::ParseCommandLineOptions;
+PRIMITIVES_SW_SETTINGS_API
+bool ParseCommandLineOptions(int argc, char **argv,
+    llvm::StringRef Overview = "",
+    llvm::raw_ostream *Errs = nullptr);
 
 inline bool ParseCommandLineOptions(const Strings &args,
     llvm::StringRef Overview = "",
@@ -24,7 +27,7 @@ inline bool ParseCommandLineOptions(const Strings &args,
     std::vector<const char *> argv;
     for (auto &a : args)
         argv.push_back(a.data());
-    return ParseCommandLineOptions(argv.size(), argv.data(), Overview, Errs);
+    return ::primitives::cl::ParseCommandLineOptions(argv.size(), argv.data(), Overview, Errs);
 }
 
 }
