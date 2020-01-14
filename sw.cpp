@@ -63,6 +63,22 @@ static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const 
     t += IncludeDirectory(out.parent_path()); // but remove this later
 }
 
+static void embed2(const DependencyPtr &embedder, NativeExecutedTarget &t, const path &in, path out = {})
+{
+    if (in.is_absolute())
+        throw SW_RUNTIME_ERROR("embed: in must be relative to SourceDir");
+    if (out.empty())
+        out = t.BinaryPrivateDir / in.parent_path() / in.filename() += ".emb";
+
+    auto f = t.SourceDir / in;
+
+    t.addCommand()
+        << cmd::prog(embedder)
+        << cmd::in(in, cmd::Skip)
+        << cmd::out(out)
+        ;
+}
+
 static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Strings &modules)
 {
     if (t.DryRun)
@@ -345,6 +361,11 @@ void build(Solution &s)
     setup_primitives_no_all_sources(tools_embedder);
     tools_embedder += "src/tools/embedder.cpp";
     tools_embedder += filesystem, sw_main;
+
+    auto &tools_embedder2 = p.addTarget<ExecutableTarget>("tools.embedder2");
+    setup_primitives_no_all_sources(tools_embedder2);
+    tools_embedder2 += "src/tools/embedder2.cpp";
+    tools_embedder2 += filesystem, sw_main;
 
     auto &tools_sqlite2cpp = p.addTarget<ExecutableTarget>("tools.sqlpp11.sqlite2cpp");
     setup_primitives_no_all_sources(tools_sqlite2cpp);
