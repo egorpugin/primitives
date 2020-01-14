@@ -1,4 +1,4 @@
-name: C/C++ CI with SW
+name: CI
 
 on: [push]
 
@@ -13,7 +13,7 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-    - uses: egorpugin/sw-action@master      
+    #- uses: egorpugin/sw-action@master      
     
     - name: Download SW
       shell: cmake -P {0}
