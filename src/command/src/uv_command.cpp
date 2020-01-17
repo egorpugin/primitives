@@ -8,6 +8,8 @@
 
 #include <primitives/exceptions.h>
 
+#include <string.h> // memset()
+
 #ifndef _WIN32
 extern char **environ;
 #endif
