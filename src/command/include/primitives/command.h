@@ -106,6 +106,8 @@ public:
     Command &operator|(Command &);
     Command &operator|=(Command &);
 
+    void addPathDirectory(const path &p);
+
 public:
     static void execute(const path &p);
     static void execute(const path &p, std::error_code &ec);
