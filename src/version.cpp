@@ -1849,8 +1849,8 @@ TEST_CASE("Checking version helpers", "[helpers]")
             using C = decltype(s);
             C a;
 
-            using BE = C::const_iterator(C::*)() const;
-            using RBE = C::const_reverse_iterator(C::*)() const;
+            using BE = typename C::const_iterator(C::*)() const;
+            using RBE = typename C::const_reverse_iterator(C::*)() const;
             BE b = &C::begin;
             BE e = &C::end;
             RBE rb = &C::rbegin;
@@ -1865,8 +1865,8 @@ TEST_CASE("Checking version helpers", "[helpers]")
             using C = decltype(m);
             C a;
 
-            using BE = C::const_iterator(C::*)() const;
-            using RBE = C::const_reverse_iterator(C::*)() const;
+            using BE = typename C::const_iterator(C::*)() const;
+            using RBE = typename C::const_reverse_iterator(C::*)() const;
             BE b = &C::begin;
             BE e = &C::end;
             RBE rb = &C::rbegin;
@@ -1881,7 +1881,7 @@ TEST_CASE("Checking version helpers", "[helpers]")
             using C = decltype(um);
             C a;
 
-            using BE = C::const_iterator(C::*)() const;
+            using BE = typename C::const_iterator(C::*)() const;
             BE b = &C::begin;
             BE e = &C::end;
 
