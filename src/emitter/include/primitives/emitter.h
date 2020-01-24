@@ -87,11 +87,10 @@ struct PRIMITIVES_EMITTER_API Emitter
     Emitter &operator=(Emitter &&) = default;
     virtual ~Emitter();
 
-    void addLine(const Text &s = Text());
-    void addNoNewLine(const Text &s); // deprecated, use addLineWithIndent()
-    void addLineWithIndent(const Text &s);
-    void addLineWithIndent(const Text &s, int n);
-    void addLineNoSpace(const Text &s);
+    void addLine(const Text & = {});
+    void addLineWithIndent(const Text &);
+    void addLineWithIndent(const Text &, int indent); // absolute indent
+    void addLineWithoutIndent(const Text &);
     void removeLine();
     void removeLines(int n);
 

@@ -94,25 +94,12 @@ void Emitter::addText(const char* str, int n)
     addText(Text(str, str + n));
 }
 
-void Emitter::addNoNewLine(const Text &s)
+void Emitter::addLine(const Text &s)
 {
-    addLineWithIndent(s);
-}
-
-void Emitter::addLineWithIndent(const Text &s)
-{
-    addLineWithIndent(s, 0);
-}
-
-void Emitter::addLineWithIndent(const Text &text, int n)
-{
-    for (auto &s : splitWithIndent(text, newline))
-        addLine(std::make_unique<Line>(s, n + n_indents));
-}
-
-void Emitter::addLineNoSpace(const Text &s)
-{
-    addLineWithIndent(s, 0);
+    if (s.empty())
+        addLineWithoutIndent(s);
+    else
+        addLineWithIndent(s);
 }
 
 void Emitter::addLine(LinePtr &&l)
@@ -120,12 +107,20 @@ void Emitter::addLine(LinePtr &&l)
     lines.emplace_back(std::move(l));
 }
 
-void Emitter::addLine(const Text &s)
+void Emitter::addLineWithIndent(const Text &s)
 {
-    if (s.empty())
-        addLine(std::make_unique<Line>());
-    else
-        addLineWithIndent(s);
+    addLineWithIndent(s, n_indents);
+}
+
+void Emitter::addLineWithIndent(const Text &text, int n)
+{
+    for (auto &s : splitWithIndent(text, newline))
+        addLine(std::make_unique<Line>(s, n));
+}
+
+void Emitter::addLineWithoutIndent(const Text &s)
+{
+    addLineWithIndent(s, 0);
 }
 
 void Emitter::removeLine()
@@ -267,8 +262,8 @@ void CppEmitter::endFunction()
 
 void CppEmitter::beginNamespace(const Text &s)
 {
-    addLineNoSpace("namespace " + s);
-    addLineNoSpace("{");
+    addLineWithoutIndent("namespace " + s);
+    addLineWithoutIndent("{");
     addLine();
     namespaces.push(s);
 }
@@ -281,18 +276,18 @@ void CppEmitter::endNamespace(const Text &ns)
         s = namespaces.top();
         namespaces.pop();
     }
-    addLineNoSpace("} // namespace " + s);
+    addLineWithoutIndent("} // namespace " + s);
     addLine();
 }
 
 void CppEmitter::ifdef(const Text &s)
 {
-    addLineNoSpace("#ifdef " + s);
+    addLineWithoutIndent("#ifdef " + s);
 }
 
 void CppEmitter::endif()
 {
-    addLineNoSpace("#endif");
+    addLineWithoutIndent("#endif");
 }
 
 BinaryStream::BinaryStream()
