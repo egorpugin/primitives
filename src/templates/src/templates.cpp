@@ -22,6 +22,10 @@ ScopeGuard::~ScopeGuard()
         std::cerr << "unknown exception was thrown in scope guard" << std::endl;
         //throw;
     }
+
+    // in case if we want to run dtor manually
+    // it won't shoot for the second time
+    dismiss();
 }
 
 void ScopeGuard::run()
