@@ -166,7 +166,7 @@ void Command::setProgram(const path &p)
         getArguments()[0] = std::make_unique<command::SimpleArgument>(p);
         return;
     }
-    getArguments().push_front(normalize_path(p));
+    getArguments().push_front(p);
     program_set = true;
 }
 
@@ -229,7 +229,7 @@ void Command::preExecute(std::error_code *ec_in)
     // resolve exe
     {
         // remove this? underlying libuv could resolve itself
-        auto p = resolveProgram(getProgram());
+        auto p = resolveProgram(fs::u8path(getProgram()));
         if (p.empty())
         {
             auto e = "Cannot resolve executable: " + getProgram();
