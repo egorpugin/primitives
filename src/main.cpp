@@ -100,7 +100,8 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
 {
     using namespace primitives;
 
-    path dir = fs::temp_directory_path() / u"cppąń-storage-寿星天文历的";
+    path dir = fs::temp_directory_path() / "primitives" / "test" / u"cppąń-storage-寿星天文历的";
+    REQUIRE_NOTHROW(fs::remove_all(dir));
     REQUIRE_NOTHROW(fs::create_directories(dir));
 
     error_code ec;
@@ -125,8 +126,6 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
             c[i].setProgram("more");
             c[i - 1] | c[i];
             end += single;
-
-            CHECK_THROWS(c[i].execute());
         }
 
         CHECK_NOTHROW(c[0].execute());
@@ -146,6 +145,14 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
         c.setProgram(p);
         CHECK_NOTHROW(c.execute());
         CHECK(c.out.text == "hello\r\n");
+    }
+
+    {
+        write_file(p, "@echo hello world");
+        Command c;
+        c.setProgram(p);
+        REQUIRE_NOTHROW(c.execute());
+        CHECK(c.out.text == "hello world\r\n");
     }
 
     {
@@ -463,7 +470,7 @@ TEST_CASE("Checking executor", "[executor]")
     }
 
     {
-        Executor e;
+        Executor e(4);
         std::vector<Future<void>> fs;
         fs.push_back(e.push([] { std::this_thread::sleep_for(400ms); }));
         fs.push_back(e.push([] { std::this_thread::sleep_for(200ms); }));
@@ -523,12 +530,12 @@ TEST_CASE("Checking executor", "[executor]")
     }
 
     {
-        Executor e;
+        Executor e(4);
         auto f3 = e.push([] { std::this_thread::sleep_for(300ms); });
         auto f2 = e.push([] { std::this_thread::sleep_for(200ms); });
         auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
         auto f1 = e.push([] { std::this_thread::sleep_for(100ms); });
-        REQUIRE_NOTHROW_TIME(waitAny(f1, f2, f3, f4), 250ms);
+        REQUIRE_NOTHROW_TIME(waitAny(f1, f2, f3, f4), 200ms);
     }
 
     {
