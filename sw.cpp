@@ -401,6 +401,8 @@ void build(Solution &s)
     };
 
     auto &test_main = add_test("main");
+    if (test_main.getCompilerType() == CompilerType::MSVC)
+        test_main.CompileOptions.push_back("/utf-8"); // path tests
     test_main += command, date_time,
         executor, hash, yaml, emitter, http,
         "org.sw.demo.nlohmann.json-*"_dep;
@@ -425,8 +427,7 @@ void build(Solution &s)
     /*auto &test_cl = add_test("cl");
     test_cl += cl;*/
 
-#if 0
-    auto tm = s.addTest(test_main);
+    auto tm = test_main.addTest(test_main);
     tm.c->addPathDirectory(getenv("PATH"));
     /*auto tdb = s.addTest(test_db);
     if (test_db.getBuildSettings().TargetOS.Type == OSType::Windows)
@@ -437,8 +438,7 @@ void build(Solution &s)
             c->addPathDirectory(pq.LinkDirectories.begin()->parent_path() / "bin");
         });
     }*/
-    s.addTest(test_patch);
-    s.addTest(test_settings);
-    s.addTest(test_version);
-#endif
+    patch.addTest(test_patch);
+    settings.addTest(test_settings);
+    version.addTest(test_version);
 }
