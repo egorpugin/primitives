@@ -38,37 +38,37 @@
         <DisplayString>empty</DisplayString>
     </Type>
 
+    <Type Name="primitives::version::detail::comparable_variant&lt;*&gt;">
+        <DisplayString Condition="_Which == 0">
+            {_Head,sb}
+        </DisplayString>
+        <DisplayString Condition="_Which == 1">
+            {_Tail._Head}
+        </DisplayString>
+    </Type>
+
     <Type Name="primitives::version::detail::Extra">
         <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 0">
             empty
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 1 &amp;&amp; _Mypair._Myval2._Myfirst[0]._Which == 0">
-            {_Mypair._Myval2._Myfirst[0]._Head,sb}
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 1">
+            {_Mypair._Myval2._Myfirst[0]}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 1 &amp;&amp; _Mypair._Myval2._Myfirst[0]._Which == 1">
-            {_Mypair._Myval2._Myfirst[0]._Tail._Head}
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 2">
+            {_Mypair._Myval2._Myfirst[0]}.{_Mypair._Myval2._Myfirst[1]}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 2
-                       &amp;&amp; _Mypair._Myval2._Myfirst[0]._Which == 0
-                       &amp;&amp; _Mypair._Myval2._Myfirst[1]._Which == 0">
-            {_Mypair._Myval2._Myfirst[0]._Tail._Head,sb}.{_Mypair._Myval2._Myfirst[1]._Head,sb}
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 3">
+            {_Mypair._Myval2._Myfirst[0]}.{_Mypair._Myval2._Myfirst[1]}.{_Mypair._Myval2._Myfirst[2]}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 2
-                       &amp;&amp; _Mypair._Myval2._Myfirst[0]._Which == 0
-                       &amp;&amp; _Mypair._Myval2._Myfirst[1]._Which == 1">
-            {_Mypair._Myval2._Myfirst[0]._Tail._Head,sb}.{_Mypair._Myval2._Myfirst[1]._Head}
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 4">
+            {_Mypair._Myval2._Myfirst[0]}.{_Mypair._Myval2._Myfirst[1]}.{_Mypair._Myval2._Myfirst[2]}.{_Mypair._Myval2._Myfirst[3]}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 2
-                       &amp;&amp; _Mypair._Myval2._Myfirst[0]._Which == 1
-                       &amp;&amp; _Mypair._Myval2._Myfirst[1]._Which == 0">
-            {_Mypair._Myval2._Myfirst[0]._Tail._Head}.{_Mypair._Myval2._Myfirst[1]._Head,sb}
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 5">
+            {_Mypair._Myval2._Myfirst[0]}.{_Mypair._Myval2._Myfirst[1]}.{_Mypair._Myval2._Myfirst[2]}.{_Mypair._Myval2._Myfirst[3]}.{_Mypair._Myval2._Myfirst[4]}
         </DisplayString>
-        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 2
-                       &amp;&amp; _Mypair._Myval2._Myfirst[0]._Which == 1
-                       &amp;&amp; _Mypair._Myval2._Myfirst[1]._Which == 1">
-            {_Mypair._Myval2._Myfirst[0]._Tail._Head}.{_Mypair._Myval2._Myfirst[1]._Head}
+        <DisplayString>
+            update natvis :)
         </DisplayString>
-        <DisplayString>empty</DisplayString>
     </Type>
 
     <Type Name="primitives::version::Version">
