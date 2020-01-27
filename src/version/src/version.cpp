@@ -190,7 +190,8 @@ Version::Version(const std::string &v, const std::string &e)
 Version::Version(const Version &version, const std::string &extra)
     : Version(version)
 {
-    parseExtra(*this, extra);
+    if (!parseExtra(*this, detail::preprocess_input(extra)))
+        throw_bad_version_extra(extra);
 }
 
 Version::Version(const char *s)

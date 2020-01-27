@@ -39,6 +39,9 @@ TEST_CASE("Checking versions", "[version]")
     CHECK_THROWS(Version("1.2--rc2.3.a")); // with extra
     CHECK_THROWS(Version("1.2-rc2.3.a-")); // with extra
     CHECK_THROWS(Version("1.2-rc2.3.-a")); // with extra
+    CHECK_THROWS(Version(Version("1.2"), "-rc2.3.-a")); // with extra
+    CHECK_THROWS(Version(Version("1.2"), "3.4.1-beta4-19610-02")); // with extra
+    CHECK_THROWS(Version(Version("1.2"), "beta4-19610-02")); // with extra
     CHECK_NOTHROW(Version("1.2.3"));
     CHECK_NOTHROW(Version("1.2.3.4"));
     CHECK_THROWS(Version("1.2.*"));
