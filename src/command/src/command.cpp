@@ -478,7 +478,8 @@ void Command::execute1(const path &p, const Arguments &args, std::error_code *ec
 {
     Command c;
     c.setProgram(p);
-    c.setArguments(args);
+    for (auto &a : args)
+        c.push_back(a->clone());
     c.execute1(ec);
 }
 
