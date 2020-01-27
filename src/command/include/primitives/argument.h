@@ -86,7 +86,12 @@ struct PRIMITIVES_COMMAND_API Arguments
     void push_back(const String &);
     void push_back(const path &);
     void push_back(const Arguments &);
+
+    void push_front(Element &&);
+    void push_front(const char *);
+    void push_front(const String &);
     void push_front(const path &);
+    void push_front(const Arguments &);
 
     bool empty() const { return args.empty(); }
     size_t size() const;

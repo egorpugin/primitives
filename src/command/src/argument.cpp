@@ -142,7 +142,33 @@ void Arguments::push_back(const path &p)
 void Arguments::push_back(const Arguments &args2)
 {
     for (auto &a : args2)
-        args.push_back(a->clone());
+        push_back(a->clone());
+}
+
+void Arguments::push_front(Element &&e)
+{
+    args.push_front(std::move(e));
+}
+
+void Arguments::push_front(const char *s)
+{
+    push_front(String(s));
+}
+
+void Arguments::push_front(const String &s)
+{
+    push_front(std::make_unique<SimpleArgument>(s));
+}
+
+void Arguments::push_front(const path &p)
+{
+    push_front(std::make_unique<SimpleArgument>(p));
+}
+
+void Arguments::push_front(const Arguments &args2)
+{
+    for (auto &a : args2)
+        push_front(a->clone());
 }
 
 size_t Arguments::size() const
@@ -168,11 +194,6 @@ Arguments::const_iterator Arguments::begin() const
 Arguments::const_iterator Arguments::end() const
 {
     return args.end();
-}
-
-void Arguments::push_front(const path &p)
-{
-    args.push_front(std::make_unique<SimpleArgument>(p));
 }
 
 } // namespace primitives::command
