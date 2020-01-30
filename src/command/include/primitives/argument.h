@@ -48,7 +48,7 @@ struct PRIMITIVES_COMMAND_API Argument
 
     virtual String toString() const = 0;
     virtual std::unique_ptr<Argument> clone() const = 0;
-    virtual ArgumentPosition getPosition() const;
+    virtual const ArgumentPosition &getPosition() const;
 
     String quote(QuoteType type = QuoteType::Simple) const;
     static String quote(const String &, QuoteType type = QuoteType::Simple);
@@ -65,6 +65,19 @@ struct PRIMITIVES_COMMAND_API SimpleArgument : Argument
 
 private:
     String a;
+};
+
+struct PRIMITIVES_COMMAND_API SimplePositionalArgument : SimpleArgument
+{
+    using SimpleArgument::SimpleArgument;
+
+    const ArgumentPosition &getPosition() const override { return pos; }
+    ArgumentPosition &getPosition() { return pos; }
+
+    std::unique_ptr<Argument> clone() const override { return std::make_unique<SimplePositionalArgument>(*this); }
+
+private:
+    ArgumentPosition pos;
 };
 
 struct PRIMITIVES_COMMAND_API Arguments

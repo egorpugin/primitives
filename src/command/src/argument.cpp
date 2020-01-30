@@ -12,14 +12,58 @@
 namespace primitives::command
 {
 
+template<class InputIt1, class InputIt2>
+static bool position_compare(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2)
+{
+    for (; first1 != last1 && first2 != last2; ++first1, ++first2)
+    {
+        if (*first1 < *first2) return true;
+        if (*first1 > *first2) return false;
+    }
+
+    // equal, but we do not meet such case here for now
+    // because equals check is earlier before this call
+    if (first1 == last1 && first2 == last2)
+        return false;
+
+    if (first1 == last1)
+    {
+        // why loop?
+        // because 1,2,3 == 1,2,3,0
+        // and     1,2,3 != 1,2,3,0,0,0,-1
+        for (; first2 != last2; ++first2)
+        {
+            // 1,2,3 < 1,2,3,1
+            if (*first2 > 0) return true;
+
+            // 1,2,3 > 1,2,3,-1
+            if (*first2 < 0) return false;
+        }
+    }
+    else // first2 == last2
+    {
+        // why loop?
+        // because 1,2,3,0        == 1,2,3
+        // and     1,2,3,0,0,0,-1 != 1,2,3
+        for (; first1 != last1; ++first1)
+        {
+            // 1,2,3,-1 < 1,2,3
+            if (*first1 < 0) return true;
+
+            // 1,2,3,1 > 1,2,3
+            if (*first1 > 0) return false;
+        }
+    }
+
+    // 1,2,3,0,0 == 1,2,3,0,0,0,0
+    return false;
+}
+
 bool ArgumentPosition::operator<(const ArgumentPosition &rhs) const
 {
-    auto max = std::min(positions.size(), rhs.positions.size());
-    auto v1 = positions;
-    auto v2 = rhs.positions;
-    v1.resize(max);
-    v2.resize(max);
-    return v1 < v2;
+    if (positions.size() == rhs.positions.size())
+        return positions < rhs.positions;
+    return position_compare(positions.begin(), positions.end(), rhs.positions.begin(), rhs.positions.end());
 }
 
 void ArgumentPosition::push_back(int v)
@@ -31,9 +75,10 @@ Argument::~Argument()
 {
 }
 
-ArgumentPosition Argument::getPosition() const
+const ArgumentPosition &Argument::getPosition() const
 {
-    return {};
+    static const ArgumentPosition p;
+    return p;
 }
 
 String Argument::quote(QuoteType type) const
