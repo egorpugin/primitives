@@ -112,6 +112,20 @@ static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Str
     return out;
 }
 
+static void generate_cl(const DependencyPtr &clgen, NativeExecutedTarget &t, const path &fn, const String &type)
+{
+    auto outh = t.BinaryDir / (fn.stem().u8string() + "." + type + ".h");
+    auto outcpp = t.BinaryDir / (fn.stem().u8string() + "." + type + ".cpp");
+
+    auto c = t.addCommand();
+    c << cmd::prog(clgen)
+        << cmd::in(fn)
+        << cmd::out(outh)
+        << cmd::out(outcpp)
+        << type
+        ;
+}
+
 #pragma sw header off
 
 void configure(Build &s)
@@ -337,21 +351,31 @@ void build(Solution &s)
     //ADD_LIBRARY(object_path);
     //object_path.Public += string, templates;
 
+    //
+    auto &cl_generator = p.addTarget<ExecutableTarget>("tools.cl_generator");
+    setup_primitives_no_all_sources(cl_generator);
+    cl_generator += "src/tools/cl_generator.cpp";
+    cl_generator += filesystem, yaml, emitter, main;
+    //
+
     auto &sw_main = p.addTarget<StaticLibraryTarget>("sw.main");
-    setup_primitives(sw_main);
-    sw_main.Public += "BOOST_DLL_USE_STD_FS"_def;
-    sw_main.Public += main, sw_settings,
-        "org.sw.demo.boost.dll"_dep;
-    //sw_main.Interface.LinkLibraries.push_back(main.getImportLibrary()); // main itself
-    //sw_main.Interface.LinkLibraries.push_back(sw_main.getImportLibrary()); // then me (self, sw.main)
-    //sw_main.Interface.LinkLibraries.push_back(sw_settings.getImportLibrary()); // then sw.settings
-    if (sw_main.getBuildSettings().TargetOS.Type == OSType::Windows)
     {
-        sw_main.Public +=
-            "org.sw.demo.google.breakpad.client.windows.handler-master"_dep,
-            "org.sw.demo.google.breakpad.client.windows.crash_generation.client-master"_dep,
-            "org.sw.demo.google.breakpad.client.windows.crash_generation.server-master"_dep
-            ;
+        setup_primitives(sw_main);
+        sw_main.Public += "BOOST_DLL_USE_STD_FS"_def;
+        sw_main.Public += main, sw_settings,
+            "org.sw.demo.boost.dll"_dep;
+        //sw_main.Interface.LinkLibraries.push_back(main.getImportLibrary()); // main itself
+        //sw_main.Interface.LinkLibraries.push_back(sw_main.getImportLibrary()); // then me (self, sw.main)
+        //sw_main.Interface.LinkLibraries.push_back(sw_settings.getImportLibrary()); // then sw.settings
+        if (sw_main.getBuildSettings().TargetOS.Type == OSType::Windows)
+        {
+            sw_main.Public +=
+                "org.sw.demo.google.breakpad.client.windows.handler-master"_dep,
+                "org.sw.demo.google.breakpad.client.windows.crash_generation.client-master"_dep,
+                "org.sw.demo.google.breakpad.client.windows.crash_generation.server-master"_dep
+                ;
+        }
+        generate_cl(std::make_shared<Dependency>(cl_generator), sw_main, "src/cl.yml", "llvm");
     }
 
     ADD_LIBRARY(wt);
