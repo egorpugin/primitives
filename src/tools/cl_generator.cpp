@@ -42,8 +42,9 @@ struct Command
     bool hidden = false;
     bool really_hidden = false;
 
-    bool value_optional = false;
+    int multi_val = -1;
 
+    bool value_optional = false;
     bool list = false;
     bool positional = false;
     bool zero_or_more = false;
@@ -79,12 +80,17 @@ struct Command
         READ_OPT(list);
         READ_OPT(positional);
         READ_OPT(hidden);
+        READ_OPT(really_hidden);
         READ_OPT(zero_or_more);
         READ_OPT(prefix);
         READ_OPT(comma_separated);
         READ_OPT(space_separated);
         READ_OPT(required);
         READ_OPT(consume_after);
+        READ_OPT(value_optional);
+
+        //
+        READ_OPT(multi_val);
 
 #undef READ_OPT
 #undef READ_SEQ
@@ -183,10 +189,16 @@ struct Command
             ctx.addLine(", ::cl::ConsumeAfter");
         if (prefix)
             ctx.addLine(", ::cl::Prefix");
+        if (value_optional)
+            ctx.addLine(", ::cl::ValueOptional");
+        if (multi_val != -1)
+            ctx.addLine(", ::cl::multi_val(" + std::to_string(multi_val) + ")");
         if (!subcommand.empty())
             ctx.addLine(", ::cl::sub(subcommand_" + subcommand + ")");
         if (hidden)
             ctx.addLine(", ::cl::Hidden");
+        if (really_hidden)
+            ctx.addLine(", ::cl::ReallyHidden");
         ctx.decreaseIndent();
 
         if (sz == ctx.getLines().size())
