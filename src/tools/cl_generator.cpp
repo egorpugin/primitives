@@ -233,17 +233,17 @@ struct CommandLine
     void parse(const yaml &root, const String &subcommand = {})
     {
         auto cmd = root["command_line"];
-        for (auto &v : cmd)
+        for (const auto &v : cmd)
         {
-            auto n = v.first.template as<String>();
+            auto n = v.first.as<String>();
             if (n == "subcommand")
             {
                 subcommands.emplace_back(std::make_unique<CommandLine>());
-                subcommands.back()->name = v.second["name"].template as<String>();
+                subcommands.back()->name = v.second["name"].as<String>();
                 if (v.second["desc"].IsDefined())
-                    subcommands.back()->description = v.second["desc"].template as<String>();
+                    subcommands.back()->description = v.second["desc"].as<String>();
                 if (v.second["description"].IsDefined())
-                    subcommands.back()->description = v.second["description"].template as<String>();
+                    subcommands.back()->description = v.second["description"].as<String>();
                 subcommands.back()->parse(v.second, subcommands.back()->name);
                 continue;
             }
