@@ -869,7 +869,7 @@ protected:
 };
 
 #if __clang__ && defined(_MSC_VER)
-#error "clang-cl does not work here, find workaround!"
+//#error "clang-cl does not work here, find workaround!"
 #define EXTERN_PARSER_TEMPLATE(type) \
     extern template class basic_parser<type>; \
     extern template class parser<type>
