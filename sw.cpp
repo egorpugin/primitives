@@ -63,19 +63,24 @@ static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const 
     t += IncludeDirectory(out.parent_path()); // but remove this later
 }
 
-static void embed2(const DependencyPtr &embedder, NativeExecutedTarget &t, const path &in, path out = {})
+// compress_xz = 0x1
+static void embed2(const DependencyPtr &embedder, NativeExecutedTarget &t, path in, path out = {}, int compress = 0)
 {
-    if (in.is_absolute())
-        throw SW_RUNTIME_ERROR("embed: in must be relative to SourceDir");
-    if (out.empty())
-        out = t.BinaryPrivateDir / in.parent_path() / in.filename() += ".emb";
+    if (t.DryRun)
+        return;
 
-    auto f = t.SourceDir / in;
+    if (in.is_absolute() && out.empty())
+        throw SW_RUNTIME_ERROR("provide out file for absolute input");
+    auto pp = in.parent_path();
+    t.check_absolute(in);
+    if (out.empty())
+        out = t.BinaryPrivateDir / pp / in.filename() += ".emb";
 
     t.addCommand()
         << cmd::prog(embedder)
         << cmd::in(in, cmd::Skip)
         << cmd::out(out)
+        << compress
         ;
 }
 
@@ -260,7 +265,7 @@ void build(Solution &s)
 
     ADD_LIBRARY(pack);
     pack.Public += filesystem, templates,
-        "org.sw.demo.libarchive.libarchive-3"_dep;
+        "org.sw.demo.libarchive.libarchive"_dep;
 
     ADD_LIBRARY(patch);
     patch.Public += filesystem, templates;
@@ -392,6 +397,7 @@ void build(Solution &s)
     setup_primitives_no_all_sources(tools_embedder2);
     tools_embedder2 += "src/tools/embedder2.cpp";
     tools_embedder2 += filesystem, sw_main;
+    tools_embedder2 += "org.sw.demo.xz_utils.lzma"_dep;
 
     auto &tools_sqlite2cpp = p.addTarget<ExecutableTarget>("tools.sqlpp11.sqlite2cpp");
     setup_primitives_no_all_sources(tools_sqlite2cpp);
