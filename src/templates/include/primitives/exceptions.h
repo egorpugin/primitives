@@ -25,6 +25,8 @@
 #define SW_RUNTIME_ERROR(msg) SW_RUNTIME_ERROR_CUSTOM(msg, true)
 #define SW_LOGIC_ERROR(msg) SW_LOGIC_ERROR_CUSTOM(msg, true)
 
+#define SW_CHECK(x) do { if (!(x)) throw SW_RUNTIME_ERROR(#x); } while (0)
+
 #define SW_UNIMPLEMENTED                                                                                               \
     do                                                                                                                 \
     {                                                                                                                  \
