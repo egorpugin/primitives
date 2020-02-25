@@ -131,6 +131,20 @@ static void generate_cl(const DependencyPtr &clgen, NativeExecutedTarget &t, con
         ;
 }
 
+static void create_git_revision(const DependencyPtr &create_git_rev, NativeExecutedTarget &t)
+{
+    auto c = t.addCommand();
+    c << cmd::prog(create_git_rev)
+        << sw::resolveExecutable("git")
+        << t.SourceDir
+        << cmd::out(t.BinaryPrivateDir / "gitrev.h");
+    c.c->always = true;
+
+    auto u = create_git_rev->getPackage();
+    sw::UnresolvedPackage up{ u.getPath().parent().parent() / "git_rev", u.getRange() };
+    t += std::make_shared<sw::Dependency>(up);
+}
+
 #pragma sw header off
 
 void configure(Build &s)
@@ -412,6 +426,19 @@ void build(Solution &s)
     auto &stamp_gen = p.addTarget<ExecutableTarget>("tools.stamp_gen");
     setup_primitives_no_all_sources(stamp_gen);
     stamp_gen += "src/tools/stamp_gen.cpp";
+
+    {
+        auto &git_rev = p.addTarget<StaticLibraryTarget>("git_rev");
+        auto r = setup_primitives_no_all_sources(git_rev);
+        git_rev.setRootDirectory(r);
+        git_rev -= ".*"_rr;
+        git_rev.Interface += "src/.*"_rr;
+
+        auto &create_git_rev = p.addTarget<ExecutableTarget>("tools.create_git_rev");
+        setup_primitives_no_all_sources(create_git_rev);
+        create_git_rev += "src/tools/create_git_rev.cpp";
+        create_git_rev += command, sw_main;
+    }
 
     auto &test = p.addDirectory("test");
     test.Scope = TargetScope::Test;
