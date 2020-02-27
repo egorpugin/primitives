@@ -56,7 +56,7 @@ void DatabaseSchemaManager::update() const
     };
     auto v = (size_t)database->getValue<int>(version_column).value();
     auto sz = getDiffSqlSize();
-    if (v == sz)
+    if (v >= sz)
         return;
     for (auto i = v; i < sz; i++)
         database->execute(getDiffSql(i));
