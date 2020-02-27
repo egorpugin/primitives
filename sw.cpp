@@ -247,6 +247,8 @@ void build(Solution &s)
     executor.Public += templates,
         "org.sw.demo.boost.asio"_dep,
         "org.sw.demo.boost.system"_dep;
+    if (executor.getBuildSettings().TargetOS.Type != OSType::Windows)
+        executor += "pthread"_slib;
 
     ADD_LIBRARY(command);
     command.Public += file_monitor,
