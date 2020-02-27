@@ -26,6 +26,8 @@ struct SubCommand
 
 };
 
+const String all_subcommands_name = "AllSubCommands";
+
 struct Command
 {
     String name;
@@ -37,7 +39,8 @@ struct Command
     String description;
     String value_description;
     Strings aliases;
-    String subcommand;
+    Strings subcommands;
+    bool all_subcommands = false;
 
     bool hidden = false;
     bool really_hidden = false;
@@ -56,12 +59,15 @@ struct Command
 
     void parse(const yaml &root)
     {
-#define READ_OPT(x) \
-        if (root[#x].IsDefined()) \
-        x = root[#x].template as<decltype(x)>()
-#define READ_SEQ(x) \
-        if (root[#x].IsDefined()) \
-        x = get_sequence(root[#x])
+#define READ_OPT(x)                                                                                                    \
+    if (root[#x].IsDefined())                                                                                          \
+    x = root[#x].template as<decltype(x)>()
+#define READ_SEQ(x)                                                                                                    \
+    if (root[#x].IsDefined())                                                                                          \
+    {                                                                                                                  \
+        auto s = get_sequence(root[#x]);                                                                               \
+        x.insert(x.end(), s.begin(), s.end());                                                                         \
+    }
 
         READ_OPT(option);
         READ_OPT(type);
@@ -75,6 +81,8 @@ struct Command
             value_description = root["value_desc"].template as<decltype(value_description)>();
         READ_OPT(value_description);
         READ_SEQ(aliases);
+        READ_SEQ(subcommands);
+        READ_OPT(all_subcommands);
 
         // bools
         READ_OPT(list);
@@ -193,8 +201,12 @@ struct Command
             ctx.addLine(", ::cl::ValueOptional");
         if (multi_val != -1)
             ctx.addLine(", ::cl::multi_val(" + std::to_string(multi_val) + ")");
-        if (!subcommand.empty())
-            ctx.addLine(", ::cl::sub(subcommand_" + subcommand + ")");
+        // TopLevelSubCommand - default
+        // AllSubCommands - all subs
+        if (all_subcommands)
+            ctx.addLine(", ::cl::sub(*::cl::" + all_subcommands_name + ")");
+        for (auto &s : subcommands)
+            ctx.addLine(", ::cl::sub(subcommand_" + s + ")");
         if (hidden)
             ctx.addLine(", ::cl::Hidden");
         if (really_hidden)
@@ -238,6 +250,13 @@ struct CommandLine
             auto n = v.first.as<String>();
             if (n == "subcommand")
             {
+                if (v.second["name"].as<String>() == all_subcommands_name)
+                {
+                    // do not add subcommand here
+                    parse(v.second, v.second["name"].as<String>());
+                    continue;
+                }
+
                 subcommands.emplace_back(std::make_unique<CommandLine>());
                 subcommands.back()->name = v.second["name"].as<String>();
                 if (v.second["desc"].IsDefined())
@@ -249,7 +268,13 @@ struct CommandLine
             }
             Command c;
             c.name = n;
-            c.subcommand = subcommand;
+            if (!subcommand.empty())
+            {
+                if (subcommand == all_subcommands_name)
+                    c.all_subcommands = true;
+                else
+                    c.subcommands.push_back(subcommand);
+            }
             c.parse(v.second);
             commands.push_back(c);
         }
