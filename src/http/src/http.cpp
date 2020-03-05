@@ -63,22 +63,52 @@ static size_t curl_write_string(char *ptr, size_t size, size_t nmemb, String *s)
     return read;
 }
 
-void download_file(const String &url, const path &fn, int64_t file_size_limit)
+struct CurlWrapper
 {
-    auto parent = fn.parent_path();
-    if (!parent.empty() && !fs::exists(parent))
-        fs::create_directories(parent);
+    CURL *curl;
+    struct curl_slist *headers = nullptr;
+    std::string post_data;
+    std::vector<char *> escaped_strings;
 
-    ScopedFile ofile(fn, "wb");
+    CurlWrapper()
+    {
+        curl = curl_easy_init();
+    }
+    ~CurlWrapper()
+    {
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
 
-    // set up curl request
-    auto curl = curl_easy_init();
+        for (auto &e : escaped_strings)
+            curl_free(e);
+    }
+};
 
-    if (httpSettings.verbose)
+static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &request)
+{
+    auto wp = std::make_unique<CurlWrapper>();
+    auto &w = *wp;
+    auto curl = w.curl;
+
+    curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
+
+    if (request.verbose)
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    if (!request.agent.empty())
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, request.agent.c_str());
+
+    if (!request.username.empty())
+        curl_easy_setopt(curl, CURLOPT_USERNAME, request.username.c_str());
+    if (!request.password.empty())
+        curl_easy_setopt(curl, CURLOPT_USERPWD, request.password.c_str());
+
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+
+    if (request.connect_timeout != -1)
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, request.connect_timeout);
+    if (request.timeout != -1)
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, request.timeout);
 
     // proxy settings
     auto proxy_addr = getAutoProxy();
@@ -100,19 +130,15 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
             curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, httpSettings.proxy.user.c_str());
     }
 
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_file); // must be set! see CURLOPT_WRITEDATA api desc
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, ofile.getHandle());
-    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, curl_transfer_info);
-    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &file_size_limit);
-
+    // ssl
 #ifdef _WIN32
     if (!httpSettings.certs_file.empty())
         curl_easy_setopt(curl, CURLOPT_CAINFO, httpSettings.certs_file.c_str());
-    else if (url.find("https") == 0)
+    else if (request.url.find("https") == 0)
     {
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
-        if (httpSettings.ignore_ssl_checks)
+        if (request.ignore_ssl_checks)
         {
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
             //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
@@ -123,11 +149,66 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
 #endif
 
+    // headers
+    auto ct = "Content-Type: " + request.content_type;
+    if (!request.content_type.empty())
+    {
+        w.headers = curl_slist_append(w.headers, ct.c_str());
+    }
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, w.headers);
+
+    //
+    switch (request.type)
+    {
+    case HttpRequest::Post:
+        if (!request.data_kv.empty())
+        {
+            for (auto &a : request.data_kv)
+            {
+                w.escaped_strings.push_back(curl_easy_escape(curl, a.first.c_str(), (int)a.first.size()));
+                w.post_data += w.escaped_strings.back() + std::string("=");
+                w.escaped_strings.push_back(curl_easy_escape(curl, a.second.c_str(), (int)a.second.size()));
+                w.post_data += w.escaped_strings.back() + std::string("&");
+            }
+            w.post_data.resize(w.post_data.size() - 1);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, w.post_data.c_str());
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)w.post_data.size());
+        }
+        else
+        {
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.data.c_str());
+        }
+        break;
+    case HttpRequest::Delete:
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+        break;
+    }
+
+    return wp;
+}
+
+void download_file(const String &url, const path &fn, int64_t file_size_limit)
+{
+    auto parent = fn.parent_path();
+    if (!parent.empty() && !fs::exists(parent))
+        fs::create_directories(parent);
+
+    ScopedFile ofile(fn, "wb");
+
+    HttpRequest req(httpSettings);
+    req.url = url;
+    auto w = setup_curl_request(req);
+    auto curl = w->curl;
+
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_file); // must be set! see CURLOPT_WRITEDATA api desc
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, ofile.getHandle());
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, curl_transfer_info);
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &file_size_limit);
+
     auto res = curl_easy_perform(curl);
 
     long http_code = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-    curl_easy_cleanup(curl);
 
     // manual close
     ofile.close();
@@ -157,112 +238,16 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
 
 HttpResponse url_request(const HttpRequest &request)
 {
-    auto curl = curl_easy_init();
-
-    if (request.verbose)
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
-
-    if (!request.agent.empty())
-        curl_easy_setopt(curl, CURLOPT_USERAGENT, request.agent.c_str());
-    if (!request.username.empty())
-        curl_easy_setopt(curl, CURLOPT_USERNAME, request.username.c_str());
-    if (!request.password.empty())
-        curl_easy_setopt(curl, CURLOPT_USERPWD, request.password.c_str());
-
-    curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-    if (request.connect_timeout != -1)
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, request.connect_timeout);
-    if (request.timeout != -1)
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, request.timeout);
-
-    // proxy settings
-    auto proxy_addr = getAutoProxy();
-    if (!proxy_addr.empty())
-    {
-        curl_easy_setopt(curl, CURLOPT_PROXY, proxy_addr.c_str());
-        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
-    }
-    if (!request.proxy.host.empty())
-    {
-        curl_easy_setopt(curl, CURLOPT_PROXY, request.proxy.host.c_str());
-        curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
-        if (request.proxy.host.find("socks5") == 0)
-        {
-            curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
-            curl_easy_setopt(curl, CURLOPT_SOCKS5_AUTH, CURLAUTH_BASIC);
-        }
-        if (!request.proxy.user.empty())
-            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, request.proxy.user.c_str());
-    }
-
-    std::string data;
-    std::vector<char *> escaped;
-    switch (request.type)
-    {
-    case HttpRequest::Post:
-        if (!request.data_kv.empty())
-        {
-            for (auto &a : request.data_kv)
-            {
-                escaped.push_back(curl_easy_escape(curl, a.first.c_str(), (int)a.first.size()));
-                data += escaped.back() + std::string("=");
-                escaped.push_back(curl_easy_escape(curl, a.second.c_str(), (int)a.second.size()));
-                data += escaped.back() + std::string("&");
-            }
-            data.resize(data.size() - 1);
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)data.size());
-        }
-        else
-        {
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.data.c_str());
-        }
-        break;
-    case HttpRequest::Delete:
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-        break;
-    }
-
-#ifdef _WIN32
-    if (!httpSettings.certs_file.empty())
-        curl_easy_setopt(curl, CURLOPT_CAINFO, httpSettings.certs_file.c_str());
-    else if (request.url.find("https") == 0)
-    {
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
-        if (request.ignore_ssl_checks)
-        {
-            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
-            //curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
-        }
-    }
-#else
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
-#endif
+    auto w = setup_curl_request(request);
+    auto curl = w->curl;
 
     HttpResponse response;
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response.response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_string);
 
-    struct curl_slist *list = NULL;
-
-    auto ct = "Content-Type: " + request.content_type;
-    if (!request.content_type.empty())
-    {
-        list = curl_slist_append(list, ct.c_str());
-    }
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
-
     auto res = curl_easy_perform(curl);
 
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response.http_code);
-    curl_slist_free_all(list);
-    curl_easy_cleanup(curl);
-
-    for (auto &e : escaped)
-        curl_free(e);
 
     if (res != CURLE_OK)
         throw SW_RUNTIME_ERROR("url = " + request.url + ", curl error: "s + curl_easy_strerror(res));
