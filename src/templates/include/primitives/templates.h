@@ -111,7 +111,7 @@ struct ExtendedScopeExit
     ExtendedScopeExit(ExtendedScopeExit &&) = default;
     ~ExtendedScopeExit()
     {
-        if (std::uncaught_exceptions()/* == n_exceptions + 1*/)
+        if (std::uncaught_exceptions() > n_exceptions)
         {
             if (on_error)
                 on_error();
