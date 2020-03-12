@@ -19,7 +19,8 @@ std::string getBuildTime()
 {
     time_t t = SW_BUILD_TIME_T;
     std::ostringstream ss2;
-    ss2 << std::put_time(localtime(&t), "%d.%m.%Y %H:%M:%S %Z");
+    ss2 << "assembled on " << std::put_time(gmtime   (&t), "%d.%m.%Y %H:%M:%S UTC") << "\n";
+    ss2 << "             " << std::put_time(localtime(&t), "%d.%m.%Y %H:%M:%S %Z" ) << "\n";
     return ss2.str();
 }
 
