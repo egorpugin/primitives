@@ -1,4 +1,4 @@
-name: windows
+name: sw
 
 on: [push]
 
