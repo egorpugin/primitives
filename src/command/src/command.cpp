@@ -181,7 +181,8 @@ String Command::print() const
             s += a->quote();
             s += " ";
         }
-        s.resize(s.size() - 1);
+        if (!s.empty())
+            s.resize(s.size() - 1);
         return s;
     };
 
