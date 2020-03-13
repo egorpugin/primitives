@@ -17,3 +17,6 @@ jobs:
 
     - name: build
       run: ./sw build
+
+    - name: test
+      run: ./sw test
