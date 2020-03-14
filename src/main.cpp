@@ -220,13 +220,17 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
         // match
         write_file("x.exe", "");
         x = resolve_executable("x");
-        CHECK(x == "x.exe");
+        // cannot resolve into x.exe because boost process also checks exe contents
+        // it is more correct
+        CHECK(x == "");
         fs::remove("x.exe", ec);
 
         // register match
         write_file("x.ExE", "");
         x = resolve_executable("x");
-        CHECK(x == "x.exe");
+        // cannot resolve into x.exe because boost process also checks exe contents
+        // it is more correct
+        CHECK(x == "");
         fs::remove("x.exe", ec);
 
         // dir mismatch
@@ -256,7 +260,7 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
         // allow resolving of custom existing files
         write_file("x.txt", "");
         x = resolve_executable("x.txt");
-        CHECK(x == "x.txt");
+        CHECK(fs::equivalent(x, "x.txt"));
         fs::remove("x.txt", ec);
 
         // dir mismatch
@@ -472,11 +476,11 @@ TEST_CASE("Checking executor", "[executor]")
     {
         Executor e(4);
         std::vector<Future<void>> fs;
-        fs.push_back(e.push([] { std::this_thread::sleep_for(400ms); }));
-        fs.push_back(e.push([] { std::this_thread::sleep_for(200ms); }));
-        fs.push_back(e.push([] { std::this_thread::sleep_for(300ms); }));
-        fs.push_back(e.push([] { std::this_thread::sleep_for(100ms); }));
-        REQUIRE_NOTHROW_TIME(waitAny(fs), 200ms);
+        fs.push_back(e.push([] { std::this_thread::sleep_for(400ms * 2); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(200ms * 2); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(300ms * 2); }));
+        fs.push_back(e.push([] { std::this_thread::sleep_for(100ms * 2); }));
+        REQUIRE_NOTHROW_TIME(waitAny(fs), 400ms);
     }
 
     {
