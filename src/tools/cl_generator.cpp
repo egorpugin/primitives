@@ -11,11 +11,13 @@ struct EmitterContext
 {
     primitives::CppEmitter h;
     primitives::CppEmitter c;
+    primitives::CppEmitter qt;
 };
 
 struct Settings
 {
     bool add_include = true;
+    bool add_qt = true;
     String namespace_;
     String prefix;
     bool generate_struct = false;
@@ -23,7 +25,6 @@ struct Settings
 
 struct SubCommand
 {
-
 };
 
 const String all_subcommands_name = "AllSubCommands";
@@ -140,6 +141,21 @@ struct Command
         ctx.addLine("extern " + type + " " + getExternalName() + ";");
     }
 
+    void emitQtWidgets(primitives::CppEmitter &ctx, const Settings &settings,
+        const String &qt_var_parent, const String &parent = {}) const
+    {
+        ctx.addLine("cl_option_add_widget(\"" + name + "\", " + qt_var_parent + ", ");
+        if (!isExternal())
+        {
+            ctx.addText("options.");
+            if (!parent.empty())
+                ctx.addText("options_" + parent + ".");
+        }
+        ctx.addText(getExternalName() + ", ");
+        ctx.addText(getName(settings));
+        ctx.addText(");");
+    }
+
     void emit(EmitterContext &inctx, const Settings &settings) const
     {
         auto begin = [this, &settings](auto &ctx)
@@ -158,10 +174,13 @@ struct Command
             ctx.addText(getName(settings));
         };
 
-        inctx.h.addText("extern ");
+        inctx.h.addLine("extern ");
         begin(inctx.h);
         inctx.h.addText(";");
-        inctx.h.addLine();
+
+        inctx.qt.addLine("extern ");
+        begin(inctx.qt);
+        inctx.qt.addText(";");
 
         inctx.c.addLine("// " + name);
         inctx.c.addLine();
@@ -294,17 +313,19 @@ struct CommandLine
         for (auto &c : commands)
             c.emit(ctx, settings);
         ctx.h.emptyLines();
+        ctx.qt.emptyLines();
         ctx.c.emptyLines();
         for (auto &sb : subcommands)
             sb->emit(ctx, settings);
     }
 
-    void emitStruct(primitives::CppEmitter &ctx, const Settings &settings) const
+    void emitStruct(EmitterContext &ectx, const Settings &settings, const String &parent = {}) const
     {
         const auto suffix = name.empty() ? "" : ("_" + name);
         const auto Oname = "Options" + suffix;
         const auto oname = "options" + suffix;
 
+        auto &ctx = ectx.h;
         ctx.addLine("//");
         ctx.beginBlock("struct " + Oname);
         for (auto &c : commands)
@@ -317,19 +338,20 @@ struct CommandLine
 
         // subcommands
         for (auto &sb : subcommands)
-            sb->emitStruct(ctx, settings);
+            sb->emitStruct(ectx, settings, Oname);
         ctx.emptyLines();
 
         // ctor
-        ctx.beginFunction(Oname + "()");
+        ctx.addLine(Oname + "();");
+        ectx.c.beginFunction(parent + "::" + Oname + "::" + Oname + "()");
         for (auto &c : commands)
         {
             if (c.isExternal())
                 continue;
             //                                                  .getValue()?
-            ctx.addLine(c.name + " = " + c.getName(settings) + ";");
+            ectx.c.addLine(c.name + " = " + c.getName(settings) + ";");
         }
-        ctx.endFunction();
+        ectx.c.endFunction();
 
         // end of s
         ctx.endBlock(true);
@@ -350,6 +372,28 @@ struct CommandLine
         ctx.emptyLines();
         for (auto &sb : subcommands)
             sb->emitExternal(ctx);
+        ctx.emptyLines();
+    }
+
+    void emitQtWidgets(primitives::CppEmitter &ctx, const Settings &settings, const String &qt_var_parent) const
+    {
+        const auto n = name.empty() ? "AllSubCommands"s : ("SubCommand " + name);
+        const String var = "gbl";
+
+        ctx.addLine("// subcommand "s + n);
+        ctx.beginBlock();
+        ctx.addLine("auto gb = new QGroupBox(\"" + n + "\");");
+        ctx.addLine(qt_var_parent + "->addWidget(gb);");
+        ctx.addLine("QVBoxLayout *" + var + " = new QVBoxLayout;");
+        ctx.addLine("gb->setLayout(" + var + ");");
+        ctx.emptyLines();
+
+        for (auto &c : commands)
+            c.emitQtWidgets(ctx, settings, var, name);
+        ctx.emptyLines();
+        for (auto &sb : subcommands)
+            sb->emitQtWidgets(ctx, settings, var);
+        ctx.endBlock();
     }
 };
 
@@ -380,17 +424,17 @@ struct File
     {
         EmitterContext ctx;
 
-        if (settings.add_include)
-        {
-            ctx.h.addLine("#include <primitives/sw/cl.h>");
-            ctx.h.addLine();
-        }
+        // h
+        ctx.h.addLine("#include <primitives/sw/cl.h>");
+        ctx.h.addLine();
 
+        // cpp
         ctx.c.addLine("#include \"" + h.filename().u8string() + "\"");
         ctx.c.addLine();
 
         // externals
         cmd.emitExternal(ctx.h);
+        cmd.emitExternal(ctx.qt);
 
         if (!settings.namespace_.empty())
         {
@@ -399,15 +443,22 @@ struct File
         }
         cmd.emit(ctx, settings);
         if (settings.generate_struct)
-            cmd.emitStruct(ctx.h, settings);
+            cmd.emitStruct(ctx, settings);
         if (!settings.namespace_.empty())
         {
             ctx.h.endNamespace();
             ctx.c.endNamespace();
         }
 
+        // qt
+        const String qt_var = "in_widget";
+        ctx.qt.beginFunction("void createOptionWidgets(QLayout *" + qt_var + ", Options &options)");
+        cmd.emitQtWidgets(ctx.qt, settings, qt_var);
+        ctx.qt.endFunction();
+
         write_file(h, ctx.h.getText());
         write_file(cpp, ctx.c.getText());
+        write_file(h.parent_path() / h.stem() += ".qt.inl", ctx.qt.getText());
     }
 };
 
