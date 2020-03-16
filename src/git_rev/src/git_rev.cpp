@@ -19,8 +19,9 @@ std::string getBuildTime()
 {
     time_t t = SW_BUILD_TIME_T;
     std::ostringstream ss2;
-    ss2 << "assembled on " << std::put_time(gmtime   (&t), "%d.%m.%Y %H:%M:%S UTC") << "\n";
-    ss2 << "             " << std::put_time(localtime(&t), "%d.%m.%Y %H:%M:%S %Z" ) << "\n";
+    ss2 << "assembled on\n";
+    ss2 << std::put_time(gmtime(&t), "%d.%m.%Y %H:%M:%S UTC") << "\n";
+    ss2 << std::put_time(localtime(&t), "%d.%m.%Y %H:%M:%S %Z");
     return ss2.str();
 }
 
@@ -32,7 +33,6 @@ std::string getGitRevision()
         gitrev = "git revision " + gitrev;
         if (SW_GIT_CHANGED_FILES)
             gitrev += " plus " + std::to_string(SW_GIT_CHANGED_FILES) + " modified files";
-        gitrev += "\n";
     }
     return gitrev;
 }
