@@ -266,6 +266,13 @@ String download_file(const String &url)
     return s;
 }
 
+String read_file_or_download_file(const String &target)
+{
+    if (fs::exists(target))
+        return read_file(target);
+    return download_file(target);
+}
+
 bool isUrl(const String &s)
 {
     if (s.find("http://") == 0 ||

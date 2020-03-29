@@ -68,5 +68,9 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit = 
 PRIMITIVES_HTTP_API
 String download_file(const String &url);
 
+/// checks if file exists, then reads it, otherwise downloads it
+PRIMITIVES_HTTP_API
+String read_file_or_download_file(const String &target);
+
 PRIMITIVES_HTTP_API
 bool isUrl(const String &s);
