@@ -253,8 +253,6 @@ void build(Solution &s)
     ADD_LIBRARY(command);
     command.Public += file_monitor,
         "org.sw.demo.boost.process"_dep;
-    if (command.getBuildSettings().TargetOS.Type == OSType::Windows)
-        command += "Shell32.lib"_slib;
 
     ADD_LIBRARY(date_time);
     date_time.Public += string,
