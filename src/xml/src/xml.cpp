@@ -26,22 +26,24 @@ String getName(xmlNode *from)
     return (char *)from->name;
 }
 
-static String getContent1(xmlNode *from)
+String getName(xmlAttr *from)
+{
+    checkNullptr(from);
+    checkNullptr(from->name);
+    return (char *)from->name;
+}
+
+String getContent(xmlNode *from)
 {
     checkNullptr(from);
     if (from->type == XML_ELEMENT_NODE)
     {
         from = &from->children[0];
-        return getContent1(from);
+        return getContent(from);
     }
     if (from->type == XML_TEXT_NODE)
         return (char*)from->content;
     throw SW_RUNTIME_ERROR("unknown node type");
-}
-
-String getContent(xmlNode *from)
-{
-    return boost::trim_copy(getContent1(from));
 }
 
 static xmlNode *getNextRaw(xmlNode *from, const String &name)

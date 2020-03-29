@@ -17,6 +17,9 @@ PRIMITIVES_XML_API
 String getName(xmlNode *from);
 
 PRIMITIVES_XML_API
+String getName(xmlAttr *from);
+
+PRIMITIVES_XML_API
 String getContent(xmlNode *from);
 
 PRIMITIVES_XML_API
