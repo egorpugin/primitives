@@ -83,7 +83,7 @@ Emitter::~Emitter()
 void Emitter::addText(const Text &s)
 {
     if (lines.empty())
-        lines.emplace_back();
+        addLine();
     if (!s.empty() && lines.back()->n_indents == 0)
         lines.back()->n_indents = n_indents;
     lines.back()->setText(lines.back()->getText() += s);
