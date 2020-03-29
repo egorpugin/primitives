@@ -125,6 +125,8 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
         {
             curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
             curl_easy_setopt(curl, CURLOPT_SOCKS5_AUTH, CURLAUTH_BASIC);
+            // also reset back to basic, helps in connection reuse if any
+            curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_BASIC);
         }
         if (!httpSettings.proxy.user.empty())
             curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, httpSettings.proxy.user.c_str());
