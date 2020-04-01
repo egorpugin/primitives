@@ -37,6 +37,18 @@ struct PRIMITIVES_COMMAND_API Command
         bool append = false;
         std::function<ActionType> action;
         char buf[8192];
+
+    private:
+#ifdef BOOST_SERIALIZATION_ACCESS_HPP
+        friend class boost::serialization::access;
+        template <class Ar>
+        void serialize(Ar &ar, unsigned)
+        {
+            ar & text;
+            ar & file;
+            ar & append;
+        }
+#endif
     };
 
     Arguments arguments; // hide?
@@ -127,6 +139,24 @@ private:
     std::vector<Command*> execute2(std::error_code *ec);
 
     static void execute1(const path &p, const Arguments & = {}, std::error_code *ec = nullptr);
+
+#ifdef BOOST_SERIALIZATION_ACCESS_HPP
+    friend class boost::serialization::access;
+    template <class Ar>
+    void serialize(Ar &ar, unsigned)
+    {
+        ar & working_directory;
+        ar & environment;
+
+        ar & in;
+        ar & out;
+        ar & err;
+
+        //ar & prev;
+
+        ar & arguments;
+    }
+#endif
 };
 
 /// return empty when file not found
