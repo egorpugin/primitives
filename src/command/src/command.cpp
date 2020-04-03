@@ -132,12 +132,13 @@ void Command::push_back(const Arguments &in)
 
 void Command::setProgram(const path &p)
 {
+    auto np = normalize_path(p);
     if (program_set)
     {
-        getArguments()[0] = std::make_unique<command::SimpleArgument>(p);
+        getArguments()[0] = std::make_unique<command::SimpleArgument>(np);
         return;
     }
-    getArguments().push_front(p);
+    getArguments().push_front(np);
     program_set = true;
 }
 
