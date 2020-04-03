@@ -215,12 +215,7 @@ void build(Solution &s)
         templates += "USE_STACKTRACE"_def;
         templates += "org.sw.demo.boost.stacktrace"_dep;
     }
-    if (templates.getBuildSettings().TargetOS.Type == OSType::Windows)
-    {
-        templates += "dbgeng.lib"_slib;
-        templates += "Ole32.lib"_slib;
-    }
-    else
+    if (templates.getBuildSettings().TargetOS.Type != OSType::Windows)
     {
         templates += "dl"_slib;
     }
