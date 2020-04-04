@@ -426,10 +426,8 @@ void Command::addPathDirectory(const path &p)
     // Windows uses 'Path' not 'PATH', but we handle it in underlying primitives::Command.
     static const auto env = "PATH";
 #ifdef _WIN32
-    static const auto delim = ";";
     auto norm = [](const auto &p) { return normalize_path_windows(p); };
 #else
-    static const auto delim = ":";
     auto norm = [](const auto &p) { return p.u8string(); };
 #endif
 
@@ -444,7 +442,39 @@ void Command::addPathDirectory(const path &p)
         environment[env] = e;
 #endif
     }
-    environment[env] += delim + norm(p);
+
+    // now add without duplication
+    appendEnvironmentArrayValue(env, norm(p), true);
+}
+
+void Command::appendEnvironmentArrayValue(const String &key, const String &value, bool unique_values)
+{
+    static const auto delim =
+#ifdef _WIN32
+        ";"
+#else
+        ":"
+#endif
+        ;
+
+    auto add = [](auto &e, auto &value)
+    {
+        if (!e.empty())
+            e += delim;
+        e += value;
+    };
+
+    auto &e = environment[key];
+    if (!unique_values)
+        return add(e, value);
+
+    auto values = split_string(e, delim);
+    auto in_values = split_string(value, delim);
+    for (auto &v : in_values)
+    {
+        if (std::find(values.begin(), values.end(), v) == values.end())
+            add(e, v);
+    }
 }
 
 void Command::execute1(const path &p, const Arguments &args, std::error_code *ec)

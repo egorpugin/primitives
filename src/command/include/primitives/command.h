@@ -118,7 +118,11 @@ public:
     Command &operator|(Command &);
     Command &operator|=(Command &);
 
+    // env commands
     void addPathDirectory(const path &p);
+    // not only PATH may be added with delimiters ([DY]LD_LIBRARY_PATH etc.)
+    // value may be an array of values (proper delims must be set for target platform already)
+    void appendEnvironmentArrayValue(const String &key, const String &value, bool unique_values = false);
 
 public:
     static void execute(const path &p);
