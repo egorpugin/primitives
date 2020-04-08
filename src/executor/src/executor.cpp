@@ -10,6 +10,7 @@
 #include <primitives/exceptions.h>
 #include <primitives/thread.h>
 
+#include <atomic>
 #include <iostream>
 #include <string>
 
@@ -51,14 +52,39 @@ Executor::Executor(const std::string &name, size_t nThreads)
 Executor::Executor(size_t nThreads, const std::string &name)
     : nThreads(nThreads)
 {
+    // we keep this lock until all threads created and assigned to thread_pool var
+    // this is to prevent races on data objects
+    std::unique_lock<std::mutex> lk(m);
+
+    std::atomic<decltype(nThreads)> barrier{ 0 };
+
     thread_pool.resize(nThreads);
     for (size_t i = 0; i < nThreads; i++)
     {
-        thread_pool[i].t = make_thread([this, i, name = name]() mutable
+        thread_pool[i].t = make_thread([this, i, name = name, &barrier, nThreads]() mutable
         {
+            // set tids early
+            {
+                std::unique_lock<std::mutex> lk(m);
+                thread_ids[std::this_thread::get_id()] = i;
+                ++barrier;
+            }
+
+            // wait when all threads set their tids
+            while (barrier != nThreads)
+                std::this_thread::sleep_for(std::chrono::microseconds(1));
+
+            // proceed
             run(i, name);
         });
     }
+
+    // allow threads to run
+    lk.unlock();
+
+    // wait when all threads set their tids
+    while (barrier != nThreads)
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
 }
 
 Executor::~Executor()
@@ -91,11 +117,6 @@ void Executor::run(size_t i, const std::string &name)
         n += " ";
     n += std::to_string(i);
     primitives::setThreadName(n);
-
-    {
-        std::unique_lock<std::mutex> lk(m);
-        thread_ids[std::this_thread::get_id()] = i;
-    }
 
     while (!stopped_)
     {
