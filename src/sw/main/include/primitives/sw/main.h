@@ -15,3 +15,4 @@ int SW_MAIN(int argc, char *argv[]);
 #endif
 
 void sw_append_symbol_path(const path &in);
+void sw_enable_crash_server(int level = 0); // send -1 to disable

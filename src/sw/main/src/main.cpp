@@ -72,7 +72,8 @@ static google_breakpad::ExceptionHandler* handler;
 static std::string client_pipe_name;
 static std::wstring client_pipe_name_prepared;
 static const wchar_t *client_pipe_name_prepared_c_str;
-static std::atomic_bool handled_on_server;
+static std::string filter_message;
+static std::string after_minidump_write_message;
 
 static std::string get_object_prefix()
 {
@@ -89,7 +90,7 @@ static std::string get_pipe_name_base()
     return "\\\\.\\pipe\\" + get_object_prefix();
 }
 
-static int CrashServerStart(const std::string &id)
+static int StartCrashGenerationServer(const std::string &win_pipe_id)
 {
     auto dump_path = get_crash_dir().wstring();
 
@@ -103,7 +104,7 @@ static int CrashServerStart(const std::string &id)
         exit(0);
     };
 
-    crash_server = new google_breakpad::CrashGenerationServer(to_wstring(get_pipe_name_base() + id), 0,
+    crash_server = new google_breakpad::CrashGenerationServer(to_wstring(get_pipe_name_base() + win_pipe_id), 0,
         on_client_connect, 0,
         0, 0,
         on_client_disconnect, 0,
@@ -114,7 +115,7 @@ static int CrashServerStart(const std::string &id)
     auto r = crash_server->Start();
     if (r)
     {
-        auto ev = OpenEvent(EVENT_MODIFY_STATE, 0, to_wstring(get_event_name_base() + id).c_str());
+        auto ev = OpenEvent(EVENT_MODIFY_STATE, 0, to_wstring(get_event_name_base() + win_pipe_id).c_str());
         if (!ev)
         {
             printf("OpenEvent failed: %d\n", GetLastError());
@@ -134,7 +135,7 @@ static int CrashServerStart(const std::string &id)
     return !r;
 }
 
-static int CrashServerStart2()
+static int LaunchCrashServerHelper()
 {
     auto prog = boost::dll::program_location().wstring();
     auto cmd = L'\"' + prog + L'\"';
@@ -166,122 +167,25 @@ static int CrashServerStart2()
     return true;
 }
 
-static bool filter_cb(void* context, EXCEPTION_POINTERS* exinfo, MDRawAssertionInfo* assertion)
+static void print_string_safe(const std::string &s)
 {
-    if (client_pipe_name_prepared_c_str)
-    {
-        // server-side handling
+    WriteFile(GetStdHandle(STD_ERROR_HANDLE), s.data(), s.size(), 0, 0);
+}
 
-        /*google_breakpad::CrashGenerationClient c(client_pipe_name_prepared_c_str, MINIDUMP_TYPE::MiniDumpNormal, nullptr);
-        if (!c.Register())
-        {
-            printf("CrashGenerationClient::Register failed\n");
-            return true;
-        }
-        if (!c.RequestDump(exinfo, assertion))
-        {
-            printf("CrashGenerationClient::RequestDump failed\n");
-            return true;
-        }
-
-        printf("Unhandled exception.\nWriting minidump to %s\n", get_crash_dir().u8string().c_str());
-        printf("Crash server was used.\n");*/
-
-        // return to crash handler client to handle on server
-        return true;
-    }
-
-    // actually we can't safely start process here, make allocation etc.
-    // we can get loader lock and (or) other issues
-
-    // right approach is to setup crash handler server or a watchdog process
-    // before exception occurs
-
-    printf("Unhandled exception.\nWriting minidump to %s\n", get_crash_dir().u8string().c_str());
-
-    auto prog = boost::dll::program_location().wstring();
-    auto cmd = L'\"' + prog + L'\"';
-    cmd += to_wstring(" " + get_cl_option_base() + " " + client_pipe_name);
-
-    auto pipe_name = to_wstring(get_pipe_name_base() + client_pipe_name);
-    auto event_name = to_wstring(get_event_name_base() + client_pipe_name);
-
-    STARTUPINFO si{ 0 };
-    PROCESS_INFORMATION pi{ 0 };
-
-    auto ev = CreateEvent(0, 0, 0, event_name.c_str());
-    if (!ev)
-    {
-        printf("CreateEvent failed: %d\n", GetLastError());
-        return true;
-    }
-    if (!CreateProcess(prog.c_str(), cmd.data(), 0, 0, 0, 0, 0, 0, &si, &pi))
-    {
-        printf("CreateProcess failed: %d\n", GetLastError());
-        return true;
-    }
-    if (WaitForSingleObject(ev, 5000))
-    {
-        printf("Cannot connect to crash server\n");
-        return true;
-    }
-
-    google_breakpad::CrashGenerationClient c(pipe_name.c_str(), MINIDUMP_TYPE::MiniDumpNormal, nullptr);
-    if (!c.Register())
-    {
-        printf("CrashGenerationClient::Register failed\n");
-        return true;
-    }
-    if (!c.RequestDump(exinfo, assertion))
-    {
-        printf("CrashGenerationClient::RequestDump failed\n");
-        return true;
-    }
-
-    printf("Minidump is written using crash server started from inside the app\n");
-
-    // dangerous, but we'll try
-    exit(1);
-
-    handled_on_server = true;
+static bool filter_cb(void *context, EXCEPTION_POINTERS *exinfo, MDRawAssertionInfo *assertion)
+{
+    print_string_safe(filter_message);
     return true;
 }
 
-// not used at the moment, as we do exit in filter_cb
-static bool minidump_cb(const wchar_t *dump_path,
-                 const wchar_t *minidump_id,
-                 void *context,
-                 EXCEPTION_POINTERS *exinfo,
-                 MDRawAssertionInfo *assertion,
-                 bool succeeded)
+static bool after_minidump_write_cb(const wchar_t *dump_path,
+    const wchar_t *minidump_id,
+    void *context,
+    EXCEPTION_POINTERS *exinfo,
+    MDRawAssertionInfo *assertion,
+    bool succeeded)
 {
-    // server-side handling
-    if (client_pipe_name_prepared_c_str)
-    {
-        if (succeeded)
-        {
-            printf("Unhandled exception.\nWriting minidump to %s\n", get_crash_dir().u8string().c_str());
-            printf("Crash server was used.\n");
-        }
-        else
-        {
-            printf("Unhandled exception.\nCannot write dump.\n");
-        }
-
-        return succeeded;
-    }
-
-    // client-side handling
-    if (handled_on_server)
-    {
-        auto p = path(dump_path) / minidump_id;
-        p += ".dmp";
-
-        error_code ec;
-        fs::remove(p, ec);
-        if (ec)
-            printf("fs::remove failed\n");
-    }
+    print_string_safe(after_minidump_write_message);
     return succeeded;
 }
 #endif
@@ -329,42 +233,35 @@ static int startup(int argc, char *argv[])
     }
 
 #ifdef _WIN32
+    // prepare strings
+    filter_message = "Unhandled exception.\nWriting minidump to "s + get_crash_dir().u8string().c_str() + "\n";
+    after_minidump_write_message = "Minidump saved.\n";
+
+    //
     auto option_name = get_cl_option_base();
     if (argc > 1 && argv[1] == option_name)
     {
-        // server
+        // out-of-process server
         cl::opt<std::string> id(cl::arg{ option_name.substr(1) }, cl::Required);
         cl::ParseCommandLineOptions(argc, argv);
 
-        return CrashServerStart(id);
+        return StartCrashGenerationServer(id);
     }
     else if (argc > 1 && String(argv[1]).find(CRASH_SERVER_OPTION) != String::npos)
     {
-        // with early explicit server
-        client_pipe_name = std::to_string(std::random_device()());
-        client_pipe_name_prepared = to_wstring(get_pipe_name_base() + client_pipe_name);
-        client_pipe_name_prepared_c_str = client_pipe_name_prepared.c_str();
-        if (!CrashServerStart2())
-        {
-            printf("Cannot start crash server.\n");
-            return 1;
-        }
+        // with early out-of-process server
         int t = MiniDumpNormal;
         auto p = String(argv[1]).find('=');
         if (p != String::npos)
             t = std::stoi(String(argv[1]).substr(p + 1));
-        if (t < 0)
-            t = MiniDumpNormal;
-        handler = new google_breakpad::ExceptionHandler(get_crash_dir(),
-            filter_cb, minidump_cb, nullptr, google_breakpad::ExceptionHandler::HANDLER_ALL,
-            (MINIDUMP_TYPE)t, client_pipe_name_prepared_c_str, nullptr);
+        // start server and handler
+        sw_enable_crash_server(t);
     }
     else if (!IsDebuggerPresent())
     {
-        // client
-        client_pipe_name = std::to_string(std::random_device()());
+        // in-process handler
         handler = new google_breakpad::ExceptionHandler(get_crash_dir(),
-            filter_cb, minidump_cb, nullptr, google_breakpad::ExceptionHandler::HANDLER_ALL);
+            filter_cb, after_minidump_write_cb, nullptr, google_breakpad::ExceptionHandler::HANDLER_ALL);
     }
 #endif
 
@@ -411,4 +308,28 @@ int main(int argc, char *argv[])
     if (int r = startup(argc, argv))
         return r;
     return SW_MAIN(argc, argv);
+}
+
+void sw_enable_crash_server(int level)
+{
+#ifdef _WIN32
+    delete handler; // delete previous always
+
+    if (level < 0)
+        return;
+
+    // with early explicit server
+    client_pipe_name = std::to_string(std::random_device()());
+    client_pipe_name_prepared = to_wstring(get_pipe_name_base() + client_pipe_name);
+    client_pipe_name_prepared_c_str = client_pipe_name_prepared.c_str();
+    if (!LaunchCrashServerHelper())
+    {
+        printf("Cannot start crash server.\n");
+        exit(1); // exit immediately? yes for now
+        return;
+    }
+    handler = new google_breakpad::ExceptionHandler(get_crash_dir(),
+        filter_cb, after_minidump_write_cb, nullptr, google_breakpad::ExceptionHandler::HANDLER_ALL,
+        (MINIDUMP_TYPE)level, client_pipe_name_prepared_c_str, nullptr);
+#endif
 }
