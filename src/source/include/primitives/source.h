@@ -249,7 +249,7 @@ private:
     std::unique_ptr<Source> clone() const override { return std::make_unique<Cvs>(*this); }
 };
 
-struct Svn : SourceUrl
+struct PRIMITIVES_SOURCE_API Svn : SourceUrl
 {
     String tag;
     String branch;
