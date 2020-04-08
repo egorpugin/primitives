@@ -57,11 +57,12 @@ Executor::Executor(size_t nThreads, const std::string &name)
     std::unique_lock<std::mutex> lk(m);
 
     std::atomic<decltype(nThreads)> barrier{ 0 };
+    std::atomic<decltype(nThreads)> barrier2{ 0 };
 
     thread_pool.resize(nThreads);
     for (size_t i = 0; i < nThreads; i++)
     {
-        thread_pool[i].t = make_thread([this, i, name = name, &barrier, nThreads]() mutable
+        thread_pool[i].t = make_thread([this, i, name = name, &barrier, &barrier2, nThreads]() mutable
         {
             // set tids early
             {
@@ -74,6 +75,9 @@ Executor::Executor(size_t nThreads, const std::string &name)
             while (barrier != nThreads)
                 std::this_thread::sleep_for(std::chrono::microseconds(1));
 
+            // allow to proceed main thread
+            ++barrier2;
+
             // proceed
             run(i, name);
         });
@@ -83,7 +87,7 @@ Executor::Executor(size_t nThreads, const std::string &name)
     lk.unlock();
 
     // wait when all threads set their tids
-    while (barrier != nThreads)
+    while (barrier2 != nThreads)
         std::this_thread::sleep_for(std::chrono::microseconds(1));
 }
 
