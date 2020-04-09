@@ -470,8 +470,8 @@ void build(Solution &s)
     /*auto &test_cl = add_test("cl");
     test_cl += cl;*/
 
-    auto tm = test_main.addTest(test_main);
-    tm.c->addPathDirectory(getenv("PATH"));
+    //auto tm = test_main.addTest(test_main);
+    //tm.c->addPathDirectory(getenv("PATH"));
     /*auto tdb = s.addTest(test_db);
     if (test_db.getBuildSettings().TargetOS.Type == OSType::Windows)
     {
