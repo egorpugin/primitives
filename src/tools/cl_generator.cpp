@@ -136,9 +136,13 @@ struct Command
     {
         if (!isExternal())
             return;
+        ctx.addLine("extern ");
         if (list)
-            return;
-        ctx.addLine("extern " + type + " " + getExternalName() + ";");
+            ctx.addText("std::vector<");
+        ctx.addText(type);
+        if (list)
+            ctx.addText(">");
+        ctx.addText(" " + getExternalName() + ";");
     }
 
     void emitQtWidgets(primitives::CppEmitter &ctx, const Settings &settings,
