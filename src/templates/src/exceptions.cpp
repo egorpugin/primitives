@@ -5,9 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <primitives/exceptions.h>
-#ifdef USE_STACKTRACE
 #include <boost/stacktrace.hpp>
-#endif
 
 #include <primitives/debug.h>
 
@@ -21,10 +19,8 @@ bool gUseStackTrace;
 bool gDebugOnException;
 std::string gSymbolPath;
 
-#ifdef USE_STACKTRACE
 #ifdef _WIN32
 #include "exceptions_msvc.h"
-#endif
 #endif
 
 using namespace std::chrono_literals;
@@ -38,7 +34,6 @@ namespace detail
 BaseException::BaseException(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
     : file(file), function(function), line(line), message(msg)
 {
-#ifdef USE_STACKTRACE
     if (stacktrace && gUseStackTrace)
     {
         // skip 3 frames
@@ -53,7 +48,6 @@ BaseException::BaseException(const char *file, const char *function, int line, c
         message += ss.str();
 #endif
     }
-#endif
 }
 
 const char *BaseException::getMessage() const
@@ -67,10 +61,7 @@ std::string BaseException::format() const
 {
     std::string s;
     //s += ex_type;
-#ifdef USE_STACKTRACE
     //s += "Exception: " + message; // disabled for now, too poor :(
-#else
-#endif
     if (file.empty() && function.empty() && line == 0)
         s += "Exception: " + message;
     else

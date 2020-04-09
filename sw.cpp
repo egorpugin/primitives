@@ -207,18 +207,9 @@ void build(Solution &s)
 
     auto &templates = p.addTarget<StaticLibraryTarget>("templates");
     setup_primitives(templates);
-    templates -= "org.sw.demo.boost.stacktrace"_dep;
-    if (templates.getBuildSettings().Native.ConfigurationType != ConfigurationType::Release &&
-        templates.getBuildSettings().Native.ConfigurationType != ConfigurationType::MinimalSizeRelease
-        )
-    {
-        templates += "USE_STACKTRACE"_def;
-        templates += "org.sw.demo.boost.stacktrace"_dep;
-    }
+    templates += "org.sw.demo.boost.stacktrace"_dep;
     if (templates.getBuildSettings().TargetOS.Type != OSType::Windows)
-    {
         templates += "dl"_slib;
-    }
 
     ADD_LIBRARY(string);
     string.Public += "org.sw.demo.boost.algorithm"_dep;
