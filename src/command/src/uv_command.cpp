@@ -310,7 +310,7 @@ UvCommand::UvCommand(uv_loop_t *loop, primitives::Command &c)
         if (c.create_new_console)
             options.flags |= UV_PROCESS_WINDOWS_ALLOC_CONSOLE;
         else
-            options.flags |= UV_PROCESS_WINDOWS_HIDE_CONSOLE;
+            options.flags |= UV_PROCESS_WINDOWS_HIDE;
 #endif
         //if (!detached)
         options.exit_cb = on_exit;
