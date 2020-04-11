@@ -110,6 +110,7 @@ public:
 
     // actually might throw in case of oom during errors.push_back, but let's ignore it for now
     void execute(Strings &errors) noexcept;
+    void interrupt() noexcept;
 
     void clean() noexcept;
 

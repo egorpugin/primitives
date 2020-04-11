@@ -262,6 +262,9 @@ std::vector<Command*> Command::execute2(std::error_code *ec_in)
     for (auto &c : cmds)
         c->execute(errors);
 
+    // after execute
+    internal_command = cmds[0].get();
+
     // main loop
     if (auto r = uv_run(&loop, UV_RUN_DEFAULT); r)
         errors.push_back("something goes wrong in the loop: "s + uv_strerror(r));
@@ -279,7 +282,22 @@ std::vector<Command*> Command::execute2(std::error_code *ec_in)
     if (auto r = ::primitives::detail::uv_loop_close(loop, errors); r)
         errors.push_back("error in cmd: loop was not closed");
 
+    // cleanup ptr
+    internal_command = nullptr;
+
     return cmds_big;
+}
+
+void Command::interrupt()
+{
+    if (prev)
+        return prev->interrupt();
+    if (pid == -1)
+        throw SW_RUNTIME_ERROR("Command is not running (pid)");
+    if (!internal_command)
+        throw SW_RUNTIME_ERROR("Command is not running (internal command was not set)");
+
+    ((::primitives::command::detail::UvCommand*)internal_command)->interrupt();
 }
 
 static String getStringFromErrorCode(int exit_code)

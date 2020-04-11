@@ -92,6 +92,9 @@ public:
     virtual void execute() { execute1(); }
     virtual void execute(std::error_code &ec) { execute1(&ec); }
 
+    // immediately stop running command
+    void interrupt();
+
     virtual void onBeforeRun() noexcept {}
     virtual void onEnd() noexcept {}
 
@@ -135,6 +138,7 @@ public:
     static void execute(const std::initializer_list<String> &args, std::error_code &ec);
 
 private:
+    mutable void *internal_command = nullptr;
     bool program_set = false;
     Strings errors;
 

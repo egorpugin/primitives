@@ -402,6 +402,11 @@ void UvCommand::execute(Strings &errors) noexcept
     }
 }
 
+void UvCommand::interrupt() noexcept
+{
+    uv_process_kill(&child_req, SIGINT);
+}
+
 void UvCommand::clean() noexcept
 {
     for (auto &s : streams)
