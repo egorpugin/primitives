@@ -71,7 +71,7 @@ String Smtp::sendEmail(const Email &e) const
     curl_easy_setopt(curl, CURLOPT_LOGIN_OPTIONS, auth.c_str());
 
     curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)ssl);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0); // TODO: improve ssl with certs
     //curl_easy_setopt(curl, CURLOPT_CAINFO, "certs/roots.pem");
 
     curl_easy_setopt(curl, CURLOPT_VERBOSE, verbose);
