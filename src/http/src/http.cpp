@@ -360,6 +360,8 @@ bool curlUseNativeTls()
         curlGlobalSslSet(CURLSSLBACKEND_SCHANNEL)
 #elif defined(__APPLE__)
         curlGlobalSslSet(CURLSSLBACKEND_SECURETRANSPORT)
+#else
+        false
 #endif
         ;
     if (ok)
