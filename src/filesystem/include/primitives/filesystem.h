@@ -184,6 +184,10 @@ class PRIMITIVES_FILESYSTEM_API ScopedFile
 {
 public:
     ScopedFile(const path &p, const char *mode = "rb");
+    ScopedFile(const ScopedFile &) = delete;
+    ScopedFile &operator=(const ScopedFile &) = delete;
+    ScopedFile(ScopedFile &&);
+    ScopedFile &operator=(ScopedFile &&) = delete;
     ~ScopedFile();
 
     FILE *getHandle() const { return f; }

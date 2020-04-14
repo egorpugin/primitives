@@ -645,6 +645,12 @@ ScopedFile::ScopedFile(const path &p, const char *mode)
     f = primitives::filesystem::fopen_checked(p, mode);
 }
 
+ScopedFile::ScopedFile(ScopedFile &&rhs)
+{
+    f = rhs.f;
+    rhs.f = nullptr;
+}
+
 ScopedFile::~ScopedFile()
 {
     close();
