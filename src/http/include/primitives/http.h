@@ -9,6 +9,8 @@
 #include <primitives/constants.h>
 #include <primitives/filesystem.h>
 
+#include <optional>
+
 struct ProxySettings
 {
     String host;
@@ -22,7 +24,8 @@ struct HttpSettings
 {
     bool verbose = false;
     bool ignore_ssl_checks = false;
-    String certs_file;
+    String ca_certs_file;
+    String ca_certs_dir;
     ProxySettings proxy;
 };
 
@@ -74,3 +77,36 @@ String read_file_or_download_file(const String &target);
 
 PRIMITIVES_HTTP_API
 bool isUrl(const String &s);
+
+namespace primitives::http
+{
+
+// CA Certificates Methods
+
+PRIMITIVES_HTTP_API
+String getDefaultCaBundleUrl();
+
+PRIMITIVES_HTTP_API
+bool curlGlobalSslSet(int ssl_id);
+
+// returns true if set
+PRIMITIVES_HTTP_API
+bool curlUseNativeTls();
+
+PRIMITIVES_HTTP_API
+std::optional<path> getCaCertificatesBundleFileName();
+
+PRIMITIVES_HTTP_API
+std::optional<path> getCaCertificatesDirectory();
+
+PRIMITIVES_HTTP_API
+bool downloadOrUpdateCaCertificatesBundle(const path &destfn, String url = {});
+
+// must be called before other curl commands
+PRIMITIVES_HTTP_API
+bool safelyDownloadCaCertificatesBundle(const path &destfn, String url = {});
+
+PRIMITIVES_HTTP_API
+void setupSafeTls(bool prefer_native, bool strict, const path &ca_certs_fn, String url = {});
+
+}
