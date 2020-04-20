@@ -377,6 +377,7 @@ bool downloadOrUpdateCaCertificatesBundle(const path &destfn, String url)
 {
     if (url.empty())
         url = getDefaultCaBundleUrl();
+
     auto fn = path(destfn) += ".tmp";
     int64_t file_size_limit = 1_MB;
     bool old_file_exists = fs::exists(destfn);
@@ -497,6 +498,9 @@ bool safelyDownloadCaCertificatesBundle(const path &destfn, String url)
 
 void setupSafeTls(bool prefer_native, bool strict, const path &ca_certs_fn, String url)
 {
+    if (url.empty())
+        url = getDefaultCaBundleUrl();
+
     // by default we want to trust remote certs
     // but someone may replace our certs file
     //
