@@ -108,7 +108,14 @@ struct ExtendedScopeExit
         if (init)
             init();
     }
-    ExtendedScopeExit(ExtendedScopeExit &&) = default;
+    ExtendedScopeExit(ExtendedScopeExit &&rhs)
+    {
+        n_exceptions = rhs.n_exceptions;
+        on_error = std::move(rhs.on_error);
+        on_success = std::move(rhs.on_success);
+        finally = std::move(rhs.finally);
+    }
+    ExtendedScopeExit(const ExtendedScopeExit &rhs) = delete;
     ~ExtendedScopeExit()
     {
         if (std::uncaught_exceptions() > n_exceptions)
