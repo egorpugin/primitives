@@ -6,7 +6,7 @@
 static void gen_stamp(const DependencyPtr &tools_stamp_gen, NativeExecutedTarget &t)
 {
     auto c = t.addCommand();
-    c.c->always = true;
+    c->always = true;
     c << cmd::prog(tools_stamp_gen)
         << cmd::std_out(t.BinaryPrivateDir / "stamp.h.in")
         ;
@@ -52,9 +52,7 @@ static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const 
     auto f = t.SourceDir / in;
     auto out = t.BinaryDir / in.parent_path() / in.filename().stem();
 
-    auto c = t.addCommand();
-    c.c = std::make_shared<EmbedCommand>(c.c->getContext());
-    SW_INTERNAL_ADD_COMMAND(c.c, t);
+    auto c = t.addCommand(std::make_shared<EmbedCommand>());
     c << cmd::prog(embedder)
         << cmd::wdir(f.parent_path())
         << cmd::in(in)
@@ -105,7 +103,7 @@ static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Str
             << cmd::end()
             << cmd::out(i / m / m)
             ;
-        c.c->strict_order = 1; // run before moc
+        c->strict_order = 1; // run before moc
         out.insert(i / m / m);
         //t.Interface += i / m / m; makes cyclic deps
 
@@ -138,7 +136,7 @@ static void create_git_revision(const DependencyPtr &create_git_rev, NativeExecu
         << sw::resolveExecutable("git")
         << t.SourceDir
         << cmd::out(t.BinaryPrivateDir / "gitrev.h");
-    c.c->always = true;
+    c->always = true;
 
     auto u = create_git_rev->getPackage();
     sw::UnresolvedPackage up{ u.getPath().parent().parent() / "git_rev", u.getRange() };
