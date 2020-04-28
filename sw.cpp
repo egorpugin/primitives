@@ -270,7 +270,7 @@ void build(Solution &s)
 
     ADD_LIBRARY(http);
     http.Public += filesystem, templates,
-        "org.sw.demo.badger.curl.libcurl-7"_dep;
+        "org.sw.demo.badger.curl.libcurl"_dep;
     if (http.getBuildSettings().TargetOS.Type == OSType::Windows)
         http += "Winhttp.lib"_slib;
 
@@ -300,7 +300,7 @@ void build(Solution &s)
     db_sqlite3.Public += db_common, "org.sw.demo.sqlite3"_dep;
 
     ADD_LIBRARY_WITH_NAME(db_postgresql, "db.postgresql");
-    db_postgresql.Public += db_common, "org.sw.demo.jtv.pqxx-*"_dep;
+    db_postgresql.Public += db_common, "org.sw.demo.jtv.pqxx"_dep;
 
     auto &main = p.addTarget<StaticLibraryTarget>("main");
     setup_primitives(main);
@@ -336,7 +336,7 @@ void build(Solution &s)
     version.Public += "include"_idir;
     version.Public += "src/version.natvis";
     version.Public += string, templates,
-        "org.sw.demo.fmt-*"_dep,
+        "org.sw.demo.fmt"_dep,
         "org.sw.demo.boost.container_hash"_dep,
         "org.sw.demo.imageworks.pystring"_dep;
     gen_ragel("org.sw.demo.ragel-6"_dep, version, "src/version.rl");
@@ -432,7 +432,7 @@ void build(Solution &s)
         auto &t = test.addTarget<ExecutableTarget>(name);
         t += cpp17;
         t += path("src/" + name + ".cpp");
-        t += "org.sw.demo.catchorg.catch2-*"_dep;
+        t += "org.sw.demo.catchorg.catch2"_dep;
         if (t.getCompilerType() == CompilerType::MSVC)
             t.CompileOptions.push_back("-bigobj");
         //else if (t.getCompilerType() == CompilerType::GNU)
@@ -446,7 +446,7 @@ void build(Solution &s)
         test_main.CompileOptions.push_back("/utf-8"); // path tests
     test_main += command, date_time,
         executor, hash, yaml, emitter, http,
-        "org.sw.demo.nlohmann.json-*"_dep;
+        "org.sw.demo.nlohmann.json"_dep;
 
     auto &test_db = add_test("db");
     test_db += command, db_sqlite3, db_postgresql, date_time,
