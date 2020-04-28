@@ -19,7 +19,7 @@ bool gUseStackTrace;
 bool gDebugOnException;
 std::string gSymbolPath;
 
-#ifdef _WIN32
+#ifdef BOOST_MSVC
 #include "exceptions_msvc.h"
 #endif
 
@@ -40,7 +40,7 @@ BaseException::BaseException(const char *file, const char *function, int line, c
         // -1 means till the end
         boost::stacktrace::stacktrace t(3, -1);
         message += "\nStacktrace:\n";
-#ifdef _WIN32
+#ifdef BOOST_MSVC
         message += ::to_string(t);
 #else
         std::ostringstream ss;
