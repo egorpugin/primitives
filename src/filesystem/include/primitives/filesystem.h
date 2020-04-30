@@ -71,8 +71,13 @@ std::wstring wnormalize_path(const path &p);
 PRIMITIVES_FILESYSTEM_API
 std::wstring wnormalize_path_windows(const path &p);
 
+// checks for real file
 PRIMITIVES_FILESYSTEM_API
-bool is_under_root(path p, const path &root_dir);
+bool is_under_root(path existing_path, const path &root_dir);
+
+// checks path that may not exist
+PRIMITIVES_FILESYSTEM_API
+bool is_under_root_by_prefix_path(const path &p, const path &root_dir);
 
 PRIMITIVES_FILESYSTEM_API
 void copy_dir(const path &source, const path &destination);

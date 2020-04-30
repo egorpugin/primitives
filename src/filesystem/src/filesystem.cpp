@@ -367,9 +367,9 @@ bool is_under_root(path p, const path &root_dir)
         return false;
     error_code ec;
     if (fs::exists(p))
-        // Converts p, which must exist, to an absolute path
-        // that has no symbolic link, dot, or dot-dot elements.
-        p = primitives::filesystem::canonical(p);
+    // Converts p, which must exist, to an absolute path
+    // that has no symbolic link, dot, or dot-dot elements.
+    p = primitives::filesystem::canonical(p);
     while (!p.empty() && p != p.root_path())
     {
         if (fs::equivalent(p, root_dir, ec))
@@ -377,6 +377,14 @@ bool is_under_root(path p, const path &root_dir)
         p = p.parent_path();
     }
     return false;
+}
+
+bool is_under_root_by_prefix_path(const path &p, const path &root_dir)
+{
+    auto r = normalize_path(root_dir);
+    auto v = normalize_path(p);
+    // disallow .. elements
+    return v.find(r) == 0 && v.find("..") == v.npos;
 }
 
 bool compare_files(const path &fn1, const path &fn2)
