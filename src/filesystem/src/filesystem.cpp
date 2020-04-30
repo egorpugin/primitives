@@ -363,15 +363,12 @@ Files filter_files_like(const Files &files, const String &regex)
 
 bool is_under_root(path p, const path &root_dir)
 {
-    if (p.empty())
-        return false;
-    error_code ec;
-    if (fs::exists(p))
     // Converts p, which must exist, to an absolute path
     // that has no symbolic link, dot, or dot-dot elements.
     p = primitives::filesystem::canonical(p);
     while (!p.empty() && p != p.root_path())
     {
+        error_code ec;
         if (fs::equivalent(p, root_dir, ec))
             return true;
         p = p.parent_path();
