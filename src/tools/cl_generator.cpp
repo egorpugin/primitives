@@ -24,6 +24,14 @@ struct Settings
     bool generate_struct = false;
 };
 
+struct Category
+{
+    String name;
+    String description;
+};
+
+using Categories = std::map<String, Category>;
+
 struct SubCommand
 {
 };
@@ -38,6 +46,7 @@ struct Command
     String type = "bool";
     String location;
     bool external = false;
+    String category;
     String description;
     String value_description;
     Strings aliases;
@@ -84,6 +93,9 @@ struct Command
         if (root["desc"].IsDefined())
             description = root["desc"].template as<decltype(description)>();
         READ_OPT(description);
+        if (root["cat"].IsDefined())
+            category = root["cat"].template as<decltype(category)>();
+        READ_OPT(category);
         if (root["value_desc"].IsDefined())
             value_description = root["value_desc"].template as<decltype(value_description)>();
         READ_OPT(value_description);
@@ -199,7 +211,9 @@ struct Command
         auto sz = ctx.getLines().size();
         ctx.increaseIndent();
         if (!description.empty())
-            ctx.addLineWithoutIndent(", ::cl::desc(R\"xxx(" + description + ")xxx\")");
+            ctx.addLine(", ::cl::desc(R\"xxx(" + description + ")xxx\")");
+        if (!category.empty())
+            ctx.addLine(", ::cl::cat(cat_" + category + ")");
         if (!value_description.empty())
             ctx.addLine(", ::cl::value_desc(\"" + value_description + "\")");
         // location before default value
@@ -414,6 +428,7 @@ struct File
 {
     CommandLine cmd;
     Settings settings;
+    Categories categories;
 
     void parse(const yaml &root)
     {
@@ -428,6 +443,22 @@ struct File
                 settings.namespace_ = set["namespace"].template as<decltype(settings.namespace_)>();
             if (set["generate_struct"].IsDefined())
                 settings.generate_struct = set["generate_struct"].template as<decltype(settings.generate_struct)>();
+        }
+
+        auto cats = root["categories"];
+        if (cats)
+        {
+            for (const auto &c : cats)
+            {
+                auto key = c.first.template as<String>();
+                Category v;
+                v.name = c.second["name"].template as<String>();
+                if (c.second["desc"].IsDefined())
+                    v.description = c.second["desc"].template as<String>();
+                if (c.second["description"].IsDefined())
+                    v.description = c.second["description"].template as<String>();
+                categories[key] = v;
+            }
         }
 
         cmd.parse(root);
