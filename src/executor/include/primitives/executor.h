@@ -244,7 +244,7 @@ struct PackagedTask
     using Task = std::function<Ret(ArgTypes...)>;
     using FutureType = Future<Ret>;
 
-    PackagedTask(Executor &e, F f, ArgTypes && ... args)
+    PackagedTask(Executor &e, F f, ArgTypes && ...)
         : t(f)
     {
         s = makeSharedState<Ret>(e);

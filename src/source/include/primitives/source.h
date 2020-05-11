@@ -94,17 +94,17 @@ struct EmptySource : Source
 {
     EmptySource() {}
 
-    EmptySource(const nlohmann::json &j) {}
-    EmptySource(const yaml &root) {}
+    EmptySource(const nlohmann::json &) {}
+    EmptySource(const yaml &) {}
 
-    void applyVersion(const Version &v) override {}
+    void applyVersion(const Version &) override {}
 
 private:
     SourceType getType() const override { return SourceType::Empty; }
     String print1() const override { return ""; }
-    void download1(const path &dir) const override {}
-    void save1(nlohmann::json &p) const override {}
-    void save1(yaml &root) const override {}
+    void download1(const path &) const override {}
+    void save1(nlohmann::json &) const override {}
+    void save1(yaml &) const override {}
     void checkUrl() const override {}
     std::unique_ptr<Source> clone() const override { return std::make_unique<EmptySource>(*this); }
 };

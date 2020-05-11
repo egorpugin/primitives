@@ -71,6 +71,7 @@ public:
     {
         rhs.dismiss();
     }
+    ScopeGuard &operator=(ScopeGuard &&) = delete;
 
 private:
     Function f;
