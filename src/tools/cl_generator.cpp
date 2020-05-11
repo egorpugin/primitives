@@ -6,6 +6,7 @@
 #include <primitives/yaml.h>
 
 #include <iostream>
+#include <optional>
 
 struct EmitterContext
 {
@@ -33,7 +34,7 @@ struct Command
 {
     String name;
     String option; // rename to flag?
-    String default_value; // rename to init?
+    std::optional<String> default_value; // rename to init?
     String type = "bool";
     String location;
     bool external = false;
@@ -72,7 +73,12 @@ struct Command
 
         READ_OPT(option);
         READ_OPT(type);
-        READ_OPT(default_value);
+        {
+            if (root["default_value"].IsDefined())
+                default_value = root["default_value"].template as<String>();
+            if (!default_value && root["default"].IsDefined())
+                default_value = root["default"].template as<String>();
+        }
         READ_OPT(location);
         READ_OPT(external);
         if (root["desc"].IsDefined())
@@ -120,8 +126,8 @@ struct Command
 
     String getName(const Settings &s) const
     {
-        if (!s.prefix.empty())
-            return s.prefix + name;
+        //if (!s.prefix.empty())
+            //return s.prefix + name;
         return name;
     }
 
@@ -160,7 +166,7 @@ struct Command
         ctx.addText(");");
     }
 
-    void emit(EmitterContext &inctx, const Settings &settings) const
+    void emitOption(EmitterContext &inctx, const Settings &settings) const
     {
         auto begin = [this, &settings](auto &ctx)
         {
@@ -178,19 +184,12 @@ struct Command
             ctx.addText(getName(settings));
         };
 
-        inctx.h.addLine("extern ");
+        inctx.h.addLine();
         begin(inctx.h);
         inctx.h.addText(";");
 
-        inctx.qt.addLine("extern ");
-        begin(inctx.qt);
-        inctx.qt.addText(";");
-
-        inctx.c.addLine("// " + name);
-        inctx.c.addLine();
-        begin(inctx.c);
-
         auto &ctx = inctx.c;
+        ctx.addLine(name);
         ctx.addText("(");
         if (!positional)
             ctx.addText("\"" + option + "\"");
@@ -206,8 +205,8 @@ struct Command
         // location before default value
         if (isExternal())
             ctx.addLine(", ::cl::location(::" + getExternalName() + ")");
-        if (!default_value.empty())
-            ctx.addLine(", ::cl::init(" + default_value + ")");
+        if (default_value)
+            ctx.addLine(", ::cl::init(" + *default_value + ")");
         if (zero_or_more)
             ctx.addLine(", ::cl::ZeroOrMore");
         if (comma_separated)
@@ -237,22 +236,23 @@ struct Command
         ctx.decreaseIndent();
 
         if (sz == ctx.getLines().size())
-            ctx.addText(");");
+            ctx.addText("),");
         else
-            ctx.addLine(");");
+            ctx.addLine("),");
 
         int na = 1;
         for (auto &a : aliases)
         {
-            ctx.addLine("static ::cl::alias " + name + std::to_string(na++) + "(\"" + a + "\"");
+            inctx.h.addLine("::cl::alias " + name + std::to_string(na) + ";");
+            ctx.addLine(name + std::to_string(na) + "(\"" + a + "\"");
             ctx.increaseIndent();
             ctx.addLine(", ::cl::desc(\"Alias for -" + option + "\")");
             ctx.addLine(", ::cl::aliasopt(");
             ctx.addText(getName(settings) + ")");
             ctx.decreaseIndent();
-            ctx.addLine(");");
+            ctx.addLine("),");
+            na++;
         }
-        ctx.addLine();
     }
 };
 
@@ -303,31 +303,25 @@ struct CommandLine
         }
     }
 
-    void emit(EmitterContext &ctx, const Settings &settings) const
+    void emitOption(EmitterContext &ctx, const Settings &settings) const
     {
         if (!name.empty())
         {
-            ctx.h.addLine("extern ::cl::SubCommand subcommand_" + name + ";");
-            ctx.h.emptyLines();
-
-            ctx.c.addLine("::cl::SubCommand subcommand_" + name + "(\"" + name + "\", \"" + description + "\");");
-            ctx.c.emptyLines();
+            ctx.h.addLine("MySubCommand " + getVariableName() + ";");
+            ctx.c.addLine(getVariableName() + "(\"" + name + "\", \"" + description + "\"),");
         }
 
         for (auto &c : commands)
-            c.emit(ctx, settings);
+            c.emitOption(ctx, settings);
         ctx.h.emptyLines();
         ctx.qt.emptyLines();
-        ctx.c.emptyLines();
         for (auto &sb : subcommands)
-            sb->emit(ctx, settings);
+            sb->emitOption(ctx, settings);
     }
 
     void emitStruct(EmitterContext &ectx, const Settings &settings, const String &parent = {}) const
     {
-        const auto suffix = name.empty() ? "" : ("_" + name);
-        const auto Oname = "Options" + suffix;
-        const auto oname = "options" + suffix;
+        auto Oname = get_Oname();
 
         auto &ctx = ectx.h;
         ctx.addLine("//");
@@ -346,16 +340,24 @@ struct CommandLine
         ctx.emptyLines();
 
         // ctor
-        ctx.addLine(Oname + "();");
-        ectx.c.beginFunction(parent + "::" + Oname + "::" + Oname + "()");
+        ctx.addLine(Oname + "(ClOptions &);");
+        ectx.c.addLine(parent + "::" + Oname + "::" + Oname + "(ClOptions &cl_options)");
+        ectx.c.increaseIndent();
+        ectx.c.addLine(":");
         for (auto &c : commands)
         {
             if (c.isExternal())
                 continue;
             //                                                  .getValue()?
-            ectx.c.addLine(c.name + " = " + c.getName(settings) + ";");
+            ectx.c.addLine(c.name + "(cl_options." + c.getName(settings) + "),");
         }
-        ectx.c.endFunction();
+        for (auto &sb : subcommands)
+            ectx.c.addLine(sb->get_oname() + "(cl_options),");
+        ectx.c.trimEnd(1);
+        ectx.c.decreaseIndent();
+        ectx.c.beginBlock();
+        ectx.c.endBlock();
+        ectx.c.emptyLines();
 
         // end of s
         ctx.endBlock(true);
@@ -364,7 +366,7 @@ struct CommandLine
         // var
         if (!name.empty())
         {
-            ctx.addLine(Oname + " " + oname + ";");
+            ctx.addLine(Oname + " " + get_oname() + ";");
             ctx.addLine();
         }
     }
@@ -399,6 +401,13 @@ struct CommandLine
             sb->emitQtWidgets(ctx, settings, var);
         ctx.endBlock();
     }
+
+    String getVariableName() const { return name.empty() ? name : ("subcommand_" + name); }
+
+private:
+    String get_suffix() const { return name.empty() ? "" : ("_" + name); }
+    String get_Oname() const { return "Options" + get_suffix(); }
+    String get_oname() const { return "options" + get_suffix(); }
 };
 
 struct File
@@ -438,14 +447,125 @@ struct File
 
         // externals
         cmd.emitExternal(ctx.h);
-        cmd.emitExternal(ctx.qt);
 
         if (!settings.namespace_.empty())
         {
             ctx.h.beginNamespace(settings.namespace_);
             ctx.c.beginNamespace(settings.namespace_);
         }
-        cmd.emit(ctx, settings);
+
+        {
+            ctx.h.addLine(R"(struct UnregisterableSubCommand : ::cl::SubCommand
+{
+    using Base = ::cl::SubCommand;
+
+    using Base::Base;
+
+    ~UnregisterableSubCommand()
+    {
+        unregisterSubCommand();
+    }
+};
+
+using MySubCommand = UnregisterableSubCommand;
+
+struct OldCommandsSaver
+{
+    ::cl::SubCommand TopLevelSubCommand;
+    ::cl::SubCommand AllSubCommands;
+
+    OldCommandsSaver();
+    ~OldCommandsSaver();
+};
+)");
+            ctx.h.beginBlock("struct ClOptions");
+            ctx.h.addLine("OldCommandsSaver internal_old_command_line_options_saver__;");
+            ctx.h.addLine();
+            ctx.c.addLine("ClOptions::ClOptions()");
+            ctx.c.increaseIndent();
+            ctx.c.addLine(":");
+
+            cmd.emitOption(ctx, settings);
+
+            ctx.h.addLine("ClOptions();");
+            ctx.h.addLine("~ClOptions();");
+            ctx.h.endBlock(true);
+            ctx.h.emptyLines();
+
+            ctx.c.trimEnd(1);
+            ctx.c.decreaseIndent();
+            ctx.c.beginBlock();
+            ctx.c.endBlock();
+            ctx.c.emptyLines();
+
+            ctx.c.beginFunction("ClOptions::~ClOptions()");
+            ctx.c.addLine("::cl::TopLevelSubCommand->reset();");
+            ctx.c.addLine("::cl::AllSubCommands->reset();");
+            //ctx.c.emptyLines();
+            for (auto &c : cmd.commands)
+            {
+                if (c.isExternal())
+                    continue;
+                //ctx.c.addLine(c.name + ".removeArgument();");
+            }
+            for (auto &s : cmd.subcommands)
+            {
+                for (auto &c : s->commands)
+                {
+                    if (c.isExternal())
+                        continue;
+                    //ctx.c.addLine(c.name + ".removeArgument();");
+                }
+            }
+            ctx.c.endFunction();
+
+            ctx.c.addLine(R"(
+OldCommandsSaver::OldCommandsSaver()
+{
+    // copy command args that populated before us
+    TopLevelSubCommand = *::cl::TopLevelSubCommand;
+    AllSubCommands = *::cl::AllSubCommands;
+    // but we don't see other subcommands here still
+}
+
+static auto reset_subcommand(::cl::SubCommand &s)
+{
+    for (auto it = s.OptionsMap.begin(),
+        ie = s.OptionsMap.end();
+        it != ie; ++it)
+    {
+        auto O = it->second;
+        O->reset();
+    }
+    for (auto it = s.PositionalOpts.begin(),
+        ie = s.PositionalOpts.end();
+        it != ie; ++it)
+    {
+        auto O = *it;
+        O->reset();
+    }
+    for (auto it = s.SinkOpts.begin(),
+        ie = s.SinkOpts.end();
+        it != ie; ++it)
+    {
+        auto O = *it;
+        O->reset();
+    }
+    if (s.ConsumeAfterOpt)
+        s.ConsumeAfterOpt->reset();
+}
+
+OldCommandsSaver::~OldCommandsSaver()
+{
+    // restore previous cmdline
+    *::cl::TopLevelSubCommand = TopLevelSubCommand;
+    *::cl::AllSubCommands = AllSubCommands;
+    reset_subcommand(TopLevelSubCommand);
+    reset_subcommand(AllSubCommands);
+}
+)");
+        }
+
         if (settings.generate_struct)
             cmd.emitStruct(ctx, settings);
         if (!settings.namespace_.empty())
