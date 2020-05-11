@@ -321,7 +321,7 @@ struct CommandLine
     {
         if (!name.empty())
         {
-            ctx.h.addLine("MySubCommand " + getVariableName() + ";");
+            ctx.h.addLine("::primitives::cl::ClSubCommand " + getVariableName() + ";");
             ctx.c.addLine(getVariableName() + "(\"" + name + "\", \"" + description + "\"),");
         }
 
@@ -486,35 +486,21 @@ struct File
         }
 
         {
-            ctx.h.addLine(R"(struct UnregisterableSubCommand : ::cl::SubCommand
-{
-    using Base = ::cl::SubCommand;
-
-    using Base::Base;
-
-    ~UnregisterableSubCommand()
-    {
-        unregisterSubCommand();
-    }
-};
-
-using MySubCommand = UnregisterableSubCommand;
-
-struct OldCommandsSaver
-{
-    ::cl::SubCommand TopLevelSubCommand;
-    ::cl::SubCommand AllSubCommands;
-
-    OldCommandsSaver();
-    ~OldCommandsSaver();
-};
-)");
-            ctx.h.beginBlock("struct ClOptions");
-            ctx.h.addLine("OldCommandsSaver internal_old_command_line_options_saver__;");
-            ctx.h.addLine();
+            ctx.h.beginBlock("struct ClOptions : ::primitives::cl::ClOptions");
             ctx.c.addLine("ClOptions::ClOptions()");
             ctx.c.increaseIndent();
             ctx.c.addLine(":");
+
+            for (auto &[n, c] : categories)
+            {
+                ctx.h.addLine("::cl::OptionCategory cat_" + n + ";");
+                ctx.c.addLine("cat_" + n + "(\"" + c.name + "\", \"" + c.description + "\"),");
+            }
+            if (!categories.empty())
+            {
+                ctx.h.emptyLines();
+                ctx.c.emptyLines();
+            }
 
             cmd.emitOption(ctx, settings);
 
@@ -530,71 +516,8 @@ struct OldCommandsSaver
             ctx.c.emptyLines();
 
             ctx.c.beginFunction("ClOptions::~ClOptions()");
-            ctx.c.addLine("::cl::TopLevelSubCommand->reset();");
-            ctx.c.addLine("::cl::AllSubCommands->reset();");
-            //ctx.c.emptyLines();
-            for (auto &c : cmd.commands)
-            {
-                if (c.isExternal())
-                    continue;
-                //ctx.c.addLine(c.name + ".removeArgument();");
-            }
-            for (auto &s : cmd.subcommands)
-            {
-                for (auto &c : s->commands)
-                {
-                    if (c.isExternal())
-                        continue;
-                    //ctx.c.addLine(c.name + ".removeArgument();");
-                }
-            }
             ctx.c.endFunction();
-
-            ctx.c.addLine(R"(
-OldCommandsSaver::OldCommandsSaver()
-{
-    // copy command args that populated before us
-    TopLevelSubCommand = *::cl::TopLevelSubCommand;
-    AllSubCommands = *::cl::AllSubCommands;
-    // but we don't see other subcommands here still
-}
-
-static auto reset_subcommand(::cl::SubCommand &s)
-{
-    for (auto it = s.OptionsMap.begin(),
-        ie = s.OptionsMap.end();
-        it != ie; ++it)
-    {
-        auto O = it->second;
-        O->reset();
-    }
-    for (auto it = s.PositionalOpts.begin(),
-        ie = s.PositionalOpts.end();
-        it != ie; ++it)
-    {
-        auto O = *it;
-        O->reset();
-    }
-    for (auto it = s.SinkOpts.begin(),
-        ie = s.SinkOpts.end();
-        it != ie; ++it)
-    {
-        auto O = *it;
-        O->reset();
-    }
-    if (s.ConsumeAfterOpt)
-        s.ConsumeAfterOpt->reset();
-}
-
-OldCommandsSaver::~OldCommandsSaver()
-{
-    // restore previous cmdline
-    *::cl::TopLevelSubCommand = TopLevelSubCommand;
-    *::cl::AllSubCommands = AllSubCommands;
-    reset_subcommand(TopLevelSubCommand);
-    reset_subcommand(AllSubCommands);
-}
-)");
+            ctx.c.emptyLines();
         }
 
         if (settings.generate_struct)

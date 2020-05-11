@@ -2099,6 +2099,26 @@ void ResetAllOptionOccurrences();
 PRIMITIVES_SETTINGS_API
 void ResetCommandLineParser();
 
+struct PRIMITIVES_SETTINGS_API UnregisterableSubCommand : SubCommand
+{
+    using Base = SubCommand;
+
+    using Base::Base;
+    //~UnregisterableSubCommand();
+};
+
+struct PRIMITIVES_SETTINGS_API Options
+{
+    Options();
+    ~Options();
+
+private:
+    void *saved_data;
+};
+
+using ClOptions = Options;
+using ClSubCommand = SubCommand;
+
 } // end namespace cl
 
-} // end namespace llvm
+} // end namespace primitives

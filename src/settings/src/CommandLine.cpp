@@ -2411,7 +2411,27 @@ void cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
   }
 }
 
-void cl::ResetCommandLineParser() { GlobalParser->reset(); }
 void cl::ResetAllOptionOccurrences() {
-  GlobalParser->ResetAllOptionOccurrences();
+    GlobalParser->ResetAllOptionOccurrences();
+}
+
+void cl::ResetCommandLineParser() { GlobalParser->reset(); }
+
+cl::Options::Options()
+{
+    // we must save parser to be able to restore previous state
+    saved_data = new CommandLineParser(*GlobalParser);
+}
+
+cl::Options::~Options()
+{
+    // restore previous parser
+    *GlobalParser = *(CommandLineParser*)saved_data;
+    delete saved_data;
+
+    // reset parser
+    //ResetCommandLineParser();
+
+    // reset occurences after restoring previous subcommands
+    ResetAllOptionOccurrences();
 }
