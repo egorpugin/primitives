@@ -2417,21 +2417,77 @@ void cl::ResetAllOptionOccurrences() {
 
 void cl::ResetCommandLineParser() { GlobalParser->reset(); }
 
-cl::Options::Options()
+struct BlockStorage
 {
-    // we must save parser to be able to restore previous state
-    saved_data = new CommandLineParser(*GlobalParser);
+    // special subcommands
+    ::cl::SubCommand TopLevelSubCommand;
+    ::cl::SubCommand AllSubCommands;
+    std::vector<SubCommand> subcommands;
+
+    BlockStorage()
+    {
+        // save all subcommands
+        TopLevelSubCommand = *::cl::TopLevelSubCommand;
+        AllSubCommands = *::cl::AllSubCommands;
+
+        int i = 0;
+        for (const auto &s : GlobalParser->RegisteredSubCommands)
+        {
+            i++;
+            // skip two service subcommands
+            if (i < 2)
+                continue;
+            subcommands.push_back(*s);
+        }
+    }
+
+    ~BlockStorage()
+    {
+        *::cl::TopLevelSubCommand = TopLevelSubCommand;
+        *::cl::AllSubCommands = AllSubCommands;
+        //reset_subcommand(*::cl::TopLevelSubCommand);
+        //reset_subcommand(*::cl::AllSubCommands);
+    }
+
+private:
+    static void reset_subcommand(SubCommand &s)
+    {
+        for (auto it = s.OptionsMap.begin(), ie = s.OptionsMap.end(); it != ie; ++it)
+        {
+            auto O = it->second;
+            O->reset();
+        }
+        for (auto it = s.PositionalOpts.begin(), ie = s.PositionalOpts.end(); it != ie; ++it)
+        {
+            auto O = *it;
+            O->reset();
+        }
+        for (auto it = s.SinkOpts.begin(), ie = s.SinkOpts.end(); it != ie; ++it)
+        {
+            auto O = *it;
+            O->reset();
+        }
+        if (s.ConsumeAfterOpt)
+            s.ConsumeAfterOpt->reset();
+    }
+};
+
+cl::UnregisterableSubCommand::~UnregisterableSubCommand()
+{
+    unregisterSubCommand();
 }
 
+// we must save parser to be able to restore previous state
+cl::Options::Options()
+{
+    //saved_data = new CommandLineParser(*GlobalParser);
+    saved_data = new BlockStorage;
+}
+
+// restore previous parser
 cl::Options::~Options()
 {
-    // restore previous parser
-    *GlobalParser = *(CommandLineParser*)saved_data;
-    delete saved_data;
-
-    // reset parser
-    //ResetCommandLineParser();
-
-    // reset occurences after restoring previous subcommands
+    auto d = (BlockStorage*)saved_data;
+    delete d;
     ResetAllOptionOccurrences();
 }

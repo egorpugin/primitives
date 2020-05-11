@@ -2104,7 +2104,8 @@ struct PRIMITIVES_SETTINGS_API UnregisterableSubCommand : SubCommand
     using Base = SubCommand;
 
     using Base::Base;
-    //~UnregisterableSubCommand();
+
+    ~UnregisterableSubCommand();
 };
 
 struct PRIMITIVES_SETTINGS_API Options
@@ -2117,7 +2118,7 @@ private:
 };
 
 using ClOptions = Options;
-using ClSubCommand = SubCommand;
+using ClSubCommand = UnregisterableSubCommand;
 
 } // end namespace cl
 
