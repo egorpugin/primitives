@@ -10,11 +10,11 @@
 Generate projects (e.g. VS solution)
 
 ```
-cppan --generate .
+sw generate
 ```
 
 Build
 
 ```
-cppan --build .
+sw build
 ```
