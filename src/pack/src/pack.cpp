@@ -21,9 +21,9 @@
 namespace primitives::pack
 {
 
-std::unordered_map<path, path> prepare_files(const Files &files, const path &root_dir, const path &dir_prefix, const path &file_prefix)
+std::map<path, path> prepare_files(const FilesSorted &files, const path &root_dir, const path &dir_prefix, const path &file_prefix)
 {
-    std::unordered_map<path, path> files2;
+    std::map<path, path> files2;
     for (auto &f : files)
     {
         auto s = fs::status(f);
@@ -53,7 +53,7 @@ std::unordered_map<path, path> prepare_files(const Files &files, const path &roo
 
 }
 
-bool pack_files(const path &fn, const std::unordered_map<path, path> &files, String *error)
+bool pack_files(const path &fn, const std::map<path, path> &files, String *error)
 {
     bool result = true;
     auto a = archive_write_new();
@@ -119,17 +119,17 @@ bool pack_files(const path &fn, const std::unordered_map<path, path> &files, Str
     return result;
 }
 
-bool pack_files(const path &fn, const Files &files, const path &root_dir, String *error)
+bool pack_files(const path &fn, const FilesSorted &files, const path &root_dir, String *error)
 {
     return pack_files(fn, primitives::pack::prepare_files(files, root_dir), error);
 }
 
-Files unpack_file(const path &fn, const path &dst)
+FilesSorted unpack_file(const path &fn, const path &dst)
 {
     if (!fs::exists(dst))
         fs::create_directories(dst);
 
-    Files files;
+    FilesSorted files;
 
     auto a = archive_read_new();
 

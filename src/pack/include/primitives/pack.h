@@ -8,19 +8,21 @@
 
 #include <primitives/filesystem.h>
 
-PRIMITIVES_PACK_API
-bool pack_files(const path &archive, const std::unordered_map<path, path> &files, String *error = nullptr);
+// use sorted arrays to get predictable results
 
 PRIMITIVES_PACK_API
-bool pack_files(const path &archive, const Files &files, const path &root_dir, String *error = nullptr);
+bool pack_files(const path &archive, const std::map<path, path> &files, String *error = nullptr);
 
 PRIMITIVES_PACK_API
-Files unpack_file(const path &archive, const path &dest_dir);
+bool pack_files(const path &archive, const FilesSorted &files, const path &root_dir, String *error = nullptr);
+
+PRIMITIVES_PACK_API
+FilesSorted unpack_file(const path &archive, const path &dest_dir);
 
 namespace primitives::pack
 {
 
 PRIMITIVES_PACK_API
-std::unordered_map<path, path> prepare_files(const Files &files, const path &root_dir, const path &dir_prefix = path(), const path &file_prefix = path());
+std::map<path, path> prepare_files(const FilesSorted &files, const path &root_dir, const path &dir_prefix = path(), const path &file_prefix = path());
 
 }
