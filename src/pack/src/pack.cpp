@@ -69,6 +69,9 @@ bool pack_files(const path &fn, const std::map<path, path> &files, String *error
     if (archive_write_set_format_filter_by_ext(a, fn.filename().u8string().c_str()) != ARCHIVE_OK)
         throw SW_RUNTIME_ERROR(archive_error_string(a));
 
+    // predictable results
+    archive_write_set_filter_option(a, 0, "timestamp", 0);
+
     auto r = archive_write_open_filename(a, fn.u8string().c_str());
     if (r != ARCHIVE_OK)
         throw SW_RUNTIME_ERROR(archive_error_string(a));
