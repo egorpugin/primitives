@@ -279,6 +279,9 @@ void build(Solution &s)
         "org.sw.demo.aleksey14.rhash"_dep,
         "org.sw.demo.openssl.crypto"_dep;
 
+    ADD_LIBRARY(csv);
+    csv += templates;
+
     ADD_LIBRARY(win32helpers);
     if (!win32helpers.getBuildSettings().TargetOS.is(OSType::Windows))
         win32helpers.DryRun = true;
@@ -464,6 +467,9 @@ void build(Solution &s)
 
     auto &test_patch = add_test("patch");
     test_patch += patch;
+
+    auto &test_csv = add_test("csv");
+    test_csv += csv;
 
     /*auto &test_cl = add_test("cl");
     test_cl += cl;*/
