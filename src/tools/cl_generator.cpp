@@ -21,6 +21,7 @@ struct Settings
     bool add_qt = true;
     String namespace_;
     String prefix;
+    String api_name;
     bool generate_struct = false;
 };
 
@@ -44,8 +45,11 @@ struct Command
     String option; // rename to flag?
     std::optional<String> default_value; // rename to init?
     String type = "bool";
-    String location;
+    // if true, extern variable will be declared
     bool external = false;
+    // if external == true, it will point to it
+    // if external == false, in-class variable will be defined
+    String location;
     String category;
     String description;
     String value_description;
@@ -126,9 +130,14 @@ struct Command
             option = boost::replace_all_copy(name, "_", "-");
     }
 
-    bool isExternal() const
+    bool isExternalOrLocation() const
     {
         return external || !location.empty();
+    }
+
+    bool isLocationOnly() const
+    {
+        return !external && !location.empty();
     }
 
     String getExternalName() const
@@ -152,7 +161,7 @@ struct Command
 
     void emitExternal(primitives::CppEmitter &ctx) const
     {
-        if (!isExternal())
+        if (!external)
             return;
         ctx.addLine("extern ");
         if (list)
@@ -167,7 +176,7 @@ struct Command
         const String &qt_var_parent, const String &parent = {}) const
     {
         ctx.addLine("cl_option_add_widget(\"" + name + "\", " + qt_var_parent + ", ");
-        if (!isExternal())
+        if (!isExternalOrLocation())
         {
             ctx.addText("options.");
             if (!parent.empty())
@@ -185,10 +194,15 @@ struct Command
             ctx.addText("::cl::");
             ctx.addText(list ? "list" : "opt");
             ctx.addText("<" + type);
-            if (isExternal())
+            if (isExternalOrLocation())
             {
                 if (list)
-                    ctx.addText(", decltype(::" + getExternalName() + ")");
+                {
+                    if (isLocationOnly())
+                        ctx.addText(", decltype(Externals::" + getExternalName() + ")");
+                    else
+                        ctx.addText(", decltype(::" + getExternalName() + ")");
+                }
                 else
                     ctx.addText(", true");
             }
@@ -217,8 +231,13 @@ struct Command
         if (!value_description.empty())
             ctx.addLine(", ::cl::value_desc(\"" + value_description + "\")");
         // location before default value
-        if (isExternal())
-            ctx.addLine(", ::cl::location(::" + getExternalName() + ")");
+        if (isExternalOrLocation())
+        {
+            if (isLocationOnly())
+                ctx.addLine(", ::cl::location(getStorage()." + getExternalName() + ")");
+            else
+                ctx.addLine(", ::cl::location(::" + getExternalName() + ")");
+        }
         if (default_value)
             ctx.addLine(", ::cl::init(" + *default_value + ")");
         if (zero_or_more)
@@ -339,10 +358,17 @@ struct CommandLine
 
         auto &ctx = ectx.h;
         ctx.addLine("//");
-        ctx.beginBlock("struct " + Oname);
+        ctx.beginBlock("struct " + settings.api_name + " " + Oname);
+        if (isRoot())
+        {
+            ctx.addLine("ClOptions &cl_options__;");
+            ctx.addLine("ClOptions &getClOptions() { return cl_options__; }");
+            ctx.addLine("const ClOptions &getClOptions() const { return cl_options__; }");
+            ctx.addLine();
+        }
         for (auto &c : commands)
         {
-            if (c.isExternal())
+            if (c.isExternalOrLocation())
                 continue;
             ctx.addLine(c.getStructType() + " " + c.name + ";");
         }
@@ -358,9 +384,14 @@ struct CommandLine
         ectx.c.addLine(parent + "::" + Oname + "::" + Oname + "(ClOptions &cl_options)");
         ectx.c.increaseIndent();
         ectx.c.addLine(":");
+        if (isRoot())
+        {
+            ectx.c.addLine("cl_options__(cl_options),");
+            ectx.c.addLine();
+        }
         for (auto &c : commands)
         {
-            if (c.isExternal())
+            if (c.isExternalOrLocation())
                 continue;
             //                                                  .getValue()?
             ectx.c.addLine(c.name + "(cl_options." + c.getName(settings) + "),");
@@ -378,7 +409,7 @@ struct CommandLine
         ctx.addLine();
 
         // var
-        if (!name.empty())
+        if (!isRoot())
         {
             ctx.addLine(Oname + " " + get_oname() + ";");
             ctx.addLine();
@@ -418,10 +449,25 @@ struct CommandLine
 
     String getVariableName() const { return name.empty() ? name : ("subcommand_" + name); }
 
+    using StorageCommands = std::map<String, Command>;
+    StorageCommands gatherStorageCommands() const
+    {
+        StorageCommands cmds;
+        for (auto &c : commands)
+        {
+            if (c.isLocationOnly())
+                cmds[c.location] = c;
+        }
+        for (auto &s : subcommands)
+            cmds.merge(s->gatherStorageCommands());
+        return cmds;
+    }
+
 private:
     String get_suffix() const { return name.empty() ? "" : ("_" + name); }
     String get_Oname() const { return "Options" + get_suffix(); }
     String get_oname() const { return "options" + get_suffix(); }
+    bool isRoot() const { return name.empty(); }
 };
 
 struct File
@@ -443,6 +489,8 @@ struct File
                 settings.namespace_ = set["namespace"].template as<decltype(settings.namespace_)>();
             if (set["generate_struct"].IsDefined())
                 settings.generate_struct = set["generate_struct"].template as<decltype(settings.generate_struct)>();
+            if (set["api_name"].IsDefined())
+                settings.api_name = set["api_name"].template as<decltype(settings.api_name)>();
         }
 
         auto cats = root["categories"];
@@ -486,7 +534,21 @@ struct File
         }
 
         {
-            ctx.h.beginBlock("struct ClOptions : ::primitives::cl::ClOptions");
+            ctx.h.beginBlock("struct " + settings.api_name + " ClOptions : ::primitives::cl::ClOptions");
+
+            {
+                auto &ctx1 = ctx.h;
+                auto &ctx = ctx1;
+                ctx.beginBlock("struct Externals");
+                for (auto &[n,c] : cmd.gatherStorageCommands())
+                    ctx.addLine(c.getStructType() + " " + c.name + ";");
+                ctx.endBlock(true);
+                ctx.addLine("Externals storage__;");
+                ctx.addLine("auto &getStorage() { return storage__; }");
+                ctx.addLine("const auto &getStorage() const { return storage__; }");
+                ctx.addLine();
+            }
+
             ctx.c.addLine("ClOptions::ClOptions()");
             ctx.c.increaseIndent();
             ctx.c.addLine(":");
