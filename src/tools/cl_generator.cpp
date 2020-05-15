@@ -181,8 +181,15 @@ struct Command
             ctx.addText("options.");
             if (!parent.empty())
                 ctx.addText("options_" + parent + ".");
+            ctx.addText(getExternalName() + ", options.getClOptions().");
         }
-        ctx.addText(getExternalName() + ", cloptions.");
+        else
+        {
+            if (isLocationOnly())
+                ctx.addText("options.getClOptions().getStorage()." + getExternalName() + ", options.getClOptions().");
+            else
+                ctx.addText(getExternalName() + ", options.getClOptions().");
+        }
         ctx.addText(getName(settings));
         ctx.addText(");");
     }
@@ -592,7 +599,7 @@ struct File
 
         // qt
         const String qt_var = "in_widget";
-        ctx.qt.beginFunction("void createOptionWidgets(QLayout *" + qt_var + ", Options &options, const ClOptions &cloptions)");
+        ctx.qt.beginFunction("void createOptionWidgets(QLayout *" + qt_var + ", Options &options)");
         cmd.emitQtWidgets(ctx.qt, settings, qt_var);
         ctx.qt.endFunction();
 
