@@ -73,7 +73,7 @@ String preprocess_file(const String &s)
 {
     String o;
     int i = 0;
-    for (auto &c : s)
+    for (uint8_t c : s)
     {
         String h(2, 0);
         sprintf(&h[0], "%02x", c);
