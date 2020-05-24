@@ -40,15 +40,6 @@ struct PRIMITIVES_COMMAND_API ArgumentPosition
 
 private:
     std::vector<int> positions;
-
-#ifdef BOOST_SERIALIZATION_ACCESS_HPP
-    friend class boost::serialization::access;
-    template <class Ar>
-    void serialize(Ar &ar, unsigned)
-    {
-        ar & positions;
-    }
-#endif
 };
 
 struct PRIMITIVES_COMMAND_API Argument
@@ -61,15 +52,6 @@ struct PRIMITIVES_COMMAND_API Argument
 
     String quote(QuoteType type = QuoteType::Simple) const;
     static String quote(const String &, QuoteType type = QuoteType::Simple);
-
-private:
-#ifdef BOOST_SERIALIZATION_ACCESS_HPP
-    friend class boost::serialization::access;
-    template <class Ar>
-    void serialize(Ar &ar, unsigned)
-    {
-    }
-#endif
 };
 
 struct PRIMITIVES_COMMAND_API SimpleArgument : Argument
@@ -83,16 +65,6 @@ struct PRIMITIVES_COMMAND_API SimpleArgument : Argument
 
 private:
     String a;
-
-#ifdef BOOST_SERIALIZATION_ACCESS_HPP
-    friend class boost::serialization::access;
-    template <class Ar>
-    void serialize(Ar &ar, unsigned)
-    {
-        ar & boost::serialization::base_object<Argument>(*this);
-        ar & a;
-    }
-#endif
 };
 
 struct PRIMITIVES_COMMAND_API SimplePositionalArgument : SimpleArgument
@@ -106,16 +78,6 @@ struct PRIMITIVES_COMMAND_API SimplePositionalArgument : SimpleArgument
 
 private:
     ArgumentPosition pos;
-
-#ifdef BOOST_SERIALIZATION_ACCESS_HPP
-    friend class boost::serialization::access;
-    template <class Ar>
-    void serialize(Ar &ar, unsigned)
-    {
-        ar & boost::serialization::base_object<SimpleArgument>(*this);
-        ar & pos;
-    }
-#endif
 };
 
 struct PRIMITIVES_COMMAND_API Arguments
@@ -157,15 +119,6 @@ struct PRIMITIVES_COMMAND_API Arguments
 
 private:
     Storage args;
-
-#ifdef BOOST_SERIALIZATION_ACCESS_HPP
-    friend class boost::serialization::access;
-    template <class Ar>
-    void serialize(Ar &ar, unsigned)
-    {
-        ar & args;
-    }
-#endif
 };
 
 }
