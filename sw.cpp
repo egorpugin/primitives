@@ -23,40 +23,20 @@ static void gen_sqlite2cpp(const DependencyPtr &tools_sqlite2cpp, NativeExecuted
 
 static void embed(const DependencyPtr &embedder, NativeExecutedTarget &t, const path &in)
 {
-    struct EmbedCommand : ::sw::driver::Command
-    {
-        using Command::Command;
-
-        std::shared_ptr<Command> clone() const override
-        {
-            return std::make_shared<EmbedCommand>(*this);
-        }
-
-    private:
-        void postProcess1(bool ok) override
-        {
-            for (auto &line : split_lines(out.text))
-            {
-                static const auto prefix = "embedding: "s;
-                boost::trim(line);
-                addImplicitInput(line.substr(prefix.size()));
-                //for (auto &f : outputs)
-                    //File(f, *fs).addImplicitDependency(line.substr(prefix.size()));
-            }
-        }
-    };
-
     if (in.is_absolute())
         throw SW_RUNTIME_ERROR("embed: in must be relative to SourceDir");
 
     auto f = t.SourceDir / in;
     auto out = t.BinaryDir / in.parent_path() / in.filename().stem();
 
-    auto c = t.addCommand(std::make_shared<EmbedCommand>());
+    auto c = t.addCommand(std::make_shared<::sw::driver::Command>());
+    c->deps_processor = Command::DepsProcessor::Gnu;
+    c->deps_file = path(out) += ".d";
     c << cmd::prog(embedder)
         << cmd::wdir(f.parent_path())
         << cmd::in(in)
         << cmd::out(out)
+        << "-d" << c->deps_file
         ;
     t += IncludeDirectory(out.parent_path()); // but remove this later
 }

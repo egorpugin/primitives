@@ -39,8 +39,12 @@ int main(int argc, char *argv[])
 {
     cl::opt<path> InputFilename(cl::Positional, cl::desc("<input file>"), cl::Required);
     cl::opt<path> OutputFilename(cl::Positional, cl::desc("<output file>"), cl::Required);
+    cl::opt<path> deps_file("-d"); // gnu style
 
     cl::ParseCommandLineOptions(argc, argv);
+
+    String d;
+    d += OutputFilename.u8string() + ": \\\n";
 
     auto s = read_file(InputFilename);
     std::regex r("EMBED<(.*?)>");
@@ -55,10 +59,12 @@ int main(int argc, char *argv[])
         str += m.suffix();
         s = str;
         // print inputs for consumers
-        std::cout << "embedding: " << (fs::current_path() / fn).u8string() << "\n";
+        d += (fs::current_path() / fn).u8string() + " \\\n";
     }
 
     write_file(OutputFilename, s);
+    if (!deps_file.empty())
+        write_file(deps_file, d);
 
     return 0;
 }
