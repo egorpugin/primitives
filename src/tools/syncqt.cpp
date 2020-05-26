@@ -321,8 +321,8 @@ int main(int argc, char **argv)
             if (!(
                 std::regex_search(fn, r_header) &&
                 !std::regex_search(fn, r_skip_header) &&
-                fn.find("ui_") != 0 &&
-                fn.find("q") == 0
+                fn.find("ui_") != 0/* &&
+                fn.find("q") == 0*/
                 ))
                 continue;
 
