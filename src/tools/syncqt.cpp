@@ -361,12 +361,6 @@ int main(int argc, char **argv)
             if (!f.qpa_header)
                 f.public_header = !std::regex_search(fn, r_private_header);
 
-            if (fn == "qopenglfunctions_1_0.h")
-            {
-                int a = 5;
-                a++;
-            }
-
             StringSet classes;
             if (f.public_header)
                 classes = class_names(ff);
