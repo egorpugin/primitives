@@ -180,6 +180,8 @@ const StringMap<StringSet> classnames {
     {"qmultimedia.h" , {"QMultimedia" }   },
     {"qwaylandquickextension.h" , {"QWaylandQuickExtension"}},
     {"qwebsocketprotocol.h" , {"QWebSocketProtocol"}},
+
+    { "qscopedvaluerollback.h", {"QScopedValueRollback"} },
 };
 
 const StringMap<StringMap<String>> deprecatedheaders {
