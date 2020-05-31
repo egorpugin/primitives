@@ -32,7 +32,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <climits>
@@ -236,10 +235,12 @@ public:
 };
 
 // A special subcommand representing no subcommand
-extern ManagedStatic<SubCommand> TopLevelSubCommand;
+PRIMITIVES_SETTINGS_API
+SubCommand &getTopLevelSubCommand();
 
 // A special subcommand that can be used to put an option into all subcommands.
-extern ManagedStatic<SubCommand> AllSubCommands;
+PRIMITIVES_SETTINGS_API
+SubCommand &getAllSubCommands();
 
 //===----------------------------------------------------------------------===//
 // Option Base class
@@ -313,7 +314,7 @@ public:
 
   bool isInAllSubCommands() const {
     return any_of(Subs, [](const SubCommand *SC) {
-      return SC == &*AllSubCommands;
+      return SC == &getAllSubCommands();
     });
   }
 
@@ -1954,7 +1955,7 @@ void PrintHelpMessage(bool Hidden = false, bool Categorized = false);
 /// Hopefully this API can be deprecated soon. Any situation where options need
 /// to be modified by tools or libraries should be handled by sane APIs rather
 /// than just handing around a global list.
-StringMap<Option *> &getRegisteredOptions(SubCommand &Sub = *TopLevelSubCommand);
+StringMap<Option *> &getRegisteredOptions(SubCommand &Sub = getTopLevelSubCommand());
 
 /// Use this to get all registered SubCommands from the provided parser.
 ///
@@ -2074,7 +2075,7 @@ bool ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
 /// not specific to the tool. This function allows a tool to specify a single
 /// option category to display in the -help output.
 void HideUnrelatedOptions(cl::OptionCategory &Category,
-                          SubCommand &Sub = *TopLevelSubCommand);
+                          SubCommand &Sub = getTopLevelSubCommand());
 
 /// Mark all options not part of the categories as cl::ReallyHidden.
 ///
@@ -2084,7 +2085,7 @@ void HideUnrelatedOptions(cl::OptionCategory &Category,
 /// not specific to the tool. This function allows a tool to specify a single
 /// option category to display in the -help output.
 void HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
-                          SubCommand &Sub = *TopLevelSubCommand);
+                          SubCommand &Sub = getTopLevelSubCommand());
 
 /// Reset all command line options to a state that looks as if they have
 /// never appeared on the command line.  This is useful for being able to parse
