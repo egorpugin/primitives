@@ -266,7 +266,7 @@ struct Command
         // TopLevelSubCommand - default
         // AllSubCommands - all subs
         if (all_subcommands)
-            ctx.addLine(", ::cl::sub(*::cl::" + all_subcommands_name + ")");
+            ctx.addLine(", ::cl::sub(::cl::get" + all_subcommands_name + "()");
         for (auto &s : subcommands)
             ctx.addLine(", ::cl::sub(subcommand_" + s + ")");
         if (hidden)
@@ -435,7 +435,7 @@ struct CommandLine
 
     void emitQtWidgets(primitives::CppEmitter &ctx, const Settings &settings, const String &qt_var_parent) const
     {
-        const auto n = name.empty() ? "AllSubCommands"s : ("SubCommand " + name);
+        const auto n = name.empty() ? all_subcommands_name : ("SubCommand " + name);
         const String var = "gbl";
 
         ctx.addLine("// subcommand "s + n);
