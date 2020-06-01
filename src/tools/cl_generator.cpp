@@ -266,7 +266,7 @@ struct Command
         // TopLevelSubCommand - default
         // AllSubCommands - all subs
         if (all_subcommands)
-            ctx.addLine(", ::cl::sub(::cl::get" + all_subcommands_name + "()");
+            ctx.addLine(", ::cl::sub(::cl::get" + all_subcommands_name + "())");
         for (auto &s : subcommands)
             ctx.addLine(", ::cl::sub(subcommand_" + s + ")");
         if (hidden)
