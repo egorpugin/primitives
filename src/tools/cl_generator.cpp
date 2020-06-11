@@ -311,6 +311,7 @@ struct CommandLine
         for (const auto &v : cmd)
         {
             auto n = v.first.as<String>();
+            n = boost::replace_all_copy(n, "-", "_");
             if (n == "subcommand")
             {
                 if (v.second["name"].as<String>() == all_subcommands_name)
@@ -348,7 +349,7 @@ struct CommandLine
         if (!name.empty())
         {
             ctx.h.addLine("::primitives::cl::ClSubCommand " + getVariableName() + ";");
-            ctx.c.addLine(getVariableName() + "(\"" + name + "\", \"" + description + "\"),");
+            ctx.c.addLine(getVariableName() + "(\"" + name + "\", R\"xxx(" + description + ")xxx\"),");
         }
 
         for (auto &c : commands)
@@ -563,7 +564,7 @@ struct File
             for (auto &[n, c] : categories)
             {
                 ctx.h.addLine("::cl::OptionCategory cat_" + n + ";");
-                ctx.c.addLine("cat_" + n + "(\"" + c.name + "\", \"" + c.description + "\"),");
+                ctx.c.addLine("cat_" + n + "(\"" + c.name + "\", R\"xxx(" + c.description + ")xxx\"),");
             }
             if (!categories.empty())
             {
