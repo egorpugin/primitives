@@ -25,3 +25,9 @@ inline std::unique_ptr<primitives::ExtendedScopeExit> sqlpp11_transaction_manual
     ese->on_success = [&c] {sqlite3_exec(c.native_handle(), "COMMIT", 0, 0, 0); };
     return ese;
 }
+
+inline std::unique_ptr<primitives::ExtendedScopeExit> sqlpp11_transaction(::sqlpp::sqlite3::connection &c)
+{
+    return sqlpp11_transaction_manual(c);
+}
+
