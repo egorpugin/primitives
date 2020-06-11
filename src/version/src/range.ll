@@ -16,6 +16,11 @@ long make_long(const char *s)
     return std::stoll(s);
 }
 
+// bison 3.6 workaround
+#ifdef EOQ
+#undef EOQ
+#endif
+
 %}
 
 %option nounistd
