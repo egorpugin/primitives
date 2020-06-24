@@ -142,7 +142,13 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
     // ssl
     if (!httpSettings.ca_certs_file.empty())
         curl_easy_setopt(curl, CURLOPT_CAINFO, httpSettings.ca_certs_file.c_str());
-#ifndef _WIN32
+#ifdef _WIN32
+    else
+    {
+        // by default on windows we use native ca store since curl 7.71.0
+        curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+    }
+#else
     // capath does not work on windows
     // https://curl.haxx.se/libcurl/c/CURLOPT_CAPATH.html
     else if (!httpSettings.ca_certs_dir.empty())
@@ -556,6 +562,22 @@ void setupSafeTls(bool prefer_native, bool strict, const path &ca_certs_fn, Stri
         return;
     }
 
+#ifdef _WIN32
+    // just simple download on windows + openssl + windows ca store
+    try
+    {
+        String empty;
+        SwapAndRestore sr(httpSettings.ca_certs_file, empty);
+        download_file(url, ca_certs_fn);
+        httpSettings.ca_certs_file = normalize_path(ca_certs_fn);
+        return;
+    }
+    catch (std::exception &)
+    {
+        // ignore
+    }
+#endif
+
     if (strict)
         throw SW_RUNTIME_ERROR("Cannot set TLS settings.");
 
@@ -563,6 +585,11 @@ void setupSafeTls(bool prefer_native, bool strict, const path &ca_certs_fn, Stri
     SwapAndRestore sr(httpSettings.ignore_ssl_checks, true);
     download_file(url, ca_certs_fn);
     httpSettings.ca_certs_file = normalize_path(ca_certs_fn);
+}
+
+void setupSafeTls()
+{
+    setupSafeTls(true, true, {});
 }
 
 }

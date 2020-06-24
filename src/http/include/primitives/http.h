@@ -109,4 +109,9 @@ bool safelyDownloadCaCertificatesBundle(const path &destfn, String url = {});
 PRIMITIVES_HTTP_API
 void setupSafeTls(bool prefer_native, bool strict, const path &ca_certs_fn, String url = {});
 
+// native = true
+// strict = true
+PRIMITIVES_HTTP_API
+void setupSafeTls();
+
 }
