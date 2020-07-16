@@ -340,7 +340,7 @@ void build(Solution &s)
     //
     auto &cl_generator = p.addTarget<ExecutableTarget>("tools.cl_generator");
     setup_primitives_no_all_sources(cl_generator);
-    cl_generator += "src/tools/cl_generator.cpp";
+    cl_generator += "src/tools/cl_generator.*"_rr;
     cl_generator += filesystem, yaml, emitter, main;
     //
 
