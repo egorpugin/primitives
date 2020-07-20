@@ -40,8 +40,10 @@ std::map<path, path> prepare_files(const FilesSorted &files, const path &root_di
 
         auto r = fs::relative(f, root_dir);
         if (r.u8string().find("..") != String::npos)
+        {
             if (!is_under_root(f, root_dir))
                 continue; // report error?
+        }
         if (!file_prefix.empty())
             r = file_prefix.string() + r.string();
         if (!dir_prefix.empty())
