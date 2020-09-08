@@ -49,12 +49,12 @@ namespace filesystem
 {
 
 FileMonitor::record::record(FileMonitor *mon, const path &dir, Callback callback, bool recursive)
-    : mon(mon), dir(dir), dir_holder(dir.u8string()), callback(callback)
+    : mon(mon), dir(dir), dir_holder(to_string(dir.u8string())), callback(callback)
 {
     if (uv_fs_event_init(&mon->loop, &e))
         return;
     e.data = this;
-    if (uv_fs_event_start(&e, cb, dir_holder.c_str(),
+    if (uv_fs_event_start(&e, cb, (const char *)dir_holder.c_str(),
         // was 0 = non recursive
         recursive ? UV_FS_EVENT_RECURSIVE : 0
     ) < 0)

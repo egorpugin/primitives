@@ -30,7 +30,7 @@ bool ParseCommandLineOptions(int argc, char **argv,
         throw SW_RUNTIME_ERROR("bad cmd");
     Strings args;
     for (int i = 0; i < argc; i++)
-        args.push_back(to_string(argw[i]));
+        args.push_back(to_string(std::wstring(argw[i])));
     return ParseCommandLineOptions(args, Overview, Errs);
 #else
     return ::primitives::cl::ParseCommandLineOptions(argc, argv, Overview, Errs);

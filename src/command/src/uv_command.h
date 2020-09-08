@@ -86,7 +86,7 @@ struct UvCommand
 
     // data holders, all strings are utf-8
     String prog;
-    String wdir;
+    std::u8string wdir;
 
     Strings args;
     std::vector<char*> uv_args;

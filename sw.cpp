@@ -97,8 +97,8 @@ static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Str
 
 static void generate_cl(const DependencyPtr &clgen, NativeExecutedTarget &t, const path &fn, const String &type)
 {
-    auto outh = t.BinaryDir / (fn.stem().u8string() + "." + type + ".h");
-    auto outcpp = t.BinaryDir / (fn.stem().u8string() + "." + type + ".cpp");
+    auto outh = t.BinaryDir / (to_string(fn.stem()) + "." + type + ".h");
+    auto outcpp = t.BinaryDir / (to_string(fn.stem()) + "." + type + ".cpp");
 
     auto c = t.addCommand();
     c << cmd::prog(clgen)
@@ -147,7 +147,7 @@ void build(Solution &s)
             n = n.slice(1);
         }
         t.ApiName = "PRIMITIVES_" + boost::to_upper_copy(n2.toString("_")) + "_API";
-        t += cpp17;
+        t += cpp20;
         t.PackageDefinitions = true;
         // not all code works with this yet (e.g. hh.date)
         //t.Public.CompileOptions.push_back("-Zc:__cplusplus");
@@ -414,7 +414,7 @@ void build(Solution &s)
     auto add_test = [&test, &s, &sw_main](const String &name) -> decltype(auto)
     {
         auto &t = test.addTarget<ExecutableTarget>(name);
-        t += cpp17;
+        t += cpp20;
         t += path("src/" + name + ".cpp");
         t += "org.sw.demo.catchorg.catch2"_dep;
         if (t.getCompilerType() == CompilerType::MSVC)

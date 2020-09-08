@@ -39,7 +39,7 @@ std::map<path, path> prepare_files(const FilesSorted &files, const path &root_di
             continue; // report error?
 
         auto r = fs::relative(f, root_dir);
-        if (r.u8string().find("..") != String::npos)
+        if (to_string(r).find("..") != String::npos)
         {
             if (!is_under_root(f, root_dir))
                 continue; // report error?
@@ -68,13 +68,13 @@ bool pack_files(const path &fn, const std::map<path, path> &files, String *error
     //archive_write_add_filter_gzip(a);
     //archive_write_set_format_pax_restricted(a);
 
-    if (archive_write_set_format_filter_by_ext(a, fn.filename().u8string().c_str()) != ARCHIVE_OK)
+    if (archive_write_set_format_filter_by_ext(a, (const char *)fn.filename().u8string().c_str()) != ARCHIVE_OK)
         throw SW_RUNTIME_ERROR(archive_error_string(a));
 
     // predictable results
     archive_write_set_filter_option(a, 0, "timestamp", 0);
 
-    auto r = archive_write_open_filename(a, fn.u8string().c_str());
+    auto r = archive_write_open_filename(a, (const char *)fn.u8string().c_str());
     if (r != ARCHIVE_OK)
         throw SW_RUNTIME_ERROR(archive_error_string(a));
 
@@ -91,7 +91,7 @@ bool pack_files(const path &fn, const std::map<path, path> &files, String *error
         {
             result = false;
             if (error)
-                *error = "Missing file: " + normalize_path(f);
+                *error = "Missing file: " + to_string(f);
             continue;
         }
 
@@ -101,7 +101,7 @@ bool pack_files(const path &fn, const std::map<path, path> &files, String *error
             ScopedFile fp(f);
             auto sz = fs::file_size(f);
             auto e = archive_entry_new();
-            archive_entry_set_pathname(e, n.u8string().c_str());
+            archive_entry_set_pathname(e, (const char *)n.u8string().c_str());
             archive_entry_set_size(e, sz);
             archive_entry_set_filetype(e, AE_IFREG);
             archive_entry_set_perm(e, 0644);
@@ -114,7 +114,7 @@ bool pack_files(const path &fn, const std::map<path, path> &files, String *error
         else if (s.type() == fs::file_type::directory)
         {
             auto e = archive_entry_new();
-            archive_entry_set_pathname(e, n.u8string().c_str());
+            archive_entry_set_pathname(e, (const char *)n.u8string().c_str());
             archive_entry_set_filetype(e, AE_IFDIR);
             archive_entry_set_perm(e, 0644);
             archive_write_header(a, e);
@@ -145,7 +145,7 @@ FilesSorted unpack_file(const path &fn, const path &dst)
 
     archive_read_support_filter_all(a);
     archive_read_support_format_all(a);
-    auto r = archive_read_open_filename(a, fn.u8string().c_str(), BLOCK_SIZE);
+    auto r = archive_read_open_filename(a, (const char *)fn.u8string().c_str(), BLOCK_SIZE);
     if (r != ARCHIVE_OK)
         throw SW_RUNTIME_ERROR(archive_error_string(a));
 

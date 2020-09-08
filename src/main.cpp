@@ -55,18 +55,18 @@ TEST_CASE("Checking hashes", "[hash]")
     CHECK(sha256  ("0"s) == "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9");
     CHECK(sha3_256("0"s) == "f9e2eaaa42d9fe9e558a9b8ef1bf366f190aacaa83bad2641ee106e9041096e4");
     CHECK(sha3_256("5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9f9e2eaaa42d9fe9e558a9b8ef1bf366f190aacaa83bad2641ee106e9041096e40"s)
-                                         == "539e660d5e7d3245469e151f0c106ae2ac108a681f5083ac61f52381766aff3c");
-    CHECK(strong_file_hash(""s)        == "539e660d5e7d3245469e151f0c106ae2ac108a681f5083ac61f52381766aff3c");
-    CHECK(strong_file_hash(empty_file) == "539e660d5e7d3245469e151f0c106ae2ac108a681f5083ac61f52381766aff3c");
+                                            == "539e660d5e7d3245469e151f0c106ae2ac108a681f5083ac61f52381766aff3c");
+    CHECK(strong_file_hash(""s)             == "539e660d5e7d3245469e151f0c106ae2ac108a681f5083ac61f52381766aff3c");
+    CHECK(strong_file_hash_file(empty_file) == "539e660d5e7d3245469e151f0c106ae2ac108a681f5083ac61f52381766aff3c");
 
     CHECK(sha256  ("The quick brown fox jumps over the lazy dog"s)   == "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592");
     CHECK(sha3_256("The quick brown fox jumps over the lazy dog"s)   == "69070dda01975c8c120c3aada1b282394e7f032fa9cf32f4cb2259a0897dfc04");
     CHECK(sha256  ("The quick brown fox jumps over the lazy dog43"s) == "57186baa9fc99c713e6523f3c1ccae283cc563798cbcad0b1b3ea6d48a824618");
     CHECK(sha3_256("The quick brown fox jumps over the lazy dog43"s) == "e351cc10a404769508f9720e13c9b564e6dc008ec01ff0a82cafa6af7d314ed4");
     CHECK(sha3_256("57186baa9fc99c713e6523f3c1ccae283cc563798cbcad0b1b3ea6d48a824618e351cc10a404769508f9720e13c9b564e6dc008ec01ff0a82cafa6af7d314ed443"s)
-                                                                             == "d7dd023e2e8f7b9b5df806ddacfa7510fcd441202399c7896960876f17610fe6");
-    CHECK(strong_file_hash("The quick brown fox jumps over the lazy dog"s) == "d7dd023e2e8f7b9b5df806ddacfa7510fcd441202399c7896960876f17610fe6");
-    CHECK(strong_file_hash(fox_file)                                       == "d7dd023e2e8f7b9b5df806ddacfa7510fcd441202399c7896960876f17610fe6");
+                                                                                == "d7dd023e2e8f7b9b5df806ddacfa7510fcd441202399c7896960876f17610fe6");
+    CHECK(strong_file_hash("The quick brown fox jumps over the lazy dog"s)      == "d7dd023e2e8f7b9b5df806ddacfa7510fcd441202399c7896960876f17610fe6");
+    CHECK(strong_file_hash_file(fox_file)                                       == "d7dd023e2e8f7b9b5df806ddacfa7510fcd441202399c7896960876f17610fe6");
 
     CHECK(sha256  ("The quick brown fox jumps over the lazy dog."s)   == "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c");
     CHECK(sha3_256("The quick brown fox jumps over the lazy dog."s)   == "a80f839cd4f83f6c3dafc87feae470045e4eb0d366397d5c6ce34ba1739f734d");
@@ -83,13 +83,13 @@ TEST_CASE("Checking hashes", "[hash]")
         == "38b66d21d113eb60e20941d2ff3aa38f5287f97045a3998be5cefae3686956a678afc7b92312d4013d925a50a03d6b57b42619f635445eb070fb42b4ff63a2ee"s);
 
     CHECK(strong_file_hash_blake2b_sha3("The quick brown fox jumps over the lazy dog."s) == "3_2$38b66d21d113eb60e20941d2ff3aa38f5287f97045a3998be5cefae3686956a678afc7b92312d4013d925a50a03d6b57b42619f635445eb070fb42b4ff63a2ee");
-    CHECK(strong_file_hash_blake2b_sha3(fox_point_file) == "3_2$38b66d21d113eb60e20941d2ff3aa38f5287f97045a3998be5cefae3686956a678afc7b92312d4013d925a50a03d6b57b42619f635445eb070fb42b4ff63a2ee");
+    CHECK(strong_file_hash_file_blake2b_sha3(fox_point_file) == "3_2$38b66d21d113eb60e20941d2ff3aa38f5287f97045a3998be5cefae3686956a678afc7b92312d4013d925a50a03d6b57b42619f635445eb070fb42b4ff63a2ee");
 
     CHECK(check_strong_file_hash("The quick brown fox jumps over the lazy dog."s, "3_2$38b66d21d113eb60e20941d2ff3aa38f5287f97045a3998be5cefae3686956a678afc7b92312d4013d925a50a03d6b57b42619f635445eb070fb42b4ff63a2ee"));
     CHECK(check_strong_file_hash(fox_point_file, "3_2$38b66d21d113eb60e20941d2ff3aa38f5287f97045a3998be5cefae3686956a678afc7b92312d4013d925a50a03d6b57b42619f635445eb070fb42b4ff63a2ee"));
 
     CHECK(strong_file_hash("The quick brown fox jumps over the lazy dog."s) == "853af62ed82f1c9079c2a1ee3f28806a520dc48fb702091e8f375466d7c484c0");
-    CHECK(strong_file_hash(fox_point_file) == "853af62ed82f1c9079c2a1ee3f28806a520dc48fb702091e8f375466d7c484c0");
+    CHECK(strong_file_hash_file(fox_point_file) == "853af62ed82f1c9079c2a1ee3f28806a520dc48fb702091e8f375466d7c484c0");
 
     fs::remove(empty_file);
     fs::remove(fox_file);
@@ -280,10 +280,10 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
         fs::remove("x", ec);
     }
 
-    CHECK(normalize_path("c:/Program Files/LLVM/bin\\clang++.exe") == "C:/Program Files/LLVM/bin/clang++.exe");
+    CHECK(normalize_path("c:/Program Files/LLVM/bin\\clang++.exe") == u8"C:/Program Files/LLVM/bin/clang++.exe");
     CHECK(wnormalize_path(L"c:/Program Files/LLVM/bin\\clang++.exe") == L"C:/Program Files/LLVM/bin/clang++.exe");
 
-    CHECK(normalize_path_windows("c:/Program Files/LLVM/bin\\clang++.exe") == "C:\\Program Files\\LLVM\\bin\\clang++.exe");
+    CHECK(normalize_path_windows("c:/Program Files/LLVM/bin\\clang++.exe") == u8"C:\\Program Files\\LLVM\\bin\\clang++.exe");
     CHECK(wnormalize_path_windows(L"c:/Program Files/LLVM/bin\\clang++.exe") == L"C:\\Program Files\\LLVM\\bin\\clang++.exe");
 
     // input stream

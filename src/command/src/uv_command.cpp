@@ -83,7 +83,7 @@ void io_data::set_redirect(const path &file, bool out, bool append)
     else
         flags |= O_RDONLY;
 
-    uv_fs_open(c.loop, &file_req, f.c_str(), flags, 0644, NULL);
+    uv_fs_open(c.loop, &file_req, (const char *)f.c_str(), flags, 0644, NULL);
     uv_fs_req_cleanup(&file_req);
 
     fd = (int)file_req.result;
@@ -297,7 +297,7 @@ UvCommand::UvCommand(uv_loop_t *loop, primitives::Command &c)
     // options
     {
         options.file = prog.c_str();
-        options.cwd = wdir.c_str();
+        options.cwd = (const char *)wdir.c_str();
         options.args = uv_args.data();
         //#if UV_VERSION_MAJOR > 1
 #ifdef _WIN32

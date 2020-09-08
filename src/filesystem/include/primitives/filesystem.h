@@ -60,16 +60,22 @@ PRIMITIVES_FILESYSTEM_API
 void remove_all_from_dir(const path &dir);
 
 PRIMITIVES_FILESYSTEM_API
-String normalize_path(const path &p);
+std::u8string normalize_path(const path &p);
 
 PRIMITIVES_FILESYSTEM_API
-String normalize_path_windows(const path &p);
+std::u8string normalize_path_windows(const path &p);
+
+PRIMITIVES_FILESYSTEM_API
+String to_string(const path &p);
 
 PRIMITIVES_FILESYSTEM_API
 std::wstring wnormalize_path(const path &p);
 
 PRIMITIVES_FILESYSTEM_API
 std::wstring wnormalize_path_windows(const path &p);
+
+PRIMITIVES_FILESYSTEM_API
+std::wstring to_wstring(const path &p);
 
 // checks for real file
 PRIMITIVES_FILESYSTEM_API

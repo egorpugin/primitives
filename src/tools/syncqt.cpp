@@ -36,7 +36,7 @@ struct File
     bool qpa_header = true;
     bool no_master_include = false;
     bool clean = true;
-    String requires;
+    String requires_;
 };
 
 const StringMap<path> module_dirs {
@@ -279,7 +279,7 @@ StringSet class_names(std::map<path, File>::value_type &ff)
         if (std::regex_search(line, m, r_typedef))
             classes.insert(m[1]);
         if (std::regex_search(line, m, r_require))
-            f.requires = m[1];
+            f.requires_ = m[1];
     }
     return classes;
 }
@@ -379,10 +379,10 @@ int main(int argc, char **argv)
 
                 if (!f.no_master_include)
                 {
-                    if (!f.requires.empty())
-                        master << "#if QT_CONFIG(" << f.requires << ")\n";
+                    if (!f.requires_.empty())
+                        master << "#if QT_CONFIG(" << f.requires_ << ")\n";
                     master << "#include \"" << fn << "\"\n";
-                    if (!f.requires.empty())
+                    if (!f.requires_.empty())
                         master << "#endif\n";
                 }
             }
@@ -397,7 +397,7 @@ int main(int argc, char **argv)
             // set abs for the moment
             //if (rel.empty())
                 rel = p;
-            write_file(oheader, "#include \"" + normalize_path(rel) + "\"\n");
+            write_file(oheader, "#include \"" + to_string(normalize_path(rel)) + "\"\n");
         }
 
         master << "#include \"" << boost::to_lower_copy(m) + "version.h\"" << "\n";

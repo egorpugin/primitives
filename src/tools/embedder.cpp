@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     cl::ParseCommandLineOptions(argc, argv);
 
     String d;
-    d += OutputFilename.u8string() + ": \\\n";
+    d += to_string(OutputFilename.u8string()) + ": \\\n";
 
     auto s = read_file(InputFilename);
     std::regex r("EMBED<(.*?)>");
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
         str += m.suffix();
         s = str;
         // print inputs for consumers
-        d += (fs::current_path() / fn).u8string() + " \\\n";
+        d += to_string((fs::current_path() / fn).u8string()) + " \\\n";
     }
 
     write_file(OutputFilename, s);

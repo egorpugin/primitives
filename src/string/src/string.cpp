@@ -35,6 +35,11 @@ void normalize_string(String &s)
     std::replace(s.begin(), s.end(), '\\', '/');
 }
 
+void normalize_string(std::u8string &s)
+{
+    std::replace(s.begin(), s.end(), '\\', '/');
+}
+
 void normalize_string(std::wstring &s)
 {
     std::replace(s.begin(), s.end(), L'\\', L'/');
@@ -53,6 +58,11 @@ std::wstring normalize_string_copy(std::wstring s)
 }
 
 void normalize_string_windows(String &s)
+{
+    std::replace(s.begin(), s.end(), '/', '\\');
+}
+
+void normalize_string_windows(std::u8string &s)
 {
     std::replace(s.begin(), s.end(), '/', '\\');
 }
@@ -106,6 +116,11 @@ std::wstring to_wstring(const std::string &s)
 {
     auto &converter = get_string_converter();
     return converter.from_bytes(s.c_str());
+}
+
+std::string to_string(const std::u8string &s)
+{
+    return {s.begin(), s.end()};
 }
 
 std::string to_string(const std::wstring &s)

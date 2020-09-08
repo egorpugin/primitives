@@ -98,7 +98,7 @@ String blake2b_512(const String &data)
     return bytes_to_string(hash, hash_size);
 }
 
-String sha256(const path &fn)
+String sha256_file(const path &fn)
 {
     return sha256(read_file(fn));
 }
@@ -110,7 +110,7 @@ String sha3_256(const String &data)
     return bytes_to_string(o);
 }
 
-String sha3_256(const path &fn)
+String sha3_256_file(const path &fn)
 {
     std::string o(32, 0);
     auto data = read_file(fn);
@@ -126,7 +126,7 @@ String md5(const String &data)
     return bytes_to_string(hash, hash_size);
 }
 
-String md5(const path &fn)
+String md5_file(const path &fn)
 {
     return md5(read_file(fn));
 }
@@ -159,7 +159,7 @@ String strong_file_hash(const String &data)
     return sha3_256(sha256(f) + sha3_256(f) + sz);
 }
 
-String strong_file_hash(const path &fn)
+String strong_file_hash_file(const path &fn)
 {
     // algorithm:
     //  sha3_256(sha2(f+sz) + sha3_256(f+sz) + sz)
@@ -212,9 +212,9 @@ String strong_file_hash_sha3_sha2(const String &data)
     return strong_file_hash(data);
 }
 
-String strong_file_hash_sha3_sha2(const path &fn)
+String strong_file_hash_file_sha3_sha2(const path &fn)
 {
-    return strong_file_hash(fn);
+    return strong_file_hash_file(fn);
 }
 
 String strong_file_hash_blake2b_sha3(const String &data)
@@ -227,7 +227,7 @@ String strong_file_hash_blake2b_sha3(const String &data)
     return save_strong_hash_prefix(HashType::blake2b_512, HashType::sha3_256) + blake2b_512(sha3_256(f) + blake2b_512(f) + sz);
 }
 
-String strong_file_hash_blake2b_sha3(const path &fn)
+String strong_file_hash_file_blake2b_sha3(const path &fn)
 {
     // algorithm:
     //  blake2b_512(sha3_256(data+sz) + blake2b_512(data+sz) + sz)

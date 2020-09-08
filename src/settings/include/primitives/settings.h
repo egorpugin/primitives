@@ -253,18 +253,20 @@ struct parser<std::string, void> : parser_base
     }
 };
 
-// std::string
+// path
 template <>
 struct parser<path, void> : parser_base
 {
     String toString(const std::any &value) const override
     {
-        return std::any_cast<path>(value).u8string();
+        SW_UNIMPLEMENTED;
+        //return std::any_cast<path>(value).u8string();
     }
 
     std::any fromString(const String &value) const override
     {
-        return path(value);
+        SW_UNIMPLEMENTED;
+        //return path(value);
     }
 };
 

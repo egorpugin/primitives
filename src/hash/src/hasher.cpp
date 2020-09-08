@@ -64,7 +64,8 @@ Hasher &Hasher::operator|=(const String &v)
 
 Hasher &Hasher::operator|=(const path &v)
 {
-    hash += normalize_path(v);
+    // will different utf8 paths have same std::string repr?
+    hash += to_string(v);
     do_hash();
     return *this;
 }

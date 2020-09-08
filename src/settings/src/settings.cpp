@@ -174,9 +174,9 @@ void Settings::clear()
 
 void Settings::load(const path &fn, SettingsType type)
 {
-    if (fn.extension() == ".yml" || fn.extension() == ".yaml" || fn.extension() == ".settings")
+    if (fn.extension() == ".yml" || fn.extension() == ".yaml" || fn.extension() == ".settings" || fn == ".settings")
     {
-        load(YAML::LoadFile(fn.u8string()));
+        load(YAML::LoadFile(to_string(fn.u8string())));
     }
     else
     {

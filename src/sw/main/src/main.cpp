@@ -234,7 +234,7 @@ static int startup(int argc, char *argv[])
 
 #ifdef _WIN32
     // prepare strings
-    filter_message = "Unhandled exception.\nWriting minidump to "s + get_crash_dir().u8string().c_str() + "\n";
+    filter_message = "Unhandled exception.\nWriting minidump to "s + to_string(get_crash_dir()) + "\n";
     after_minidump_write_message = "Minidump saved.\n";
 
     //
@@ -281,15 +281,15 @@ static int startup(int argc, char *argv[])
     while (!s.empty() && s.back() == '/')
         s.resize(s.size() - 1);
 #ifdef _WIN32
-    s = normalize_path_windows(fs::u8path(s));
+    s = normalize_path_windows(s);
     // windows does not change case of the disk letter if other parts unchanged
-    cp = fs::u8path(s);
+    cp = s;
     // so we take parent dir first, set cd there
     cp = cp.parent_path();
     fs::current_path(cp);
     // then we restore our cwd but with our changes
 #endif
-    cp = fs::u8path(s);
+    cp = s;
     fs::current_path(cp);
 
     //

@@ -39,6 +39,9 @@ PRIMITIVES_STRING_API
 void normalize_string(String &s);
 
 PRIMITIVES_STRING_API
+void normalize_string(std::u8string &s);
+
+PRIMITIVES_STRING_API
 void normalize_string(std::wstring &s);
 
 PRIMITIVES_STRING_API
@@ -49,6 +52,9 @@ std::wstring normalize_string_copy(std::wstring s);
 
 PRIMITIVES_STRING_API
 void normalize_string_windows(String &s);
+
+PRIMITIVES_STRING_API
+void normalize_string_windows(std::u8string &s);
 
 PRIMITIVES_STRING_API
 void normalize_string_windows(std::wstring &s);
@@ -66,7 +72,16 @@ std::wstring normalize_string_windows_copy(std::wstring s);
 #endif
 
 PRIMITIVES_STRING_API
+inline std::u8string to_u8string(const std::string &s)
+{
+    return {s.begin(), s.end()};
+}
+
+PRIMITIVES_STRING_API
 std::wstring to_wstring(const std::string &s);
+
+PRIMITIVES_STRING_API
+std::string to_string(const std::u8string &s);
 
 PRIMITIVES_STRING_API
 std::string to_string(const std::wstring &s);

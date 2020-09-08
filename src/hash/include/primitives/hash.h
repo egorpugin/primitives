@@ -28,7 +28,7 @@ PRIMITIVES_HASH_API
 String md5(const String &data);
 
 PRIMITIVES_HASH_API
-String md5(const path &fn);
+String md5_file(const path &fn);
 
 PRIMITIVES_HASH_API
 String sha1(const String &data);
@@ -37,13 +37,13 @@ PRIMITIVES_HASH_API
 String sha256(const String &data);
 
 PRIMITIVES_HASH_API
-String sha256(const path &fn);
+String sha256_file(const path &fn);
 
 PRIMITIVES_HASH_API
 String sha3_256(const String &data);
 
 PRIMITIVES_HASH_API
-String sha3_256(const path &fn);
+String sha3_256_file(const path &fn);
 
 PRIMITIVES_HASH_API
 String blake2b_512(const String &data);
@@ -69,7 +69,7 @@ String strong_file_hash(const String &data);
 
 /// sha3_256(sha2(data+sz) + sha3_256(data+sz) + sz)
 PRIMITIVES_HASH_API
-String strong_file_hash(const path &fn);
+String strong_file_hash_file(const path &fn);
 
 /// sha3_256(sha2(data+sz) + sha3_256(data+sz) + sz)
 PRIMITIVES_HASH_API
@@ -77,7 +77,7 @@ String strong_file_hash_sha3_sha2(const String &data);
 
 /// sha3_256(sha2(data+sz) + sha3_256(data+sz) + sz)
 PRIMITIVES_HASH_API
-String strong_file_hash_sha3_sha2(const path &fn);
+String strong_file_hash_file_sha3_sha2(const path &fn);
 
 /// blake2b_512(sha3_256(data+sz) + blake2b_512(data+sz) + sz)
 PRIMITIVES_HASH_API
@@ -85,32 +85,30 @@ String strong_file_hash_blake2b_sha3(const String &data);
 
 /// blake2b_512(sha3_256(data+sz) + blake2b_512(data+sz) + sz)
 PRIMITIVES_HASH_API
-String strong_file_hash_blake2b_sha3(const path &fn);
+String strong_file_hash_file_blake2b_sha3(const path &fn);
 
 PRIMITIVES_HASH_API
 String shorten_hash(const String &data, size_t size);
 
 /// calculate and return strong_file_hash of data using type from hash
-template <class T>
-String get_strong_file_hash(const T &data, const String &hash)
+inline String get_strong_file_hash(const path &data, const String &hash)
 {
     auto[f, s] = load_strong_hash_prefix(hash);
     if (f == HashType::sha3_256 && s == HashType::sha2_256)
-        return strong_file_hash_sha3_sha2(data);
+        return strong_file_hash_file_sha3_sha2(data);
     if (f == HashType::blake2b_512 && s == HashType::sha3_256)
-        return strong_file_hash_blake2b_sha3(data);
+        return strong_file_hash_file_blake2b_sha3(data);
     throw SW_RUNTIME_ERROR("Unknown hash type(s)");
 }
 
 /// calculate strong_file_hash of data and compare with procided hash
 /// returns true if equal
-template <class T>
-bool check_strong_file_hash(const T &data, const String &hash)
+inline bool check_strong_file_hash(const path &data, const String &hash)
 {
     auto[f, s] = load_strong_hash_prefix(hash);
     if (f == HashType::sha3_256 && s == HashType::sha2_256)
-        return hash == strong_file_hash_sha3_sha2(data);
+        return hash == strong_file_hash_file_sha3_sha2(data);
     if (f == HashType::blake2b_512 && s == HashType::sha3_256)
-        return hash == strong_file_hash_blake2b_sha3(data);
+        return hash == strong_file_hash_file_blake2b_sha3(data);
     throw SW_RUNTIME_ERROR("Unknown hash type(s)");
 }

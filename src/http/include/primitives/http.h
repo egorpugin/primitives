@@ -24,8 +24,8 @@ struct HttpSettings
 {
     bool verbose = false;
     bool ignore_ssl_checks = false;
-    String ca_certs_file;
-    String ca_certs_dir;
+    path ca_certs_file;
+    path ca_certs_dir;
     ProxySettings proxy;
 };
 

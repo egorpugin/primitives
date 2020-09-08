@@ -76,7 +76,7 @@ void remove_file(const path &p)
     error_code ec;
     fs::remove(p, ec);
     if (ec)
-        std::cerr << "Cannot remove file: " << p.u8string() << "\n";
+        std::cerr << "Cannot remove file: " << to_string(p) << "\n";
 }
 
 path canonical(const path &p)
@@ -94,8 +94,7 @@ path canonical(const path &p)
     }
     auto r = fs::absolute(p);
     r = r.lexically_normal();
-    r = fs::u8path(normalize_path_windows(r));
-    return r;
+    return normalize_path_windows(r);
 #else
     return fs::canonical(p);
 #endif
@@ -115,36 +114,47 @@ static void set_uppercase_disk(std::string &s)
         s[0] = toupper(s[0]);
 }
 
+static void set_uppercase_disk(std::u8string &s)
+{
+    if (s.size() >= 2 && s[1] == ':')
+        s[0] = toupper(s[0]);
+}
+
 static void set_uppercase_disk(std::wstring &s)
 {
     if (s.size() >= 2 && s[1] == L':')
         s[0] = towupper(s[0]);
 }
 
-String normalize_path(const path &p)
+std::u8string normalize_path(const path &p)
 {
     if (p.empty())
-        return "";
+        return {};
     auto s = p.u8string();
     normalize_string(s);
     set_uppercase_disk(s);
     return s;
 }
 
-String normalize_path_windows(const path &p)
+std::u8string normalize_path_windows(const path &p)
 {
     if (p.empty())
-        return "";
+        return {};
     auto s = p.u8string();
     normalize_string_windows(s);
     set_uppercase_disk(s);
     return s;
 }
 
+String to_string(const path &p)
+{
+    return p.string();
+}
+
 std::wstring wnormalize_path(const path &p)
 {
     if (p.empty())
-        return L"";
+        return {};
     auto s = p.wstring();
     normalize_string(s);
     set_uppercase_disk(s);
@@ -154,11 +164,16 @@ std::wstring wnormalize_path(const path &p)
 std::wstring wnormalize_path_windows(const path &p)
 {
     if (p.empty())
-        return L"";
+        return {};
     auto s = p.wstring();
     normalize_string_windows(s);
     set_uppercase_disk(s);
     return s;
+}
+
+std::wstring to_wstring(const path &p)
+{
+    return p.wstring();
 }
 
 String read_file(const path &p, uintmax_t offset, uintmax_t count)
@@ -354,9 +369,8 @@ Files filter_files_like(const Files &files, const String &regex)
     std::regex r(regex);
     for (auto &f : files)
     {
-        if (!std::regex_match(f.filename().u8string(), r))
-            continue;
-        fls.insert(f);
+        if (std::regex_match(to_string(f.filename()), r))
+            fls.insert(f);
     }
     return fls;
 }
@@ -381,7 +395,7 @@ bool is_under_root_by_prefix_path(const path &p, const path &root_dir)
     auto r = normalize_path(root_dir);
     auto v = normalize_path(p);
     // disallow .. elements
-    return v.find(r) == 0 && v.find("..") == v.npos;
+    return v.find(r) == 0 && v.find(u8"..") == v.npos;
 }
 
 bool compare_files(const path &fn1, const path &fn2)
@@ -490,7 +504,7 @@ bool FileIterator::iterate(std::function<bool(const BuffersRef &, uint64_t)> f)
 
 path unique_path(const path &p)
 {
-    return boost::filesystem::unique_path(p.u8string()).wstring();
+    return boost::filesystem::unique_path(to_wstring(p)).wstring();
 }
 
 time_t file_time_type2time_t(fs::file_time_type t)
@@ -533,7 +547,7 @@ FILE *fopen(const path &p, const char *mode)
         return nullptr;
     return f;
 #else
-    return ::fopen(p.u8string().c_str(), mode);
+    return ::fopen((const char *)p.u8string().c_str(), mode);
 #endif
 }
 
@@ -565,7 +579,7 @@ FILE *fopen_checked(const path &p, const char *mode)
         if (f)
             return f;
     }
-    throw SW_RUNTIME_ERROR("Cannot open file: " + p.u8string() + ", mode = " + mode + ", errno = " + std::to_string(errno) + ": " + errno2str());
+    throw SW_RUNTIME_ERROR("Cannot open file: " + to_string(p) + ", mode = " + mode + ", errno = " + std::to_string(errno) + ": " + errno2str());
 }
 
 void create(const path &p)

@@ -462,7 +462,7 @@ void Command::addPathDirectory(const path &p)
     }
 
     // now add without duplication
-    appendEnvironmentArrayValue(env, norm(p), true);
+    appendEnvironmentArrayValue(env, to_string(norm(p)), true);
 }
 
 void Command::appendEnvironmentArrayValue(const String &key, const String &value, bool unique_values)

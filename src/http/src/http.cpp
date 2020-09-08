@@ -69,6 +69,8 @@ struct CurlWrapper
     struct curl_slist *headers = nullptr;
     std::string post_data;
     std::vector<char *> escaped_strings;
+    std::u8string ca_certs_file;
+    std::u8string ca_certs_dir;
 
     CurlWrapper()
     {
@@ -95,6 +97,8 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
 {
     auto wp = std::make_unique<CurlWrapper>();
     auto &w = *wp;
+    w.ca_certs_file = normalize_path(request.ca_certs_file);
+    w.ca_certs_dir = normalize_path(request.ca_certs_dir);
     auto curl = w.curl;
 
     curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
@@ -140,8 +144,8 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
     }
 
     // ssl
-    if (!httpSettings.ca_certs_file.empty())
-        curl_easy_setopt(curl, CURLOPT_CAINFO, httpSettings.ca_certs_file.c_str());
+    if (!w.ca_certs_file.empty())
+        curl_easy_setopt(curl, CURLOPT_CAINFO, w.ca_certs_file.c_str());
 #ifdef _WIN32
     else
     {
@@ -151,8 +155,8 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
 #else
     // capath does not work on windows
     // https://curl.haxx.se/libcurl/c/CURLOPT_CAPATH.html
-    else if (!httpSettings.ca_certs_dir.empty())
-        curl_easy_setopt(curl, CURLOPT_CAPATH, httpSettings.ca_certs_dir.c_str());
+    else if (!w.ca_certs_dir.empty())
+        curl_easy_setopt(curl, CURLOPT_CAPATH, w.ca_certs_dir.c_str());
 #endif
 
     if (request.ignore_ssl_checks)
@@ -566,7 +570,7 @@ void setupSafeTls(bool prefer_native, bool strict, const path &ca_certs_fn, Stri
     // just simple download on windows + openssl + windows ca store
     try
     {
-        String empty;
+        decltype(httpSettings.ca_certs_file) empty;
         SwapAndRestore sr(httpSettings.ca_certs_file, empty);
         download_file(url, ca_certs_fn);
         httpSettings.ca_certs_file = normalize_path(ca_certs_fn);

@@ -1903,7 +1903,7 @@ void parser<std::string>::printOptionDiff(const Option &O, StringRef V,
 // own types
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const path &p)
 {
-    o << p.u8string();
+    o << to_string(p.u8string());
     return o;
 }
 
