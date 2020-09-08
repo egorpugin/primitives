@@ -162,6 +162,7 @@ void build(Solution &s)
             t.Public += "_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS"_def;
             t.Public += "_CRT_SECURE_NO_WARNINGS"_def;
             t.Public.CompileOptions.push_back("-wd4251");
+            //t.Protected.CompileOptions.push_back("/Zc:__cplusplus");
         }
         return p;
     };
