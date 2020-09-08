@@ -464,7 +464,7 @@ void File::emit(const path &h, const path &cpp) const
     ctx.h.addLine();
 
     // cpp
-    ctx.c.addLine("#include \"" + to_string(h.filename()) + "\"");
+    ctx.c.addLine("#include \"" + to_printable_string(h.filename()) + "\"");
     ctx.c.addLine();
 
     // externals

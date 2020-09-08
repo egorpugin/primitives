@@ -81,6 +81,12 @@ PRIMITIVES_STRING_API
 std::wstring to_wstring(const std::string &s);
 
 PRIMITIVES_STRING_API
+inline std::string to_string(const std::string &s)
+{
+    return s;
+}
+
+PRIMITIVES_STRING_API
 std::string to_string(const std::u8string &s);
 
 PRIMITIVES_STRING_API

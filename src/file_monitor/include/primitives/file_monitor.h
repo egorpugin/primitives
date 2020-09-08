@@ -39,7 +39,7 @@ class PRIMITIVES_FILE_MONITOR_API FileMonitor
 
         const FileMonitor *mon;
         path dir;
-        std::string dir_holder;
+        path_u8string dir_holder;
         uv_fs_event_t e;
         Callback callback;
 

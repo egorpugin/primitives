@@ -115,7 +115,7 @@ SimpleArgument::SimpleArgument(const String &s) : a(s)
 }
 
 // do not normalize, get as is
-SimpleArgument::SimpleArgument(const path &p) : a(to_string(p.u8string()))
+SimpleArgument::SimpleArgument(const path &p) : a(to_string(to_path_string(p)))
 {
 }
 

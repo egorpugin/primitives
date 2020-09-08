@@ -18,6 +18,22 @@ using error_code = std::error_code;
 
 using path = fs::path;
 
+#ifdef _WIN32
+// on win and C++20 we can use std::u8string for path strings
+// to convert paths in both directions safely
+#define PRIMITIVES_FS_USE_UTF8_PATH_STRINGS 1
+#else
+#define PRIMITIVES_FS_USE_UTF8_PATH_STRINGS 0
+#endif
+
+#if PRIMITIVES_FS_USE_UTF8_PATH_STRINGS
+// on win and C++20 we can use std::u8string for path strings
+// to convert paths in both directions safely
+using path_u8string = std::u8string;
+#else
+using path_u8string = String;
+#endif
+
 using FilesSorted = std::set<path>;
 using FilesOrdered = std::vector<path>;
 using Files = std::unordered_set<path>;
@@ -59,23 +75,21 @@ Strings read_lines(const path &p);
 PRIMITIVES_FILESYSTEM_API
 void remove_all_from_dir(const path &dir);
 
+/// change all '\\' into '/', make drive letter uppercase
 PRIMITIVES_FILESYSTEM_API
-std::u8string normalize_path(const path &p);
+path normalize_path(const path &p);
 
+/// change all '/' into '\\', make drive letter uppercase
 PRIMITIVES_FILESYSTEM_API
-std::u8string normalize_path_windows(const path &p);
+path normalize_path_windows(const path &p);
 
+/// returns utf-8 string
 PRIMITIVES_FILESYSTEM_API
-String to_string(const path &p);
+path_u8string to_path_string(const path &p);
 
+/// returns utf-8 string in std::string
 PRIMITIVES_FILESYSTEM_API
-std::wstring wnormalize_path(const path &p);
-
-PRIMITIVES_FILESYSTEM_API
-std::wstring wnormalize_path_windows(const path &p);
-
-PRIMITIVES_FILESYSTEM_API
-std::wstring to_wstring(const path &p);
+String to_printable_string(const path &p);
 
 // checks for real file
 PRIMITIVES_FILESYSTEM_API

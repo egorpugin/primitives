@@ -69,8 +69,8 @@ struct CurlWrapper
     struct curl_slist *headers = nullptr;
     std::string post_data;
     std::vector<char *> escaped_strings;
-    std::u8string ca_certs_file;
-    std::u8string ca_certs_dir;
+    path_u8string ca_certs_file;
+    path_u8string ca_certs_dir;
 
     CurlWrapper()
     {
@@ -97,8 +97,8 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
 {
     auto wp = std::make_unique<CurlWrapper>();
     auto &w = *wp;
-    w.ca_certs_file = normalize_path(request.ca_certs_file);
-    w.ca_certs_dir = normalize_path(request.ca_certs_dir);
+    w.ca_certs_file = to_path_string(normalize_path(request.ca_certs_file));
+    w.ca_certs_dir = to_path_string(normalize_path(request.ca_certs_dir));
     auto curl = w.curl;
 
     curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());

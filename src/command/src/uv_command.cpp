@@ -257,7 +257,7 @@ UvCommand::UvCommand(uv_loop_t *loop, primitives::Command &c)
     auto &arguments = c.getArguments();
 
     prog = arguments[0]->toString();
-    wdir = c.working_directory.u8string();
+    wdir = to_path_string(c.working_directory);
 
     // args
     for (const auto &a : c.getArguments())

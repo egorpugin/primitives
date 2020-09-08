@@ -281,10 +281,7 @@ TEST_CASE("Checking filesystem & command2", "[fs,cmd]")
     }
 
     CHECK(normalize_path("c:/Program Files/LLVM/bin\\clang++.exe") == u8"C:/Program Files/LLVM/bin/clang++.exe");
-    CHECK(wnormalize_path(L"c:/Program Files/LLVM/bin\\clang++.exe") == L"C:/Program Files/LLVM/bin/clang++.exe");
-
     CHECK(normalize_path_windows("c:/Program Files/LLVM/bin\\clang++.exe") == u8"C:\\Program Files\\LLVM\\bin\\clang++.exe");
-    CHECK(wnormalize_path_windows(L"c:/Program Files/LLVM/bin\\clang++.exe") == L"C:\\Program Files\\LLVM\\bin\\clang++.exe");
 
     // input stream
     {

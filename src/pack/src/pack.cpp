@@ -39,7 +39,7 @@ std::map<path, path> prepare_files(const FilesSorted &files, const path &root_di
             continue; // report error?
 
         auto r = fs::relative(f, root_dir);
-        if (to_string(r).find("..") != String::npos)
+        if (to_printable_string(r).find("..") != String::npos)
         {
             if (!is_under_root(f, root_dir))
                 continue; // report error?
@@ -91,7 +91,7 @@ bool pack_files(const path &fn, const std::map<path, path> &files, String *error
         {
             result = false;
             if (error)
-                *error = "Missing file: " + to_string(f);
+                *error = "Missing file: " + to_printable_string(f);
             continue;
         }
 
