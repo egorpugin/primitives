@@ -49,7 +49,7 @@ bool Extra::operator<(const Extra &rhs) const
         return true;
     if (empty())
         return false;
-    return ::std::operator<(*this, rhs);
+    return (Base&)*this < (Base&)rhs;
 }
 
 }
