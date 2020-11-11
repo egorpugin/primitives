@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+    <Type Name="primitives::Command">
+        <DisplayString>
+            {arguments}
+        </DisplayString>
+        <Expand>
+            <ExpandedItem>arguments</ExpandedItem>
+        </Expand>
+    </Type>
+
+    <Type Name="primitives::command::Arguments">
+        <DisplayString>{args}</DisplayString>
+        <Expand>
+            <ExpandedItem>args</ExpandedItem>
+        </Expand>
+    </Type>
+
+    <Type Name="primitives::command::SimpleArgument">
+        <DisplayString>{a}</DisplayString>
+    </Type>
+
+    <Type Name="std::unique_ptr&lt;primitives::command::Argument,*&gt;">
+        <DisplayString Condition="_Mypair._Myval2 == 0">empty</DisplayString>
+        <DisplayString Condition="_Mypair._Myval2 != 0">{*_Mypair._Myval2}</DisplayString>
+    </Type>
+
+    <!--<Type Name="std::unique_ptr&lt;primitives::command::SimpleArgument,*&gt;">
+        <SmartPointer Usage="Minimal">_Mypair._Myval2</SmartPointer>
+        <DisplayString Condition="_Mypair._Myval2 == 0">empty</DisplayString>
+        <DisplayString Condition="_Mypair._Myval2 != 0">_Mypair._Myval2</DisplayString>
+    </Type>-->
+
+</AutoVisualizer>
