@@ -511,6 +511,32 @@ void setupSafeTls(bool prefer_native, bool strict, const path &ca_certs_fn, Stri
     if (url.empty())
         url = getDefaultCaBundleUrl();
 
+    auto proper_download_file = [](auto &url, auto &ca_certs_fn)
+    {
+        /*ScopedFileLock lk(ca_certs_fn, std::defer_lock);
+        if (!lk.try_lock())
+        {
+            lk.lock();
+            // someone else downloaded file?
+            if (fs::exists(ca_certs_fn))
+                return;
+        }
+        bool e = fs::exists(ca_certs_fn);
+        try
+        {*/
+            auto dlpath = path(ca_certs_fn) += ".dl";
+            download_file(url, dlpath);
+            fs::copy_file(dlpath, ca_certs_fn, fs::copy_options::overwrite_existing);
+        /*}
+        catch (std::exception &)
+        {
+            // internet error
+            if (e)
+                return;
+            throw;
+        }*/
+    };
+
     // by default we want to trust remote certs
     // but someone may replace our certs file
     //
@@ -521,7 +547,7 @@ void setupSafeTls(bool prefer_native, bool strict, const path &ca_certs_fn, Stri
     // if -k set, ignore everything
     if (httpSettings.ignore_ssl_checks)
     {
-        download_file(url, ca_certs_fn);
+        proper_download_file(url, ca_certs_fn);
         httpSettings.ca_certs_file = normalize_path(ca_certs_fn);
         return;
     }
@@ -572,7 +598,7 @@ void setupSafeTls(bool prefer_native, bool strict, const path &ca_certs_fn, Stri
     {
         decltype(httpSettings.ca_certs_file) empty;
         SwapAndRestore sr(httpSettings.ca_certs_file, empty);
-        download_file(url, ca_certs_fn);
+        proper_download_file(url, ca_certs_fn);
         httpSettings.ca_certs_file = normalize_path(ca_certs_fn);
         return;
     }
@@ -587,7 +613,7 @@ void setupSafeTls(bool prefer_native, bool strict, const path &ca_certs_fn, Stri
 
     // just simple download
     SwapAndRestore sr(httpSettings.ignore_ssl_checks, true);
-    download_file(url, ca_certs_fn);
+    proper_download_file(url, ca_certs_fn);
     httpSettings.ca_certs_file = normalize_path(ca_certs_fn);
 }
 
