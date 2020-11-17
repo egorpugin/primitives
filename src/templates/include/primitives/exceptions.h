@@ -39,7 +39,7 @@
     do                                                                                                                 \
     {                                                                                                                  \
         DEBUG_BREAK;                                                                                                   \
-        throw SW_RUNTIME_ERROR("unreachable code");                                                                    \
+        throw SW_LOGIC_ERROR("unreachable code");                                                                      \
     } while (0)
 
 namespace sw
