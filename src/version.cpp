@@ -1557,6 +1557,8 @@ TEST_CASE("Checking version ranges", "[range]")
         VersionRange vr("1.2.0");
         CHECK(vr.hasVersion("1.2.0"));
         CHECK(vr.hasVersion("1.2.0.0"));
+        CHECK_FALSE(vr.hasVersion("1.2.1"));
+        CHECK_FALSE(vr.hasVersion("1.2.0.1"));
         CHECK_FALSE(vr.hasVersion("1.2.3"));
         CHECK_FALSE(vr.hasVersion("1.2.0.4"));
     }
@@ -1567,6 +1569,57 @@ TEST_CASE("Checking version ranges", "[range]")
         CHECK(vr.hasVersion("1.2.0.4.0"));
         CHECK_FALSE(vr.hasVersion("1.2.0.5"));
         CHECK_FALSE(vr.hasVersion("1.2.0.4.1"));
+    }
+
+    {
+        VersionRange vr("=1.2.0.4");
+        CHECK(vr.hasVersion("1.2.0.4"));
+        CHECK(vr.hasVersion("1.2.0.4.0"));
+        CHECK_FALSE(vr.hasVersion("1.2.0.4.0.1"));
+        CHECK_FALSE(vr.hasVersion("1.2.0.5"));
+        CHECK_FALSE(vr.hasVersion("1.2.0.4.1"));
+    }
+
+    {
+        auto check = [](const auto &vr)
+        {
+            CHECK(vr.hasVersion("1"));
+            CHECK(vr.hasVersion("1.0"));
+            CHECK(vr.hasVersion("1.0.0"));
+            CHECK(vr.hasVersion("1.0.0000"));
+            CHECK(vr.hasVersion("1.0.0.0"));
+            CHECK(vr.hasVersion("1.0.0.0.0"));
+            CHECK(vr.hasVersion("1.0.0.0.0.0"));
+            CHECK_FALSE(vr.hasVersion("1.1"));
+            CHECK_FALSE(vr.hasVersion("1.0.1"));
+            CHECK_FALSE(vr.hasVersion("1.0.0.1"));
+            CHECK_FALSE(vr.hasVersion("1.0.0.0.1"));
+            CHECK_FALSE(vr.hasVersion("1.0.0.0.0.1"));
+            CHECK_FALSE(vr.hasVersion("1.0.0.0.0.0.1"));
+        };
+        check(VersionRange("=1"));
+        check(VersionRange("==1"));
+        CHECK_THROWS(VersionRange("===1"));
+    }
+
+    {
+        auto check = [](const auto &vr)
+        {
+            CHECK(vr.hasVersion("1"));
+            CHECK(vr.hasVersion("1.0"));
+            CHECK(vr.hasVersion("1.0.0"));
+            CHECK(vr.hasVersion("1.0.0000"));
+            CHECK(vr.hasVersion("1.0.0.0"));
+            CHECK(vr.hasVersion("1.0.0.0.0"));
+            CHECK(vr.hasVersion("1.0.0.0.0.0"));
+            CHECK(vr.hasVersion("1.1"));
+            CHECK(vr.hasVersion("1.0.1"));
+            CHECK(vr.hasVersion("1.0.0.1"));
+            CHECK(vr.hasVersion("1.0.0.0.1"));
+            CHECK(vr.hasVersion("1.0.0.0.0.1"));
+            CHECK(vr.hasVersion("1.0.0.0.0.0.1"));
+        };
+        check(VersionRange("1"));
     }
 }
 
