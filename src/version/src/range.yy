@@ -147,8 +147,7 @@ range_set_and: range
 // single ranges
 ////////////////////////////////////////////////////////////////////////////////
 
-range: compare | caret | tilde | hyphen | interval
-    | version
+range: compare | caret | tilde | hyphen | interval | version
     {
         EXTRACT_VALUE(Version, v, $1);
         auto rp = empty_pair();
