@@ -126,11 +126,13 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     Version(Number ma, Number mi, Number pa);
     Version(Number ma, Number mi, Number pa, Number tw);
 
+    // prepared extra
     Version(Number ma, const Extra &e);
     Version(Number ma, Number mi, const Extra &e);
     Version(Number ma, Number mi, Number pa, const Extra &e);
     Version(Number ma, Number mi, Number pa, Number tw, const Extra &e);
 
+    // parse extra
     Version(Number ma, const std::string &e);
     Version(Number ma, Number mi, const std::string &e);
     Version(Number ma, Number mi, Number pa, const std::string &e);
