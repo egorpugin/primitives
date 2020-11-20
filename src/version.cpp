@@ -1999,6 +1999,34 @@ TEST_CASE("Checking version helpers", "[helpers]")
     }
 }
 
+TEST_CASE("Other stuff", "[stuff]")
+{
+    using namespace primitives::version;
+
+    auto mn = std::to_string(Version::maxNumber());
+    primitives::version::VersionRange vr1("1");
+    primitives::version::VersionRange vr2("1.*");
+    primitives::version::VersionRange vr3("1.0.*");
+    CHECK(vr3.contains("1.0." + mn));
+    // not implemented yet
+    // 1.0.* contains! 1.0.*.1
+    // 1.0.* contains! 1.0.*.0.1
+    CHECK(vr3.contains("1.0." + mn + ".1"));
+    CHECK(vr3.contains("1.0." + mn + ".0.1"));
+    primitives::version::VersionRange vr4("1.0.0");
+    // not implemented yet
+    // 1.0.0 contains! 1.0.0.1
+    // 1.0.0 contains! 1.0.0.0.1
+    CHECK(vr4.contains("1.0.0.1"));
+    CHECK(vr4.contains("1.0.0.0.1"));
+    primitives::version::VersionRange vr5("1.0.0.*");
+    // not implemented yet
+    // 1.0.0.* contains! 1.0.0.*.1
+    // 1.0.0.* contains! 1.0.0.*.0.1
+    CHECK(vr5.contains("1.0.0." + mn + ".1"));
+    CHECK(vr5.contains("1.0.0." + mn + ".0.1"));
+}
+
 int main(int argc, char **argv)
 {
     Catch::Session s;
