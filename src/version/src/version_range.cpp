@@ -123,17 +123,17 @@ VersionRange VersionRange::empty()
     return vr;
 }
 
-bool VersionRange::hasVersion(const Version &v) const
+bool VersionRange::contains(const Version &v) const
 {
     if (isBranch() && v.isBranch())
         return branch == v.getBranch();
     if (isBranch() || v.isBranch())
         return false;
     return std::any_of(range.begin(), range.end(),
-        [&v](const auto &r) { return r.hasVersion(v); });
+        [&v](const auto &r) { return r.contains(v); });
 }
 
-bool VersionRange::RangePair::hasVersion(const Version &v) const
+bool VersionRange::RangePair::contains(const Version &v) const
 {
     //if (v.getLevel() > std::max(first.getLevel(), second.getLevel()))
         //return false;
@@ -543,7 +543,7 @@ std::optional<Version> VersionRange::getMinSatisfyingVersion(const std::set<Vers
 {
     for (auto &v : s)
     {
-        if (hasVersion(v))
+        if (contains(v))
             return v;
     }
     return {};
@@ -553,7 +553,7 @@ std::optional<Version> VersionRange::getMaxSatisfyingVersion(const std::set<Vers
 {
     for (auto i = s.rbegin(); i != s.rend(); ++i)
     {
-        if (hasVersion(*i))
+        if (contains(*i))
             return *i;
     }
     return {};

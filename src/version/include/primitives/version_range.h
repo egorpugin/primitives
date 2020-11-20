@@ -72,7 +72,9 @@ struct PRIMITIVES_VERSION_API VersionRange
 
     bool isEmpty() const;
     bool isOutside(const Version &) const;
-    bool hasVersion(const Version &) const;
+    [[deprecated("use contains()")]]
+    bool hasVersion(const Version &v) const { return contains(v); }
+    bool contains(const Version &) const;
     bool isBranch() const;
     size_t size() const;
 
@@ -117,7 +119,9 @@ private:
         using base::base;
 
         std::string toString(VersionRangePairStringRepresentationType) const;
-        bool hasVersion(const Version &v) const;
+        [[deprecated("use contains()")]]
+        bool hasVersion(const Version &v) const { return contains(v); }
+        bool contains(const Version &) const;
         bool isBranch() const;
         size_t getHash() const;
         std::optional<Version> toVersion() const;

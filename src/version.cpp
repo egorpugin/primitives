@@ -50,9 +50,6 @@ TEST_CASE("Checking versions", "[version]")
     CHECK_THROWS(Version(0, "-rc2.3._a_"));
 
     // we allowed now versions with numbers > 4
-    //CHECK_THROWS(Version("1.2.3.4.5"));
-    //CHECK_THROWS(Version("1.2.3.4.5.6"));
-    //CHECK_THROWS(Version("1.2.3.4.5.6.7"));
     CHECK_NOTHROW(Version("1.2.3.4.5"));
     CHECK_NOTHROW(Version("1.2.3.4.5.6"));
     CHECK_NOTHROW(Version("1.2.3.4.5.6.7"));
@@ -1254,12 +1251,12 @@ TEST_CASE("Checking version ranges", "[range]")
     //CHECK(VersionRange(5).toString() == "*.*.*.*.*"); // changed
     CHECK(VersionRange(4).toString() == "*");
     CHECK(VersionRange(5).toString() == "*");
-    CHECK(VersionRange(3).hasVersion(Version(0,0,1)));
-    CHECK_FALSE(VersionRange(3).hasVersion(Version(0,0,0,1)));
-    CHECK(VersionRange(3).hasVersion(Version(0,0,2)));
-    CHECK(VersionRange(4).hasVersion(Version(0, 0, 1)));
-    CHECK(VersionRange(4).hasVersion(Version(0, 0, 0, 1)));
-    CHECK_FALSE(VersionRange(4).hasVersion(Version({ 0, 0, 0, 0, 1 })));
+    CHECK(VersionRange(3).contains(Version(0,0,1)));
+    CHECK_FALSE(VersionRange(3).contains(Version(0,0,0,1)));
+    CHECK(VersionRange(3).contains(Version(0,0,2)));
+    CHECK(VersionRange(4).contains(Version(0, 0, 1)));
+    CHECK(VersionRange(4).contains(Version(0, 0, 0, 1)));
+    CHECK_FALSE(VersionRange(4).contains(Version({ 0, 0, 0, 0, 1 })));
     CHECK(VersionRange(Version::minimum_level).toString() == "*");
 
     // from websites
@@ -1485,8 +1482,8 @@ TEST_CASE("Checking version ranges", "[range]")
     {
         VersionRange vr("master");
         CHECK(vr.toString() == "master");
-        CHECK(vr.hasVersion("master"));
-        CHECK_FALSE(vr.hasVersion("master1"));
+        CHECK(vr.contains("master"));
+        CHECK_FALSE(vr.contains("master1"));
     }
 
     {
@@ -1499,8 +1496,8 @@ TEST_CASE("Checking version ranges", "[range]")
         CHECK_NOTHROW(VersionRange(v, v));
         CHECK_NOTHROW(VersionRange(v2, v2));
         VersionRange vr(v, v);
-        CHECK(vr.hasVersion("master"));
-        CHECK_FALSE(vr.hasVersion("master2"));
+        CHECK(vr.contains("master"));
+        CHECK_FALSE(vr.contains("master2"));
     }
 
     CHECK_THROWS(VersionRange("master-master"));
@@ -1518,84 +1515,84 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange() != VersionRange("a"));
     CHECK_THROWS(VersionRange("a") < VersionRange("b || c d"));
 
-    // hasVersion
+    // contains
     {
         VersionRange vr("*");
-        CHECK(vr.hasVersion("1"));
-        CHECK(vr.hasVersion("1.2"));
-        CHECK(vr.hasVersion("1.2.3"));
-        CHECK(vr.hasVersion("1.2.3.4"));
-        CHECK(vr.hasVersion("1.2.3.4.5"));
-        CHECK(vr.hasVersion("1.2.3.4.5-rc1")); // change this?
-        //CHECK_FALSE(vr.hasVersion("1.2.3.4.5-rc1"));
+        CHECK(vr.contains("1"));
+        CHECK(vr.contains("1.2"));
+        CHECK(vr.contains("1.2.3"));
+        CHECK(vr.contains("1.2.3.4"));
+        CHECK(vr.contains("1.2.3.4.5"));
+        CHECK(vr.contains("1.2.3.4.5-rc1")); // change this?
+        //CHECK_FALSE(vr.contains("1.2.3.4.5-rc1"));
     }
 
     {
         VersionRange vr("*.*.*.*");
-        CHECK(vr.hasVersion("1"));
-        CHECK(vr.hasVersion("1.2"));
-        CHECK(vr.hasVersion("1.2.3"));
-        CHECK(vr.hasVersion("1.2.3.4"));
-        CHECK(vr.hasVersion("1.2.3.4.5"));
+        CHECK(vr.contains("1"));
+        CHECK(vr.contains("1.2"));
+        CHECK(vr.contains("1.2.3"));
+        CHECK(vr.contains("1.2.3.4"));
+        CHECK(vr.contains("1.2.3.4.5"));
     }
 
     {
         VersionRange vr(">=1.2.0 <=2.3.4");
-        CHECK(vr.hasVersion("1.2.3"));
-        CHECK(vr.hasVersion("1.2.3.4"));
-        CHECK(vr.hasVersion("1.2.3.4.5"));
-        CHECK(vr.hasVersion("1.2.0"));
-        CHECK(vr.hasVersion("1.2.0.0"));
-        CHECK(vr.hasVersion("1.2.0.0.0"));
-        CHECK(vr.hasVersion("2.3.4"));
-        CHECK(vr.hasVersion("2.3.4.0"));
-        CHECK(vr.hasVersion("2.3.4.0.0"));
-        CHECK_FALSE(vr.hasVersion("2.3.4.0.1"));
+        CHECK(vr.contains("1.2.3"));
+        CHECK(vr.contains("1.2.3.4"));
+        CHECK(vr.contains("1.2.3.4.5"));
+        CHECK(vr.contains("1.2.0"));
+        CHECK(vr.contains("1.2.0.0"));
+        CHECK(vr.contains("1.2.0.0.0"));
+        CHECK(vr.contains("2.3.4"));
+        CHECK(vr.contains("2.3.4.0"));
+        CHECK(vr.contains("2.3.4.0.0"));
+        CHECK_FALSE(vr.contains("2.3.4.0.1"));
     }
 
     {
         VersionRange vr("1.2.0");
-        CHECK(vr.hasVersion("1.2.0"));
-        CHECK(vr.hasVersion("1.2.0.0"));
-        CHECK_FALSE(vr.hasVersion("1.2.1"));
-        CHECK_FALSE(vr.hasVersion("1.2.0.1"));
-        CHECK_FALSE(vr.hasVersion("1.2.3"));
-        CHECK_FALSE(vr.hasVersion("1.2.0.4"));
+        CHECK(vr.contains("1.2.0"));
+        CHECK(vr.contains("1.2.0.0"));
+        CHECK_FALSE(vr.contains("1.2.1"));
+        CHECK_FALSE(vr.contains("1.2.0.1"));
+        CHECK_FALSE(vr.contains("1.2.3"));
+        CHECK_FALSE(vr.contains("1.2.0.4"));
     }
 
     {
         VersionRange vr("1.2.0.4");
-        CHECK(vr.hasVersion("1.2.0.4"));
-        CHECK(vr.hasVersion("1.2.0.4.0"));
-        CHECK_FALSE(vr.hasVersion("1.2.0.5"));
-        CHECK_FALSE(vr.hasVersion("1.2.0.4.1"));
+        CHECK(vr.contains("1.2.0.4"));
+        CHECK(vr.contains("1.2.0.4.0"));
+        CHECK_FALSE(vr.contains("1.2.0.5"));
+        CHECK_FALSE(vr.contains("1.2.0.4.1"));
     }
 
     {
         VersionRange vr("=1.2.0.4");
-        CHECK(vr.hasVersion("1.2.0.4"));
-        CHECK(vr.hasVersion("1.2.0.4.0"));
-        CHECK_FALSE(vr.hasVersion("1.2.0.4.0.1"));
-        CHECK_FALSE(vr.hasVersion("1.2.0.5"));
-        CHECK_FALSE(vr.hasVersion("1.2.0.4.1"));
+        CHECK(vr.contains("1.2.0.4"));
+        CHECK(vr.contains("1.2.0.4.0"));
+        CHECK_FALSE(vr.contains("1.2.0.4.0.1"));
+        CHECK_FALSE(vr.contains("1.2.0.5"));
+        CHECK_FALSE(vr.contains("1.2.0.4.1"));
     }
 
     {
         auto check = [](const auto &vr)
         {
-            CHECK(vr.hasVersion("1"));
-            CHECK(vr.hasVersion("1.0"));
-            CHECK(vr.hasVersion("1.0.0"));
-            CHECK(vr.hasVersion("1.0.0000"));
-            CHECK(vr.hasVersion("1.0.0.0"));
-            CHECK(vr.hasVersion("1.0.0.0.0"));
-            CHECK(vr.hasVersion("1.0.0.0.0.0"));
-            CHECK_FALSE(vr.hasVersion("1.1"));
-            CHECK_FALSE(vr.hasVersion("1.0.1"));
-            CHECK_FALSE(vr.hasVersion("1.0.0.1"));
-            CHECK_FALSE(vr.hasVersion("1.0.0.0.1"));
-            CHECK_FALSE(vr.hasVersion("1.0.0.0.0.1"));
-            CHECK_FALSE(vr.hasVersion("1.0.0.0.0.0.1"));
+            CHECK(vr.contains("1"));
+            CHECK(vr.contains("1.0"));
+            CHECK(vr.contains("1.0.0"));
+            CHECK(vr.contains("1.0.0000"));
+            CHECK(vr.contains("1.0.0.0"));
+            CHECK(vr.contains("1.0.0.0.0"));
+            CHECK(vr.contains("1.0.0.0.0.0"));
+            CHECK_FALSE(vr.contains("1.1"));
+            CHECK_FALSE(vr.contains("1.0.1"));
+            CHECK_FALSE(vr.contains("1.0.0.1"));
+            CHECK_FALSE(vr.contains("1.0.0.0.1"));
+            CHECK_FALSE(vr.contains("1.0.0.0.0.1"));
+            CHECK_FALSE(vr.contains("1.0.0.0.0.0.1"));
         };
         check(VersionRange("=1"));
         check(VersionRange("==1"));
@@ -1605,19 +1602,19 @@ TEST_CASE("Checking version ranges", "[range]")
     {
         auto check = [](const auto &vr)
         {
-            CHECK(vr.hasVersion("1"));
-            CHECK(vr.hasVersion("1.0"));
-            CHECK(vr.hasVersion("1.0.0"));
-            CHECK(vr.hasVersion("1.0.0000"));
-            CHECK(vr.hasVersion("1.0.0.0"));
-            CHECK(vr.hasVersion("1.0.0.0.0"));
-            CHECK(vr.hasVersion("1.0.0.0.0.0"));
-            CHECK(vr.hasVersion("1.1"));
-            CHECK(vr.hasVersion("1.0.1"));
-            CHECK(vr.hasVersion("1.0.0.1"));
-            CHECK(vr.hasVersion("1.0.0.0.1"));
-            CHECK(vr.hasVersion("1.0.0.0.0.1"));
-            CHECK(vr.hasVersion("1.0.0.0.0.0.1"));
+            CHECK(vr.contains("1"));
+            CHECK(vr.contains("1.0"));
+            CHECK(vr.contains("1.0.0"));
+            CHECK(vr.contains("1.0.0000"));
+            CHECK(vr.contains("1.0.0.0"));
+            CHECK(vr.contains("1.0.0.0.0"));
+            CHECK(vr.contains("1.0.0.0.0.0"));
+            CHECK(vr.contains("1.1"));
+            CHECK(vr.contains("1.0.1"));
+            CHECK(vr.contains("1.0.0.1"));
+            CHECK(vr.contains("1.0.0.0.1"));
+            CHECK(vr.contains("1.0.0.0.0.1"));
+            CHECK(vr.contains("1.0.0.0.0.0.1"));
         };
         check(VersionRange("1"));
     }
