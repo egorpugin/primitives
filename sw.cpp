@@ -216,6 +216,7 @@ void build(Solution &s)
         executor += "pthread"_slib;
 
     ADD_LIBRARY(command);
+    command.Public += "src/command.natvis";
     command.Public += file_monitor,
         "org.sw.demo.boost.process"_dep;
 
