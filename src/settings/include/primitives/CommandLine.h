@@ -1139,7 +1139,11 @@ public:
 
     // parse - Return true on error.
     bool parse(Option &, StringRef, StringRef Arg, path &Value) {
+#if PRIMITIVES_FS_USE_UTF8_PATH_STRINGS
+        Value = (const char8_t *)Arg.str().c_str();
+#else
         Value = fs::u8path(Arg.str());
+#endif
         return false;
     }
 

@@ -142,11 +142,15 @@ void Command::setProgram(const path &p)
     program_set = true;
 }
 
-String Command::getProgram() const
+path Command::getProgram() const
 {
     if (!program_set && getArguments().empty())
         throw SW_RUNTIME_ERROR("program is not set");
+#if PRIMITIVES_FS_USE_UTF8_PATH_STRINGS
+    return (const char8_t *)getArguments()[0]->toString().c_str();
+#else
     return getArguments()[0]->toString();
+#endif
 }
 
 Command::Arguments &Command::getArguments()
@@ -202,10 +206,10 @@ void Command::preExecute(std::error_code *ec_in)
     // resolve exe
     {
         // remove this? underlying libuv could resolve itself
-        auto p = resolveProgram(fs::u8path(getProgram()));
+        auto p = resolveProgram(getProgram());
         if (p.empty())
         {
-            auto e = "Cannot resolve executable: " + getProgram();
+            auto e = "Cannot resolve executable: " + to_printable_string(getProgram());
             if (!ec_in)
                 throw SW_RUNTIME_ERROR(e);
             *ec_in = std::make_error_code(std::errc::no_such_file_or_directory);

@@ -84,7 +84,7 @@ public:
 
     bool isProgramSet() const { return program_set; }
     void setProgram(const path &);
-    String getProgram() const;
+    path getProgram() const;
     virtual Arguments &getArguments();
     virtual const Arguments &getArguments() const;
     void setArguments(const Arguments &);
