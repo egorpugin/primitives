@@ -133,8 +133,8 @@ void configure(Build &s)
 
 void build(Solution &s)
 {
-    auto &p = s.addProject("primitives", "master");
-    p += "https://github.com/egorpugin/primitives"_git;
+    auto &p = s.addProject("primitives", "0.3.0");
+    p += Git("https://github.com/egorpugin/primitives", "", "master");
 
     auto setup_primitives_no_all_sources = [](auto &t)
     {
