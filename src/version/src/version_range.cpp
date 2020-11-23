@@ -13,11 +13,6 @@
 #include <algorithm>
 #include <map>
 
-static void throw_bad_version_range(const std::string &s)
-{
-    throw SW_RUNTIME_ERROR("Invalid version range: " + s);
-}
-
 primitives::version::Version prepare_version(
     primitives::version::Version &ver, primitives::version::Version::Number fill_value = 0,
     primitives::version::Version::Level level = primitives::version:: Version::minimum_level);
@@ -204,7 +199,7 @@ VersionRange::VersionRange(const std::string &s)
     if (in.empty())
         range.emplace_back(Version::min(), Version::max());
     else if (auto r = parse(*this, in); r)
-        throw_bad_version_range(in + ", error: " + r.value());
+        throw SW_RUNTIME_ERROR("Invalid version range: " + in + ", error: " + r.value());
 }
 
 VersionRange::VersionRange(const char *v)
