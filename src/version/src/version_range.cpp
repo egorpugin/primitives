@@ -19,8 +19,8 @@ static void throw_bad_version_range(const std::string &s)
 }
 
 primitives::version::Version prepare_version(
-    primitives::version::Version &ver, primitives::version::Version::Number val = 0,
-    primitives::version::Version::Level level =primitives::version:: Version::minimum_level);
+    primitives::version::Version &ver, primitives::version::Version::Number fill_value = 0,
+    primitives::version::Version::Level level = primitives::version:: Version::minimum_level);
 
 namespace primitives::version
 {

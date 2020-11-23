@@ -37,17 +37,17 @@ enum { OPEN, CLOSED, };
 
 using primitives::version::detail::RangePair;
 
-Version prepare_version(Version &ver, Version::Number val = 0, Version::Level level = Version::minimum_level)
+Version prepare_version(Version &v, Version::Number fill_value = 0, Version::Level level = Version::minimum_level)
 {
-    auto l = std::max(ver.getLevel(), level);
-    for (auto &n : ver.numbers)
+    auto l = std::max(v.getLevel(), level);
+    for (auto &n : v.numbers)
     {
         if (n < 0)
-            n = val;
+            n = fill_value;
     }
-    if (ver.numbers.size() < l)
-        ver.numbers.resize(l, val);
-    return ver;
+    if (v.numbers.size() < l)
+        v.numbers.resize(l, fill_value);
+    return v;
 }
 
 %}
