@@ -882,6 +882,11 @@ TEST_CASE("Checking version ranges", "[range]")
     // check that left <= right
     {
         CHECK_THROWS(VersionRange("5 - 4"));
+        CHECK_NOTHROW(VersionRange("5 - 5"));
+        CHECK_NOTHROW(VersionRange("[5,5]"));
+        CHECK_NOTHROW(VersionRange("(5,5]"));
+        CHECK_NOTHROW(VersionRange("[5,5)"));
+        CHECK_NOTHROW(VersionRange("(5,5)"));
         CHECK_THROWS(VersionRange("[5,4]"));
         CHECK_THROWS(VersionRange("[5,4)"));
         CHECK_THROWS(VersionRange("(5,4]"));

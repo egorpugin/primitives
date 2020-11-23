@@ -31,6 +31,7 @@ detail::RangePair::RangePair(const Version &l, const Version &r)
         throw SW_RUNTIME_ERROR("Both versions must be either versions or branches");
     if (l > r)
         throw SW_RUNTIME_ERROR("Left version must be <= than right: " + l.toString() + " > " + r.toString());
+
     first = l;
     second = r;
 
