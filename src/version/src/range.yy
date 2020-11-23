@@ -35,9 +35,9 @@ using namespace primitives::version;
 enum : Version::Number { ANY = -2, UNSET = -1, };
 enum { OPEN, CLOSED, };
 
-VersionRange::RangePair empty_pair()
+primitives::version::detail::RangePair empty_pair()
 {
-    VersionRange::RangePair rp;
+    primitives::version::detail::RangePair rp;
     rp.first.fill(UNSET);
     rp.second.fill(UNSET);
     return rp;
@@ -56,7 +56,7 @@ auto prepare_version(Version &ver, Version::Number val = 0, Version::Level level
     return ver;
 }
 
-auto prepare_pair(VersionRange::RangePair &p)
+auto prepare_pair(primitives::version::detail::RangePair &p)
 {
     if (p.isBranch())
         return p;

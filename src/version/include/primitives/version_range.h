@@ -32,6 +32,36 @@ enum class VersionRangePairStringRepresentationType
     IndividualRealLevel     = 2,
 };
 
+namespace detail
+{
+
+/// [from, to] interval
+struct RangePair : std::pair<Version, Version>
+{
+    // replace with [from, to)?
+    // but we do not know what is next version for "15.9.03232.13 - 16.0.123.13-preview"
+    // so we can't use [,)
+    // to do this, we must teach Extra to know it's next version
+    //
+    // Example: for string "a" next version will be "aa" - in case if we allow only [a-z]
+    //
+
+    using base = std::pair<Version, Version>;
+    using base::base;
+
+    std::string toString(VersionRangePairStringRepresentationType) const;
+    [[deprecated("use contains()")]]
+    bool hasVersion(const Version &v) const { return contains(v); }
+    bool contains(const Version &) const;
+    bool isBranch() const;
+    size_t getHash() const;
+    std::optional<Version> toVersion() const;
+
+    std::optional<RangePair> operator&(const RangePair &) const;
+};
+
+}
+
 struct PRIMITIVES_VERSION_API VersionRange
 {
     /// default is any version or * or Version::min() - Version::max()
@@ -104,39 +134,15 @@ public:
 #ifndef HAVE_BISON_RANGE_PARSER
 private:
 #endif
-    /// [from, to] interval
-    struct RangePair : std::pair<Version, Version>
-    {
-        // replace with [from, to)?
-        // but we do not know what is next version for "15.9.03232.13 - 16.0.123.13-preview"
-        // so we can't use [,)
-        // to do this, we must teach Extra to know it's next version
-        //
-        // Example: for string "a" next version will be "aa" - in case if we allow only [a-z]
-        //
+    VersionRange &operator|=(const detail::RangePair &);
+    VersionRange &operator&=(const detail::RangePair &);
 
-        using base = std::pair<Version, Version>;
-        using base::base;
-
-        std::string toString(VersionRangePairStringRepresentationType) const;
-        [[deprecated("use contains()")]]
-        bool hasVersion(const Version &v) const { return contains(v); }
-        bool contains(const Version &) const;
-        bool isBranch() const;
-        size_t getHash() const;
-        std::optional<Version> toVersion() const;
-
-        std::optional<RangePair> operator&(const RangePair &) const;
-    };
-
-    using Range = std::vector<RangePair>;
+private:
+    using Range = std::vector<detail::RangePair>;
 
     // always sorted with less
     Range range;
     std::string branch;
-
-    VersionRange &operator|=(const RangePair &);
-    VersionRange &operator&=(const RangePair &);
 
     /// range will be in an invalid state in case of errors
     /// optional error will be returned

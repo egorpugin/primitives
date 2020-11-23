@@ -133,20 +133,20 @@ bool VersionRange::contains(const Version &v) const
         [&v](const auto &r) { return r.contains(v); });
 }
 
-bool VersionRange::RangePair::contains(const Version &v) const
+bool detail::RangePair::contains(const Version &v) const
 {
     //if (v.getLevel() > std::max(first.getLevel(), second.getLevel()))
         //return false;
     return first <= v && v <= second;
 }
 
-std::optional<VersionRange::RangePair> VersionRange::RangePair::operator&(const RangePair &rhs) const
+std::optional<detail::RangePair> detail::RangePair::operator&(const detail::RangePair &rhs) const
 {
     if (isBranch())
         return *this;
     if (rhs.isBranch())
         return rhs;
-    VersionRange::RangePair rp;
+    detail::RangePair rp;
     rp.first = std::max(first, rhs.first);
     rp.second = std::min(second, rhs.second);
     if (rp.first > rp.second)
@@ -154,7 +154,7 @@ std::optional<VersionRange::RangePair> VersionRange::RangePair::operator&(const 
     return rp;
 }
 
-std::string VersionRange::RangePair::toString(VersionRangePairStringRepresentationType t) const
+std::string detail::RangePair::toString(VersionRangePairStringRepresentationType t) const
 {
     if (first.isBranch())
         return first.toString();
@@ -234,14 +234,14 @@ std::optional<Version> VersionRange::toVersion() const
     return range.begin()->toVersion();
 }
 
-std::optional<Version> VersionRange::RangePair::toVersion() const
+std::optional<Version> detail::RangePair::toVersion() const
 {
     if (first != second)
         return {};
     return first;
 }
 
-size_t VersionRange::RangePair::getHash() const
+size_t detail::RangePair::getHash() const
 {
     size_t h = 0;
     hash_combine(h, first.getHash());
@@ -249,7 +249,7 @@ size_t VersionRange::RangePair::getHash() const
     return h;
 }
 
-bool VersionRange::RangePair::isBranch() const
+bool detail::RangePair::isBranch() const
 {
     return first.isBranch() || second.isBranch();
 }
@@ -340,7 +340,7 @@ bool VersionRange::operator!=(const VersionRange &rhs) const
     return !operator==(rhs);
 }
 
-VersionRange &VersionRange::operator|=(const RangePair &rhs)
+VersionRange &VersionRange::operator|=(const detail::RangePair &rhs)
 {
     if (isBranch())
         throw SW_RUNTIME_ERROR("Cannot |= with branch on LHS");
@@ -404,7 +404,7 @@ VersionRange &VersionRange::operator|=(const RangePair &rhs)
     return *this;
 }
 
-VersionRange &VersionRange::operator&=(const RangePair &rhs)
+VersionRange &VersionRange::operator&=(const detail::RangePair &rhs)
 {
     if (isBranch())
         throw SW_RUNTIME_ERROR("Cannot &= with branch on LHS");
