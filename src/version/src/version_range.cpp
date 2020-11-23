@@ -18,8 +18,39 @@ static void throw_bad_version_range(const std::string &s)
     throw SW_RUNTIME_ERROR("Invalid version range: " + s);
 }
 
+primitives::version::Version prepare_version(
+    primitives::version::Version &ver, primitives::version::Version::Number val = 0,
+    primitives::version::Version::Level level =primitives::version:: Version::minimum_level);
+
 namespace primitives::version
 {
+
+detail::RangePair::RangePair(const Version &l, const Version &r)
+{
+    if (l.isBranch() ^ r.isBranch())
+        throw SW_RUNTIME_ERROR("Both versions must be either versions or branches");
+    if (l > r)
+        throw SW_RUNTIME_ERROR("Left version must be <= than right: " + l.toString() + " > " + r.toString());
+    first = l;
+    second = r;
+
+    // prepare pair
+    auto level = std::max(first.getLevel(), second.getLevel());
+    prepare_version(first, 0, level);
+    if (first < Version::min(level))
+    {
+        // keep extra for first
+        auto e = first.extra;
+        first = Version::min(level);
+        first.extra = e;
+    }
+    prepare_version(second, Version::maxNumber(), level);
+    if (second > Version::max(level))
+    {
+        // but not second?
+        second = Version::max(level);
+    }
+}
 
 bool detail::RangePair::contains(const Version &v) const
 {

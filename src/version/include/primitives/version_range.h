@@ -46,8 +46,7 @@ struct RangePair : std::pair<Version, Version>
     // Example: for string "a" next version will be "aa" - in case if we allow only [a-z]
     //
 
-    using base = std::pair<Version, Version>;
-    using base::base;
+    RangePair(const Version &, const Version &);
 
     std::string toString(VersionRangePairStringRepresentationType) const;
     [[deprecated("use contains()")]]
