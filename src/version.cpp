@@ -861,6 +861,34 @@ TEST_CASE("Checking version ranges", "[range]")
         CHECK(vr1.toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">=1.0.1 <4 || >=4.0.1 <7");
     }
 
+    // deny version - range pairs
+    {
+        CHECK_THROWS(VersionRange(">1 <master"));
+        CHECK_THROWS(VersionRange(">1 <master-x"));
+        CHECK_THROWS(VersionRange(">master <1"));
+        CHECK_THROWS(VersionRange("1 - master"));
+        CHECK_THROWS(VersionRange("master - 1"));
+        CHECK_THROWS(VersionRange("(master,1)"));
+        CHECK_THROWS(VersionRange("[master,1)"));
+        CHECK_THROWS(VersionRange("(master,1]"));
+        CHECK_THROWS(VersionRange("[master,1]"));
+        CHECK_THROWS(VersionRange("[master , 1)"));
+        CHECK_THROWS(VersionRange("(master , 1)"));
+        CHECK_NOTHROW(VersionRange("master - master"));
+        CHECK_NOTHROW(VersionRange("[master ,master]"));
+        CHECK_THROWS(VersionRange("[master-a ,master-b]"));
+    }
+
+    // check that left <= right
+    {
+        CHECK_THROWS(VersionRange("5 - 4"));
+        CHECK_THROWS(VersionRange("[5,4]"));
+        CHECK_THROWS(VersionRange("[5,4)"));
+        CHECK_THROWS(VersionRange("(5,4]"));
+        CHECK_THROWS(VersionRange("(5,4)"));
+        CHECK_NOTHROW(VersionRange(">2 <2"));
+    }
+
     // VersionRange ops
     {
         VersionRange vr1(" > 1 < 3 || >5 <7 ");
