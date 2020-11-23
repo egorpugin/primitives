@@ -124,6 +124,7 @@ range: compare | caret | tilde | hyphen | interval | version
 
         EXTRACT_VALUE(Version, v, $1);
 
+        // construct without extra part
         Version v2;
         v2.numbers = v.numbers;
         v2.branch = v.branch;
@@ -144,6 +145,7 @@ caret: CARET space_or_empty version
         if (v.numbers[0] < 0)
             YYABORT;
 
+        // construct without extra part
         Version v2;
         v2.numbers = v.numbers;
         v2.branch = v.branch;
@@ -191,6 +193,7 @@ tilde: TILDE space_or_empty version
         if (v.numbers[0] < 0)
             YYABORT;
 
+        // construct without extra part
         Version v2;
         v2.numbers = v.numbers;
         v2.branch = v.branch;
@@ -269,12 +272,11 @@ interval: open_bracket space_or_empty version space_or_empty COMMA space_or_empt
         EXTRACT_VALUE(int, l, $1);
         EXTRACT_VALUE(int, r, $7);
         EXTRACT_VALUE(Version, v, $5);
-        auto v2 = v;
-        prepare_version(v2);
+        prepare_version(v);
         if (r == OPEN)
-            v2.decrementVersion();
+            v.decrementVersion();
         auto vr = VersionRange::empty();
-        vr |= RangePair(Version::min(v), v2);
+        vr |= RangePair(Version::min(v), v);
         SET_RETURN_VALUE(vr);
     }
     ;
