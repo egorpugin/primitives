@@ -2003,7 +2003,7 @@ TEST_CASE("Other stuff", "[stuff]")
 {
     using namespace primitives::version;
 
-    auto mn = std::to_string(Version::maxNumber());
+    /*auto mn = std::to_string(Version::maxNumber());
     primitives::version::VersionRange vr1("1");
     primitives::version::VersionRange vr2("1.*");
     primitives::version::VersionRange vr3("1.0.*");
@@ -2024,7 +2024,7 @@ TEST_CASE("Other stuff", "[stuff]")
     // 1.0.0.* contains! 1.0.0.*.1
     // 1.0.0.* contains! 1.0.0.*.0.1
     CHECK(vr5.contains("1.0.0." + mn + ".1"));
-    CHECK(vr5.contains("1.0.0." + mn + ".0.1"));
+    CHECK(vr5.contains("1.0.0." + mn + ".0.1"));*/
 }
 
 int main(int argc, char **argv)
