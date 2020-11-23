@@ -282,41 +282,36 @@ interval: open_bracket space_or_empty version space_or_empty COMMA space_or_empt
 compare: LT space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        RangePair rp(Version::min(v), prepare_version(v).getPreviousVersion());
         auto vr = VersionRange::empty();
-        vr |= rp;
+        vr |= RangePair(Version::min(v), prepare_version(v).getPreviousVersion());
         SET_RETURN_VALUE(vr);
     }
     | LE space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        RangePair rp(Version::min(v), prepare_version(v));
         auto vr = VersionRange::empty();
-        vr |= rp;
+        vr |= RangePair(Version::min(v), prepare_version(v));
         SET_RETURN_VALUE(vr);
     }
     | GT space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        RangePair rp(prepare_version(v).getNextVersion(), Version::max(v));
         auto vr = VersionRange::empty();
-        vr |= rp;
+        vr |= RangePair(prepare_version(v).getNextVersion(), Version::max(v));
         SET_RETURN_VALUE(vr);
     }
     | GE space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        RangePair rp(prepare_version(v), Version::max(v));
         auto vr = VersionRange::empty();
-        vr |= rp;
+        vr |= RangePair(prepare_version(v), Version::max(v));
         SET_RETURN_VALUE(vr);
     }
     | EQ space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        RangePair rp(prepare_version(v), prepare_version(v));
         auto vr = VersionRange::empty();
-        vr |= rp;
+        vr |= RangePair(prepare_version(v), prepare_version(v));
         SET_RETURN_VALUE(vr);
     }
     | NE space_or_empty version
