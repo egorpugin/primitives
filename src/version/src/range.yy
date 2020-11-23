@@ -156,7 +156,6 @@ range: compare | caret | tilde | hyphen | interval | version
         // they must be filled only from the beginning
 
         rp.first = v;
-        rp.first.extra = v.extra;
         rp.second.numbers = v.numbers;
 
         auto vr = VersionRange::empty();
@@ -177,7 +176,6 @@ caret: CARET space_or_empty version
             YYABORT;
 
         rp.first = v;
-        rp.first.extra = v.extra;
         rp.second.numbers = v.numbers;
 
         bool set = false;
@@ -225,7 +223,6 @@ tilde: TILDE space_or_empty version
             YYABORT;
 
         rp.first = v;
-        rp.first.extra = v.extra;
         rp.second.numbers = v.numbers;
 
         int p = v.numbers.size() > 2 && v.numbers[1] >= 0;
