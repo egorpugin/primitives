@@ -21,6 +21,117 @@ static void throw_bad_version_range(const std::string &s)
 namespace primitives::version
 {
 
+bool detail::RangePair::contains(const Version &v) const
+{
+    //if (v.getLevel() > std::max(first.getLevel(), second.getLevel()))
+    //return false;
+    return first <= v && v <= second;
+}
+
+std::optional<detail::RangePair> detail::RangePair::operator&(const detail::RangePair &rhs) const
+{
+    if (isBranch())
+        return *this;
+    if (rhs.isBranch())
+        return rhs;
+    auto f = std::max(first, rhs.first);
+    auto s = std::min(second, rhs.second);
+    if (f > s)
+        return {};
+    return detail::RangePair(f, s);
+}
+
+std::string detail::RangePair::toString(VersionRangePairStringRepresentationType t) const
+{
+    if (first.isBranch())
+        return first.toString();
+    if (second.isBranch())
+        return second.toString();
+
+    auto level = std::max(first.getLevel(), second.getLevel());
+    if (t == VersionRangePairStringRepresentationType::SameRealLevel)
+        level = std::max(first.getRealLevel(), second.getRealLevel());
+    if (first == second)
+    {
+        if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
+            return first.toString(first.getRealLevel());
+        else
+            return first.toString(level);
+    }
+    std::string s;
+    if (first != Version::min(first))
+    {
+        s += ">=";
+        if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
+            s += first.toString(first.getRealLevel());
+        else
+            s += first.toString(level);
+    }
+    // reconsider?
+    // probably wrong now: 1.MAX.3
+    if (std::any_of(second.numbers.begin(), second.numbers.end(),
+        [](const auto &n) {return n == Version::maxNumber(); }))
+    {
+        if (second == Version::max(second))
+        {
+            if (s.empty())
+                return "*";
+            return s;
+        }
+        if (second.getPatch() == Version::maxNumber() ||
+            second.getTweak() == Version::maxNumber())
+        {
+            if (!s.empty())
+                s += " ";
+            if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
+            {
+                auto nv = second.getNextVersion(second.getRealLevel());
+                return s + "<" + nv.toString(nv.getRealLevel());
+            }
+            auto nv = second.getNextVersion(level);
+            if (t == VersionRangePairStringRepresentationType::SameRealLevel)
+            {
+                level = std::max(first.getRealLevel(), nv.getRealLevel());
+                s.clear();
+                if (first != Version::min(first))
+                {
+                    s += ">=";
+                    s += first.toString(level);
+                    if (!s.empty())
+                        s += " ";
+                }
+            }
+            return s + "<" + nv.toString(level);
+        }
+    }
+    if (!s.empty())
+        s += " ";
+    if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
+        return s + "<=" + second.toString(second.getRealLevel());
+    else
+        return s + "<=" + second.toString(level);
+}
+
+std::optional<Version> detail::RangePair::toVersion() const
+{
+    if (first != second)
+        return {};
+    return first;
+}
+
+size_t detail::RangePair::getHash() const
+{
+    size_t h = 0;
+    hash_combine(h, first.getHash());
+    hash_combine(h, second.getHash());
+    return h;
+}
+
+bool detail::RangePair::isBranch() const
+{
+    return first.isBranch() || second.isBranch();
+}
+
 VersionRange::VersionRange()
     : VersionRange(Version::minimum_level)
 {
@@ -133,98 +244,6 @@ bool VersionRange::contains(const Version &v) const
         [&v](const auto &r) { return r.contains(v); });
 }
 
-bool detail::RangePair::contains(const Version &v) const
-{
-    //if (v.getLevel() > std::max(first.getLevel(), second.getLevel()))
-        //return false;
-    return first <= v && v <= second;
-}
-
-std::optional<detail::RangePair> detail::RangePair::operator&(const detail::RangePair &rhs) const
-{
-    if (isBranch())
-        return *this;
-    if (rhs.isBranch())
-        return rhs;
-    detail::RangePair rp;
-    rp.first = std::max(first, rhs.first);
-    rp.second = std::min(second, rhs.second);
-    if (rp.first > rp.second)
-        return {};
-    return rp;
-}
-
-std::string detail::RangePair::toString(VersionRangePairStringRepresentationType t) const
-{
-    if (first.isBranch())
-        return first.toString();
-    if (second.isBranch())
-        return second.toString();
-
-    auto level = std::max(first.getLevel(), second.getLevel());
-    if (t == VersionRangePairStringRepresentationType::SameRealLevel)
-        level = std::max(first.getRealLevel(), second.getRealLevel());
-    if (first == second)
-    {
-        if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
-            return first.toString(first.getRealLevel());
-        else
-            return first.toString(level);
-    }
-    std::string s;
-    if (first != Version::min(first))
-    {
-        s += ">=";
-        if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
-            s += first.toString(first.getRealLevel());
-        else
-            s += first.toString(level);
-    }
-    // reconsider?
-    // probably wrong now: 1.MAX.3
-    if (std::any_of(second.numbers.begin(), second.numbers.end(),
-        [](const auto &n) {return n == Version::maxNumber(); }))
-    {
-        if (second == Version::max(second))
-        {
-            if (s.empty())
-                return "*";
-            return s;
-        }
-        if (second.getPatch() == Version::maxNumber() ||
-            second.getTweak() == Version::maxNumber())
-        {
-            if (!s.empty())
-                s += " ";
-            if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
-            {
-                auto nv = second.getNextVersion(second.getRealLevel());
-                return s + "<" + nv.toString(nv.getRealLevel());
-            }
-            auto nv = second.getNextVersion(level);
-            if (t == VersionRangePairStringRepresentationType::SameRealLevel)
-            {
-                level = std::max(first.getRealLevel(), nv.getRealLevel());
-                s.clear();
-                if (first != Version::min(first))
-                {
-                    s += ">=";
-                    s += first.toString(level);
-                    if (!s.empty())
-                        s += " ";
-                }
-            }
-            return s + "<" + nv.toString(level);
-        }
-    }
-    if (!s.empty())
-        s += " ";
-    if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
-        return s + "<=" + second.toString(second.getRealLevel());
-    else
-        return s + "<=" + second.toString(level);
-}
-
 std::optional<Version> VersionRange::toVersion() const
 {
     if (isBranch())
@@ -232,26 +251,6 @@ std::optional<Version> VersionRange::toVersion() const
     if (size() != 1)
         return {};
     return range.begin()->toVersion();
-}
-
-std::optional<Version> detail::RangePair::toVersion() const
-{
-    if (first != second)
-        return {};
-    return first;
-}
-
-size_t detail::RangePair::getHash() const
-{
-    size_t h = 0;
-    hash_combine(h, first.getHash());
-    hash_combine(h, second.getHash());
-    return h;
-}
-
-bool detail::RangePair::isBranch() const
-{
-    return first.isBranch() || second.isBranch();
 }
 
 bool VersionRange::isBranch() const
