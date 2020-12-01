@@ -55,6 +55,13 @@ bool detail::RangePair::contains(const Version &v) const
     return first <= v && v <= second;
 }
 
+bool detail::RangePair::contains(const RangePair &v) const
+{
+    // unused for now
+    SW_UNIMPLEMENTED;
+    return first <= v.first && v.second <= second;
+}
+
 std::optional<detail::RangePair> detail::RangePair::operator&(const detail::RangePair &rhs) const
 {
     if (isBranch())
@@ -261,6 +268,11 @@ VersionRange VersionRange::empty()
     return vr;
 }
 
+bool VersionRange::contains(const char *s) const
+{
+    return contains(Version(s));
+}
+
 bool VersionRange::contains(const Version &v) const
 {
     if (isBranch() && v.isBranch())
@@ -269,6 +281,15 @@ bool VersionRange::contains(const Version &v) const
         return false;
     return std::any_of(range.begin(), range.end(),
         [&v](const auto &r) { return r.contains(v); });
+}
+
+bool VersionRange::contains(const VersionRange &r) const
+{
+    if (isBranch() && r.isBranch())
+        return branch == r.getBranch();
+    if (isBranch() || r.isBranch())
+        return false;
+    return (*this & r) == r;
 }
 
 std::optional<Version> VersionRange::toVersion() const
@@ -283,6 +304,13 @@ std::optional<Version> VersionRange::toVersion() const
 bool VersionRange::isBranch() const
 {
     return !branch.empty();
+}
+
+std::string VersionRange::getBranch() const
+{
+    if (!isBranch())
+        throw SW_RUNTIME_ERROR("Range is not a branch: " + toString());
+    return branch;
 }
 
 std::string VersionRange::toString() const

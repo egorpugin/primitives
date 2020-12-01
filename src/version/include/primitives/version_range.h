@@ -52,6 +52,7 @@ struct RangePair : std::pair<Version, Version>
     [[deprecated("use contains()")]]
     bool hasVersion(const Version &v) const { return contains(v); }
     bool contains(const Version &) const;
+    bool contains(const RangePair &) const;
     bool isBranch() const;
     size_t getHash() const;
     std::optional<Version> toVersion() const;
@@ -103,8 +104,11 @@ struct PRIMITIVES_VERSION_API VersionRange
     bool isOutside(const Version &) const;
     [[deprecated("use contains()")]]
     bool hasVersion(const Version &v) const { return contains(v); }
+    bool contains(const char *) const; // branch version, because Version and VersionRange construction is ambiguous
     bool contains(const Version &) const;
+    bool contains(const VersionRange &) const;
     bool isBranch() const;
+    std::string getBranch() const;
     size_t size() const;
 
     std::optional<Version> getMinSatisfyingVersion(const std::set<Version> &) const;

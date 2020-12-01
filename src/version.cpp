@@ -1651,6 +1651,38 @@ TEST_CASE("Checking version ranges", "[range]")
         };
         check(VersionRange("1"));
     }
+
+    // contains range
+    {
+        VersionRange vr("*");
+        CHECK(vr.contains(VersionRange("1")));
+        CHECK(vr.contains(VersionRange("1.2")));
+        CHECK(vr.contains(VersionRange("1.2.3")));
+        CHECK(vr.contains(VersionRange("1.2.3.4")));
+        CHECK(vr.contains(VersionRange("1.2.3.4.5")));
+        CHECK(vr.contains(VersionRange("1.2.3.4.5-rc1"))); // change this?
+        //CHECK_FALSE(vr.contains("1.2.3.4.5-rc1"));
+    }
+
+    {
+        VersionRange vr("1");
+        CHECK(vr.contains(VersionRange("1")));
+        CHECK(vr.contains(VersionRange("1.2")));
+        CHECK(vr.contains(VersionRange("1.2.3")));
+        CHECK(vr.contains(VersionRange("1.2.3.4")));
+        CHECK(vr.contains(VersionRange("1.2.3.4.5")));
+        CHECK(vr.contains(VersionRange("1.2.3.4.5-rc1"))); // change this?
+    }
+
+    {
+        VersionRange vr("1");
+        CHECK_FALSE(vr.contains(VersionRange("2")));
+        CHECK_FALSE(vr.contains(VersionRange("2.2")));
+        CHECK_FALSE(vr.contains(VersionRange("2.2.3")));
+        CHECK_FALSE(vr.contains(VersionRange("2.2.3.4")));
+        CHECK_FALSE(vr.contains(VersionRange("2.2.3.4.5")));
+        CHECK_FALSE(vr.contains(VersionRange("2.2.3.4.5-rc1"))); // change this?
+    }
 }
 
 TEST_CASE("Checking version ranges v1", "[ranges_v1]")
