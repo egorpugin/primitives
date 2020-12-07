@@ -145,8 +145,6 @@ struct PRIMITIVES_VERSION_API Version
     Number getTweak() const;
     Extra &getExtra();
     const Extra &getExtra() const;
-    // return as const ref like extra?
-    std::string getBranch() const;
 
     Level getLevel() const;
 
@@ -172,13 +170,8 @@ struct PRIMITIVES_VERSION_API Version
     Version getPreviousVersion(Level level) const;
 
     /// format string
-    void format(std::string &s) const;
+    [[nodiscard]]
     std::string format(const std::string &s) const;
-
-    // checkers
-    bool isBranch() const;
-    bool isVersion() const;
-    //bool isTag() const; todo - add tags
 
     bool hasExtra() const;
     bool isRelease() const;
@@ -204,9 +197,7 @@ struct PRIMITIVES_VERSION_API Version
 
 public:
     static Version min(Level level);
-    //static Version min(const Version &v);
     static Version max(Level level);
-    //static Version max(const Version &v);
     static Level getDefaultLevel();
     static Number maxNumber();
 
@@ -219,7 +210,6 @@ private:
 #endif
     Numbers numbers;
     Extra extra;
-    std::string branch;
 
     /// version will be in an invalid state in case of errors
     static bool parse(Version &v, const std::string &s);
@@ -234,6 +224,45 @@ private:
 
     template <class F>
     static bool cmp(const Version &v1, const Version &v2, F f);
+};
+
+struct PRIMITIVES_VERSION_API PackageVersion
+{
+    using Branch = std::string;
+
+    PackageVersion();
+    PackageVersion(const char *);
+    PackageVersion(const std::string &);
+    PackageVersion(const Version &);
+    //PackageVersion(const PackageVersion &) = default;
+
+    // checkers
+    bool isBranch() const;
+    bool isVersion() const;
+    //bool isTag() const; todo - add tags?
+
+    Version &getVersion();
+    const Version &getVersion() const;
+    const Branch &getBranch() const;
+
+    bool isRelease() const;
+    bool isPreRelease() const;
+
+    [[nodiscard]]
+    std::string format(const std::string &s) const;
+    [[nodiscard]]
+    std::string toString() const;
+
+    // operators
+    bool operator<(const PackageVersion &) const;
+    bool operator>(const PackageVersion &) const;
+    bool operator<=(const PackageVersion &) const;
+    bool operator>=(const PackageVersion &) const;
+    bool operator==(const PackageVersion &) const;
+    bool operator!=(const PackageVersion &) const;
+
+private:
+    std::variant<Version, Branch> value;
 };
 
 } // namespace primitives::version

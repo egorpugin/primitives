@@ -128,8 +128,8 @@ range: compare | caret | tilde | hyphen | interval | version
         // construct without extra part
         Version v2;
         v2.numbers = v.numbers;
-        v2.branch = v.branch;
         SW_UNIMPLEMENTED;
+        //v2.branch = v.branch;
         /*RangePair rp(v, v2);
 
         auto vr = VersionRange::empty();
@@ -150,8 +150,8 @@ caret: CARET space_or_empty version
         // construct without extra part
         Version v2;
         v2.numbers = v.numbers;
-        v2.branch = v.branch;
         SW_UNIMPLEMENTED;
+        //v2.branch = v.branch;
         /*RangePair rp(v, v2);
 
         bool set = false;
@@ -199,7 +199,8 @@ tilde: TILDE space_or_empty version
         // construct without extra part
         Version v2;
         v2.numbers = v.numbers;
-        v2.branch = v.branch;
+        SW_UNIMPLEMENTED;
+        //v2.branch = v.branch;
         SW_UNIMPLEMENTED;
         /*RangePair rp(v, v2);
 
@@ -370,7 +371,8 @@ version: basic_version
     {
         EXTRACT_VALUE(std::string, branch, $1);
         Version v;
-        v.branch = branch;
+        SW_UNIMPLEMENTED;
+        //v.branch = branch;
         SET_RETURN_VALUE(v);
     }
     ;

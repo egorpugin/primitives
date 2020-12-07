@@ -193,7 +193,7 @@ size_t GenericNumericVersion::getHash() const
 
 Version::Version()
 {
-    *this = min(getDefaultLevel());
+    prepareAndCheckVersion();
 }
 
 Version::Version(const Version &v, const Extra &e)
@@ -211,9 +211,6 @@ Version::Version(const char *s)
 
 Version::Version(const std::string &s)
 {
-    //numbers.clear();
-    //numbers.resize(minimum_level);
-
     auto ps = detail::preprocess_input(s);
     if (auto p = ps.find('-'); p != ps.npos)
     {
@@ -271,15 +268,6 @@ void Version::prepareAndCheckVersion()
 
 void Version::checkVersion() const
 {
-    if (isBranch())
-    {
-        if (branch.size() > 200)
-            throw_bad_version(branch + ", branch must have size <= 200");
-        if (!extra.empty())
-            throw SW_RUNTIME_ERROR("Cannot set extra part on a branch");
-        return;
-    }
-
     if (std::any_of(numbers.begin(), numbers.end(), [](const auto &n) {return n < 0; }))
         throw SW_RUNTIME_ERROR("Version number cannot be less than 0");
     if (std::all_of(numbers.begin(), numbers.end(), [](const auto &n) {return n == 0; }))
@@ -288,8 +276,6 @@ void Version::checkVersion() const
 
 void Version::checkNumber() const
 {
-    if (isBranch())
-        throw SW_RUNTIME_ERROR("Version is a branch");
 }
 
 void Version::setFirstVersion()
@@ -338,11 +324,6 @@ const Version::Extra &Version::getExtra() const
     return extra;
 }
 
-std::string Version::getBranch() const
-{
-    return branch;
-}
-
 std::string Version::printVersion(const String &delimeter, Level level) const
 {
     std::string s;
@@ -369,17 +350,11 @@ std::string Version::toString(Level level) const
 
 std::string Version::toString(const std::string &delimeter) const
 {
-    if (!branch.empty())
-        return branch;
-
     return toString(delimeter, getLevel());
 }
 
 std::string Version::toString(const String &delimeter, Level level) const
 {
-    if (!branch.empty())
-        return branch;
-
     auto s = printVersion(delimeter, level);
     if (!extra.empty())
         s += "-" + extra.print();
@@ -398,22 +373,12 @@ std::string Version::toString(const String &delimeter, const Version &v) const
 
 size_t Version::getHash() const
 {
-    if (isBranch())
-        return std::hash<std::string>()(getBranch());
+    //if (isBranch())
+        //return std::hash<std::string>()(getBranch());
     size_t h = 0;
     for (auto &n : numbers)
         hash_combine(h, n);
     return h;
-}
-
-bool Version::isBranch() const
-{
-    return !isVersion();
-}
-
-bool Version::isVersion() const
-{
-    return branch.empty();
 }
 
 bool Version::hasExtra() const
@@ -423,7 +388,7 @@ bool Version::hasExtra() const
 
 bool Version::isRelease() const
 {
-    return !isPreRelease(); // && !branch()?
+    return !isPreRelease();
 }
 
 bool Version::isPreRelease() const
@@ -434,8 +399,8 @@ bool Version::isPreRelease() const
 Version::Level Version::getMatchingLevel(const Version &v) const
 {
     int i = 0;
-    if (isBranch() || v.isBranch())
-        return i;
+    //if (isBranch() || v.isBranch())
+        //return i;
 
     auto m = std::min(getLevel(), v.getLevel());
     for (; i < m; i++)
@@ -461,40 +426,28 @@ bool Version::cmp(const Version &v1, const Version &v2, F f)
     return f(std::tie(v1.numbers, v1.extra), std::tie(v2.numbers, v2.extra));
 }
 
-#define BRANCH_COMPARE(op)              \
-    if (isBranch() && rhs.isBranch())   \
-        return branch op rhs.branch;    \
-    if (isBranch() || rhs.isBranch())   \
-        return !(branch op rhs.branch)
-
 bool Version::operator<(const Version &rhs) const
 {
-    BRANCH_COMPARE(<);
     return cmp(*this, rhs, std::less<decltype(std::tie(numbers, extra))>());
 }
 
 bool Version::operator>(const Version &rhs) const
 {
-    BRANCH_COMPARE(>);
     return cmp(*this, rhs, std::greater<decltype(std::tie(numbers, extra))>());
 }
 
 bool Version::operator<=(const Version &rhs) const
 {
-    BRANCH_COMPARE(<=);
     return cmp(*this, rhs, std::less_equal<decltype(std::tie(numbers, extra))>());
 }
 
 bool Version::operator>=(const Version &rhs) const
 {
-    BRANCH_COMPARE(>=);
     return cmp(*this, rhs, std::greater_equal<decltype(std::tie(numbers, extra))>());
 }
 
 bool Version::operator==(const Version &rhs) const
 {
-    if (isBranch() || rhs.isBranch())
-        return branch == rhs.branch;
     return cmp(*this, rhs, std::equal_to<decltype(std::tie(numbers, extra))>());
 }
 
@@ -533,17 +486,12 @@ Version Version::min(Level level)
 {
     level = checkAndNormalizeLevel(level, getDefaultLevel());
 
-    Version v{1}; // hack: init with just some random stuff to prevent recursive calls
+    Version v{ 1 }; // hack
     v.numbers.clear();
     v.numbers.resize(level - 1);
     v.numbers.push_back(1);
     return v;
 }
-
-/*Version Version::min(const Version &v)
-{
-    return min(v.getLevel());
-}*/
 
 Version Version::max(Level level)
 {
@@ -554,11 +502,6 @@ Version Version::max(Level level)
     v.numbers.resize(level, maxNumber());
     return v;
 }
-
-/*Version Version::max(const Version &v)
-{
-    return max(v.getLevel());
-}*/
 
 Version::Level Version::getDefaultLevel()
 {
@@ -643,23 +586,6 @@ Version Version::getPreviousVersion(Level l) const
 
 std::string Version::format(const std::string &s) const
 {
-    auto f = s;
-    format(f);
-    return f;
-}
-
-void Version::format(std::string &s) const
-{
-    if (isBranch())
-    {
-        s = fmt::format(s,
-            fmt::arg("e", extra.print()),
-            fmt::arg("b", branch),
-            fmt::arg("v", toString())
-        );
-        return;
-    }
-
     // TODO: optimize
 
     auto create_latin_replacements = [](Number n, char base = 'a')
@@ -765,7 +691,7 @@ void Version::format(std::string &s) const
     VAR_SMALL_OPT(p);
     VAR_SMALL_OPT(t);
 
-    s = fmt::format(s,
+    return fmt::format(s,
         ARG(M),
         ARG(m),
         ARG(p),
@@ -826,6 +752,139 @@ void Version::format(std::string &s) const
 #undef VAR_OPT
 #undef VAR_SMALL_OPT
 #undef VAR_CAP_OPT
+}
+
+PackageVersion::PackageVersion()
+{
+    value = Version::min(Version::getDefaultLevel());
+}
+
+PackageVersion::PackageVersion(const char *s)
+{
+    if (!s)
+        throw SW_RUNTIME_ERROR("Empty package version");
+    *this = PackageVersion{ std::string{s} };
+}
+
+PackageVersion::PackageVersion(const std::string &s)
+{
+    if (s.empty())
+        throw SW_RUNTIME_ERROR("Empty package version");
+
+    if (std::isalpha(s[0]) && std::all_of(s.begin(), s.end(), [](auto c)
+    {
+        return std::isalnum(c) || c == '_';
+    }))
+    {
+        if (s.size() > 200)
+            throw_bad_version(s + ", branch must have size <= 200");
+        value = s;
+    }
+    else
+    {
+        value = Version(s);
+    }
+}
+
+PackageVersion::PackageVersion(const Version &v)
+{
+    value = v;
+}
+
+bool PackageVersion::isBranch() const
+{
+    return std::holds_alternative<Branch>(value);
+}
+
+bool PackageVersion::isVersion() const
+{
+    return std::holds_alternative<Version>(value);
+}
+
+Version &PackageVersion::getVersion()
+{
+    return std::get<Version>(value);
+}
+
+const Version &PackageVersion::getVersion() const
+{
+    return std::get<Version>(value);
+}
+
+const PackageVersion::Branch &PackageVersion::getBranch() const
+{
+    return std::get<Branch>(value);
+}
+
+bool PackageVersion::isRelease() const
+{
+    if (isBranch())
+        return false;
+    return getVersion().isRelease();
+}
+
+bool PackageVersion::isPreRelease() const
+{
+    return !isRelease();
+}
+
+std::string PackageVersion::format(const std::string &s) const
+{
+    if (isBranch())
+    {
+        return fmt::format(s,
+            fmt::arg("b", getBranch()),
+            fmt::arg("v", toString())
+        );
+    }
+    else
+        return getVersion().format(s);
+}
+
+std::string PackageVersion::toString() const
+{
+    if (isBranch())
+        return getBranch();
+    return getVersion().toString();
+}
+
+#define BRANCH_COMPARE(op)                          \
+    if (isBranch() && rhs.isBranch())               \
+        return getBranch() op rhs.getBranch();      \
+    if (isBranch())                                 \
+        return !(getBranch() op std::string{});     \
+    if (rhs.isBranch())                             \
+        return !(std::string{} op rhs.getBranch()); \
+    return value op rhs.value
+
+bool PackageVersion::operator<(const PackageVersion &rhs) const
+{
+    BRANCH_COMPARE(<);
+}
+
+bool PackageVersion::operator<=(const PackageVersion &rhs) const
+{
+    BRANCH_COMPARE(<=);
+}
+
+bool PackageVersion::operator>(const PackageVersion &rhs) const
+{
+    BRANCH_COMPARE(>);
+}
+
+bool PackageVersion::operator>=(const PackageVersion &rhs) const
+{
+    BRANCH_COMPARE(>=);
+}
+
+bool PackageVersion::operator==(const PackageVersion &rhs) const
+{
+    return value == rhs.value;
+}
+
+bool PackageVersion::operator!=(const PackageVersion &rhs) const
+{
+    return value != rhs.value;
 }
 
 }

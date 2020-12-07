@@ -33,7 +33,7 @@ constexpr bool is_pair_v = is_pair<T>::value;
 By default performs operations only on releases.
 If input version is pre release, searchs for pre releases too.
 */
-template <class T>
+/*template <class T>
 auto findBestMatch(const T &begin, const T &end, const Version &what, bool accept_prereleases = false)
 {
     if (what.isPreRelease())
@@ -66,7 +66,7 @@ auto findBestMatch(const T &begin, const T &end, const Version &what, bool accep
         }
     }
     return imax;
-}
+}*/
 
 namespace detail
 {
@@ -79,6 +79,7 @@ To run things on releases versions, use '_releases' suffix on operations.
     * Call .releases() to get proxy object to iterate in range-for loops.
 */
 template <
+    class Version,
     template <class ...> class BaseContainer,
     class ... Args
 >
@@ -216,12 +217,13 @@ public:
 With rbegin/rend methods.
 */
 template <
+    class Version,
     template <class ...> class BaseContainer,
     class ... Args
 >
-struct ReverseVersionContainer : VersionContainer<BaseContainer, Args...>
+struct ReverseVersionContainer : VersionContainer<Version, BaseContainer, Args...>
 {
-    using Base = VersionContainer<BaseContainer, Args...>;
+    using Base = VersionContainer<Version, BaseContainer, Args...>;
     using This = ReverseVersionContainer;
 
     using reverse_iterator_releases = typename Base::template ReleaseIterator<typename Base::reverse_iterator>;
@@ -263,15 +265,15 @@ public:
 
 } // namespace detail
 
-using VersionSet = detail::ReverseVersionContainer<std::set>;
+using VersionSet = detail::ReverseVersionContainer<PackageVersion, std::set>;
 
 template <class ... Args>
-using VersionSetCustom = detail::ReverseVersionContainer<std::set, Args...>;
+using VersionSetCustom = detail::ReverseVersionContainer<PackageVersion, std::set, Args...>;
 
 template <class ... Args>
-using VersionMap = detail::ReverseVersionContainer<std::map, Args...>;
+using VersionMap = detail::ReverseVersionContainer<PackageVersion, std::map, Args...>;
 
 template <class ... Args>
-using UnorderedVersionMap = detail::VersionContainer<std::unordered_map, Args...>;
+using UnorderedVersionMap = detail::VersionContainer<PackageVersion, std::unordered_map, Args...>;
 
 } // namespace primitives::version

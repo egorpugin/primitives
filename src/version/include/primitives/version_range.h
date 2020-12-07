@@ -63,7 +63,6 @@ public:
     bool hasVersion(const Version &v) const { return contains(v); }
     bool contains(const Version &) const;
     bool contains(const RangePair &) const;
-    bool isBranch() const;
     size_t getHash() const;
     std::optional<Version> toVersion() const;
 
@@ -121,8 +120,6 @@ struct PRIMITIVES_VERSION_API VersionRange
     bool contains(const char *) const; // branch version, because Version and VersionRange construction is ambiguous
     bool contains(const Version &) const;
     bool contains(const VersionRange &) const;
-    bool isBranch() const;
-    std::string getBranch() const;
     size_t size() const;
 
     std::optional<Version> getMinSatisfyingVersion(const std::set<Version> &) const;
@@ -160,7 +157,6 @@ private:
 
     // always sorted with less
     Range range;
-    std::string branch;
 
     /// range will be in an invalid state in case of errors
     /// optional error will be returned
@@ -187,6 +183,21 @@ bool operator>(const VersionRange &, const Version &);
 /// Return true if version is greater than all the versions possible in the range.
 PRIMITIVES_VERSION_API
 bool operator>(const Version &, const VersionRange &);*/
+
+struct PackageVersionRange
+{
+    using Branch = PackageVersion::Branch;
+
+    // checkers
+    bool isBranch() const;
+    bool isRange() const;
+
+    const VersionRange &getRange() const;
+    const Branch &getBranch() const;
+
+private:
+    std::variant<VersionRange, Branch> value;
+};
 
 } // namespace primitives::version
 

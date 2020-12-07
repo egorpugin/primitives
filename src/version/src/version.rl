@@ -40,9 +40,6 @@ bool Version::parse(Version &v, const std::string &s)
             v.numbers.push_back(n);
         }
 
-        alpha_ = alpha | '_';
-        alnum_ = alnum | '_';
-
         number = digit+ >SB %{ n = std::stoll(std::string{sb, p}); };
         number_version_part = number %ADD_PART;
 
@@ -55,9 +52,7 @@ bool Version::parse(Version &v, const std::string &s)
         # limit was disabled
         basic_version = number_version_part ('.' number_version_part)*;
 
-        branch = (alpha_ (alnum_ | '-')*) >SB %{ v.branch.assign(sb, p); };
-
-        main := (basic_version | branch) %OK;
+        main := basic_version %OK;
 
 		write init;
 		write exec;
