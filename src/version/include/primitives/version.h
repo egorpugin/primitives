@@ -147,12 +147,14 @@ struct PRIMITIVES_VERSION_API Version
     const Extra &getExtra() const;
 
     Level getLevel() const;
+    // non-zero level
+    Level getRealLevel() const;
 
     std::string toString() const;
     std::string toString(Level level) const;
     std::string toString(const std::string &delimeter) const;
     std::string toString(const std::string &delimeter, Level level) const;
-    std::string toString(const Version &v) const;
+    //std::string toString(const Version &v) const;
     std::string toString(const std::string &delimeter, const Version &v) const;
 
     size_t getHash() const;

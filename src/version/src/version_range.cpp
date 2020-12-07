@@ -22,6 +22,38 @@ primitives::version::Version prepare_version(
 namespace primitives::version
 {
 
+bool detail::RangePair::Side::operator<(const Version &rhs) const
+{
+    if (strong_relation)
+        return v < rhs;
+    else
+        return v <= rhs;
+}
+
+bool detail::RangePair::Side::operator>(const Version &rhs) const
+{
+    if (strong_relation)
+        return v > rhs;
+    else
+        return v >= rhs;
+}
+
+std::string detail::RangePair::Side::toString(VersionRangePairStringRepresentationType t) const
+{
+    switch (t)
+    {
+    case VersionRangePairStringRepresentationType::SameDefaultLevel:
+        return v.toString(v.getDefaultLevel());
+        break;
+    case VersionRangePairStringRepresentationType::SameRealLevel:
+        return v.toString(v.getRealLevel());
+        break;
+    case VersionRangePairStringRepresentationType::IndividualRealLevel:
+        return v.toString(v.getRealLevel());
+    }
+    SW_UNREACHABLE;
+}
+
 detail::RangePair::RangePair(const Version &v1, bool strong_relation1, const Version &v2, bool strong_relation2)
     : first{ v1, strong_relation1 }, second{ v2, strong_relation2 }
 {
@@ -55,31 +87,6 @@ detail::RangePair::RangePair(const Side &l, const Side &r)
 {
 }
 
-bool detail::RangePair::Side::operator<(const Side &rhs) const
-{
-    if (v != rhs.v)
-        return v < rhs.v;
-    if (strong_relation || rhs.strong_relation)
-        return true;
-    return strong_relation < rhs.strong_relation;
-}
-
-bool detail::RangePair::Side::operator<(const Version &rhs) const
-{
-    if (strong_relation)
-        return v < rhs;
-    else
-        return v <= rhs;
-}
-
-bool detail::RangePair::Side::operator>(const Version &rhs) const
-{
-    if (strong_relation)
-        return v > rhs;
-    else
-        return v >= rhs;
-}
-
 bool detail::RangePair::contains(const Version &v) const
 {
     return first < v && second > v;
@@ -96,15 +103,36 @@ std::optional<detail::RangePair> detail::RangePair::operator&(const detail::Rang
 {
     auto &f = std::max(first, rhs.first);
     auto &s = std::min(second, rhs.second);
-    if (s < f)
-        return {};
-    return detail::RangePair(f, s);
+    if (0
+        || f.v < s.v
+        || f.v == s.v && (!f.strong_relation && !s.strong_relation)
+        )
+        return detail::RangePair(f, s);
+    return {};
+}
+
+std::optional<detail::RangePair> detail::RangePair::operator|(const detail::RangePair &rhs) const
+{
+    // find intersection first
+    auto &f = std::max(first, rhs.first);
+    auto &s = std::min(second, rhs.second);
+    if (0
+        || f.v < s.v
+        || f.v == s.v && (!f.strong_relation || !s.strong_relation)
+        )
+    {
+        // now make a union
+        auto &fmin = std::min(first, rhs.first);
+        auto &smax = std::max(second, rhs.second);
+        return detail::RangePair(fmin, smax);
+    }
+    return {};
 }
 
 std::string detail::RangePair::toString(VersionRangePairStringRepresentationType t) const
 {
-    SW_UNIMPLEMENTED;
-    /*auto level = std::max(getFirst().getLevel(), getSecond().getLevel());
+    /*
+    auto level = std::max(getFirst().getLevel(), getSecond().getLevel());
     if (t == VersionRangePairStringRepresentationType::SameRealLevel)
         level = std::max(getFirst().getRealLevel(), getSecond().getRealLevel());
     if (getFirst() == getSecond())
@@ -166,6 +194,18 @@ std::string detail::RangePair::toString(VersionRangePairStringRepresentationType
         return s + "<=" + getSecond().toString(getSecond().getRealLevel());
     else
         return s + "<=" + getSecond().toString(level);*/
+
+    std::string s;
+    s += ">";
+    if (!first.strong_relation)
+        s += "=";
+    s += first.toString(t);
+    s += " ";
+    s += "<";
+    if (!second.strong_relation)
+        s += "=";
+    s += second.toString(t);
+    return s;
 }
 
 std::optional<Version> detail::RangePair::toVersion() const
@@ -314,8 +354,51 @@ bool VersionRange::operator==(const VersionRange &rhs) const
 
 VersionRange &VersionRange::operator|=(const detail::RangePair &rhs)
 {
-    // TODO: we need to merge overlapped
-    range.push_back(rhs);
+    // we can do pairs |= p
+    // but we still need to merge overlapped after
+    // so we choose simple iterative approach instead
+
+    bool added = false;
+    for (auto i = range.begin(); i < range.end(); i++)
+    {
+        if (!added)
+        {
+            // skip add, p is greater
+            if (i->getSecond() < rhs.getFirst())
+                continue;
+            // insert as is BEFORE current
+            else if (i->getFirst() > rhs.getSecond())
+            {
+                i = range.insert(i, rhs);
+                break; // no further merges requires
+            }
+            else
+            {
+                // TRY to merge overlapped
+                // we can fail on (1,2)|(2,3)
+                if (auto u = *i | rhs)
+                    *i = *u;
+                else
+                    // insert as is AFTER current
+                    i = range.insert(++i, rhs);
+                added = true;
+            }
+        }
+        else
+        {
+            // after merging with existing entry we must ensure that
+            // following intervals do not require merges too
+            if ((i - 1)->getSecond() < i->getFirst())
+                break;
+            else if (auto u = *(i - 1) | *i)
+            {
+                *(i - 1) = *u;
+                i = range.erase(i) - 1;
+            }
+        }
+    }
+    if (!added)
+        range.push_back(rhs);
     return *this;
 }
 

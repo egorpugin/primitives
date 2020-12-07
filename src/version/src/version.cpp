@@ -314,7 +314,7 @@ std::string Version::printVersion(const String &delimeter, Level level) const
 {
     std::string s;
     Level i = 0;
-    auto until = std::min(level, (Level)numbers.size());
+    auto until = getRealLevel();
     for (; i < until; i++)
         s += std::to_string(numbers[i]) + delimeter;
     for (; i < level; i++)
@@ -347,10 +347,10 @@ std::string Version::toString(const String &delimeter, Level level) const
     return s;
 }
 
-std::string Version::toString(const Version &v) const
+/*std::string Version::toString(const Version &v) const
 {
     return toString(v.getLevel());
-}
+}*/
 
 std::string Version::toString(const String &delimeter, const Version &v) const
 {
@@ -499,6 +499,18 @@ Version::Number Version::maxNumber()
 Version::Level Version::getLevel() const
 {
     return (Level)numbers.size();
+}
+
+Version::Level Version::getRealLevel() const
+{
+    auto l = getLevel();
+    for (auto i = numbers.rbegin(); i != numbers.rend(); i++)
+    {
+        if (*i != 0)
+            return l;
+        l--;
+    }
+    return l;
 }
 
 /*void Version::decrementVersion()

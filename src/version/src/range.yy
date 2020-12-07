@@ -100,12 +100,6 @@ range_set_or: range_set_and
     ;
 
 range_set_and: range
-    {
-        EXTRACT_VALUE(VersionRange, vr, $1);
-        VersionRange vr_and;
-        vr_and |= vr;
-        SET_RETURN_VALUE(vr_and);
-    }
     | range_set_and and range
     {
         EXTRACT_VALUE(VersionRange, vr_and, $1);
@@ -303,9 +297,8 @@ compare: LT space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
         VersionRange vr;
-        SW_UNIMPLEMENTED;
-        /*vr |= RangePair(Version::min(v), prepare_version(v));
-        SET_RETURN_VALUE(vr);*/
+        vr |= RangePair(0, true, prepare_version(v), false);
+        SET_RETURN_VALUE(vr);
     }
     | GT space_or_empty version
     {
@@ -318,9 +311,8 @@ compare: LT space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
         VersionRange vr;
-        SW_UNIMPLEMENTED;
-        /*vr |= RangePair(prepare_version(v), Version::max(v));
-        SET_RETURN_VALUE(vr);*/
+        vr |= RangePair(prepare_version(v), false, Version::maxNumber() + 1, true);
+        SET_RETURN_VALUE(vr);
     }
     | EQ space_or_empty version
     {
@@ -369,11 +361,10 @@ basic_version: number
     }
     | basic_version DOT number
     {
-        SW_UNIMPLEMENTED;
-        /*EXTRACT_VALUE(GenericNumericVersion::Numbers, numbers, $1);
+        EXTRACT_VALUE(Version, v, $1);
         EXTRACT_VALUE(Version::Number, n, $3);
-        numbers.push_back(n);
-        SET_RETURN_VALUE(numbers);*/
+        v.push_back(n);
+        SET_RETURN_VALUE(v);
     }
     ;
 

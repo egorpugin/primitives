@@ -801,8 +801,8 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(v.toString(5) == "0.0.1.0.0");
         CHECK(v.toString(4) == "0.0.1.0");
         CHECK(v.toString(3) == "0.0.1");
-        CHECK(v.toString(2) == "0.0");
-        CHECK(v.toString(1) == "0");
+        CHECK(v.toString(2) == "0.0.1");
+        CHECK(v.toString(1) == "0.0.1");
         CHECK(Version().toString(0) == "");
         CHECK(Version().toString(-1) == "");
         CHECK(Version().toString(-2) == "");
@@ -891,49 +891,102 @@ TEST_CASE("Checking version range pairs", "[range_pair]")
 {
     using namespace primitives::version;
 
+    // unions are handled in terms of merging two intervals
+    // if union contains both pairs, we result empty optional
+
     // [1,2] & [3,4] = {}
+    // [1,2] | [3,4] = {}
     {
         detail::RangePair rp1{1,false,2,false};
         detail::RangePair rp2{3,false,4,false};
         CHECK_FALSE(rp1 & rp2);
-    }
-
-    // [3,4] & [1,2] = {}
-    {
-        detail::RangePair rp1{1,false,2,false};
-        detail::RangePair rp2{3,false,4,false};
         CHECK_FALSE(rp2 & rp1);
+        CHECK_FALSE(rp1 | rp2);
+        CHECK_FALSE(rp2 | rp1);
     }
 
     // [1,2] & [2,3] = [2,2]
+    // [1,2] | [2,3] = [1,3]
     {
         detail::RangePair rp1{1,false,2,false};
         detail::RangePair rp2{2,false,3,false};
-        auto rp3 = rp1 & rp2;
-        REQUIRE(rp3);
-        CHECK(rp3->getFirst() == 2);
-        CHECK(rp3->getSecond() == 2);
+        {
+            auto rp3 = rp1 & rp2;
+            REQUIRE(rp3);
+            CHECK(rp3->getFirst() == 2);
+            CHECK(rp3->getSecond() == 2);
+        }
+        {
+            auto rp3 = rp2 & rp1;
+            REQUIRE(rp3);
+            CHECK(rp3->getFirst() == 2);
+            CHECK(rp3->getSecond() == 2);
+        }
+        {
+            auto rp3 = rp1 | rp2;
+            REQUIRE(rp3);
+            CHECK(rp3->getFirst() == 1);
+            CHECK(rp3->getSecond() == 3);
+        }
+        {
+            auto rp3 = rp2 | rp1;
+            REQUIRE(rp3);
+            CHECK(rp3->getFirst() == 1);
+            CHECK(rp3->getSecond() == 3);
+        }
     }
 
     // [1,2) & [2,3] = {}
+    // [1,2) | [2,3] = [1,3]
     {
         detail::RangePair rp1{1,false,2,true};
         detail::RangePair rp2{2,false,3,false};
         CHECK_FALSE(rp1 & rp2);
+        CHECK_FALSE(rp2 & rp1);
+        {
+            auto rp3 = rp1 | rp2;
+            REQUIRE(rp3);
+            CHECK(rp3->getFirst() == 1);
+            CHECK(rp3->getSecond() == 3);
+        }
+        {
+            auto rp3 = rp2 | rp1;
+            REQUIRE(rp3);
+            CHECK(rp3->getFirst() == 1);
+            CHECK(rp3->getSecond() == 3);
+        }
     }
 
     // [1,2] & (2,3] = {}
+    // [1,2] | (2,3] = {}
     {
         detail::RangePair rp1{1,false,2,false};
         detail::RangePair rp2{2,true,3,false};
         CHECK_FALSE(rp1 & rp2);
+        CHECK_FALSE(rp2 & rp1);
+        {
+            auto rp3 = rp1 | rp2;
+            REQUIRE(rp3);
+            CHECK(rp3->getFirst() == 1);
+            CHECK(rp3->getSecond() == 3);
+        }
+        {
+            auto rp3 = rp2 | rp1;
+            REQUIRE(rp3);
+            CHECK(rp3->getFirst() == 1);
+            CHECK(rp3->getSecond() == 3);
+        }
     }
 
     // [1,2) & (2,3] = {}
+    // [1,2) | (2,3] = {}
     {
         detail::RangePair rp1{1,false,2,true};
         detail::RangePair rp2{2,true,3,false};
         CHECK_FALSE(rp1 & rp2);
+        CHECK_FALSE(rp2 & rp1);
+        CHECK_FALSE(rp1 | rp2);
+        CHECK_FALSE(rp2 | rp1);
     }
 }
 
@@ -956,6 +1009,7 @@ TEST_CASE("Checking version ranges", "[range]")
         CHECK_FALSE(VersionRange(">1").contains("0.0.0.0"));
         CHECK_FALSE(VersionRange(">1").contains("0.0.0.0.1"));
         CHECK_FALSE(VersionRange(">1").contains("1"));
+        CHECK(VersionRange(">=1").contains("1"));
         CHECK(VersionRange(">1").contains("1.0.0.0.0.0.1"));
         CHECK(VersionRange(">1").contains("1.0.0.0.0.0.1"));
         CHECK(VersionRange(">1").contains("999999999"));
@@ -963,6 +1017,18 @@ TEST_CASE("Checking version ranges", "[range]")
         CHECK(VersionRange(">1").contains("999999999.999999999.999999999.999999999"));
         CHECK(VersionRange(">1").contains("999999999.999999999.999999999.999999999.999999999"));
         CHECK_FALSE(VersionRange(">1").contains("1000000000"));
+
+        CHECK(VersionRange(">1 <3||>5 <7").toString() == ">1.0.0 <3.0.0 || >5.0.0 <7.0.0");
+        CHECK(VersionRange(">=1 <3||>5 <=7").toString() == ">=1.0.0 <3.0.0 || >5.0.0 <=7.0.0");
+        CHECK(VersionRange(">1 <3||>5 <7").toString(VersionRangePairStringRepresentationType::SameDefaultLevel) == ">1.0.0 <3.0.0 || >5.0.0 <7.0.0");
+        CHECK(VersionRange(">1.1 <3||>5 <7").toString(VersionRangePairStringRepresentationType::SameDefaultLevel) == ">1.1.0 <3.0.0 || >5.0.0 <7.0.0");
+        CHECK(VersionRange(">1 <3||>5 <7").toString() == VersionRange(">1 <3||>5 <7").toString(VersionRangePairStringRepresentationType::SameDefaultLevel));
+        CHECK(VersionRange(">1 <3||>5 <7").toString(VersionRangePairStringRepresentationType::SameRealLevel) == ">1 <3 || >5 <7");
+        CHECK(VersionRange(">1 <3||>5 <7").toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">1 <3 || >5 <7");
+        CHECK(VersionRange(">1.1 <3||>5 <7").toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">1.1 <3 || >5 <7");
+        CHECK(VersionRange(">1.1 <3.3.3.3||>5 <7").toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">1.1 <3.3.3.3 || >5 <7");
+        CHECK(VersionRange(">1.1.0 <3.3.3.3.0.0||>5.0.0.0 <7.0").toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">1.1 <3.3.3.3 || >5 <7");
+        CHECK(VersionRange(">1.1.0 <3.3.3.3.0.0||>5.0.0.0 <7.0").toString() == ">1.1.0 <3.3.3.3 || >5.0.0 <7.0.0");
     }
 
     // assignment
@@ -971,13 +1037,13 @@ TEST_CASE("Checking version ranges", "[range]")
         VersionRange vr2;
         vr2 = " > 1 < 3 || >5 <7 ";
         vr1 = vr2;
-        CHECK(vr1.toString() == ">=1.0.1 <3.0.0 || >=5.0.1 <7.0.0");
-        CHECK(vr1.toString(VersionRangePairStringRepresentationType::SameRealLevel) == vr1.toString());
-        CHECK(vr1.toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">=1.0.1 <3 || >=5.0.1 <7");
+        CHECK(vr1.toString() == ">1.0.0 <3.0.0 || >5.0.0 <7.0.0");
+        CHECK(vr1.toString(VersionRangePairStringRepresentationType::SameRealLevel) == ">1 <3 || >5 <7");
+        CHECK(vr1.toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">1 <3 || >5 <7");
         vr1 |= ">2 <4||>4 <6";
-        CHECK(vr1.toString() == ">=1.0.1 <4.0.0 || >=4.0.1 <7.0.0");
-        CHECK(vr1.toString(VersionRangePairStringRepresentationType::SameRealLevel) == vr1.toString());
-        CHECK(vr1.toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">=1.0.1 <4 || >=4.0.1 <7");
+        CHECK(vr1.toString() == ">1.0.0 <4.0.0 || >4.0.0 <7.0.0");
+        CHECK(vr1.toString(VersionRangePairStringRepresentationType::SameRealLevel) == ">1 <4 || >4 <7");
+        CHECK(vr1.toString(VersionRangePairStringRepresentationType::IndividualRealLevel) == ">1 <4 || >4 <7");
     }
 
     // deny version - range pairs
@@ -993,9 +1059,10 @@ TEST_CASE("Checking version ranges", "[range]")
         CHECK_THROWS(VersionRange("[master,1]"));
         CHECK_THROWS(VersionRange("[master , 1)"));
         CHECK_THROWS(VersionRange("(master , 1)"));
-        CHECK_NOTHROW(VersionRange("master - master"));
-        CHECK_NOTHROW(VersionRange("[master ,master]"));
         CHECK_THROWS(VersionRange("[master-a ,master-b]"));
+        // also deny branch-branch pairs
+        CHECK_THROWS(VersionRange("master - master"));
+        CHECK_THROWS(VersionRange("[master ,master]"));
     }
 
     // check that left <= right

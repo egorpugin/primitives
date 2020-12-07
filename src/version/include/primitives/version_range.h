@@ -44,10 +44,12 @@ struct RangePair
         bool strong_relation;
 
         bool operator==(const Side &rhs) const { return std::tie(v, strong_relation) == std::tie(rhs.v, rhs.strong_relation); }
+        bool operator<(const Side &rhs) const { return std::tie(v, strong_relation) < std::tie(rhs.v, rhs.strong_relation); }
+
         bool operator<(const Version &) const;
         bool operator>(const Version &) const;
 
-        bool operator<(const Side &) const;
+        std::string detail::RangePair::toString(VersionRangePairStringRepresentationType t) const;
     };
 private:
     Side first;
@@ -78,6 +80,8 @@ public:
     bool operator==(const RangePair &rhs) const { return std::tie(first, second) == std::tie(rhs.first, rhs.second); }
 
     std::optional<RangePair> operator&(const RangePair &) const;
+    // returns {} in case of non overlapping pairs
+    std::optional<RangePair> operator|(const RangePair &) const;
 
 private:
     RangePair() = default;
