@@ -492,7 +492,7 @@ Version::Level Version::getDefaultLevel()
 
 Version::Number Version::maxNumber()
 {
-    // currently set a limit up to 1 billion excluding
+    // currently set a limit up to 1 billion
     return 999'999'999;
 }
 
@@ -748,7 +748,7 @@ PackageVersion::PackageVersion(const std::string &s)
     if (s.empty())
         throw SW_RUNTIME_ERROR("Empty package version");
 
-    if (std::isalpha(s[0]) && std::all_of(s.begin(), s.end(), [](auto c)
+    if ((std::isalpha(s[0]) || s[0] == '_') && std::all_of(s.begin(), s.end(), [](auto c)
     {
         return std::isalnum(c) || c == '_';
     }))

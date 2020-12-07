@@ -23,7 +23,7 @@ TEST_CASE("Checking versions", "[version]")
     CHECK_NOTHROW(PackageVersion("abc123___"));
     // too long branch
     CHECK_THROWS(PackageVersion("abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___abc123___"));
-    CHECK_THROWS(PackageVersion("_1abc123___"));
+    CHECK_NOTHROW(PackageVersion("_1abc123___"));
     CHECK_THROWS(PackageVersion("1abc123___"));
     CHECK_THROWS(PackageVersion("abc123___-")); // no extra allowed
     CHECK_THROWS(PackageVersion("a-a")); // extras on branches are not allowed
@@ -887,9 +887,83 @@ TEST_CASE("Checking versions", "[version]")
     }
 }
 
+TEST_CASE("Checking version range pairs", "[range_pair]")
+{
+    using namespace primitives::version;
+
+    // [1,2] & [3,4] = {}
+    {
+        detail::RangePair rp1{1,false,2,false};
+        detail::RangePair rp2{3,false,4,false};
+        CHECK_FALSE(rp1 & rp2);
+    }
+
+    // [3,4] & [1,2] = {}
+    {
+        detail::RangePair rp1{1,false,2,false};
+        detail::RangePair rp2{3,false,4,false};
+        CHECK_FALSE(rp2 & rp1);
+    }
+
+    // [1,2] & [2,3] = [2,2]
+    {
+        detail::RangePair rp1{1,false,2,false};
+        detail::RangePair rp2{2,false,3,false};
+        auto rp3 = rp1 & rp2;
+        REQUIRE(rp3);
+        CHECK(rp3->getFirst() == 2);
+        CHECK(rp3->getSecond() == 2);
+    }
+
+    // [1,2) & [2,3] = {}
+    {
+        detail::RangePair rp1{1,false,2,true};
+        detail::RangePair rp2{2,false,3,false};
+        CHECK_FALSE(rp1 & rp2);
+    }
+
+    // [1,2] & (2,3] = {}
+    {
+        detail::RangePair rp1{1,false,2,false};
+        detail::RangePair rp2{2,true,3,false};
+        CHECK_FALSE(rp1 & rp2);
+    }
+
+    // [1,2) & (2,3] = {}
+    {
+        detail::RangePair rp1{1,false,2,true};
+        detail::RangePair rp2{2,true,3,false};
+        CHECK_FALSE(rp1 & rp2);
+    }
+}
+
 TEST_CASE("Checking version ranges", "[range]")
 {
     using namespace primitives::version;
+
+    // new tests
+    {
+        CHECK(VersionRange("<2").contains("1"));
+        CHECK(VersionRange("<2").contains("0.1"));
+        CHECK(VersionRange("<2").contains("0.0.1"));
+        CHECK(VersionRange("<2").contains("0.0.0.1"));
+        CHECK(VersionRange("<2").contains("0.0.0.0.1"));
+        CHECK_FALSE(VersionRange("<2").contains("2"));
+
+        CHECK_FALSE(VersionRange(">1").contains("0"));
+        CHECK_FALSE(VersionRange(">1").contains("0.0"));
+        CHECK_FALSE(VersionRange(">1").contains("0.0.0"));
+        CHECK_FALSE(VersionRange(">1").contains("0.0.0.0"));
+        CHECK_FALSE(VersionRange(">1").contains("0.0.0.0.1"));
+        CHECK_FALSE(VersionRange(">1").contains("1"));
+        CHECK(VersionRange(">1").contains("1.0.0.0.0.0.1"));
+        CHECK(VersionRange(">1").contains("1.0.0.0.0.0.1"));
+        CHECK(VersionRange(">1").contains("999999999"));
+        CHECK(VersionRange(">1").contains("999999999.999999999.999999999"));
+        CHECK(VersionRange(">1").contains("999999999.999999999.999999999.999999999"));
+        CHECK(VersionRange(">1").contains("999999999.999999999.999999999.999999999.999999999"));
+        CHECK_FALSE(VersionRange(">1").contains("1000000000"));
+    }
 
     // assignment
     {
@@ -1611,9 +1685,9 @@ TEST_CASE("Checking version ranges", "[range]")
     // cmp
     CHECK(VersionRange("a") == VersionRange("a"));
     CHECK_FALSE(VersionRange("a") != VersionRange("a"));
-    CHECK(VersionRange() < VersionRange("a"));
+    //CHECK(VersionRange() < VersionRange("a"));
     CHECK(VersionRange() != VersionRange("a"));
-    CHECK_THROWS(VersionRange("a") < VersionRange("b || c d"));
+    //CHECK_THROWS(VersionRange("a") < VersionRange("b || c d"));
 
     // contains
     {

@@ -34,7 +34,7 @@ long make_long(const char *s)
 
 number [0-9]+
 extra  [_a-zA-Z0-9]+
-branch [_a-zA-Z][_a-zA-Z0-9]*
+string [_a-zA-Z][_a-zA-Z0-9]*
 
 %%
 
@@ -72,7 +72,7 @@ branch [_a-zA-Z][_a-zA-Z0-9]*
 "||"                    return MAKE(OR);
 
 {number}                return MAKE_VALUE(NUMBER, make_long(yytext));
-{branch}                return MAKE_VALUE(BRANCH, std::string(yytext));
+{string}                return MAKE_VALUE(STRING, std::string(yytext));
 {extra}                 return MAKE_VALUE(EXTRA, std::string(yytext));
 
 <*>(?s:.)               { return MAKE_VALUE(ERROR_SYMBOL, std::string(yytext)); }

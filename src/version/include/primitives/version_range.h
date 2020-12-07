@@ -42,6 +42,12 @@ struct RangePair
     {
         Version v;
         bool strong_relation;
+
+        bool operator==(const Side &rhs) const { return std::tie(v, strong_relation) == std::tie(rhs.v, rhs.strong_relation); }
+        bool operator<(const Version &) const;
+        bool operator>(const Version &) const;
+
+        bool operator<(const Side &) const;
     };
 private:
     Side first;
@@ -69,11 +75,14 @@ public:
     const Version &getFirst() const { return first.v; }
     const Version &getSecond() const { return second.v; }
 
-    std::optional<RangePair> operator&(const RangePair &) const;
-};
+    bool operator==(const RangePair &rhs) const { return std::tie(first, second) == std::tie(rhs.first, rhs.second); }
 
-bool operator<(const RangePair::Side &, const Version &);
-bool operator<(const Version &, const RangePair::Side &);
+    std::optional<RangePair> operator&(const RangePair &) const;
+
+private:
+    RangePair() = default;
+    RangePair(const Side &, const Side &);
+};
 
 }
 
@@ -84,7 +93,7 @@ struct PRIMITIVES_VERSION_API VersionRange
 
     // separate ctor!
     /// default is any version or * or Version::min() - Version::max()
-    explicit VersionRange(Version::Level level);
+    //explicit VersionRange(Version::Level level);
 
     /// from one version
     VersionRange(const Version &);
@@ -123,9 +132,7 @@ struct PRIMITIVES_VERSION_API VersionRange
     std::optional<Version> getMaxSatisfyingVersion(const std::set<Version> &) const;
 
     // operators
-    bool operator<(const VersionRange &) const;
     bool operator==(const VersionRange &) const;
-    bool operator!=(const VersionRange &) const;
 
     // TODO:
     //VersionRange operator~() const;
@@ -138,9 +145,6 @@ struct PRIMITIVES_VERSION_API VersionRange
 public:
     /// get range from string without throw
     static std::optional<VersionRange> parse(const std::string &s);
-
-    /// returns empty set
-    static VersionRange empty();
 
     // GLR parser does not have class yet, so we can't make it a friend
 #ifndef HAVE_BISON_RANGE_PARSER

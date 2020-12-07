@@ -39,6 +39,7 @@ using primitives::version::detail::RangePair;
 
 Version prepare_version(Version &v, Version::Number fill_value = 0, Version::Level level = 3)
 {
+    return v;
     SW_UNIMPLEMENTED;
     /*auto l = std::max(v.getLevel(), level);
     for (auto &n : v.numbers)
@@ -66,7 +67,7 @@ Version prepare_version(Version &v, Version::Number fill_value = 0, Version::Lev
 %token CARET TILDE HYPHEN DOT
 
 %token <v> L_SQUARE_BRACKET R_SQUARE_BRACKET L_BRACKET R_BRACKET
-%token <v> NUMBER X_NUMBER STAR_NUMBER EXTRA BRANCH
+%token <v> NUMBER X_NUMBER STAR_NUMBER EXTRA STRING
 
 %type <v> file
 %type <v> range_set_or range
@@ -101,7 +102,7 @@ range_set_or: range_set_and
 range_set_and: range
     {
         EXTRACT_VALUE(VersionRange, vr, $1);
-        auto vr_and = VersionRange::empty();
+        VersionRange vr_and;
         vr_and |= vr;
         SET_RETURN_VALUE(vr_and);
     }
@@ -132,7 +133,7 @@ range: compare | caret | tilde | hyphen | interval | version
         //v2.branch = v.branch;
         /*RangePair rp(v, v2);
 
-        auto vr = VersionRange::empty();
+        VersionRange vr;
         vr |= rp;
         SET_RETURN_VALUE(vr);*/
     }
@@ -181,7 +182,7 @@ caret: CARET space_or_empty version
         prepare_version(rp.second);
         rp.second.decrementVersion();
 
-        auto vr = VersionRange::empty();
+        VersionRange vr;
         vr |= rp;
         SET_RETURN_VALUE(vr);*/
     }
@@ -211,7 +212,7 @@ tilde: TILDE space_or_empty version
         prepare_version(rp.second);
         rp.second.decrementVersion();
 
-        auto vr = VersionRange::empty();
+        VersionRange vr;
         vr |= rp;
         SET_RETURN_VALUE(vr);*/
     }
@@ -238,7 +239,7 @@ hyphen: version SPACE HYPHEN space_or_empty version
         //auto level = std::max(rp.first.getLevel(), rp.second.getLevel());
         //prepare_version(rp.second, 0, level);
 
-        auto vr = VersionRange::empty();
+        VersionRange vr;
         vr |= rp;
         SET_RETURN_VALUE(vr);*/
     }
@@ -258,7 +259,7 @@ interval: open_bracket space_or_empty version space_or_empty COMMA space_or_empt
             rp.first.incrementVersion();
         if (r == OPEN)
             rp.second.decrementVersion();
-        auto vr = VersionRange::empty();
+        VersionRange vr;
         vr |= rp;
         SET_RETURN_VALUE(vr);*/
     }
@@ -271,7 +272,7 @@ interval: open_bracket space_or_empty version space_or_empty COMMA space_or_empt
         /*RangePair rp(v, Version::max(v));
         if (l == OPEN)
             rp.first.incrementVersion();
-        auto vr = VersionRange::empty();
+        VersionRange vr;
         vr |= rp;
         SET_RETURN_VALUE(vr);*/
     }
@@ -284,7 +285,7 @@ interval: open_bracket space_or_empty version space_or_empty COMMA space_or_empt
         SW_UNIMPLEMENTED;
         //if (r == OPEN)
             //v.decrementVersion();
-        auto vr = VersionRange::empty();
+        VersionRange vr;
         SW_UNIMPLEMENTED;
         /*vr |= RangePair(Version::min(v), v);
         SET_RETURN_VALUE(vr);*/
@@ -294,15 +295,14 @@ interval: open_bracket space_or_empty version space_or_empty COMMA space_or_empt
 compare: LT space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        auto vr = VersionRange::empty();
-        SW_UNIMPLEMENTED;
-        /*vr |= RangePair(Version::min(v), prepare_version(v).getPreviousVersion());
-        SET_RETURN_VALUE(vr);*/
+        VersionRange vr;
+        vr |= RangePair(0, true, prepare_version(v), true);
+        SET_RETURN_VALUE(vr);
     }
     | LE space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        auto vr = VersionRange::empty();
+        VersionRange vr;
         SW_UNIMPLEMENTED;
         /*vr |= RangePair(Version::min(v), prepare_version(v));
         SET_RETURN_VALUE(vr);*/
@@ -310,15 +310,14 @@ compare: LT space_or_empty version
     | GT space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        auto vr = VersionRange::empty();
-        SW_UNIMPLEMENTED;
-        /*vr |= RangePair(prepare_version(v).getNextVersion(), Version::max(v));
-        SET_RETURN_VALUE(vr);*/
+        VersionRange vr;
+        vr |= RangePair(prepare_version(v), true, Version::maxNumber() + 1, true);
+        SET_RETURN_VALUE(vr);
     }
     | GE space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        auto vr = VersionRange::empty();
+        VersionRange vr;
         SW_UNIMPLEMENTED;
         /*vr |= RangePair(prepare_version(v), Version::max(v));
         SET_RETURN_VALUE(vr);*/
@@ -326,7 +325,7 @@ compare: LT space_or_empty version
     | EQ space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        auto vr = VersionRange::empty();
+        VersionRange vr;
         SW_UNIMPLEMENTED;
         /*vr |= RangePair(prepare_version(v), prepare_version(v));
         SET_RETURN_VALUE(vr);*/
@@ -334,7 +333,7 @@ compare: LT space_or_empty version
     | NE space_or_empty version
     {
         EXTRACT_VALUE(Version, v, $3);
-        auto vr = VersionRange::empty();
+        VersionRange vr;
         SW_UNIMPLEMENTED;
         /*vr |= RangePair(Version::min(v), prepare_version(v).getPreviousVersion());
         vr |= RangePair(prepare_version(v).getNextVersion(), Version::max(v));
@@ -347,15 +346,6 @@ compare: LT space_or_empty version
 ////////////////////////////////////////////////////////////////////////////////
 
 version: basic_version
-    {
-        SW_UNIMPLEMENTED;
-        /*EXTRACT_VALUE(GenericNumericVersion::Numbers, numbers, $1);
-        if (numbers.size() < Version::minimum_level)
-            numbers.resize(Version::minimum_level, UNSET);
-        Version v;
-        v.numbers = numbers;
-        SET_RETURN_VALUE(v);*/
-    }
     | basic_version HYPHEN extra
     {
         SW_UNIMPLEMENTED;
@@ -368,23 +358,14 @@ version: basic_version
         v.extra = extra;
         SET_RETURN_VALUE(v);*/
     }
-    | BRANCH
-    {
-        EXTRACT_VALUE(std::string, branch, $1);
-        Version v;
-        SW_UNIMPLEMENTED;
-        //v.branch = branch;
-        SET_RETURN_VALUE(v);
-    }
     ;
 
 basic_version: number
     {
         EXTRACT_VALUE(Version::Number, major, $1);
-        SW_UNIMPLEMENTED;
-        /*GenericNumericVersion::Numbers numbers;
-        numbers.push_back(major);
-        SET_RETURN_VALUE(numbers);*/
+        Version v;
+        v.push_back(major);
+        SET_RETURN_VALUE(v);
     }
     | basic_version DOT number
     {
@@ -422,7 +403,7 @@ extra_part: EXTRA
         extra.push_back(e);
         SET_RETURN_VALUE(extra);*/
     }
-    | BRANCH
+    | STRING
     {
         EXTRACT_VALUE(std::string, e, $1);
         SW_UNIMPLEMENTED;

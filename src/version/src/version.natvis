@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
-    <Type Name="primitives::version::GenericNumericVersion">
+    <Type Name="primitives::version::Version">
         <DisplayString Condition="numbers._Mypair._Myval2._Mylast - numbers._Mypair._Myval2._Myfirst == 0">
-            empty
+            0
         </DisplayString>
         <DisplayString Condition="numbers._Mypair._Myval2._Mylast - numbers._Mypair._Myval2._Myfirst == 1">
             {numbers._Mypair._Myval2._Myfirst[0]}
@@ -71,7 +71,7 @@
         </DisplayString>
     </Type>
 
-    <Type Name="primitives::version::Version">
+    <!--<Type Name="primitives::version::Version">
         <DisplayString Condition="branch._Mypair._Myval2._Mysize != 0">{branch,sb}</DisplayString>
         <DisplayString Condition="branch._Mypair._Myval2._Mysize == 0
                        &amp;&amp; extra._Mypair._Myval2._Mylast - extra._Mypair._Myval2._Myfirst == 0">
@@ -79,14 +79,21 @@
         <DisplayString Condition="branch._Mypair._Myval2._Mysize == 0
                        &amp;&amp; extra._Mypair._Myval2._Mylast - extra._Mypair._Myval2._Myfirst != 0">
             {(primitives::version::GenericNumericVersion &amp; )*this}-{extra}</DisplayString>
+    </Type>-->
+
+    <Type Name="primitives::version::detail::RangePair::Side">
+        <DisplayString>{v}</DisplayString>
     </Type>
 
-    <Type Name="primitives::version::VersionRange::RangePair">
-        <DisplayString>[{first}, {second}]</DisplayString>
+    <Type Name="primitives::version::detail::RangePair">
+        <DisplayString Condition="first.strong_relation == false &amp;&amp; second.strong_relation == false">[{first}, {second}]</DisplayString>
+        <DisplayString Condition="first.strong_relation == false &amp;&amp; second.strong_relation == true">[{first}, {second})</DisplayString>
+        <DisplayString Condition="first.strong_relation == true &amp;&amp; second.strong_relation == false">({first}, {second}]</DisplayString>
+        <DisplayString Condition="first.strong_relation == true &amp;&amp; second.strong_relation == true">({first}, {second})</DisplayString>
     </Type>
 
     <Type Name="primitives::version::VersionRange">
-        <DisplayString Condition="branch._Mypair._Myval2._Mysize != 0">{branch,sb}</DisplayString>
+        <!--<DisplayString Condition="branch._Mypair._Myval2._Mysize != 0">{branch,sb}</DisplayString>-->
         <DisplayString Condition="range._Mypair._Myval2._Mylast - range._Mypair._Myval2._Myfirst == 0">
             empty
         </DisplayString>

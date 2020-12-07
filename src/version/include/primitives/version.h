@@ -157,6 +157,8 @@ struct PRIMITIVES_VERSION_API Version
 
     size_t getHash() const;
 
+    void push_back(Number n) { numbers.push_back(n); }
+
     // modificators
     /*void decrementVersion();
     void decrementVersion(Level level);
