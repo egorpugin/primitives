@@ -327,7 +327,7 @@ void SourceUrl::save1(SourceKvMap &m) const
 
 void SourceUrl::applyVersion(const Version &v)
 {
-    v.format(url);
+    url = v.format(url);
 }
 
 Git::Git(const String &url, const String &tag, const String &branch, const String &commit)
@@ -499,8 +499,8 @@ void Git::save1(SourceKvMap &m) const
 void Git::applyVersion(const Version &v)
 {
     SourceUrl::applyVersion(v);
-    v.format(tag);
-    v.format(branch);
+    tag = v.format(tag);
+    branch = v.format(branch);
 }
 
 Hg::Hg(const String &url, const String &tag, const String &branch, const String &commit, int64_t revision)
@@ -613,7 +613,7 @@ void Bzr::download1(const path &dir) const
 void Bzr::applyVersion(const Version &v)
 {
     SourceUrl::applyVersion(v);
-    v.format(tag);
+    tag = v.format(tag);
 }
 
 void Bzr::save1(nlohmann::json &j) const
@@ -720,9 +720,9 @@ void Cvs::applyVersion(const Version &v)
 {
     SourceUrl::applyVersion(v);
     //v.format(module); // ?
-    v.format(tag);
-    v.format(branch);
-    v.format(revision); // ?
+    tag = v.format(tag);
+    branch = v.format(branch);
+    revision = v.format(revision); // ?
 }
 
 void Cvs::save1(nlohmann::json &j) const
@@ -809,8 +809,8 @@ void Svn::download1(const path &dir) const
 void Svn::applyVersion(const Version &v)
 {
     SourceUrl::applyVersion(v);
-    v.format(tag);
-    v.format(branch);
+    tag = v.format(tag);
+    branch = v.format(branch);
 }
 
 void Svn::save1(nlohmann::json &j) const
@@ -908,8 +908,10 @@ void RemoteFiles::save1(SourceKvMap &m) const
 
 void RemoteFiles::applyVersion(const Version &v)
 {
+    decltype(urls) urls2;
     for (auto &u : urls)
-        v.format(u);
+        urls2.insert(v.format(u));
+    urls = urls2;
 }
 
 } // namespace primitives::source
