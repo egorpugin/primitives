@@ -35,9 +35,19 @@ enum class VersionRangePairStringRepresentationType
 namespace detail
 {
 
-/// [from, to] interval
-struct RangePair : std::pair<Version, Version>
+/// version interval
+struct RangePair
 {
+    struct Side
+    {
+        Version v;
+        bool strong_relation;
+    };
+private:
+    Side first;
+    Side second;
+public:
+
     // replace with [from, to)?
     // but we do not know what is next version for "15.9.03232.13 - 16.0.123.13-preview"
     // so we can't use [,)
@@ -46,7 +56,7 @@ struct RangePair : std::pair<Version, Version>
     // Example: for string "a" next version will be "aa" - in case if we allow only [a-z]
     //
 
-    RangePair(const Version &, const Version &);
+    RangePair(const Version &, bool strong_relation1, const Version &, bool strong_relation2);
 
     std::string toString(VersionRangePairStringRepresentationType) const;
     [[deprecated("use contains()")]]
@@ -57,8 +67,14 @@ struct RangePair : std::pair<Version, Version>
     size_t getHash() const;
     std::optional<Version> toVersion() const;
 
+    const Version &getFirst() const { return first.v; }
+    const Version &getSecond() const { return second.v; }
+
     std::optional<RangePair> operator&(const RangePair &) const;
 };
+
+bool operator<(const RangePair::Side &, const Version &);
+bool operator<(const Version &, const RangePair::Side &);
 
 }
 
@@ -101,7 +117,6 @@ struct PRIMITIVES_VERSION_API VersionRange
     size_t getHash() const;
 
     bool isEmpty() const;
-    bool isOutside(const Version &) const;
     [[deprecated("use contains()")]]
     bool hasVersion(const Version &v) const { return contains(v); }
     bool contains(const char *) const; // branch version, because Version and VersionRange construction is ambiguous
@@ -134,6 +149,7 @@ public:
     /// returns empty set
     static VersionRange empty();
 
+    // GLR parser does not have class yet, so we can't make it a friend
 #ifndef HAVE_BISON_RANGE_PARSER
 private:
 #endif
@@ -151,14 +167,14 @@ private:
     /// optional error will be returned
     static std::optional<std::string> parse(VersionRange &v, const std::string &s);
 
-    friend PRIMITIVES_VERSION_API bool operator<(const VersionRange &, const Version &);
+    /*friend PRIMITIVES_VERSION_API bool operator<(const VersionRange &, const Version &);
     friend PRIMITIVES_VERSION_API bool operator<(const Version &, const VersionRange &);
     friend PRIMITIVES_VERSION_API bool operator>(const VersionRange &, const Version &);
-    friend PRIMITIVES_VERSION_API bool operator>(const Version &, const VersionRange &);
+    friend PRIMITIVES_VERSION_API bool operator>(const Version &, const VersionRange &);*/
 };
 
 /// Return true if version is greater than all the versions possible in the range.
-PRIMITIVES_VERSION_API
+/*PRIMITIVES_VERSION_API
 bool operator<(const VersionRange &, const Version &);
 
 /// Return true if version is less than all the versions possible in the range.
@@ -171,7 +187,7 @@ bool operator>(const VersionRange &, const Version &);
 
 /// Return true if version is greater than all the versions possible in the range.
 PRIMITIVES_VERSION_API
-bool operator>(const Version &, const VersionRange &);
+bool operator>(const Version &, const VersionRange &);*/
 
 } // namespace primitives::version
 

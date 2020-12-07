@@ -22,7 +22,7 @@ TEST_CASE("Checking versions", "[version]")
     CHECK_NOTHROW(Version("ab"));
     CHECK_NOTHROW(Version("abc123___"));
     CHECK_THROWS(Version("1abc123___"));
-    CHECK_NOTHROW(Version("abc123___-"));
+    CHECK_THROWS(Version("abc123___-"));
     CHECK_NOTHROW(Version("a-a"));
     CHECK_THROWS(Version("1..1"));
     CHECK_THROWS(Version("1.1-2..2"));
@@ -39,6 +39,7 @@ TEST_CASE("Checking versions", "[version]")
     CHECK_THROWS(Version("1.2--rc2.3.a")); // with extra
     CHECK_THROWS(Version("1.2-rc2.3.a-")); // with extra
     CHECK_THROWS(Version("1.2-rc2.3.-a")); // with extra
+    CHECK_THROWS(Version(nullptr));
     CHECK_THROWS(Version(Version("1.2"), "-rc2.3.-a")); // with extra
     CHECK_THROWS(Version(Version("1.2"), "3.4.1-beta4-19610-02")); // with extra
     CHECK_THROWS(Version(Version("1.2"), "beta4-19610-02")); // with extra
@@ -47,7 +48,9 @@ TEST_CASE("Checking versions", "[version]")
     CHECK_THROWS(Version("1.2.*"));
     CHECK_THROWS(Version("1.2.x"));
     CHECK_THROWS(Version("1.2.X"));
-    CHECK_THROWS(Version(0, "-rc2.3._a_"));
+    CHECK_THROWS(Version(Version(0), "-rc2.3._a_"));
+    CHECK_THROWS(Version(-1));
+    //CHECK_THROWS(Version(-1, "-rc2.3._a_"));
 
     // we allowed now versions with numbers > 4
     CHECK_NOTHROW(Version("1.2.3.4.5"));
@@ -75,16 +78,21 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(v.getTweak() == 0);
         v.incrementVersion();
         CHECK(v.getPatch() == 2);
+        CHECK(v.getTweak() == 0);
         v.incrementVersion();
         CHECK(v.getPatch() == 3);
+        CHECK(v.getTweak() == 0);
         v.decrementVersion();
         v.decrementVersion();
         CHECK(v.getPatch() == 1);
+        CHECK(v.getTweak() == 0);
         v.decrementVersion();
         CHECK(v.getPatch() == 1);
+        CHECK(v.getTweak() == 0);
         v.decrementVersion();
         v.decrementVersion();
         CHECK(v.getPatch() == 1);
+        CHECK(v.getTweak() == 0);
         CHECK(v.isVersion());
         CHECK_FALSE(v.isBranch());
         v = v1;
@@ -180,7 +188,7 @@ TEST_CASE("Checking versions", "[version]")
     }
 
     {
-        Version v = Version::min();
+        Version v = Version::min(Version::getDefaultLevel());
         CHECK(v.getMajor() == 0);
         CHECK(v.getMinor() == 0);
         CHECK(v.getPatch() == 1);
@@ -196,7 +204,7 @@ TEST_CASE("Checking versions", "[version]")
 
     {
         Version v1(0, 0, 0);
-        Version v = Version::min(v1);
+        Version v = Version::min(v1.getLevel());
         CHECK(v.getMajor() == 0);
         CHECK(v.getMinor() == 0);
         CHECK(v.getPatch() == 1);
@@ -211,7 +219,12 @@ TEST_CASE("Checking versions", "[version]")
     }
 
     {
-        Version v = Version::max();
+        Version v1("branch");
+        CHECK_THROWS(v1.getLevel());
+    }
+
+    {
+        Version v = Version::max(Version::getDefaultLevel());
         CHECK(v.getMajor() == Version::maxNumber());
         CHECK(v.getMinor() == Version::maxNumber());
         CHECK(v.getPatch() == Version::maxNumber());
@@ -227,7 +240,7 @@ TEST_CASE("Checking versions", "[version]")
 
     {
         Version v1(0, 0, 0);
-        Version v = Version::max(v1);
+        Version v = Version::max(v1.getLevel());
         CHECK(v.getMajor() == Version::maxNumber());
         CHECK(v.getMinor() == Version::maxNumber());
         CHECK(v.getPatch() == Version::maxNumber());
@@ -453,7 +466,7 @@ TEST_CASE("Checking versions", "[version]")
     }
 
     {
-        Version v(0,0,0, "rc2.3._a_");
+        Version v(Version(0,0,0), "rc2.3._a_");
         CHECK(v.getMajor() == 0);
         CHECK(v.getMinor() == 0);
         CHECK(v.getPatch() == 1);
@@ -558,19 +571,19 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(v_old.getPatch() == 0);
     }
 
-    CHECK(Version(0, 0, 0, "rc2.3._a_") > Version(0, 0, 0, "rc1.3._a_"));
-    CHECK(Version(0, 0, 0, "rc2.3._a_") > Version(0, 0, 0, "beta.3._a_"));
-    CHECK(Version(0, 0, 0, "rc2.3._a_") > Version(0, 0, 0, "alpha.3._a_"));
-    CHECK(Version(0, 0, 0, "rc2.3._a_") < Version(0, 0, 0, "rc3.3._a_"));
-    CHECK(Version(0, 0, 0, "rc.2.3._a_") < Version(0, 0, 0, "rc.3.3._a_"));
-    CHECK(Version(0, 0, 0, "rc.2.3._a_") == Version(0, 0, 0, "rc.2.3._a_"));
+    CHECK(Version(Version(0, 0, 0), "rc2.3._a_") > Version(Version(0, 0, 0), "rc1.3._a_"));
+    CHECK(Version(Version(0, 0, 0), "rc2.3._a_") > Version(Version(0, 0, 0), "beta.3._a_"));
+    CHECK(Version(Version(0, 0, 0), "rc2.3._a_") > Version(Version(0, 0, 0), "alpha.3._a_"));
+    CHECK(Version(Version(0, 0, 0), "rc2.3._a_") < Version(Version(0, 0, 0), "rc3.3._a_"));
+    CHECK(Version(Version(0, 0, 0), "rc.2.3._a_") < Version(Version(0, 0, 0), "rc.3.3._a_"));
+    CHECK(Version(Version(0, 0, 0), "rc.2.3._a_") == Version(Version(0, 0, 0), "rc.2.3._a_"));
 
-    CHECK(Version(0, 0, 0, "1") == Version(0, 0, 0, "1"));
-    CHECK(Version(0, 0, 0, "1") < Version(0, 0, 0, "2"));
-    CHECK(Version(0, 0, 0, "1.1") < Version(0, 0, 0, "2.1"));
-    CHECK(Version(0, 0, 0, "1.1") < Version(0, 0, 0, "1.2"));
-    CHECK(Version(0, 0, 0, "1.1") == Version(0, 0, 0, "1.1"));
-    CHECK(Version(0, 0, 0, "1.1.a") < Version(0, 0, 0, "1.1.z"));
+    CHECK(Version(Version(0, 0, 0), "1") == Version(Version(0, 0, 0), "1"));
+    CHECK(Version(Version(0, 0, 0), "1") < Version(Version(0, 0, 0), "2"));
+    CHECK(Version(Version(0, 0, 0), "1.1") < Version(Version(0, 0, 0), "2.1"));
+    CHECK(Version(Version(0, 0, 0), "1.1") < Version(Version(0, 0, 0), "1.2"));
+    CHECK(Version(Version(0, 0, 0), "1.1") == Version(Version(0, 0, 0), "1.1"));
+    CHECK(Version(Version(0, 0, 0), "1.1.a") < Version(Version(0, 0, 0), "1.1.z"));
 
     // format
     CHECK(Version(0).format("{ML}") == "A");
@@ -645,7 +658,7 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(Version().format("{e}") == "");
         CHECK(Version("1-e").format("{e}") == "e");
         CHECK(Version("1-e.2.3.4").format("{e}") == "e.2.3.4");
-        CHECK(Version(1, "e.2.3.4").format("{e}") == "e.2.3.4");
+        CHECK(Version(Version(1), "e.2.3.4").format("{e}") == "e.2.3.4");
         CHECK(Version("branch").format("{v}") == "branch");
         CHECK(Version("branch").format("{b}") == "branch");
 
@@ -695,11 +708,11 @@ TEST_CASE("Checking versions", "[version]")
         CHECK(Version("a") < Version("b"));
         CHECK(Version(1) > Version("b"));
 
-        CHECK(Version(2, 14, 0, "rc16") != Version(2, 14, 0));
-        CHECK(Version(2, 14, 0, "rc16") < Version(2, 14, 0));
-        CHECK(Version(2, 14, 0, "rc16") <= Version(2, 14, 0));
-        CHECK_FALSE(Version(2, 14, 0, "rc16") > Version(2, 14, 0));
-        CHECK_FALSE(Version(2, 14, 0, "rc16") >= Version(2, 14, 0));
+        CHECK(Version(Version(2, 14, 0), "rc16") != Version(2, 14, 0));
+        CHECK(Version(Version(2, 14, 0), "rc16") < Version(2, 14, 0));
+        CHECK(Version(Version(2, 14, 0), "rc16") <= Version(2, 14, 0));
+        CHECK_FALSE(Version(Version(2, 14, 0), "rc16") > Version(2, 14, 0));
+        CHECK_FALSE(Version(Version(2, 14, 0), "rc16") >= Version(2, 14, 0));
 
         VersionSet a;
         a.insert("master");
@@ -1290,7 +1303,7 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange(4).contains(Version(0, 0, 1)));
     CHECK(VersionRange(4).contains(Version(0, 0, 0, 1)));
     CHECK_FALSE(VersionRange(4).contains(Version({ 0, 0, 0, 0, 1 })));
-    CHECK(VersionRange(Version::minimum_level).toString() == "*");
+    CHECK(VersionRange(Version::getDefaultLevel()).toString() == "*");
 
     // from websites
     // https://docs.npmjs.com/misc/semver
@@ -1710,7 +1723,7 @@ TEST_CASE("Checking version ranges v1", "[ranges_v1]")
     }
 
     {
-        VersionRange v1(Version(2, 14, 0, "rc16"), Version(2, 14, 0));
+        VersionRange v1(Version(Version(2, 14, 0), "rc16"), Version(2, 14, 0));
         CHECK(v1.size() == 1);
         auto v = v1.getMaxSatisfyingVersion({ "2.14.0-rc16" });
         CHECK(v);
@@ -1718,7 +1731,7 @@ TEST_CASE("Checking version ranges v1", "[ranges_v1]")
     }
 
     {
-        VersionRange v1(Version(2, 14, 0, "rc16"), Version(2, 14, 0));
+        VersionRange v1(Version(Version(2, 14, 0), "rc16"), Version(2, 14, 0));
         CHECK(v1.size() == 1);
         auto v = v1.getMaxSatisfyingVersion({ "2.13.3", "2.14.0-rc16" });
         CHECK(v);

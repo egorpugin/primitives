@@ -6,6 +6,8 @@
 
 #include <primitives/version.h>
 
+#include <primitives/exceptions.h>
+
 #include <algorithm>
 #include <charconv>
 
@@ -26,8 +28,6 @@ bool Version::parse(Version &v, const std::string &s)
     Version::Number n; // number
     auto sb = p; // string begin
 
-    int i = 0;
-
     %%{
         machine Version;
 	    write data;
@@ -35,20 +35,9 @@ bool Version::parse(Version &v, const std::string &s)
         action SB { sb = p; }
         action OK { ok = p == pe; }
 
-        action ADD_EXTRA
-        {
-            primitives::version::detail::Number n;
-            if (auto [ptr, ec] = std::from_chars(sb, p, n); ptr == p && ec == std::errc())
-                v.extra.emplace_back(n);
-            else
-                v.extra.emplace_back(std::string{sb, p});
-        }
-
         action ADD_PART
         {
-            if (i >= v.numbers.size())
-                v.numbers.resize(v.numbers.size() + 1);
-            v.numbers[i++] = n;
+            v.numbers.push_back(n);
         }
 
         alpha_ = alpha | '_';
@@ -66,24 +55,24 @@ bool Version::parse(Version &v, const std::string &s)
         # limit was disabled
         basic_version = number_version_part ('.' number_version_part)*;
 
-        extra_part = alnum_+ >SB %ADD_EXTRA;
-        extra = extra_part ('.' extra_part)*;
-        version = basic_version ('-' extra)?;
-
         branch = (alpha_ (alnum_ | '-')*) >SB %{ v.branch.assign(sb, p); };
 
-        main := (version | branch) %OK;
+        main := (basic_version | branch) %OK;
 
 		write init;
 		write exec;
     }%%
 
-    v.setFirstVersion();
+    //SW_UNIMPLEMENTED;
+    //v.setFirstVersion();
 
     return ok;
 }
 
-bool Version::parseExtra(Version &v, const std::string &s)
+namespace detail
+{
+
+bool Extra::parse(const std::string &s)
 {
     if (s.size() > 8192)
         return false;
@@ -105,14 +94,11 @@ bool Version::parseExtra(Version &v, const std::string &s)
 
         action ADD_EXTRA
         {
-            try
-            {
-                v.extra.emplace_back(std::stoll(std::string{sb, p}));
-            }
-            catch (...)
-            {
-                v.extra.emplace_back(std::string{sb, p});
-            }
+            primitives::version::detail::Number n;
+            if (auto [ptr, ec] = std::from_chars(sb, p, n); ptr == p && ec == std::errc())
+                value.emplace_back(n);
+            else
+                value.emplace_back(std::string{sb, p});
         }
 
         alnum_ = alnum | '_';
@@ -130,4 +116,6 @@ bool Version::parseExtra(Version &v, const std::string &s)
     return ok;
 }
 
-}
+} // namespace detail
+
+} // namespace primitives::version

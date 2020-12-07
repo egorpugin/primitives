@@ -26,6 +26,13 @@ static void throw_bad_version_extra(const std::string &s)
 namespace primitives::version
 {
 
+static auto checkAndNormalizeLevel(Version::Level in, Version::Level minimum_level)
+{
+    if (in <= 0)
+        throw SW_RUNTIME_ERROR("Bad version level (<= 0): " + std::to_string(in));
+    return std::max(in, minimum_level);
+}
+
 namespace detail
 {
 
@@ -39,36 +46,70 @@ std::string preprocess_input(const std::string &in)
     return pystring::lower(preprocess_input(in));
 }*/
 
+Extra::Extra(const char *s)
+{
+    if (!s)
+        throw SW_RUNTIME_ERROR("Empty extra");
+    *this = std::string{ s };
+}
+
+Extra::Extra(const std::string &s)
+{
+    if (s.empty())
+        throw SW_RUNTIME_ERROR("Empty extra");
+    if (!parse(detail::preprocess_input(s)))
+        throw_bad_version_extra(s);
+}
+
 bool Extra::operator<(const Extra &rhs) const
 {
     // this one is tricky
     // 1.2.3.rc1 is less than 1.2.3!
-    if (empty() && rhs.empty())
+    if (value.empty() && rhs.value.empty())
         return false;
-    if (rhs.empty())
+    if (rhs.value.empty())
         return true;
-    if (empty())
+    if (value.empty())
         return false;
-    return (Base&)*this < (Base&)rhs;
+    return value < rhs.value;
 }
 
-}
-
-GenericNumericVersion::GenericNumericVersion()
+std::string Extra::print() const
 {
-    numbers.resize(minimum_level - 1);
-    numbers.push_back(1);
+    std::string s;
+    for (auto &e : value)
+    {
+        switch (e.index())
+        {
+        case 0:
+            s += std::get<std::string>(e) + ".";
+            break;
+        case 1:
+            s += std::to_string(std::get<Number>(e)) + ".";
+            break;
+        }
+    }
+    if (!s.empty())
+        s.resize(s.size() - 1);
+    return s;
 }
 
-GenericNumericVersion::GenericNumericVersion(const std::initializer_list<Number> &list, Level level)
+/*GenericNumericVersion::GenericNumericVersion()
+{
+    //numbers.resize(minimum_level - 1);
+    //numbers.push_back(1);
+}
+
+GenericNumericVersion::GenericNumericVersion(const std::initializer_list<Number> &list)
     : numbers(list)
 {
     if (std::any_of(numbers.begin(), numbers.end(), [](const auto &n) {return n < 0; }))
         throw SW_RUNTIME_ERROR("Version number cannot be less than 0");
-    auto l = checkAndNormalizeLevel(level);
-    if ((Level)numbers.size() < l)
-        numbers.resize(l);
-    setFirstVersion();
+    //SW_UNIMPLEMENTED;
+    //auto l = checkAndNormalizeLevel(level);
+    //if ((Level)numbers.size() < l)
+        //numbers.resize(l);
+    //setFirstVersion();
 }
 
 void GenericNumericVersion::fill(Number n)
@@ -78,10 +119,9 @@ void GenericNumericVersion::fill(Number n)
 
 GenericNumericVersion::Number GenericNumericVersion::get(Level level) const
 {
-    if ((Level)numbers.size() <= level)
+    if (level > getLevel())
         return 0;
-        //throw SW_RUNTIME_ERROR("There is no that much numbers");
-    return numbers[level];
+    return numbers[level - 1];
 }
 
 std::string GenericNumericVersion::printVersion() const
@@ -141,48 +181,53 @@ void GenericNumericVersion::setFirstVersion()
         numbers.back() = 1;
 }
 
-GenericNumericVersion::Level GenericNumericVersion::checkAndNormalizeLevel(Level in)
+size_t GenericNumericVersion::getHash() const
 {
-    if (in <= 0)
-        throw SW_RUNTIME_ERROR("Bad version level (<= 0): " + std::to_string(in));
-    return std::max(in, minimum_level);
-}
+    size_t h = 0;
+    for (auto &n : numbers)
+        hash_combine(h, n);
+    return h;
+}*/
 
-GenericNumericVersion::Number GenericNumericVersion::maxNumber()
-{
-    // currently set a limit up to 1 billion excluding
-    return 999'999'999;
-}
+} // namespace detail
 
 Version::Version()
 {
+    *this = min(getDefaultLevel());
 }
 
 Version::Version(const Version &v, const Extra &e)
     : Version(v)
 {
     extra = e;
+    checkVersion();
 }
 
-Version::Version(const Extra &e)
+/*Version::Version(const Extra &e)
     : Version()
 {
     extra = e;
-    checkExtra();
-}
+    checkVersion();
+}*/
 
 Version::Version(const std::string &s)
 {
-    numbers.clear();
-    numbers.resize(minimum_level);
+    //numbers.clear();
+    //numbers.resize(minimum_level);
 
-    if (!parse(*this, detail::preprocess_input(s)))
+    auto ps = detail::preprocess_input(s);
+    if (auto p = ps.find('-'); p != ps.npos)
+    {
+        auto es = ps.substr(p + 1);
+        extra = es;
+        ps = ps.substr(0, p);
+    }
+    if (!parse(*this, ps))
         throw_bad_version(s);
-    if (isBranch() && branch.size() > 200)
-        throw_bad_version(s + ", branch must have size <= 200");
+    checkVersion();
 }
 
-Version::Version(const std::string &v, const std::string &e)
+/*Version::Version(const std::string &v, const std::string &e)
     : Version(v + "-" + e)
 {
 }
@@ -192,69 +237,79 @@ Version::Version(const Version &version, const std::string &extra)
 {
     if (!parseExtra(*this, detail::preprocess_input(extra)))
         throw_bad_version_extra(extra);
-}
+    checkVersion();
+}*/
 
 Version::Version(const char *s)
-    : Version(std::string(s))
 {
+    if (!s)
+        throw SW_RUNTIME_ERROR("Empty string");
+    *this = std::string{ s };
+}
+
+Version::Version(const Numbers &l)
+    : numbers(l)
+{
+    checkVersion();
 }
 
 Version::Version(const std::initializer_list<Number> &l)
-    : GenericNumericVersion(l)
+    : numbers(l)
 {
+    checkVersion();
 }
 
 Version::Version(int ma)
-    : GenericNumericVersion({ ma })
+    : Version(Numbers{ ma })
 {
 }
 
 Version::Version(Number ma)
-    : GenericNumericVersion({ ma })
+    : Version(Numbers{ ma })
 {
 }
 
 Version::Version(Number ma, Number mi)
-    : GenericNumericVersion({ ma, mi })
+    : Version(Numbers{ ma, mi })
 {
 }
 
 Version::Version(Number ma, Number mi, Number pa)
-    : GenericNumericVersion({ ma, mi, pa })
+    : Version(Numbers{ ma, mi, pa })
 {
 }
 
 Version::Version(Number ma, Number mi, Number pa, Number tw)
-    : GenericNumericVersion({ ma, mi, pa, tw })
+    : Version(Numbers{ ma, mi, pa, tw })
 {
 }
 
-Version::Version(Number ma, const Extra &e)
+/*Version::Version(Number ma, const Extra &e)
     : Version(ma)
 {
     extra = e;
-    checkExtra();
+    checkVersion();
 }
 
 Version::Version(Number ma, Number mi, const Extra &e)
     : Version(ma, mi)
 {
     extra = e;
-    checkExtra();
+    checkVersion();
 }
 
 Version::Version(Number ma, Number mi, Number pa, const Extra &e)
     : Version(ma, mi, pa)
 {
     extra = e;
-    checkExtra();
+    checkVersion();
 }
 
 Version::Version(Number ma, Number mi, Number pa, Number tw, const Extra &e)
     : Version(ma, mi, pa, tw)
 {
     extra = e;
-    checkExtra();
+    checkVersion();
 }
 
 Version::Version(Number ma, const std::string &e)
@@ -283,26 +338,46 @@ Version::Version(Number ma, Number mi, Number pa, Number tw, const std::string &
 {
     if (!parseExtra(*this, detail::preprocess_input(e)))
         throw_bad_version_extra(e);
+}*/
+
+void Version::checkVersion() const
+{
+    if (isBranch() && branch.size() > 200)
+        throw_bad_version(branch + ", branch must have size <= 200");
+    //checkExtra();
+}
+
+void Version::checkNumber() const
+{
+    if (isBranch())
+        throw SW_RUNTIME_ERROR("Version is a branch");
+}
+
+Version::Number Version::get(Level level) const
+{
+    if (level > getLevel())
+        return 0;
+    return numbers[level - 1];
 }
 
 Version::Number Version::getMajor() const
 {
-    return get(0);
+    return get(1);
 }
 
 Version::Number Version::getMinor() const
 {
-    return get(1);
+    return get(2);
 }
 
 Version::Number Version::getPatch() const
 {
-    return get(2);
+    return get(3);
 }
 
 Version::Number Version::getTweak() const
 {
-    return get(3);
+    return get(4);
 }
 
 Version::Extra &Version::getExtra()
@@ -320,6 +395,20 @@ std::string Version::getBranch() const
     return branch;
 }
 
+std::string Version::printVersion(const String &delimeter, Level level) const
+{
+    std::string s;
+    Level i = 0;
+    auto until = std::min(level, (Level)numbers.size());
+    for (; i < until; i++)
+        s += std::to_string(numbers[i]) + delimeter;
+    for (; i < level; i++)
+        s += std::to_string(0) + delimeter;
+    if (!s.empty())
+        s.resize(s.size() - delimeter.size());
+    return s;
+}
+
 std::string Version::toString() const
 {
     return toString(std::string("."));
@@ -332,7 +421,7 @@ std::string Version::toString(Level level) const
 
 std::string Version::toString(const std::string &delimeter) const
 {
-    return toString(delimeter, (Level)numbers.size());
+    return toString(delimeter, getLevel());
 }
 
 std::string Version::toString(const String &delimeter, Level level) const
@@ -342,18 +431,18 @@ std::string Version::toString(const String &delimeter, Level level) const
 
     auto s = printVersion(delimeter, level);
     if (!extra.empty())
-        s += "-" + printExtra();
+        s += "-" + extra.print();
     return s;
 }
 
 std::string Version::toString(const Version &v) const
 {
-    return toString((Level)v.numbers.size());
+    return toString(v.getLevel());
 }
 
 std::string Version::toString(const String &delimeter, const Version &v) const
 {
-    return toString(delimeter, (Level)v.numbers.size());
+    return toString(delimeter, v.getLevel());
 }
 
 size_t Version::getHash() const
@@ -366,29 +455,10 @@ size_t Version::getHash() const
     return h;
 }
 
-std::string Version::printExtra() const
-{
-    std::string s;
-    for (auto &e : extra)
-    {
-        switch (e.index())
-        {
-        case 0:
-            s += std::get<std::string>(e) + ".";
-            break;
-        case 1:
-            s += std::to_string(std::get<Number>(e)) + ".";
-            break;
-        }
-    }
-    if (!s.empty())
-        s.resize(s.size() - 1);
-    return s;
-}
-
 void Version::checkExtra() const
 {
-    Version v;
+    SW_UNIMPLEMENTED;
+    /*Version v;
     auto c = std::any_of(extra.begin(), extra.end(),
         [&v](const auto &e)
     {
@@ -397,7 +467,7 @@ void Version::checkExtra() const
         return !parseExtra(v, std::get<std::string>(e));
     });
     if (c || v.extra != extra)
-        throw_bad_version(toString());
+        throw_bad_version(toString());*/
 }
 
 bool Version::isBranch() const
@@ -443,7 +513,7 @@ Version::Level Version::getMatchingLevel(const Version &v) const
 template <class F>
 bool Version::cmp(const Version &v1, const Version &v2, F f)
 {
-    if (v1.numbers.size() != v2.numbers.size())
+    if (v1.getLevel() != v2.getLevel())
     {
         auto v3 = v1;
         auto v4 = v2;
@@ -455,39 +525,33 @@ bool Version::cmp(const Version &v1, const Version &v2, F f)
     return f(std::tie(v1.numbers, v1.extra), std::tie(v2.numbers, v2.extra));
 }
 
+#define BRANCH_COMPARE(op)              \
+    if (isBranch() && rhs.isBranch())   \
+        return branch op rhs.branch;    \
+    if (isBranch() || rhs.isBranch())   \
+        return !(branch op rhs.branch)
+
 bool Version::operator<(const Version &rhs) const
 {
-    if (isBranch() && rhs.isBranch())
-        return branch < rhs.branch;
-    if (isBranch() || rhs.isBranch())
-        return !(branch < rhs.branch);
+    BRANCH_COMPARE(<);
     return cmp(*this, rhs, std::less<decltype(std::tie(numbers, extra))>());
 }
 
 bool Version::operator>(const Version &rhs) const
 {
-    if (isBranch() && rhs.isBranch())
-        return branch > rhs.branch;
-    if (isBranch() || rhs.isBranch())
-        return !(branch > rhs.branch);
+    BRANCH_COMPARE(>);
     return cmp(*this, rhs, std::greater<decltype(std::tie(numbers, extra))>());
 }
 
 bool Version::operator<=(const Version &rhs) const
 {
-    if (isBranch() && rhs.isBranch())
-        return branch <= rhs.branch;
-    if (isBranch() || rhs.isBranch())
-        return !(branch <= rhs.branch);
+    BRANCH_COMPARE(<=);
     return cmp(*this, rhs, std::less_equal<decltype(std::tie(numbers, extra))>());
 }
 
 bool Version::operator>=(const Version &rhs) const
 {
-    if (isBranch() && rhs.isBranch())
-        return branch >= rhs.branch;
-    if (isBranch() || rhs.isBranch())
-        return !(branch >= rhs.branch);
+    BRANCH_COMPARE(>=);
     return cmp(*this, rhs, std::greater_equal<decltype(std::tie(numbers, extra))>());
 }
 
@@ -531,34 +595,50 @@ Version Version::operator--(int)
 
 Version Version::min(Level level)
 {
-    level = checkAndNormalizeLevel(level);
+    level = checkAndNormalizeLevel(level, getDefaultLevel());
 
-    Version v;
+    Version v{1}; // hack: init with just some random stuff to prevent recursive calls
     v.numbers.clear();
     v.numbers.resize(level - 1);
     v.numbers.push_back(1);
     return v;
 }
 
-Version Version::min(const Version &v)
+/*Version Version::min(const Version &v)
 {
     return min(v.getLevel());
-}
+}*/
 
 Version Version::max(Level level)
 {
-    level = checkAndNormalizeLevel(level);
+    level = checkAndNormalizeLevel(level, getDefaultLevel());
 
     Version v;
     v.numbers.clear();
-    v.numbers.resize(level);
-    v.fill(maxNumber());
+    v.numbers.resize(level, maxNumber());
     return v;
 }
 
-Version Version::max(const Version &v)
+/*Version Version::max(const Version &v)
 {
     return max(v.getLevel());
+}*/
+
+Version::Level Version::getDefaultLevel()
+{
+    return 3;
+}
+
+Version::Number Version::maxNumber()
+{
+    // currently set a limit up to 1 billion excluding
+    return 999'999'999;
+}
+
+Version::Level Version::getLevel() const
+{
+    checkNumber();
+    return (Level)numbers.size();
 }
 
 void Version::decrementVersion()
@@ -583,11 +663,13 @@ Version Version::getPreviousVersion() const
 
 void Version::decrementVersion(Level l)
 {
-    if (*this == min(*this))
+    checkNumber();
+
+    if (*this == min(getLevel()))
         return;
 
     if (l > getLevel())
-        setLevel(l);
+        numbers.resize(l);
     auto current = &numbers[l - 1];
     while (*current == 0)
         *current-- = maxNumber();
@@ -596,11 +678,13 @@ void Version::decrementVersion(Level l)
 
 void Version::incrementVersion(Level l)
 {
-    if (*this == max(*this))
+    checkNumber();
+
+    if (*this == max(getLevel()))
         return;
 
     if (l > getLevel())
-        setLevel(l);
+        numbers.resize(l);
     auto current = &numbers[l - 1];
     while (*current == maxNumber())
         *current-- = 0;
@@ -664,13 +748,13 @@ void Version::format(std::string &s) const
 
     auto get_optional_number = [this](Level level) -> std::optional<Number>
     {
-        if (level > (Level)numbers.size())
+        if (level > getLevel())
             return {};
 
         level--;
 
         bool has_number = false;
-        auto sz = (Level)numbers.size();
+        auto sz = getLevel();
         for (auto i = sz - 1; i >= level; i--)
         {
             if (numbers[i] == 0)
@@ -772,7 +856,7 @@ void Version::format(std::string &s) const
         ARG(tlo),
 
         //
-        fmt::arg("e", printExtra()),
+        fmt::arg("e", extra.print()),
         fmt::arg("b", branch),
         fmt::arg("v", toString()),
         fmt::arg("Mm", toString(2)) // equals to {M}.{m}

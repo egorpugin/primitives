@@ -13,53 +13,75 @@
 #include <algorithm>
 #include <map>
 
+const primitives::version::Version::Level minimum_level = 3;
+
 primitives::version::Version prepare_version(
     primitives::version::Version &ver, primitives::version::Version::Number fill_value = 0,
-    primitives::version::Version::Level level = primitives::version:: Version::minimum_level);
+    primitives::version::Version::Level level = minimum_level);
 
 namespace primitives::version
 {
 
-detail::RangePair::RangePair(const Version &l, const Version &r)
+detail::RangePair::RangePair(const Version &v1, bool strong_relation1, const Version &v2, bool strong_relation2)
+    : first{ v1, strong_relation1 }, second{ v2,strong_relation2 }
 {
-    if (l.isBranch() ^ r.isBranch())
+    if (getFirst().isBranch() ^ getSecond().isBranch())
         throw SW_RUNTIME_ERROR("Both versions must be either versions or branches");
-    if (l > r)
-        throw SW_RUNTIME_ERROR("Left version must be <= than right: " + l.toString() + " > " + r.toString());
-
-    first = l;
-    second = r;
+    if (getFirst() > getSecond())
+        throw SW_RUNTIME_ERROR("Left version must be <= than right: " + getFirst().toString() + " > " + getSecond().toString());
 
     // prepare pair
-    auto level = std::max(first.getLevel(), second.getLevel());
-    prepare_version(first, 0, level);
-    if (first < Version::min(level))
+    SW_UNIMPLEMENTED;
+    /*auto level = std::max(getFirst().getLevel(), getSecond().getLevel());
+
+    //
+    prepare_version(first.v, 0, level);
+    if (getFirst() < Version::min(level))
     {
         // keep extra for first
-        auto e = first.extra;
-        first = Version::min(level);
-        first.extra = e;
+        auto e = getFirst().extra;
+        first.v = Version::min(level);
+        first.v.extra = e;
     }
-    prepare_version(second, Version::maxNumber(), level);
-    if (second > Version::max(level))
+
+    //
+    prepare_version(second.v, Version::maxNumber(), level);
+    if (getSecond() > Version::max(level))
     {
         // but not second?
-        second = Version::max(level);
-    }
+        second.v = Version::max(level);
+    }*/
+}
+
+bool detail::operator<(const RangePair::Side &lhs, const Version &rhs)
+{
+    if (lhs.strong_relation)
+        return lhs.v < rhs;
+    else
+        return lhs.v <= rhs;
+}
+
+bool detail::operator<(const Version &lhs, const RangePair::Side &rhs)
+{
+    if (rhs.strong_relation)
+        return lhs < rhs.v;
+    else
+        return lhs <= rhs.v;
 }
 
 bool detail::RangePair::contains(const Version &v) const
 {
     //if (v.getLevel() > std::max(first.getLevel(), second.getLevel()))
     //return false;
-    return first <= v && v <= second;
+    SW_UNIMPLEMENTED;
+    //return first < v && v < second;
 }
 
 bool detail::RangePair::contains(const RangePair &v) const
 {
     // unused for now
     SW_UNIMPLEMENTED;
-    return first <= v.first && v.second <= second;
+    //return first <= v.first && v.second <= second;
 }
 
 std::optional<detail::RangePair> detail::RangePair::operator&(const detail::RangePair &rhs) const
@@ -68,69 +90,71 @@ std::optional<detail::RangePair> detail::RangePair::operator&(const detail::Rang
         return *this;
     if (rhs.isBranch())
         return rhs;
-    auto f = std::max(first, rhs.first);
-    auto s = std::min(second, rhs.second);
+    auto f = std::max(getFirst(), rhs.getFirst());
+    auto s = std::min(getSecond(), rhs.getSecond());
     if (f > s)
         return {};
-    return detail::RangePair(f, s);
+    SW_UNIMPLEMENTED;
+    //return detail::RangePair(f, s);
 }
 
 std::string detail::RangePair::toString(VersionRangePairStringRepresentationType t) const
 {
-    if (first.isBranch())
-        return first.toString();
-    if (second.isBranch())
-        return second.toString();
+    if (getFirst().isBranch())
+        return getFirst().toString();
+    if (getSecond().isBranch())
+        return getSecond().toString();
 
-    auto level = std::max(first.getLevel(), second.getLevel());
+    SW_UNIMPLEMENTED;
+    /*auto level = std::max(getFirst().getLevel(), getSecond().getLevel());
     if (t == VersionRangePairStringRepresentationType::SameRealLevel)
-        level = std::max(first.getRealLevel(), second.getRealLevel());
-    if (first == second)
+        level = std::max(getFirst().getRealLevel(), getSecond().getRealLevel());
+    if (getFirst() == getSecond())
     {
         if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
-            return first.toString(first.getRealLevel());
+            return getFirst().toString(getFirst().getRealLevel());
         else
-            return first.toString(level);
+            return getFirst().toString(level);
     }
     std::string s;
-    if (first != Version::min(first))
+    if (getFirst() != Version::min(getFirst()))
     {
         s += ">=";
         if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
-            s += first.toString(first.getRealLevel());
+            s += getFirst().toString(getFirst().getRealLevel());
         else
-            s += first.toString(level);
+            s += getFirst().toString(level);
     }
     // reconsider?
     // probably wrong now: 1.MAX.3
-    if (std::any_of(second.numbers.begin(), second.numbers.end(),
+    if (std::any_of(getSecond().numbers.begin(), getSecond().numbers.end(),
         [](const auto &n) {return n == Version::maxNumber(); }))
     {
-        if (second == Version::max(second))
+        if (getSecond() == Version::max(getSecond()))
         {
             if (s.empty())
                 return "*";
             return s;
         }
-        if (second.getPatch() == Version::maxNumber() ||
-            second.getTweak() == Version::maxNumber())
+        if (getSecond().getPatch() == Version::maxNumber() ||
+            getSecond().getTweak() == Version::maxNumber())
         {
             if (!s.empty())
                 s += " ";
             if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
             {
-                auto nv = second.getNextVersion(second.getRealLevel());
+                auto nv = getSecond().getNextVersion(getSecond().getRealLevel());
                 return s + "<" + nv.toString(nv.getRealLevel());
             }
-            auto nv = second.getNextVersion(level);
+            auto nv = getSecond().getNextVersion(level);
             if (t == VersionRangePairStringRepresentationType::SameRealLevel)
             {
-                level = std::max(first.getRealLevel(), nv.getRealLevel());
+                level = std::max(getFirst().getRealLevel(), nv.getRealLevel());
                 s.clear();
-                if (first != Version::min(first))
+                if (getFirst() != Version::min(getFirst()))
                 {
                     s += ">=";
-                    s += first.toString(level);
+                    s += getFirst().toString(level);
                     if (!s.empty())
                         s += " ";
                 }
@@ -141,33 +165,33 @@ std::string detail::RangePair::toString(VersionRangePairStringRepresentationType
     if (!s.empty())
         s += " ";
     if (t == VersionRangePairStringRepresentationType::IndividualRealLevel)
-        return s + "<=" + second.toString(second.getRealLevel());
+        return s + "<=" + getSecond().toString(getSecond().getRealLevel());
     else
-        return s + "<=" + second.toString(level);
+        return s + "<=" + getSecond().toString(level);*/
 }
 
 std::optional<Version> detail::RangePair::toVersion() const
 {
-    if (first != second)
+    if (getFirst() != getSecond())
         return {};
-    return first;
+    return getFirst();
 }
 
 size_t detail::RangePair::getHash() const
 {
     size_t h = 0;
-    hash_combine(h, first.getHash());
-    hash_combine(h, second.getHash());
+    hash_combine(h, getFirst().getHash());
+    hash_combine(h, getSecond().getHash());
     return h;
 }
 
 bool detail::RangePair::isBranch() const
 {
-    return first.isBranch() || second.isBranch();
+    return getFirst().isBranch() || getSecond().isBranch();
 }
 
 VersionRange::VersionRange()
-    : VersionRange(Version::minimum_level)
+    : VersionRange(minimum_level)
 {
 }
 
@@ -195,16 +219,19 @@ VersionRange::VersionRange(const Version &v1, const Version &v2)
         throw SW_RUNTIME_ERROR("Cannot initialize version range from branch and non-branch versions");
     }
     if (v1 > v2)
-        range.emplace_back(v2, v1);
+        SW_UNIMPLEMENTED;
+        //range.emplace_back(v2, v1);
     else
-        range.emplace_back(v1, v2);
+        SW_UNIMPLEMENTED;
+        //range.emplace_back(v1, v2);
 }
 
 VersionRange::VersionRange(const std::string &s)
 {
     auto in = detail::preprocess_input(s);
     if (in.empty())
-        range.emplace_back(Version::min(), Version::max());
+        SW_UNIMPLEMENTED;
+        //range.emplace_back(Version::min(), Version::max());
     else if (auto r = parse(*this, in); r)
         throw SW_RUNTIME_ERROR("Invalid version range: " + in + ", error: " + r.value());
 }
@@ -240,7 +267,8 @@ std::optional<VersionRange> VersionRange::parse(const std::string &s)
     VersionRange vr;
     auto in = detail::preprocess_input(s);
     if (in.empty())
-        vr.range.emplace_back(Version::min(), Version::max());
+        SW_UNIMPLEMENTED;
+        //vr.range.emplace_back(Version::min(), Version::max());
     else if (auto r = parse(vr, in); r)
         return {};
     return vr;
@@ -254,11 +282,6 @@ size_t VersionRange::size() const
 bool VersionRange::isEmpty() const
 {
     return range.empty() && !isBranch();
-}
-
-bool VersionRange::isOutside(const Version &v) const
-{
-    return *this < v || *this > v;
 }
 
 VersionRange VersionRange::empty()
@@ -336,26 +359,27 @@ std::string VersionRange::toStringV1() const
     if (isBranch())
         return branch;
 
-    if (range[0].first == Version::min() && range[0].second == Version::max())
+    SW_UNIMPLEMENTED;
+    /*if (range[0].getFirst() == Version::min() && range[0].getSecond() == Version::max())
         return "*"; // one star in v1!
 
     GenericNumericVersion::Numbers n;
     if (!(
-        ((range[0].first == Version::min() && range[0].first.numbers[2] == 1) ||
-        (range[0].first != Version::min() && range[0].first.numbers[2] == 0))
-        && range[0].second.numbers[2] == Version::maxNumber()))
+        ((range[0].getFirst() == Version::min() && range[0].getFirst().numbers[2] == 1) ||
+        (range[0].getFirst() != Version::min() && range[0].getFirst().numbers[2] == 0))
+        && range[0].getSecond().numbers[2] == Version::maxNumber()))
     {
-        n.push_back(range[0].first.numbers[2]);
+        n.push_back(range[0].getFirst().numbers[2]);
     }
     for (int i = 1; i >= 0; i--)
     {
-        if (!(range[0].first.numbers[i] == 0 && range[0].second.numbers[i] == Version::maxNumber()))
-            n.push_back(range[0].first.numbers[i]);
+        if (!(range[0].getFirst().numbers[i] == 0 && range[0].getSecond().numbers[i] == Version::maxNumber()))
+            n.push_back(range[0].getFirst().numbers[i]);
     }
     std::reverse(n.begin(), n.end());
     Version v;
     v.numbers = n;
-    return v.toString();
+    return v.toString();*/
 }
 
 size_t VersionRange::getHash() const
@@ -381,12 +405,14 @@ bool VersionRange::operator<(const VersionRange &rhs) const
         return false;
     if (range.empty())
         return true;
-    return range < rhs.range;
+    SW_UNIMPLEMENTED;
+    //return range < rhs.range;
 }
 
 bool VersionRange::operator==(const VersionRange &rhs) const
 {
-    return range == rhs.range && branch == rhs.branch;
+    SW_UNIMPLEMENTED;
+    //return range == rhs.range && branch == rhs.branch;
 }
 
 bool VersionRange::operator!=(const VersionRange &rhs) const
@@ -418,15 +444,15 @@ VersionRange &VersionRange::operator|=(const detail::RangePair &rhs)
         if (!added)
         {
             // skip add, p is greater
-            if (i->second < rhs.first)
+            if (i->getSecond() < rhs.getFirst())
             {
                 // but if it is greater only on 1, we merge intervals
-                auto v = i->second;
-                if (++v == rhs.first)
+                auto v = i->getSecond();
+                if (++v == rhs.getFirst())
                     goto merge;
             }
             // insert as is
-            else if (i->first > rhs.second)
+            else if (i->getFirst() > rhs.getSecond())
             {
                 i = range.insert(i, rhs);
                 break; // no further merges requires
@@ -435,8 +461,9 @@ VersionRange &VersionRange::operator|=(const detail::RangePair &rhs)
             else
             {
             merge:
-                i->first = std::min(i->first, rhs.first);
-                i->second = std::max(i->second, rhs.second);
+                SW_UNIMPLEMENTED;
+                //i->getFirst() = std::min(i->getFirst(), rhs.getFirst());
+                //i->getSecond() = std::max(i->getSecond(), rhs.getSecond());
                 added = true;
             }
         }
@@ -444,11 +471,12 @@ VersionRange &VersionRange::operator|=(const detail::RangePair &rhs)
         {
             // after merging with existing entry we must ensure that
             // following intervals do not require merges too
-            if ((i - 1)->second < i->first)
+            if ((i - 1)->getSecond() < i->getFirst())
                 break;
             else
             {
-                (i - 1)->second = std::max((i - 1)->second, i->second);
+                SW_UNIMPLEMENTED;
+                //(i - 1)->getSecond() = std::max((i - 1)->getSecond(), i->getSecond());
                 i = range.erase(i) - 1;
             }
         }
@@ -478,10 +506,11 @@ VersionRange &VersionRange::operator&=(const detail::RangePair &rhs)
     auto rp = rhs;
     for (auto i = range.begin(); i < range.end(); i++)
     {
-        rp.first = std::max(i->first, rp.first);
-        rp.second = std::min(i->second, rp.second);
+        SW_UNIMPLEMENTED;
+        //rp.getFirst() = std::max(i->getFirst(), rp.getFirst());
+        //rp.getSecond() = std::min(i->getSecond(), rp.getSecond());
 
-        if (rp.first > rp.second)
+        if (rp.getFirst() > rp.getSecond())
         {
             range.clear();
             return *this;
@@ -557,13 +586,13 @@ VersionRange VersionRange::operator&(const VersionRange &rhs) const
     return tmp;
 }*/
 
-bool operator<(const VersionRange &r, const Version &v)
+/*bool operator<(const VersionRange &r, const Version &v)
 {
     if (r.isEmpty())
         return false;
     if (r.isBranch())
         return Version(r.branch) < v;
-    return r.range.back().second < v;
+    return r.range.back().getSecond() < v;
 }
 
 bool operator<(const Version &v, const VersionRange &r)
@@ -572,7 +601,7 @@ bool operator<(const Version &v, const VersionRange &r)
         return false;
     if (r.isBranch())
         return v < Version(r.branch);
-    return v < r.range.front().first;
+    return v < r.range.front().getFirst();
 }
 
 bool operator>(const VersionRange &r, const Version &v)
@@ -581,7 +610,7 @@ bool operator>(const VersionRange &r, const Version &v)
         return false;
     if (r.isBranch())
         return Version(r.branch) > v;
-    return r.range.front().first > v;
+    return r.range.front().getFirst() > v;
 }
 
 bool operator>(const Version &v, const VersionRange &r)
@@ -590,8 +619,8 @@ bool operator>(const Version &v, const VersionRange &r)
         return false;
     if (r.isBranch())
         return v > Version(r.branch);
-    return v > r.range.back().second;
-}
+    return v > r.range.back().getSecond();
+}*/
 
 std::optional<Version> VersionRange::getMinSatisfyingVersion(const std::set<Version> &s) const
 {

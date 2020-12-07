@@ -23,6 +23,45 @@ std::string preprocess_input(const std::string &);
 
 using Number = int64_t;
 
+//template <3>?
+/*struct PRIMITIVES_VERSION_API GenericNumericVersion
+{
+    using Number = detail::Number;
+    using Numbers = std::vector<Number>;
+
+    // level is indexed starting from 1
+    using Level = int;
+
+    GenericNumericVersion();
+    explicit GenericNumericVersion(const std::initializer_list<Number> &);
+
+    Level getLevel() const;
+    // non null level
+    Level getRealLevel() const;
+
+    Number &operator[](int i) { return numbers[i]; }
+    Number operator[](int i) const { return numbers[i]; }
+
+    size_t getHash() const;
+
+    //static Level checkAndNormalizeLevel(Level);
+
+#ifndef HAVE_BISON_RANGE_PARSER
+protected:
+#endif
+
+    // data
+
+    std::string printVersion() const;
+    std::string printVersion(Level level) const;
+    std::string printVersion(const std::string &delimeter) const;
+    std::string printVersion(const std::string &delimeter, Level level) const;
+    Number get(Level level) const;
+    void setLevel(Level level, Number fill = 0);
+    void setFirstVersion();
+    void fill(Number);
+};*/
+
 template <class ... Args>
 struct comparable_variant : std::variant<Args...>
 {
@@ -45,89 +84,73 @@ struct comparable_variant : std::variant<Args...>
 // TODO: add any extra (non-release)
 // maybe special '*' sign
 // e.g.: any non release is *-*
-struct Extra : std::vector<comparable_variant<std::string, Number/*, any flag */>>
+struct PRIMITIVES_VERSION_API Extra
 {
-    using Base = std::vector<comparable_variant<std::string, Number>>;
+    Extra() = default;
+    Extra(const char *);
+    Extra(const std::string &);
 
     bool operator<(const Extra &) const;
+    bool operator==(const Extra &rhs) const { return value == rhs.value; }
+    bool operator!=(const Extra &rhs) const { return value != rhs.value; }
+
+    auto &operator[](int i) { return value[i]; }
+    const auto &operator[](int i) const { return value[i]; }
+
+    bool empty() const { return value.empty(); }
+
+    std::string print() const;
+
+private:
+    std::vector<comparable_variant<std::string, Number/*, any flag */>> value;
+
+    bool parse(const std::string &s);
 };
 
 }
 
-//template <3>
-struct PRIMITIVES_VERSION_API GenericNumericVersion
+struct PRIMITIVES_VERSION_API Version
 {
     using Number = detail::Number;
     using Numbers = std::vector<Number>;
-
-    // level is indexed starting from 1
+    //using GenericNumericVersion = detail::GenericNumericVersion;
     using Level = int;
-
-    GenericNumericVersion();
-    explicit GenericNumericVersion(const std::initializer_list<Number> &, Level level = minimum_level);
-
-    Level getLevel() const;
-    Level getRealLevel() const;
-
-    Number &operator[](int i) { return numbers[i]; }
-    Number operator[](int i) const { return numbers[i]; }
-
-    static inline const Level minimum_level = 3;
-    static Level checkAndNormalizeLevel(Level);
-    static Number maxNumber();
-
-#ifndef HAVE_BISON_RANGE_PARSER
-protected:
-#endif
-
-    // data
-    Numbers numbers;
-
-    std::string printVersion() const;
-    std::string printVersion(Level level = minimum_level) const;
-    std::string printVersion(const std::string &delimeter) const;
-    std::string printVersion(const std::string &delimeter, Level level) const;
-    Number get(Level level) const;
-    void setLevel(Level level, Number fill = 0);
-    void setFirstVersion();
-    void fill(Number);
-};
-
-struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
-{
     using Extra = detail::Extra;
 
     /// default is min()
     Version();
 
     /// default is min()
-    explicit Version(const Extra &);
+    //explicit Version(const Extra &);
 
     /// construct from other version and extra
     Version(const Version &, const Extra &);
 
-    /// construct from other version and extra
-    Version(const Version &version, const std::string &extra);
-
-    /// parse from string
-    Version(const std::string &version); // no explicit
-
-    /// parse from string + extra string
-    Version(const std::string &version, const std::string &extra);
+    /// construct from other version and string extra
+    //Version(const Version &version, const std::string &extra);
 
     /// parse from raw string
     Version(const char *); // no explicit
 
+    /// parse from string
+    Version(const std::string &); // no explicit
+
+    /// parse from string + extra string
+    //Version(const std::string &version, const std::string &extra);
+
+    /// from vector
+    Version(const Numbers &); // no explicit
+    /// from initializer_list
     Version(const std::initializer_list<Number> &); // no explicit
 
-    explicit Version(int ma);
-    explicit Version(Number ma);
+    Version(int ma);
+    Version(Number ma);
     Version(Number ma, Number mi);
     Version(Number ma, Number mi, Number pa);
     Version(Number ma, Number mi, Number pa, Number tw);
 
     // prepared extra
-    Version(Number ma, const Extra &e);
+    /*Version(Number ma, const Extra &e);
     Version(Number ma, Number mi, const Extra &e);
     Version(Number ma, Number mi, Number pa, const Extra &e);
     Version(Number ma, Number mi, Number pa, Number tw, const Extra &e);
@@ -136,7 +159,7 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     Version(Number ma, const std::string &e);
     Version(Number ma, Number mi, const std::string &e);
     Version(Number ma, Number mi, Number pa, const std::string &e);
-    Version(Number ma, Number mi, Number pa, Number tw, const std::string &e);
+    Version(Number ma, Number mi, Number pa, Number tw, const std::string &e);*/
 
     // basic access
     Number getMajor() const;
@@ -147,6 +170,8 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     const Extra &getExtra() const;
     // return as const ref like extra?
     std::string getBranch() const;
+
+    Level getLevel() const;
 
     std::string toString() const;
     std::string toString(Level level) const;
@@ -159,13 +184,14 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
 
     // modificators
     void decrementVersion();
-    void incrementVersion();
-    Version getNextVersion() const;
-    Version getPreviousVersion() const;
-
     void decrementVersion(Level level);
+    void incrementVersion();
     void incrementVersion(Level level);
+
+    //
+    Version getNextVersion() const;
     Version getNextVersion(Level level) const;
+    Version getPreviousVersion() const;
     Version getPreviousVersion(Level level) const;
 
     /// format string
@@ -200,10 +226,12 @@ struct PRIMITIVES_VERSION_API Version : GenericNumericVersion
     // int compare()?
 
 public:
-    static Version min(Level level = minimum_level);
-    static Version min(const Version &v);
-    static Version max(Level level = minimum_level);
-    static Version max(const Version &v);
+    static Version min(Level level);
+    //static Version min(const Version &v);
+    static Version max(Level level);
+    //static Version max(const Version &v);
+    static Level getDefaultLevel();
+    static Number maxNumber();
 
     // TODO:
     /// extended version parsing, e.g. =v1.2
@@ -212,16 +240,20 @@ public:
 #ifndef HAVE_BISON_RANGE_PARSER
 private:
 #endif
-    Extra extra;
+    Numbers numbers;
     std::string branch;
+    Extra extra;
 
     /// version will be in an invalid state in case of errors
     static bool parse(Version &v, const std::string &s);
-    static bool parseExtra(Version &v, const std::string &s);
 
-    std::string printExtra() const;
-
+    //std::string printExtra() const;
     void checkExtra() const;
+    void checkNumber() const;
+    void checkVersion() const;
+
+    Number get(Level level) const;
+    std::string printVersion(const std::string &delimeter, Level level) const;
 
     template <class F>
     static bool cmp(const Version &v1, const Version &v2, F f);
