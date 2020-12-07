@@ -90,12 +90,11 @@ struct PRIMITIVES_VERSION_API VersionRange
     /// from one version
     VersionRange(const Version &);
 
-    /// from two versions
+    /// from two versions [from, to]
     VersionRange(const Version &from, const Version &to);
 
     /// parse from raw string
     VersionRange(const char *); // no explicit
-
     /// parse from string
     VersionRange(const std::string &); // no explicit
 

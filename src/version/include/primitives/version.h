@@ -113,30 +113,19 @@ struct PRIMITIVES_VERSION_API Version
 {
     using Number = detail::Number;
     using Numbers = std::vector<Number>;
-    //using GenericNumericVersion = detail::GenericNumericVersion;
     using Level = int;
     using Extra = detail::Extra;
 
     /// default is min()
     Version();
 
-    /// default is min()
-    //explicit Version(const Extra &);
-
     /// construct from other version and extra
     Version(const Version &, const Extra &);
 
-    /// construct from other version and string extra
-    //Version(const Version &version, const std::string &extra);
-
     /// parse from raw string
     Version(const char *); // no explicit
-
     /// parse from string
     Version(const std::string &); // no explicit
-
-    /// parse from string + extra string
-    //Version(const std::string &version, const std::string &extra);
 
     /// from vector
     Version(const Numbers &); // no explicit
@@ -148,18 +137,6 @@ struct PRIMITIVES_VERSION_API Version
     Version(Number ma, Number mi);
     Version(Number ma, Number mi, Number pa);
     Version(Number ma, Number mi, Number pa, Number tw);
-
-    // prepared extra
-    /*Version(Number ma, const Extra &e);
-    Version(Number ma, Number mi, const Extra &e);
-    Version(Number ma, Number mi, Number pa, const Extra &e);
-    Version(Number ma, Number mi, Number pa, Number tw, const Extra &e);
-
-    // parse extra
-    Version(Number ma, const std::string &e);
-    Version(Number ma, Number mi, const std::string &e);
-    Version(Number ma, Number mi, Number pa, const std::string &e);
-    Version(Number ma, Number mi, Number pa, Number tw, const std::string &e);*/
 
     // basic access
     Number getMajor() const;
@@ -241,16 +218,16 @@ public:
 private:
 #endif
     Numbers numbers;
-    std::string branch;
     Extra extra;
+    std::string branch;
 
     /// version will be in an invalid state in case of errors
     static bool parse(Version &v, const std::string &s);
 
-    //std::string printExtra() const;
-    void checkExtra() const;
     void checkNumber() const;
     void checkVersion() const;
+    void prepareAndCheckVersion();
+    void setFirstVersion();
 
     Number get(Level level) const;
     std::string printVersion(const std::string &delimeter, Level level) const;

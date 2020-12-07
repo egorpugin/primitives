@@ -207,23 +207,18 @@ VersionRange::VersionRange(const Version &v)
 
 VersionRange::VersionRange(const Version &v1, const Version &v2)
 {
-    if (v1.isBranch() && v2.isBranch())
+    if (v1.isBranch() ^ v2.isBranch())
+        throw SW_RUNTIME_ERROR("Cannot initialize version range from branch and non-branch versions");
+    if (v1.isBranch())
     {
         if (v1 != v2)
-            throw SW_RUNTIME_ERROR("Cannot initialize version range from two different versions");
+            throw SW_RUNTIME_ERROR("Cannot initialize version range from two different branches");
         branch = v1.toString();
         return;
     }
-    if (v1.isBranch() || v2.isBranch())
-    {
-        throw SW_RUNTIME_ERROR("Cannot initialize version range from branch and non-branch versions");
-    }
     if (v1 > v2)
-        SW_UNIMPLEMENTED;
-        //range.emplace_back(v2, v1);
-    else
-        SW_UNIMPLEMENTED;
-        //range.emplace_back(v1, v2);
+        throw SW_RUNTIME_ERROR("Cannot init range: l > r: " + v1.toString() + " > " + v2.toString());
+    range.emplace_back(v1, false, v2, false);
 }
 
 VersionRange::VersionRange(const std::string &s)

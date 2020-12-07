@@ -22,12 +22,12 @@ TEST_CASE("Checking versions", "[version]")
     CHECK_NOTHROW(Version("ab"));
     CHECK_NOTHROW(Version("abc123___"));
     CHECK_THROWS(Version("1abc123___"));
-    CHECK_THROWS(Version("abc123___-"));
-    CHECK_NOTHROW(Version("a-a"));
+    CHECK_THROWS(Version("abc123___-")); // empty extra
+    CHECK_THROWS(Version("a-a")); // extras on branches are not allowed
     CHECK_THROWS(Version("1..1"));
     CHECK_THROWS(Version("1.1-2..2"));
     CHECK_THROWS(Version("1.1-2-2"));
-    CHECK_THROWS(Version("1.1-"));
+    CHECK_THROWS(Version("1.1-")); // empty extra
     CHECK_THROWS(Version(""));
     CHECK_THROWS(Version("-"));
     CHECK_THROWS(Version("."));
@@ -654,7 +654,7 @@ TEST_CASE("Checking versions", "[version]")
 
     {
         CHECK(Version().format("{v}") == "0.0.1");
-        CHECK(Version().format("{b}") == "");
+        CHECK_THROWS(Version().format("{b}") == "");
         CHECK(Version().format("{e}") == "");
         CHECK(Version("1-e").format("{e}") == "e");
         CHECK(Version("1-e.2.3.4").format("{e}") == "e.2.3.4");

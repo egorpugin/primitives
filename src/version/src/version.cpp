@@ -200,15 +200,14 @@ Version::Version(const Version &v, const Extra &e)
     : Version(v)
 {
     extra = e;
-    checkVersion();
 }
 
-/*Version::Version(const Extra &e)
-    : Version()
+Version::Version(const char *s)
 {
-    extra = e;
-    checkVersion();
-}*/
+    if (!s)
+        throw SW_RUNTIME_ERROR("Empty string");
+    *this = std::string{ s };
+}
 
 Version::Version(const std::string &s)
 {
@@ -224,39 +223,19 @@ Version::Version(const std::string &s)
     }
     if (!parse(*this, ps))
         throw_bad_version(s);
-    checkVersion();
+
+    prepareAndCheckVersion();
 }
 
-/*Version::Version(const std::string &v, const std::string &e)
-    : Version(v + "-" + e)
+Version::Version(const std::initializer_list<Number> &l)
+    : Version(Numbers{ l })
 {
-}
-
-Version::Version(const Version &version, const std::string &extra)
-    : Version(version)
-{
-    if (!parseExtra(*this, detail::preprocess_input(extra)))
-        throw_bad_version_extra(extra);
-    checkVersion();
-}*/
-
-Version::Version(const char *s)
-{
-    if (!s)
-        throw SW_RUNTIME_ERROR("Empty string");
-    *this = std::string{ s };
 }
 
 Version::Version(const Numbers &l)
     : numbers(l)
 {
-    checkVersion();
-}
-
-Version::Version(const std::initializer_list<Number> &l)
-    : numbers(l)
-{
-    checkVersion();
+    prepareAndCheckVersion();
 }
 
 Version::Version(int ma)
@@ -284,73 +263,42 @@ Version::Version(Number ma, Number mi, Number pa, Number tw)
 {
 }
 
-/*Version::Version(Number ma, const Extra &e)
-    : Version(ma)
+void Version::prepareAndCheckVersion()
 {
-    extra = e;
+    setFirstVersion();
     checkVersion();
 }
-
-Version::Version(Number ma, Number mi, const Extra &e)
-    : Version(ma, mi)
-{
-    extra = e;
-    checkVersion();
-}
-
-Version::Version(Number ma, Number mi, Number pa, const Extra &e)
-    : Version(ma, mi, pa)
-{
-    extra = e;
-    checkVersion();
-}
-
-Version::Version(Number ma, Number mi, Number pa, Number tw, const Extra &e)
-    : Version(ma, mi, pa, tw)
-{
-    extra = e;
-    checkVersion();
-}
-
-Version::Version(Number ma, const std::string &e)
-    : Version(ma)
-{
-    if (!parseExtra(*this, detail::preprocess_input(e)))
-        throw_bad_version_extra(e);
-}
-
-Version::Version(Number ma, Number mi, const std::string &e)
-    : Version(ma, mi)
-{
-    if (!parseExtra(*this, detail::preprocess_input(e)))
-        throw_bad_version_extra(e);
-}
-
-Version::Version(Number ma, Number mi, Number pa, const std::string &e)
-    : Version(ma, mi, pa)
-{
-    if (!parseExtra(*this, detail::preprocess_input(e)))
-        throw_bad_version_extra(e);
-}
-
-Version::Version(Number ma, Number mi, Number pa, Number tw, const std::string &e)
-    : Version(ma, mi, pa, tw)
-{
-    if (!parseExtra(*this, detail::preprocess_input(e)))
-        throw_bad_version_extra(e);
-}*/
 
 void Version::checkVersion() const
 {
-    if (isBranch() && branch.size() > 200)
-        throw_bad_version(branch + ", branch must have size <= 200");
-    //checkExtra();
+    if (isBranch())
+    {
+        if (branch.size() > 200)
+            throw_bad_version(branch + ", branch must have size <= 200");
+        if (!extra.empty())
+            throw SW_RUNTIME_ERROR("Cannot set extra part on a branch");
+        return;
+    }
+
+    if (std::any_of(numbers.begin(), numbers.end(), [](const auto &n) {return n < 0; }))
+        throw SW_RUNTIME_ERROR("Version number cannot be less than 0");
+    if (std::all_of(numbers.begin(), numbers.end(), [](const auto &n) {return n == 0; }))
+        throw SW_RUNTIME_ERROR("Version number cannot be 0");
 }
 
 void Version::checkNumber() const
 {
     if (isBranch())
         throw SW_RUNTIME_ERROR("Version is a branch");
+}
+
+void Version::setFirstVersion()
+{
+    auto l = getDefaultLevel();
+    if (numbers.size() < l)
+        numbers.resize(l);
+    if (std::all_of(numbers.begin(), numbers.end(), [](const auto &n) {return n == 0; }))
+        numbers.back() = 1;
 }
 
 Version::Number Version::get(Level level) const
@@ -421,6 +369,9 @@ std::string Version::toString(Level level) const
 
 std::string Version::toString(const std::string &delimeter) const
 {
+    if (!branch.empty())
+        return branch;
+
     return toString(delimeter, getLevel());
 }
 
@@ -453,21 +404,6 @@ size_t Version::getHash() const
     for (auto &n : numbers)
         hash_combine(h, n);
     return h;
-}
-
-void Version::checkExtra() const
-{
-    SW_UNIMPLEMENTED;
-    /*Version v;
-    auto c = std::any_of(extra.begin(), extra.end(),
-        [&v](const auto &e)
-    {
-        if (std::holds_alternative<Number>(e))
-            return true;
-        return !parseExtra(v, std::get<std::string>(e));
-    });
-    if (c || v.extra != extra)
-        throw_bad_version(toString());*/
 }
 
 bool Version::isBranch() const
@@ -714,6 +650,16 @@ std::string Version::format(const std::string &s) const
 
 void Version::format(std::string &s) const
 {
+    if (isBranch())
+    {
+        s = fmt::format(s,
+            fmt::arg("e", extra.print()),
+            fmt::arg("b", branch),
+            fmt::arg("v", toString())
+        );
+        return;
+    }
+
     // TODO: optimize
 
     auto create_latin_replacements = [](Number n, char base = 'a')
@@ -857,7 +803,6 @@ void Version::format(std::string &s) const
 
         //
         fmt::arg("e", extra.print()),
-        fmt::arg("b", branch),
         fmt::arg("v", toString()),
         fmt::arg("Mm", toString(2)) // equals to {M}.{m}
         //,
