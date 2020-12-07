@@ -329,31 +329,6 @@ std::string VersionRange::toString(VersionRangePairStringRepresentationType t) c
     return s;
 }
 
-std::string VersionRange::toStringV1() const
-{
-    SW_UNIMPLEMENTED;
-    /*if (range[0].getFirst() == Version::min() && range[0].getSecond() == Version::max())
-        return "*"; // one star in v1!
-
-    GenericNumericVersion::Numbers n;
-    if (!(
-        ((range[0].getFirst() == Version::min() && range[0].getFirst().numbers[2] == 1) ||
-        (range[0].getFirst() != Version::min() && range[0].getFirst().numbers[2] == 0))
-        && range[0].getSecond().numbers[2] == Version::maxNumber()))
-    {
-        n.push_back(range[0].getFirst().numbers[2]);
-    }
-    for (int i = 1; i >= 0; i--)
-    {
-        if (!(range[0].getFirst().numbers[i] == 0 && range[0].getSecond().numbers[i] == Version::maxNumber()))
-            n.push_back(range[0].getFirst().numbers[i]);
-    }
-    std::reverse(n.begin(), n.end());
-    Version v;
-    v.numbers = n;
-    return v.toString();*/
-}
-
 size_t VersionRange::getHash() const
 {
     size_t h = 0;
@@ -418,8 +393,9 @@ VersionRange &VersionRange::operator|=(const detail::RangePair &rhs)
             {
                 // but if it is greater only on 1, we merge intervals
                 auto v = i->getSecond();
-                if (++v == rhs.getFirst())
-                    goto merge;
+                SW_UNIMPLEMENTED;
+                //if (++v == rhs.getFirst())
+                    //goto merge;
             }
             // insert as is
             else if (i->getFirst() > rhs.getSecond())

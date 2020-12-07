@@ -109,9 +109,6 @@ struct PRIMITIVES_VERSION_API VersionRange
     /// convert to string
     std::string toString(VersionRangePairStringRepresentationType) const;
 
-    /// call for cppan (sw v1)
-    std::string toStringV1() const;
-
     size_t getHash() const;
 
     bool isEmpty() const;

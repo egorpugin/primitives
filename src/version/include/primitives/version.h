@@ -158,16 +158,16 @@ struct PRIMITIVES_VERSION_API Version
     size_t getHash() const;
 
     // modificators
-    void decrementVersion();
+    /*void decrementVersion();
     void decrementVersion(Level level);
     void incrementVersion();
-    void incrementVersion(Level level);
+    void incrementVersion(Level level);*/
 
     //
-    Version getNextVersion() const;
+    /*Version getNextVersion() const;
     Version getNextVersion(Level level) const;
     Version getPreviousVersion() const;
-    Version getPreviousVersion(Level level) const;
+    Version getPreviousVersion(Level level) const;*/
 
     /// format string
     [[nodiscard]]
@@ -179,6 +179,10 @@ struct PRIMITIVES_VERSION_API Version
 
     Level getMatchingLevel(const Version &v) const;
 
+    //void prepareAndCheckVersion();
+    void check() const;
+    void setFirstVersion();
+
     // operators
     bool operator<(const Version &) const;
     bool operator>(const Version &) const;
@@ -187,10 +191,10 @@ struct PRIMITIVES_VERSION_API Version
     bool operator==(const Version &) const;
     bool operator!=(const Version &) const;
 
-    Version &operator++();
+    /*Version &operator++();
     Version &operator--();
     Version operator++(int);
-    Version operator--(int);
+    Version operator--(int);*/
 
     // add +,-?
     // int compare()?
@@ -213,11 +217,6 @@ private:
 
     /// version will be in an invalid state in case of errors
     static bool parse(Version &v, const std::string &s);
-
-    void checkNumber() const;
-    void checkVersion() const;
-    void prepareAndCheckVersion();
-    void setFirstVersion();
 
     Number get(Level level) const;
     std::string printVersion(const std::string &delimeter, Level level) const;
@@ -263,6 +262,9 @@ struct PRIMITIVES_VERSION_API PackageVersion
 
 private:
     std::variant<Version, Branch> value;
+
+    void checkAndSetFirstVersion();
+    void check() const;
 };
 
 } // namespace primitives::version

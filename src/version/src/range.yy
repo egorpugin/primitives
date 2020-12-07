@@ -281,8 +281,9 @@ interval: open_bracket space_or_empty version space_or_empty COMMA space_or_empt
         EXTRACT_VALUE(int, r, $7);
         EXTRACT_VALUE(Version, v, $5);
         prepare_version(v);
-        if (r == OPEN)
-            v.decrementVersion();
+        SW_UNIMPLEMENTED;
+        //if (r == OPEN)
+            //v.decrementVersion();
         auto vr = VersionRange::empty();
         SW_UNIMPLEMENTED;
         /*vr |= RangePair(Version::min(v), v);

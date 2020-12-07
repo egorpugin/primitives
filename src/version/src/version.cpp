@@ -193,7 +193,6 @@ size_t GenericNumericVersion::getHash() const
 
 Version::Version()
 {
-    prepareAndCheckVersion();
 }
 
 Version::Version(const Version &v, const Extra &e)
@@ -220,8 +219,6 @@ Version::Version(const std::string &s)
     }
     if (!parse(*this, ps))
         throw_bad_version(s);
-
-    prepareAndCheckVersion();
 }
 
 Version::Version(const std::initializer_list<Number> &l)
@@ -232,7 +229,6 @@ Version::Version(const std::initializer_list<Number> &l)
 Version::Version(const Numbers &l)
     : numbers(l)
 {
-    prepareAndCheckVersion();
 }
 
 Version::Version(int ma)
@@ -260,22 +256,12 @@ Version::Version(Number ma, Number mi, Number pa, Number tw)
 {
 }
 
-void Version::prepareAndCheckVersion()
-{
-    setFirstVersion();
-    checkVersion();
-}
-
-void Version::checkVersion() const
+void Version::check() const
 {
     if (std::any_of(numbers.begin(), numbers.end(), [](const auto &n) {return n < 0; }))
         throw SW_RUNTIME_ERROR("Version number cannot be less than 0");
     if (std::all_of(numbers.begin(), numbers.end(), [](const auto &n) {return n == 0; }))
         throw SW_RUNTIME_ERROR("Version number cannot be 0");
-}
-
-void Version::checkNumber() const
-{
 }
 
 void Version::setFirstVersion()
@@ -373,8 +359,6 @@ std::string Version::toString(const String &delimeter, const Version &v) const
 
 size_t Version::getHash() const
 {
-    //if (isBranch())
-        //return std::hash<std::string>()(getBranch());
     size_t h = 0;
     for (auto &n : numbers)
         hash_combine(h, n);
@@ -398,10 +382,8 @@ bool Version::isPreRelease() const
 
 Version::Level Version::getMatchingLevel(const Version &v) const
 {
+    SW_UNIMPLEMENTED;
     int i = 0;
-    //if (isBranch() || v.isBranch())
-        //return i;
-
     auto m = std::min(getLevel(), v.getLevel());
     for (; i < m; i++)
     {
@@ -456,7 +438,7 @@ bool Version::operator!=(const Version &rhs) const
     return !operator==(rhs);
 }
 
-Version &Version::operator++()
+/*Version &Version::operator++()
 {
     incrementVersion();
     return *this;
@@ -480,13 +462,13 @@ Version Version::operator--(int)
     auto v = *this;
     decrementVersion();
     return v;
-}
+}*/
 
 Version Version::min(Level level)
 {
     level = checkAndNormalizeLevel(level, getDefaultLevel());
 
-    Version v{ 1 }; // hack
+    Version v;
     v.numbers.clear();
     v.numbers.resize(level - 1);
     v.numbers.push_back(1);
@@ -516,11 +498,10 @@ Version::Number Version::maxNumber()
 
 Version::Level Version::getLevel() const
 {
-    checkNumber();
     return (Level)numbers.size();
 }
 
-void Version::decrementVersion()
+/*void Version::decrementVersion()
 {
     decrementVersion(getLevel());
 }
@@ -542,8 +523,6 @@ Version Version::getPreviousVersion() const
 
 void Version::decrementVersion(Level l)
 {
-    checkNumber();
-
     if (*this == min(getLevel()))
         return;
 
@@ -557,8 +536,6 @@ void Version::decrementVersion(Level l)
 
 void Version::incrementVersion(Level l)
 {
-    checkNumber();
-
     if (*this == max(getLevel()))
         return;
 
@@ -582,7 +559,7 @@ Version Version::getPreviousVersion(Level l) const
     auto v = *this;
     v.decrementVersion(l);
     return v;
-}
+}*/
 
 std::string Version::format(const std::string &s) const
 {
@@ -755,8 +732,8 @@ std::string Version::format(const std::string &s) const
 }
 
 PackageVersion::PackageVersion()
+    : PackageVersion(Version::min(Version::getDefaultLevel()))
 {
-    value = Version::min(Version::getDefaultLevel());
 }
 
 PackageVersion::PackageVersion(const char *s)
@@ -775,20 +752,16 @@ PackageVersion::PackageVersion(const std::string &s)
     {
         return std::isalnum(c) || c == '_';
     }))
-    {
-        if (s.size() > 200)
-            throw_bad_version(s + ", branch must have size <= 200");
         value = s;
-    }
     else
-    {
         value = Version(s);
-    }
+    checkAndSetFirstVersion();
 }
 
 PackageVersion::PackageVersion(const Version &v)
 {
     value = v;
+    checkAndSetFirstVersion();
 }
 
 bool PackageVersion::isBranch() const
@@ -846,6 +819,26 @@ std::string PackageVersion::toString() const
     if (isBranch())
         return getBranch();
     return getVersion().toString();
+}
+
+void PackageVersion::checkAndSetFirstVersion()
+{
+    if (!isBranch())
+        getVersion().setFirstVersion();
+    check();
+}
+
+void PackageVersion::check() const
+{
+    if (isBranch())
+    {
+        if (getBranch().size() > 200)
+            throw_bad_version(getBranch() + ", branch must have size <= 200");
+    }
+    else
+    {
+        getVersion().check();
+    }
 }
 
 #define BRANCH_COMPARE(op)                          \
