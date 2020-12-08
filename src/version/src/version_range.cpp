@@ -387,29 +387,6 @@ VersionRange &VersionRange::operator|=(const detail::RangePair &rhs)
     return *this;
 }
 
-VersionRange &VersionRange::operator&=(const detail::RangePair &rhs)
-{
-    if (range.empty())
-        return *this;
-
-    auto rp = rhs;
-    for (auto i = range.begin(); i < range.end(); i++)
-    {
-        SW_UNIMPLEMENTED;
-        //rp.getFirst() = std::max(i->getFirst(), rp.getFirst());
-        //rp.getSecond() = std::min(i->getSecond(), rp.getSecond());
-
-        if (rp.getFirst() > rp.getSecond())
-        {
-            range.clear();
-            return *this;
-        }
-    }
-    range.clear();
-    range.push_back(rp);
-    return *this;
-}
-
 VersionRange &VersionRange::operator|=(const VersionRange &rhs)
 {
     for (auto &rp : rhs.range)

@@ -32,7 +32,7 @@
 #include <primitives/version_range.h>
 using namespace primitives::version;
 
-enum : Version::Number { ANY = -2, UNSET = -1, };
+enum : Version::Number { ANY = -1, };
 enum { OPEN, CLOSED, };
 
 using primitives::version::detail::RangePair;

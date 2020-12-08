@@ -129,7 +129,6 @@ struct PRIMITIVES_VERSION_API VersionRange
     VersionRange &operator&=(const VersionRange &);
 
     VersionRange &operator|=(const detail::RangePair &);
-    VersionRange &operator&=(const detail::RangePair &);
 
     /// get range from string without throw
     static std::optional<VersionRange> parse(const std::string &s);
