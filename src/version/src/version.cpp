@@ -26,13 +26,6 @@ static void throw_bad_version_extra(const std::string &s)
 namespace primitives::version
 {
 
-static auto checkAndNormalizeLevel(Version::Level in, Version::Level minimum_level)
-{
-    if (in <= 0)
-        throw SW_RUNTIME_ERROR("Bad version level (<= 0): " + std::to_string(in));
-    return std::max(in, minimum_level);
-}
-
 namespace detail
 {
 
@@ -65,19 +58,19 @@ bool Extra::operator<(const Extra &rhs) const
 {
     // this one is tricky
     // 1.2.3.rc1 is less than 1.2.3!
-    if (value.empty() && rhs.value.empty())
+    if (values.empty() && rhs.values.empty())
         return false;
-    if (rhs.value.empty())
+    if (rhs.values.empty())
         return true;
-    if (value.empty())
+    if (values.empty())
         return false;
-    return value < rhs.value;
+    return values < rhs.values;
 }
 
 std::string Extra::print() const
 {
     std::string s;
-    for (auto &e : value)
+    for (auto &e : values)
     {
         switch (e.index())
         {
@@ -438,15 +431,9 @@ bool Version::operator!=(const Version &rhs) const
     return !operator==(rhs);
 }
 
-/*Version &Version::operator++()
+Version &Version::operator++()
 {
     incrementVersion();
-    return *this;
-}
-
-Version &Version::operator--()
-{
-    decrementVersion();
     return *this;
 }
 
@@ -457,32 +444,27 @@ Version Version::operator++(int)
     return v;
 }
 
+Version &Version::operator--()
+{
+    decrementVersion();
+    return *this;
+}
+
 Version Version::operator--(int)
 {
     auto v = *this;
     decrementVersion();
     return v;
-}*/
-
-Version Version::min(Level level)
-{
-    level = checkAndNormalizeLevel(level, getDefaultLevel());
-
-    Version v;
-    v.numbers.clear();
-    v.numbers.resize(level - 1);
-    v.numbers.push_back(1);
-    return v;
 }
 
-Version Version::max(Level level)
+Version Version::min()
 {
-    level = checkAndNormalizeLevel(level, getDefaultLevel());
+    return 0;
+}
 
-    Version v;
-    v.numbers.clear();
-    v.numbers.resize(level, maxNumber());
-    return v;
+Version Version::max()
+{
+    return maxNumber() + 1;
 }
 
 Version::Level Version::getDefaultLevel()
@@ -513,17 +495,33 @@ Version::Level Version::getRealLevel() const
     return l;
 }
 
-/*void Version::decrementVersion()
+void Version::decrementVersion()
 {
-    decrementVersion(getLevel());
+    // actually these checks must be in package version?
+    if (*this == min())
+        return;
+
+    auto l = getLevel();
+    auto current = &numbers[l - 1];
+    while (*current == 0)
+        *current-- = maxNumber();
+    (*current)--;
 }
 
 void Version::incrementVersion()
 {
-    incrementVersion(getLevel());
+    // actually these checks must be in package version?
+    if (*this == max())
+        return;
+
+    auto l = getLevel();
+    auto current = &numbers[l - 1];
+    while (*current == maxNumber())
+        *current-- = 0;
+    (*current)++;
 }
 
-Version Version::getNextVersion() const
+/*Version Version::getNextVersion() const
 {
     return getNextVersion(getLevel());
 }
@@ -535,6 +533,8 @@ Version Version::getPreviousVersion() const
 
 void Version::decrementVersion(Level l)
 {
+    SW_UNIMPLEMENTED;
+
     if (*this == min(getLevel()))
         return;
 
@@ -744,8 +744,8 @@ std::string Version::format(const std::string &s) const
 }
 
 PackageVersion::PackageVersion()
-    : PackageVersion(Version::min(Version::getDefaultLevel()))
 {
+    checkAndSetFirstVersion();
 }
 
 PackageVersion::PackageVersion(const char *s)

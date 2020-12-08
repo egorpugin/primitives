@@ -86,23 +86,28 @@ struct comparable_variant : std::variant<Args...>
 // e.g.: any non release is *-*
 struct PRIMITIVES_VERSION_API Extra
 {
+    using Value = comparable_variant<std::string, Number/*, any flag */>;
+
     Extra() = default;
     Extra(const char *);
     Extra(const std::string &);
 
     bool operator<(const Extra &) const;
-    bool operator==(const Extra &rhs) const { return value == rhs.value; }
-    bool operator!=(const Extra &rhs) const { return value != rhs.value; }
+    bool operator==(const Extra &rhs) const { return values == rhs.values; }
+    bool operator!=(const Extra &rhs) const { return values != rhs.values; }
 
-    auto &operator[](int i) { return value[i]; }
-    const auto &operator[](int i) const { return value[i]; }
+    auto &operator[](int i) { return values[i]; }
+    const auto &operator[](int i) const { return values[i]; }
 
-    bool empty() const { return value.empty(); }
+    bool empty() const { return values.empty(); }
+
+    void push_back(const Value &v) { values.push_back(v); }
+    void append(const Extra &rhs) { values.insert(values.end(), rhs.values.begin(), rhs.values.end()); }
 
     std::string print() const;
 
 private:
-    std::vector<comparable_variant<std::string, Number/*, any flag */>> value;
+    std::vector<Value> values;
 
     bool parse(const std::string &s);
 };
@@ -162,9 +167,9 @@ struct PRIMITIVES_VERSION_API Version
     void push_back(Number n) { numbers.push_back(n); }
 
     // modificators
-    /*void decrementVersion();
-    void decrementVersion(Level level);
+    void decrementVersion();
     void incrementVersion();
+    /*void decrementVersion(Level level);
     void incrementVersion(Level level);*/
 
     //
@@ -195,19 +200,21 @@ struct PRIMITIVES_VERSION_API Version
     bool operator==(const Version &) const;
     bool operator!=(const Version &) const;
 
-    /*Version &operator++();
-    Version &operator--();
+    // all calculations are on real level
+    Version &operator++();
     Version operator++(int);
-    Version operator--(int);*/
+    Version &operator--();
+    Version operator--(int);
 
     // add +,-?
     // int compare()?
 
 public:
-    static Version min(Level level);
-    static Version max(Level level);
-    static Level getDefaultLevel();
+    // [min(), max())
+    static Version min();
+    static Version max();
     static Number maxNumber();
+    static Level getDefaultLevel();
 
     // TODO:
     /// extended version parsing, e.g. =v1.2
@@ -263,6 +270,8 @@ struct PRIMITIVES_VERSION_API PackageVersion
     bool operator>=(const PackageVersion &) const;
     bool operator==(const PackageVersion &) const;
     bool operator!=(const PackageVersion &) const;
+
+    //static Version min();
 
 private:
     std::variant<Version, Branch> value;

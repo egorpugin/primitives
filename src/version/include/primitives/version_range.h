@@ -51,26 +51,12 @@ struct RangePair
 
         std::string detail::RangePair::toString(VersionRangePairStringRepresentationType t) const;
     };
-private:
-    Side first;
-    Side second;
+
 public:
-
-    // replace with [from, to)?
-    // but we do not know what is next version for "15.9.03232.13 - 16.0.123.13-preview"
-    // so we can't use [,)
-    // to do this, we must teach Extra to know it's next version
-    //
-    // Example: for string "a" next version will be "aa" - in case if we allow only [a-z]
-    //
-
     RangePair(const Version &, bool strong_relation1, const Version &, bool strong_relation2);
 
     std::string toString(VersionRangePairStringRepresentationType) const;
-    [[deprecated("use contains()")]]
-    bool hasVersion(const Version &v) const { return contains(v); }
     bool contains(const Version &) const;
-    bool contains(const RangePair &) const;
     size_t getHash() const;
     std::optional<Version> toVersion() const;
 
@@ -84,23 +70,23 @@ public:
     std::optional<RangePair> operator|(const RangePair &) const;
 
 private:
+    Side first;
+    Side second;
+
     RangePair() = default;
     RangePair(const Side &, const Side &);
+
+    std::string toStringInterval() const;
 };
 
 }
 
 struct PRIMITIVES_VERSION_API VersionRange
 {
-    /// default is any version or * or Version::min() - Version::max()
     VersionRange();
 
-    // separate ctor!
-    /// default is any version or * or Version::min() - Version::max()
-    //explicit VersionRange(Version::Level level);
-
     /// from one version
-    VersionRange(const Version &);
+    //explicit VersionRange(const Version &);
 
     /// from two versions [from, to]
     VersionRange(const Version &from, const Version &to);
@@ -127,7 +113,6 @@ struct PRIMITIVES_VERSION_API VersionRange
     bool isEmpty() const;
     [[deprecated("use contains()")]]
     bool hasVersion(const Version &v) const { return contains(v); }
-    bool contains(const char *) const; // branch version, because Version and VersionRange construction is ambiguous
     bool contains(const Version &) const;
     bool contains(const VersionRange &) const;
     size_t size() const;
@@ -146,16 +131,11 @@ struct PRIMITIVES_VERSION_API VersionRange
     VersionRange &operator|=(const VersionRange &);
     VersionRange &operator&=(const VersionRange &);
 
-public:
-    /// get range from string without throw
-    static std::optional<VersionRange> parse(const std::string &s);
-
-    // GLR parser does not have class yet, so we can't make it a friend
-#ifndef HAVE_BISON_RANGE_PARSER
-private:
-#endif
     VersionRange &operator|=(const detail::RangePair &);
     VersionRange &operator&=(const detail::RangePair &);
+
+    /// get range from string without throw
+    static std::optional<VersionRange> parse(const std::string &s);
 
 private:
     using Range = std::vector<detail::RangePair>;
@@ -189,9 +169,12 @@ bool operator>(const VersionRange &, const Version &);
 PRIMITIVES_VERSION_API
 bool operator>(const Version &, const VersionRange &);*/
 
-struct PackageVersionRange
+struct PRIMITIVES_VERSION_API PackageVersionRange
 {
     using Branch = PackageVersion::Branch;
+
+    /// default is any version or * or Version::min() - Version::max()
+    PackageVersionRange();
 
     // checkers
     bool isBranch() const;
@@ -199,6 +182,8 @@ struct PackageVersionRange
 
     const VersionRange &getRange() const;
     const Branch &getBranch() const;
+
+    std::string toString() const;
 
 private:
     std::variant<VersionRange, Branch> value;

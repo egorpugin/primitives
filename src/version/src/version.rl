@@ -91,9 +91,9 @@ bool Extra::parse(const std::string &s)
         {
             primitives::version::detail::Number n;
             if (auto [ptr, ec] = std::from_chars(sb, p, n); ptr == p && ec == std::errc())
-                value.emplace_back(n);
+                push_back(n);
             else
-                value.emplace_back(std::string{sb, p});
+                push_back(std::string{sb, p});
         }
 
         alnum_ = alnum | '_';

@@ -15,10 +15,6 @@
 
 const primitives::version::Version::Level minimum_level = 3;
 
-primitives::version::Version prepare_version(
-    primitives::version::Version &ver, primitives::version::Version::Number fill_value = 0,
-    primitives::version::Version::Level level = minimum_level);
-
 namespace primitives::version
 {
 
@@ -58,7 +54,9 @@ detail::RangePair::RangePair(const Version &v1, bool strong_relation1, const Ver
     : first{ v1, strong_relation1 }, second{ v2, strong_relation2 }
 {
     if (getFirst() > getSecond())
-        throw SW_RUNTIME_ERROR("Left version must be <= than right: " + getFirst().toString() + " > " + getSecond().toString());
+        throw SW_RUNTIME_ERROR("Left version must be <= than right: " + toStringInterval());
+    if (getFirst() == getSecond() && (strong_relation1 || strong_relation2))
+        throw SW_RUNTIME_ERROR("Pair does not contain any versions: " + toStringInterval());
 
     // prepare pair
     /*auto level = std::max(getFirst().getLevel(), getSecond().getLevel());
@@ -89,14 +87,8 @@ detail::RangePair::RangePair(const Side &l, const Side &r)
 
 bool detail::RangePair::contains(const Version &v) const
 {
+    // TODO: rename < and > here
     return first < v && second > v;
-}
-
-bool detail::RangePair::contains(const RangePair &v) const
-{
-    // unused for now
-    SW_UNIMPLEMENTED;
-    //return first <= v.first && v.second <= second;
 }
 
 std::optional<detail::RangePair> detail::RangePair::operator&(const detail::RangePair &rhs) const
@@ -195,16 +187,45 @@ std::string detail::RangePair::toString(VersionRangePairStringRepresentationType
     else
         return s + "<=" + getSecond().toString(level);*/
 
+    bool print_left = first.v > Version::min();
+    bool print_right = second.v < Version::max();
+
     std::string s;
-    s += ">";
-    if (!first.strong_relation)
-        s += "=";
-    s += first.toString(t);
-    s += " ";
-    s += "<";
-    if (!second.strong_relation)
-        s += "=";
-    s += second.toString(t);
+    if (print_left)
+    {
+        s += ">";
+        if (!first.strong_relation)
+            s += "=";
+        s += first.toString(t);
+    }
+    if (print_left && print_right)
+        s += " ";
+    if (print_right)
+    {
+        s += "<";
+        if (!second.strong_relation)
+            s += "=";
+        s += second.toString(t);
+    }
+    if (s.empty())
+        return "*";
+    return s;
+}
+
+std::string detail::RangePair::toStringInterval() const
+{
+    std::string s;
+    if (first.strong_relation)
+        s += "(";
+    else
+        s += "[";
+    s += first.toString(VersionRangePairStringRepresentationType::SameDefaultLevel);
+    s += ", ";
+    s += second.toString(VersionRangePairStringRepresentationType::SameDefaultLevel);
+    if (second.strong_relation)
+        s += ")";
+    else
+        s += "]";
     return s;
 }
 
@@ -224,19 +245,13 @@ size_t detail::RangePair::getHash() const
 }
 
 VersionRange::VersionRange()
-    //: VersionRange(minimum_level)
 {
 }
 
-/*VersionRange::VersionRange(Version::Level level)
-    : VersionRange(Version::min(level), Version::max(level))
-{
-}*/
-
-VersionRange::VersionRange(const Version &v)
+/*VersionRange::VersionRange(const Version &v)
     : VersionRange(v, v)
 {
-}
+}*/
 
 VersionRange::VersionRange(const Version &v1, const Version &v2)
 {
@@ -247,15 +262,17 @@ VersionRange::VersionRange(const std::string &s)
 {
     auto in = detail::preprocess_input(s);
     if (in.empty())
-        SW_UNIMPLEMENTED;
-        //range.emplace_back(Version::min(), Version::max());
+        // * or throw error?
+        *this = VersionRange{ Version::min(), Version::max() };
     else if (auto r = parse(*this, in); r)
         throw SW_RUNTIME_ERROR("Invalid version range: " + in + ", error: " + r.value());
 }
 
 VersionRange::VersionRange(const char *v)
-    : VersionRange(std::string(v))
 {
+    if (!v)
+        throw SW_RUNTIME_ERROR("Empty version range");
+    *this = std::string{ v };
 }
 
 std::optional<std::string> VersionRange::parse(VersionRange &vr, const std::string &s)
@@ -299,11 +316,6 @@ size_t VersionRange::size() const
 bool VersionRange::isEmpty() const
 {
     return range.empty();
-}
-
-bool VersionRange::contains(const char *s) const
-{
-    return contains(Version(s));
 }
 
 bool VersionRange::contains(const Version &v) const
@@ -523,6 +535,11 @@ std::optional<Version> VersionRange::getMaxSatisfyingVersion(const std::set<Vers
     return {};
 }
 
+PackageVersionRange::PackageVersionRange()
+{
+    value = VersionRange(Version::min(), Version::max());
+}
+
 bool PackageVersionRange::isBranch() const
 {
     return std::holds_alternative<Branch>(value);
@@ -541,6 +558,13 @@ const VersionRange &PackageVersionRange::getRange() const
 const PackageVersion::Branch &PackageVersionRange::getBranch() const
 {
     return std::get<Branch>(value);
+}
+
+std::string PackageVersionRange::toString() const
+{
+    if (isBranch())
+        return getBranch();
+    return getRange().toString();
 }
 
 }
