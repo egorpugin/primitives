@@ -1,43 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
-    <Type Name="primitives::version::Version">
-        <DisplayString Condition="numbers._Mypair._Myval2._Mylast - numbers._Mypair._Myval2._Myfirst == 0">
-            0
-        </DisplayString>
-        <DisplayString Condition="numbers._Mypair._Myval2._Mylast - numbers._Mypair._Myval2._Myfirst == 1">
-            {numbers._Mypair._Myval2._Myfirst[0]}
-        </DisplayString>
-        <DisplayString Condition="numbers._Mypair._Myval2._Mylast - numbers._Mypair._Myval2._Myfirst == 2">
-            {numbers._Mypair._Myval2._Myfirst[0]}.{numbers._Mypair._Myval2._Myfirst[1]}
-        </DisplayString>
-        <DisplayString Condition="numbers._Mypair._Myval2._Mylast - numbers._Mypair._Myval2._Myfirst == 3">
-            {numbers._Mypair._Myval2._Myfirst[0]}.{numbers._Mypair._Myval2._Myfirst[1]}.{numbers._Mypair._Myval2._Myfirst[2]}
-        </DisplayString>
-        <DisplayString Condition="numbers._Mypair._Myval2._Mylast - numbers._Mypair._Myval2._Myfirst == 4">
-            {numbers._Mypair._Myval2._Myfirst[0]}.{numbers._Mypair._Myval2._Myfirst[1]}.{numbers._Mypair._Myval2._Myfirst[2]}.{numbers._Mypair._Myval2._Myfirst[3]}
-        </DisplayString>
-        <DisplayString Condition="numbers._Mypair._Myval2._Mylast - numbers._Mypair._Myval2._Myfirst == 5">
-            {numbers._Mypair._Myval2._Myfirst[0]}.{numbers._Mypair._Myval2._Myfirst[1]}.{numbers._Mypair._Myval2._Myfirst[2]}.{numbers._Mypair._Myval2._Myfirst[3]}.{numbers._Mypair._Myval2._Myfirst[4]}
-        </DisplayString>
-        <DisplayString Condition="numbers._Mypair._Myval2._Mylast - numbers._Mypair._Myval2._Myfirst == 6">
-            {numbers._Mypair._Myval2._Myfirst[0]}.{numbers._Mypair._Myval2._Myfirst[1]}.{numbers._Mypair._Myval2._Myfirst[2]}.{numbers._Mypair._Myval2._Myfirst[3]}.{numbers._Mypair._Myval2._Myfirst[4]}.{numbers._Mypair._Myval2._Myfirst[5]}
-        </DisplayString>
-        <DisplayString Condition="numbers._Mypair._Myval2._Mylast - numbers._Mypair._Myval2._Myfirst == 7">
-            {numbers._Mypair._Myval2._Myfirst[0]}.{numbers._Mypair._Myval2._Myfirst[1]}.{numbers._Mypair._Myval2._Myfirst[2]}.{numbers._Mypair._Myval2._Myfirst[3]}.{numbers._Mypair._Myval2._Myfirst[4]}.{numbers._Mypair._Myval2._Myfirst[5]}.{numbers._Mypair._Myval2._Myfirst[6]}
-        </DisplayString>
-        <DisplayString Condition="numbers._Mypair._Myval2._Mylast - numbers._Mypair._Myval2._Myfirst == 8">
-            {numbers._Mypair._Myval2._Myfirst[0]}.{numbers._Mypair._Myval2._Myfirst[1]}.{numbers._Mypair._Myval2._Myfirst[2]}.{numbers._Mypair._Myval2._Myfirst[3]}.{numbers._Mypair._Myval2._Myfirst[4]}.{numbers._Mypair._Myval2._Myfirst[5]}.{numbers._Mypair._Myval2._Myfirst[6]}.{numbers._Mypair._Myval2._Myfirst[7]}
-        </DisplayString>
-        <DisplayString Condition="numbers._Mypair._Myval2._Mylast - numbers._Mypair._Myval2._Myfirst == 9">
-            {numbers._Mypair._Myval2._Myfirst[0]}.{numbers._Mypair._Myval2._Myfirst[1]}.{numbers._Mypair._Myval2._Myfirst[2]}.{numbers._Mypair._Myval2._Myfirst[3]}.{numbers._Mypair._Myval2._Myfirst[4]}.{numbers._Mypair._Myval2._Myfirst[5]}.{numbers._Mypair._Myval2._Myfirst[6]}.{numbers._Mypair._Myval2._Myfirst[7]}.{numbers._Mypair._Myval2._Myfirst[8]}
-        </DisplayString>
-        <DisplayString Condition="numbers._Mypair._Myval2._Mylast - numbers._Mypair._Myval2._Myfirst == 10">
-            {numbers._Mypair._Myval2._Myfirst[0]}.{numbers._Mypair._Myval2._Myfirst[1]}.{numbers._Mypair._Myval2._Myfirst[2]}.{numbers._Mypair._Myval2._Myfirst[3]}.{numbers._Mypair._Myval2._Myfirst[4]}.{numbers._Mypair._Myval2._Myfirst[5]}.{numbers._Mypair._Myval2._Myfirst[6]}.{numbers._Mypair._Myval2._Myfirst[7]}.{numbers._Mypair._Myval2._Myfirst[8]}.{numbers._Mypair._Myval2._Myfirst[9]}
-        </DisplayString>
-        <DisplayString>empty</DisplayString>
-    </Type>
-
     <Type Name="primitives::version::detail::comparable_variant&lt;*&gt;">
         <DisplayString Condition="_Which == 0">
             {_Head,sb}
@@ -47,9 +10,9 @@
         </DisplayString>
     </Type>
 
-    <Type Name="primitives::version::detail::Extra">
+    <Type Name="primitives::version::Version::Numbers">
         <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 0">
-            empty
+            0
         </DisplayString>
         <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 1">
             {_Mypair._Myval2._Myfirst[0]}
@@ -66,30 +29,68 @@
         <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 5">
             {_Mypair._Myval2._Myfirst[0]}.{_Mypair._Myval2._Myfirst[1]}.{_Mypair._Myval2._Myfirst[2]}.{_Mypair._Myval2._Myfirst[3]}.{_Mypair._Myval2._Myfirst[4]}
         </DisplayString>
-        <DisplayString>
-            update natvis :)
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 6">
+            {_Mypair._Myval2._Myfirst[0]}.{_Mypair._Myval2._Myfirst[1]}.{_Mypair._Myval2._Myfirst[2]}.{_Mypair._Myval2._Myfirst[3]}.{_Mypair._Myval2._Myfirst[4]}.{_Mypair._Myval2._Myfirst[5]}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 7">
+            {_Mypair._Myval2._Myfirst[0]}.{_Mypair._Myval2._Myfirst[1]}.{_Mypair._Myval2._Myfirst[2]}.{_Mypair._Myval2._Myfirst[3]}.{_Mypair._Myval2._Myfirst[4]}.{_Mypair._Myval2._Myfirst[5]}.{_Mypair._Myval2._Myfirst[6]}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 8">
+            {_Mypair._Myval2._Myfirst[0]}.{_Mypair._Myval2._Myfirst[1]}.{_Mypair._Myval2._Myfirst[2]}.{_Mypair._Myval2._Myfirst[3]}.{_Mypair._Myval2._Myfirst[4]}.{_Mypair._Myval2._Myfirst[5]}.{_Mypair._Myval2._Myfirst[6]}.{_Mypair._Myval2._Myfirst[7]}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 9">
+            {_Mypair._Myval2._Myfirst[0]}.{_Mypair._Myval2._Myfirst[1]}.{_Mypair._Myval2._Myfirst[2]}.{_Mypair._Myval2._Myfirst[3]}.{_Mypair._Myval2._Myfirst[4]}.{_Mypair._Myval2._Myfirst[5]}.{_Mypair._Myval2._Myfirst[6]}.{_Mypair._Myval2._Myfirst[7]}.{_Mypair._Myval2._Myfirst[8]}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst == 10">
+            {_Mypair._Myval2._Myfirst[0]}.{_Mypair._Myval2._Myfirst[1]}.{_Mypair._Myval2._Myfirst[2]}.{_Mypair._Myval2._Myfirst[3]}.{_Mypair._Myval2._Myfirst[4]}.{_Mypair._Myval2._Myfirst[5]}.{_Mypair._Myval2._Myfirst[6]}.{_Mypair._Myval2._Myfirst[7]}.{_Mypair._Myval2._Myfirst[8]}.{_Mypair._Myval2._Myfirst[9]}
+        </DisplayString>
+        <DisplayString Condition="_Mypair._Myval2._Mylast - _Mypair._Myval2._Myfirst &gt; 10">
+            uninitialized or update natvis
         </DisplayString>
     </Type>
 
-    <!--<Type Name="primitives::version::Version">
-        <DisplayString Condition="branch._Mypair._Myval2._Mysize != 0">{branch,sb}</DisplayString>
-        <DisplayString Condition="branch._Mypair._Myval2._Mysize == 0
-                       &amp;&amp; extra._Mypair._Myval2._Mylast - extra._Mypair._Myval2._Myfirst == 0">
-            {(primitives::version::GenericNumericVersion &amp; )*this}</DisplayString>
-        <DisplayString Condition="branch._Mypair._Myval2._Mysize == 0
-                       &amp;&amp; extra._Mypair._Myval2._Mylast - extra._Mypair._Myval2._Myfirst != 0">
-            {(primitives::version::GenericNumericVersion &amp; )*this}-{extra}</DisplayString>
-    </Type>-->
+    <Type Name="primitives::version::detail::Extra">
+        <DisplayString Condition="values._Mypair._Myval2._Mylast - values._Mypair._Myval2._Myfirst == 0">
+            empty
+        </DisplayString>
+        <DisplayString Condition="values._Mypair._Myval2._Mylast - values._Mypair._Myval2._Myfirst == 1">
+            {values._Mypair._Myval2._Myfirst[0]}
+        </DisplayString>
+        <DisplayString Condition="values._Mypair._Myval2._Mylast - values._Mypair._Myval2._Myfirst == 2">
+            {values._Mypair._Myval2._Myfirst[0]}.{values._Mypair._Myval2._Myfirst[1]}
+        </DisplayString>
+        <DisplayString Condition="values._Mypair._Myval2._Mylast - values._Mypair._Myval2._Myfirst == 3">
+            {values._Mypair._Myval2._Myfirst[0]}.{values._Mypair._Myval2._Myfirst[1]}.{values._Mypair._Myval2._Myfirst[2]}
+        </DisplayString>
+        <DisplayString Condition="values._Mypair._Myval2._Mylast - values._Mypair._Myval2._Myfirst == 4">
+            {values._Mypair._Myval2._Myfirst[0]}.{values._Mypair._Myval2._Myfirst[1]}.{values._Mypair._Myval2._Myfirst[2]}.{values._Mypair._Myval2._Myfirst[3]}
+        </DisplayString>
+        <DisplayString Condition="values._Mypair._Myval2._Mylast - values._Mypair._Myval2._Myfirst == 5">
+            {values._Mypair._Myval2._Myfirst[0]}.{values._Mypair._Myval2._Myfirst[1]}.{values._Mypair._Myval2._Myfirst[2]}.{values._Mypair._Myval2._Myfirst[3]}.{values._Mypair._Myval2._Myfirst[4]}
+        </DisplayString>
+        <DisplayString Condition="values._Mypair._Myval2._Mylast - values._Mypair._Myval2._Myfirst &gt; 5">
+            uninitialized or update natvis
+        </DisplayString>
+    </Type>
+
+    <Type Name="primitives::version::Version">
+        <DisplayString Condition="extra.values._Mypair._Myval2._Mylast - extra.values._Mypair._Myval2._Myfirst == 0">
+            {numbers}
+        </DisplayString>
+        <DisplayString Condition="extra.values._Mypair._Myval2._Mylast - extra.values._Mypair._Myval2._Myfirst != 0">
+            {numbers}-{extra}
+        </DisplayString>
+    </Type>
 
     <Type Name="primitives::version::detail::RangePair::Side">
         <DisplayString>{v}</DisplayString>
     </Type>
 
     <Type Name="primitives::version::detail::RangePair">
-        <DisplayString Condition="first.strong_relation == false &amp;&amp; second.strong_relation == false">[{first}, {second}]</DisplayString>
-        <DisplayString Condition="first.strong_relation == false &amp;&amp; second.strong_relation == true">[{first}, {second})</DisplayString>
-        <DisplayString Condition="first.strong_relation == true &amp;&amp; second.strong_relation == false">({first}, {second}]</DisplayString>
-        <DisplayString Condition="first.strong_relation == true &amp;&amp; second.strong_relation == true">({first}, {second})</DisplayString>
+        <DisplayString Condition="!first.strong_relation &amp;&amp; !second.strong_relation">[{first}, {second}]</DisplayString>
+        <DisplayString Condition="!first.strong_relation &amp;&amp; second.strong_relation">[{first}, {second})</DisplayString>
+        <DisplayString Condition="first.strong_relation &amp;&amp; !second.strong_relation">({first}, {second}]</DisplayString>
+        <DisplayString Condition="first.strong_relation &amp;&amp; second.strong_relation">({first}, {second})</DisplayString>
     </Type>
 
     <Type Name="primitives::version::VersionRange">
@@ -126,6 +127,9 @@
         </DisplayString>
         <DisplayString Condition="range._Mypair._Myval2._Mylast - range._Mypair._Myval2._Myfirst == 10">
             {range._Mypair._Myval2._Myfirst[0]} || {range._Mypair._Myval2._Myfirst[1]} || {range._Mypair._Myval2._Myfirst[2]} || {range._Mypair._Myval2._Myfirst[3]} || {range._Mypair._Myval2._Myfirst[4]} || {range._Mypair._Myval2._Myfirst[5]} || {range._Mypair._Myval2._Myfirst[6]} || {range._Mypair._Myval2._Myfirst[7]} || {range._Mypair._Myval2._Myfirst[8]} || {range._Mypair._Myval2._Myfirst[9]}
+        </DisplayString>
+        <DisplayString Condition="range._Mypair._Myval2._Mylast - range._Mypair._Myval2._Myfirst &gt; 10">
+            uninitialized or update natvis
         </DisplayString>
     </Type>
 

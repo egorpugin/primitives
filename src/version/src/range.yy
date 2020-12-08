@@ -103,22 +103,26 @@ range: compare | caret | tilde | hyphen | interval
     {
         EXTRACT_VALUE(Version, v, $1);
 
-        // construct without extra part
-        Version v2;
-        v2.numbers = v.numbers;
-        v2++;
+        if (v.numbers.empty())
+        {
+            // all star
+            RangePair rp(Version::min(), true, Version::max(), true);
+            VersionRange vr;
+            vr |= rp;
+            SET_RETURN_VALUE(vr);
+        }
+        else
+        {
+            // construct without extra part
+            Version v2;
+            v2.numbers = v.numbers;
+            v2++;
 
-        RangePair rp(v, false, v2, true);
-        VersionRange vr;
-        vr |= rp;
-        SET_RETURN_VALUE(vr);
-    }
-    | STAR_NUMBER
-    {
-        RangePair rp(Version::min(), true, Version::max(), true);
-        VersionRange vr;
-        vr |= rp;
-        SET_RETURN_VALUE(vr);
+            RangePair rp(v, false, v2, true);
+            VersionRange vr;
+            vr |= rp;
+            SET_RETURN_VALUE(vr);
+        }
     }
     ;
 
@@ -185,9 +189,6 @@ hyphen: version SPACE HYPHEN space_or_empty version
         // If we expand 1.0.0 - 2.0.0 it means we use first *in theory* abi broken major version 2.0.0
         // but do not use others.
         // Or if you think that abi is not broken in 2.0.0 and broken in 2.0.1 - that's not how semver works.
-
-        //auto level = std::max(rp.first.getLevel(), rp.second.getLevel());
-        //prepare_version(rp.second, 0, level);
 
         VersionRange vr;
         vr |= rp;
@@ -279,6 +280,8 @@ version: basic_version
     {
         EXTRACT_VALUE(Version, v, $1);
         EXTRACT_VALUE(Version::Extra, extra, $3);
+        if (v == Version::min())
+            throw SW_RUNTIME_ERROR("Cannot set extra part on zero version");
         v.extra = extra;
         SET_RETURN_VALUE(v);
     }
@@ -286,11 +289,12 @@ version: basic_version
 
 // at the moment we do not allow ranges like *.2.* and similar
 // they must be filled only from the beginning
-basic_version: NUMBER
+basic_version: number
     {
         EXTRACT_VALUE(Version::Number, n, $1);
         Version v;
-        v.push_back(n);
+        if (n != ANY)
+            v.push_back(n);
         SET_RETURN_VALUE(v);
     }
     | basic_version DOT number

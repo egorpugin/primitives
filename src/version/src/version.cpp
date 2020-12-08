@@ -182,6 +182,16 @@ size_t GenericNumericVersion::getHash() const
     return h;
 }*/
 
+bool isBranch(const std::string &s)
+{
+    return 1
+        && (std::isalpha(s[0]) || s[0] == '_')
+        && std::all_of(s.begin(), s.end(), [](auto &&c)
+    {
+        return std::isalnum(c) || c == '_';
+    };
+}
+
 } // namespace detail
 
 Version::Version()
@@ -760,10 +770,7 @@ PackageVersion::PackageVersion(const std::string &s)
     if (s.empty())
         throw SW_RUNTIME_ERROR("Empty package version");
 
-    if ((std::isalpha(s[0]) || s[0] == '_') && std::all_of(s.begin(), s.end(), [](auto c)
-    {
-        return std::isalnum(c) || c == '_';
-    }))
+    if (detail::isBranch(s))
         value = s;
     else
         value = Version(s);

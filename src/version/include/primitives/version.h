@@ -112,12 +112,15 @@ private:
     bool parse(const std::string &s);
 };
 
+PRIMITIVES_VERSION_API
+bool isBranch(const std::string &);
+
 }
 
 struct PRIMITIVES_VERSION_API Version
 {
     using Number = detail::Number;
-    using Numbers = std::vector<Number>;
+    struct Numbers : std::vector<Number> { using std::vector<Number>::vector; }; // for natvis
     using Level = int;
     using Extra = detail::Extra;
 

@@ -57,27 +57,6 @@ detail::RangePair::RangePair(const Version &v1, bool strong_relation1, const Ver
         throw SW_RUNTIME_ERROR("Left version must be <= than right: " + toStringInterval());
     if (getFirst() == getSecond() && (strong_relation1 || strong_relation2))
         throw SW_RUNTIME_ERROR("Pair does not contain any versions: " + toStringInterval());
-
-    // prepare pair
-    /*auto level = std::max(getFirst().getLevel(), getSecond().getLevel());
-
-    //
-    prepare_version(first.v, 0, level);
-    if (getFirst() < Version::min(level))
-    {
-        // keep extra for first
-        auto e = getFirst().extra;
-        first.v = Version::min(level);
-        first.v.extra = e;
-    }
-
-    //
-    prepare_version(second.v, Version::maxNumber(), level);
-    if (getSecond() > Version::max(level))
-    {
-        // but not second?
-        second.v = Version::max(level);
-    }*/
 }
 
 detail::RangePair::RangePair(const Side &l, const Side &r)
@@ -538,6 +517,25 @@ std::optional<Version> VersionRange::getMaxSatisfyingVersion(const std::set<Vers
 PackageVersionRange::PackageVersionRange()
 {
     value = VersionRange(Version::min(), Version::max());
+}
+
+PackageVersionRange::PackageVersionRange(const char *s)
+{
+    if (!s)
+        throw SW_RUNTIME_ERROR("Empty package version range");
+    *this = PackageVersionRange{ std::string{s} };
+}
+
+PackageVersionRange::PackageVersionRange(const std::string &s)
+{
+    if (s.empty())
+        throw SW_RUNTIME_ERROR("Empty package version range");
+
+    if (detail::isBranch(s))
+        value = s;
+    else
+        value = VersionRange(s);
+    checkAndSetFirstVersion();
 }
 
 bool PackageVersionRange::isBranch() const

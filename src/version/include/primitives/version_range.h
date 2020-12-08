@@ -176,6 +176,10 @@ struct PRIMITIVES_VERSION_API PackageVersionRange
     /// default is any version or * or Version::min() - Version::max()
     PackageVersionRange();
 
+    /// from string
+    PackageVersionRange(const char *);
+    PackageVersionRange(const std::string &);
+
     // checkers
     bool isBranch() const;
     bool isRange() const;
