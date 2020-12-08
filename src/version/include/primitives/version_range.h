@@ -85,9 +85,6 @@ struct PRIMITIVES_VERSION_API VersionRange
 {
     VersionRange();
 
-    /// from one version
-    //explicit VersionRange(const Version &);
-
     /// from two versions [from, to]
     VersionRange(const Version &from, const Version &to);
 
@@ -146,28 +143,7 @@ private:
     /// range will be in an invalid state in case of errors
     /// optional error will be returned
     static std::optional<std::string> parse(VersionRange &v, const std::string &s);
-
-    /*friend PRIMITIVES_VERSION_API bool operator<(const VersionRange &, const Version &);
-    friend PRIMITIVES_VERSION_API bool operator<(const Version &, const VersionRange &);
-    friend PRIMITIVES_VERSION_API bool operator>(const VersionRange &, const Version &);
-    friend PRIMITIVES_VERSION_API bool operator>(const Version &, const VersionRange &);*/
 };
-
-/// Return true if version is greater than all the versions possible in the range.
-/*PRIMITIVES_VERSION_API
-bool operator<(const VersionRange &, const Version &);
-
-/// Return true if version is less than all the versions possible in the range.
-PRIMITIVES_VERSION_API
-bool operator<(const Version &, const VersionRange &);
-
-/// Return true if version is less than all the versions possible in the range.
-PRIMITIVES_VERSION_API
-bool operator>(const VersionRange &, const Version &);
-
-/// Return true if version is greater than all the versions possible in the range.
-PRIMITIVES_VERSION_API
-bool operator>(const Version &, const VersionRange &);*/
 
 struct PRIMITIVES_VERSION_API PackageVersionRange
 {
@@ -188,6 +164,11 @@ struct PRIMITIVES_VERSION_API PackageVersionRange
     const Branch &getBranch() const;
 
     std::string toString() const;
+
+    bool contains(const PackageVersion &) const;
+    bool contains(const PackageVersionRange &) const;
+
+    bool operator==(const PackageVersionRange &) const;
 
 private:
     std::variant<VersionRange, Branch> value;

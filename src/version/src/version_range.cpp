@@ -227,14 +227,16 @@ VersionRange::VersionRange()
 {
 }
 
-/*VersionRange::VersionRange(const Version &v)
-    : VersionRange(v, v)
-{
-}*/
-
 VersionRange::VersionRange(const Version &v1, const Version &v2)
 {
     range.emplace_back(v1, false, v2, false);
+}
+
+VersionRange::VersionRange(const char *v)
+{
+    if (!v)
+        throw SW_RUNTIME_ERROR("Empty version range");
+    *this = std::string{ v };
 }
 
 VersionRange::VersionRange(const std::string &s)
@@ -247,11 +249,15 @@ VersionRange::VersionRange(const std::string &s)
         throw SW_RUNTIME_ERROR("Invalid version range: " + in + ", error: " + r.value());
 }
 
-VersionRange::VersionRange(const char *v)
+std::optional<VersionRange> VersionRange::parse(const std::string &s)
 {
-    if (!v)
-        throw SW_RUNTIME_ERROR("Empty version range");
-    *this = std::string{ v };
+    VersionRange vr;
+    auto in = detail::preprocess_input(s);
+    if (in.empty())
+        vr = VersionRange{ Version::min(), Version::max() };
+    else if (auto r = parse(vr, in); r)
+        return {};
+    return vr;
 }
 
 std::optional<std::string> VersionRange::parse(VersionRange &vr, const std::string &s)
@@ -273,18 +279,6 @@ std::optional<std::string> VersionRange::parse(VersionRange &vr, const std::stri
             error = "parser error: empty result";
     }
     return error;
-}
-
-std::optional<VersionRange> VersionRange::parse(const std::string &s)
-{
-    VersionRange vr;
-    auto in = detail::preprocess_input(s);
-    if (in.empty())
-        SW_UNIMPLEMENTED;
-        //vr.range.emplace_back(Version::min(), Version::max());
-    else if (auto r = parse(vr, in); r)
-        return {};
-    return vr;
 }
 
 size_t VersionRange::size() const
@@ -458,42 +452,6 @@ VersionRange VersionRange::operator&(const VersionRange &rhs) const
     return tmp;
 }*/
 
-/*bool operator<(const VersionRange &r, const Version &v)
-{
-    if (r.isEmpty())
-        return false;
-    if (r.isBranch())
-        return Version(r.branch) < v;
-    return r.range.back().getSecond() < v;
-}
-
-bool operator<(const Version &v, const VersionRange &r)
-{
-    if (r.isEmpty())
-        return false;
-    if (r.isBranch())
-        return v < Version(r.branch);
-    return v < r.range.front().getFirst();
-}
-
-bool operator>(const VersionRange &r, const Version &v)
-{
-    if (r.isEmpty())
-        return false;
-    if (r.isBranch())
-        return Version(r.branch) > v;
-    return r.range.front().getFirst() > v;
-}
-
-bool operator>(const Version &v, const VersionRange &r)
-{
-    if (r.isEmpty())
-        return false;
-    if (r.isBranch())
-        return v > Version(r.branch);
-    return v > r.range.back().getSecond();
-}*/
-
 std::optional<Version> VersionRange::getMinSatisfyingVersion(const std::set<Version> &s) const
 {
     for (auto &v : s)
@@ -531,11 +489,10 @@ PackageVersionRange::PackageVersionRange(const std::string &s)
     if (s.empty())
         throw SW_RUNTIME_ERROR("Empty package version range");
 
-    if (detail::isBranch(s))
+    if (detail::is_branch(s))
         value = s;
     else
         value = VersionRange(s);
-    checkAndSetFirstVersion();
 }
 
 bool PackageVersionRange::isBranch() const
@@ -563,6 +520,29 @@ std::string PackageVersionRange::toString() const
     if (isBranch())
         return getBranch();
     return getRange().toString();
+}
+
+bool PackageVersionRange::contains(const PackageVersion &rhs) const
+{
+    if (isBranch() ^ rhs.isBranch())
+        return false;
+    if (isBranch())
+        return getBranch() == rhs.getBranch();
+    return getRange().contains(rhs.getVersion());
+}
+
+bool PackageVersionRange::contains(const PackageVersionRange &rhs) const
+{
+    if (isBranch() ^ rhs.isBranch())
+        return false;
+    if (isBranch())
+        return getBranch() == rhs.getBranch();
+    return getRange().contains(rhs.getRange());
+}
+
+bool PackageVersionRange::operator==(const PackageVersionRange &rhs) const
+{
+    return value == rhs.value;
 }
 
 }

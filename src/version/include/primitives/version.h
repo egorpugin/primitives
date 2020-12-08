@@ -19,48 +19,10 @@ namespace primitives::version
 namespace detail
 {
 
-std::string preprocess_input(const std::string &);
-
 using Number = int64_t;
 
-//template <3>?
-/*struct PRIMITIVES_VERSION_API GenericNumericVersion
-{
-    using Number = detail::Number;
-    using Numbers = std::vector<Number>;
-
-    // level is indexed starting from 1
-    using Level = int;
-
-    GenericNumericVersion();
-    explicit GenericNumericVersion(const std::initializer_list<Number> &);
-
-    Level getLevel() const;
-    // non null level
-    Level getRealLevel() const;
-
-    Number &operator[](int i) { return numbers[i]; }
-    Number operator[](int i) const { return numbers[i]; }
-
-    size_t getHash() const;
-
-    //static Level checkAndNormalizeLevel(Level);
-
-#ifndef HAVE_BISON_RANGE_PARSER
-protected:
-#endif
-
-    // data
-
-    std::string printVersion() const;
-    std::string printVersion(Level level) const;
-    std::string printVersion(const std::string &delimeter) const;
-    std::string printVersion(const std::string &delimeter, Level level) const;
-    Number get(Level level) const;
-    void setLevel(Level level, Number fill = 0);
-    void setFirstVersion();
-    void fill(Number);
-};*/
+std::string preprocess_input(const std::string &);
+bool is_branch(const std::string &);
 
 template <class ... Args>
 struct comparable_variant : std::variant<Args...>
@@ -94,7 +56,6 @@ struct PRIMITIVES_VERSION_API Extra
 
     bool operator<(const Extra &) const;
     bool operator==(const Extra &rhs) const { return values == rhs.values; }
-    bool operator!=(const Extra &rhs) const { return values != rhs.values; }
 
     auto &operator[](int i) { return values[i]; }
     const auto &operator[](int i) const { return values[i]; }
@@ -111,9 +72,6 @@ private:
 
     bool parse(const std::string &s);
 };
-
-PRIMITIVES_VERSION_API
-bool isBranch(const std::string &);
 
 }
 
@@ -162,24 +120,9 @@ struct PRIMITIVES_VERSION_API Version
     std::string toString(Level level) const;
     std::string toString(const std::string &delimeter) const;
     std::string toString(const std::string &delimeter, Level level) const;
-    //std::string toString(const Version &v) const;
     std::string toString(const std::string &delimeter, const Version &v) const;
 
     size_t getHash() const;
-
-    void push_back(Number n) { numbers.push_back(n); }
-
-    // modificators
-    void decrementVersion();
-    void incrementVersion();
-    /*void decrementVersion(Level level);
-    void incrementVersion(Level level);*/
-
-    //
-    /*Version getNextVersion() const;
-    Version getNextVersion(Level level) const;
-    Version getPreviousVersion() const;
-    Version getPreviousVersion(Level level) const;*/
 
     /// format string
     [[nodiscard]]
@@ -191,8 +134,6 @@ struct PRIMITIVES_VERSION_API Version
 
     Level getMatchingLevel(const Version &v) const;
 
-    //void prepareAndCheckVersion();
-    void check() const;
     void setFirstVersion();
 
     // operators
@@ -201,7 +142,6 @@ struct PRIMITIVES_VERSION_API Version
     bool operator<=(const Version &) const;
     bool operator>=(const Version &) const;
     bool operator==(const Version &) const;
-    bool operator!=(const Version &) const;
 
     // all calculations are on real level
     Version &operator++();
@@ -229,11 +169,18 @@ private:
     Numbers numbers;
     Extra extra;
 
-    /// version will be in an invalid state in case of errors
-    static bool parse(Version &v, const std::string &s);
-
+    void check() const;
     Number get(Level level) const;
     std::string printVersion(const std::string &delimeter, Level level) const;
+
+    // modificators
+    void decrementVersion();
+    void incrementVersion();
+
+    void push_back(Number n) { numbers.push_back(n); }
+
+    /// version will be in an invalid state in case of errors
+    static bool parse(Version &v, const std::string &s);
 
     template <class F>
     static bool cmp(const Version &v1, const Version &v2, F f);
@@ -272,7 +219,6 @@ struct PRIMITIVES_VERSION_API PackageVersion
     bool operator<=(const PackageVersion &) const;
     bool operator>=(const PackageVersion &) const;
     bool operator==(const PackageVersion &) const;
-    bool operator!=(const PackageVersion &) const;
 
     //static Version min();
 

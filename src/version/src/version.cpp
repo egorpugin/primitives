@@ -87,109 +87,14 @@ std::string Extra::print() const
     return s;
 }
 
-/*GenericNumericVersion::GenericNumericVersion()
-{
-    //numbers.resize(minimum_level - 1);
-    //numbers.push_back(1);
-}
-
-GenericNumericVersion::GenericNumericVersion(const std::initializer_list<Number> &list)
-    : numbers(list)
-{
-    if (std::any_of(numbers.begin(), numbers.end(), [](const auto &n) {return n < 0; }))
-        throw SW_RUNTIME_ERROR("Version number cannot be less than 0");
-    //SW_UNIMPLEMENTED;
-    //auto l = checkAndNormalizeLevel(level);
-    //if ((Level)numbers.size() < l)
-        //numbers.resize(l);
-    //setFirstVersion();
-}
-
-void GenericNumericVersion::fill(Number n)
-{
-    std::fill(numbers.begin(), numbers.end(), n);
-}
-
-GenericNumericVersion::Number GenericNumericVersion::get(Level level) const
-{
-    if (level > getLevel())
-        return 0;
-    return numbers[level - 1];
-}
-
-std::string GenericNumericVersion::printVersion() const
-{
-    return printVersion(".");
-}
-
-std::string GenericNumericVersion::printVersion(Level level) const
-{
-    return printVersion(".", level);
-}
-
-std::string GenericNumericVersion::printVersion(const std::string &delimeter) const
-{
-    return printVersion(delimeter, (Level)numbers.size());
-}
-
-std::string GenericNumericVersion::printVersion(const String &delimeter, Level level) const
-{
-    std::string s;
-    Level i = 0;
-    auto until = std::min(level, (Level)numbers.size());
-    for (; i < until; i++)
-        s += std::to_string(numbers[i]) + delimeter;
-    for (; i < level; i++)
-        s += std::to_string(0) + delimeter;
-    if (!s.empty())
-        s.resize(s.size() - delimeter.size());
-    return s;
-}
-
-GenericNumericVersion::Level GenericNumericVersion::getLevel() const
-{
-    return (Level)numbers.size();
-}
-
-GenericNumericVersion::Level GenericNumericVersion::getRealLevel() const
-{
-    auto l = (Level)numbers.size();
-    for (auto i = numbers.rbegin(); i != numbers.rend(); i++)
-    {
-        if (*i != 0)
-            return l;
-        l--;
-    }
-    return l;
-}
-
-void GenericNumericVersion::setLevel(Level level, Number fill)
-{
-    numbers.resize(level, fill);
-}
-
-void GenericNumericVersion::setFirstVersion()
-{
-    if (std::all_of(numbers.begin(), numbers.end(), [](const auto &n) {return n == 0; }))
-        numbers.back() = 1;
-}
-
-size_t GenericNumericVersion::getHash() const
-{
-    size_t h = 0;
-    for (auto &n : numbers)
-        hash_combine(h, n);
-    return h;
-}*/
-
-bool isBranch(const std::string &s)
+bool is_branch(const std::string &s)
 {
     return 1
         && (std::isalpha(s[0]) || s[0] == '_')
         && std::all_of(s.begin(), s.end(), [](auto &&c)
     {
         return std::isalnum(c) || c == '_';
-    };
+    });
 }
 
 } // namespace detail
@@ -436,11 +341,6 @@ bool Version::operator==(const Version &rhs) const
     return cmp(*this, rhs, std::equal_to<decltype(std::tie(numbers, extra))>());
 }
 
-bool Version::operator!=(const Version &rhs) const
-{
-    return !operator==(rhs);
-}
-
 Version &Version::operator++()
 {
     incrementVersion();
@@ -530,58 +430,6 @@ void Version::incrementVersion()
         *current-- = 0;
     (*current)++;
 }
-
-/*Version Version::getNextVersion() const
-{
-    return getNextVersion(getLevel());
-}
-
-Version Version::getPreviousVersion() const
-{
-    return getPreviousVersion(getLevel());
-}
-
-void Version::decrementVersion(Level l)
-{
-    SW_UNIMPLEMENTED;
-
-    if (*this == min(getLevel()))
-        return;
-
-    if (l > getLevel())
-        numbers.resize(l);
-    auto current = &numbers[l - 1];
-    while (*current == 0)
-        *current-- = maxNumber();
-    (*current)--;
-}
-
-void Version::incrementVersion(Level l)
-{
-    if (*this == max(getLevel()))
-        return;
-
-    if (l > getLevel())
-        numbers.resize(l);
-    auto current = &numbers[l - 1];
-    while (*current == maxNumber())
-        *current-- = 0;
-    (*current)++;
-}
-
-Version Version::getNextVersion(Level l) const
-{
-    auto v = *this;
-    v.incrementVersion(l);
-    return v;
-}
-
-Version Version::getPreviousVersion(Level l) const
-{
-    auto v = *this;
-    v.decrementVersion(l);
-    return v;
-}*/
 
 std::string Version::format(const std::string &s) const
 {
@@ -770,7 +618,7 @@ PackageVersion::PackageVersion(const std::string &s)
     if (s.empty())
         throw SW_RUNTIME_ERROR("Empty package version");
 
-    if (detail::isBranch(s))
+    if (detail::is_branch(s))
         value = s;
     else
         value = Version(s);
@@ -892,11 +740,6 @@ bool PackageVersion::operator>=(const PackageVersion &rhs) const
 bool PackageVersion::operator==(const PackageVersion &rhs) const
 {
     return value == rhs.value;
-}
-
-bool PackageVersion::operator!=(const PackageVersion &rhs) const
-{
-    return value != rhs.value;
 }
 
 }
