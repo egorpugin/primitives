@@ -6,7 +6,6 @@
 
 #include <primitives/source.h>
 
-#include <fmt/format.h>
 #include <primitives/command.h>
 #include <primitives/exceptions.h>
 #include <primitives/filesystem.h>
@@ -325,9 +324,9 @@ void SourceUrl::save1(SourceKvMap &m) const
     KV_ADD_IF_NOT_EMPTY("Url", url);
 }
 
-void SourceUrl::applyVersion(const Version &v)
+void SourceUrl::apply(Formatter f)
 {
-    url = v.format(url);
+    url = f(url);
 }
 
 Git::Git(const String &url, const String &tag, const String &branch, const String &commit)
@@ -496,11 +495,11 @@ void Git::save1(SourceKvMap &m) const
     KV_ADD_IF_NOT_EMPTY("Commit", commit);
 }
 
-void Git::applyVersion(const Version &v)
+void Git::apply(Formatter f)
 {
-    SourceUrl::applyVersion(v);
-    tag = v.format(tag);
-    branch = v.format(branch);
+    SourceUrl::apply(f);
+    tag = f(tag);
+    branch = f(branch);
 }
 
 Hg::Hg(const String &url, const String &tag, const String &branch, const String &commit, int64_t revision)
@@ -610,10 +609,10 @@ void Bzr::download1(const path &dir) const
     });
 }
 
-void Bzr::applyVersion(const Version &v)
+void Bzr::apply(Formatter f)
 {
-    SourceUrl::applyVersion(v);
-    tag = v.format(tag);
+    SourceUrl::apply(f);
+    tag = f(tag);
 }
 
 void Bzr::save1(nlohmann::json &j) const
@@ -716,13 +715,13 @@ void Cvs::download1(const path &dir) const
     });
 }
 
-void Cvs::applyVersion(const Version &v)
+void Cvs::apply(Formatter f)
 {
-    SourceUrl::applyVersion(v);
-    //v.format(module); // ?
-    tag = v.format(tag);
-    branch = v.format(branch);
-    revision = v.format(revision); // ?
+    SourceUrl::apply(f);
+    //f(module); // ?
+    tag = f(tag);
+    branch = f(branch);
+    revision = f(revision); // ?
 }
 
 void Cvs::save1(nlohmann::json &j) const
@@ -806,11 +805,11 @@ void Svn::download1(const path &dir) const
     });
 }
 
-void Svn::applyVersion(const Version &v)
+void Svn::apply(Formatter f)
 {
-    SourceUrl::applyVersion(v);
-    tag = v.format(tag);
-    branch = v.format(branch);
+    SourceUrl::apply(f);
+    tag = f(tag);
+    branch = f(branch);
 }
 
 void Svn::save1(nlohmann::json &j) const
@@ -906,11 +905,11 @@ void RemoteFiles::save1(SourceKvMap &m) const
         KV_ADD_IF_NOT_EMPTY("Url", url);
 }
 
-void RemoteFiles::applyVersion(const Version &v)
+void RemoteFiles::apply(Formatter f)
 {
     decltype(urls) urls2;
     for (auto &u : urls)
-        urls2.insert(v.format(u));
+        urls2.insert(f(u));
     urls = urls2;
 }
 

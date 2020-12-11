@@ -328,7 +328,7 @@ void build(Solution &s)
     gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison"_dep, version, "GLR_CPP_PARSER", "src/range");
 
     ADD_LIBRARY(source);
-    source.Public += command, hash, http, pack, version, yaml,
+    source.Public += command, hash, http, pack, yaml,
         "org.sw.demo.nlohmann.json"_dep;
 
     // experimental

@@ -7,9 +7,10 @@
 #pragma once
 
 #include <primitives/filesystem.h>
-#include <primitives/version.h>
 
 #include <nlohmann/json_fwd.hpp>
+
+#include <functional>
 #include <variant>
 
 namespace YAML { class Node; }
@@ -18,7 +19,7 @@ using yaml = YAML::Node;
 namespace primitives::source
 {
 
-using primitives::version::Version;
+//using primitives::version::Version;
 
 enum class SourceType
 {
@@ -37,6 +38,7 @@ enum class SourceType
 
 struct PRIMITIVES_SOURCE_API Source
 {
+    using Formatter = std::function<String(const String &)>;
     using SourceKvMap = std::vector<std::pair<String, String>>;
 
     virtual ~Source() = default;
@@ -65,7 +67,7 @@ struct PRIMITIVES_SOURCE_API Source
     // virtual
 
     ///
-    virtual void applyVersion(const Version &v) = 0;
+    virtual void apply(Formatter) = 0;
 
     ///
     virtual SourceType getType() const = 0;
@@ -97,7 +99,7 @@ struct EmptySource : Source
     EmptySource(const nlohmann::json &) {}
     EmptySource(const yaml &) {}
 
-    void applyVersion(const Version &) override {}
+    void apply(Formatter) override {}
 
 private:
     SourceType getType() const override { return SourceType::Empty; }
@@ -118,7 +120,7 @@ struct PRIMITIVES_SOURCE_API SourceUrl : Source
     SourceUrl(const nlohmann::json &j);
     SourceUrl(const yaml &root);
 
-    void applyVersion(const Version &v) override;
+    void apply(Formatter) override;
 
 protected:
     String print1() const override;
@@ -141,7 +143,7 @@ struct PRIMITIVES_SOURCE_API Git : SourceUrl
     Git(const nlohmann::json &j);
     Git(const yaml &root);
 
-    void applyVersion(const Version &v) override;
+    void apply(Formatter) override;
     void tryVTagPrefixDuringDownload(bool try_v_tag_prefix = true);
 
 protected:
@@ -198,7 +200,7 @@ struct PRIMITIVES_SOURCE_API Bzr : SourceUrl
     Bzr(const nlohmann::json &j);
     Bzr(const yaml &root);
 
-    void applyVersion(const Version &v) override;
+    void apply(Formatter) override;
 
 private:
     void checkValid() const;
@@ -235,7 +237,7 @@ struct PRIMITIVES_SOURCE_API Cvs : SourceUrl
     Cvs(const nlohmann::json &j);
     Cvs(const yaml &root);
 
-    void applyVersion(const Version &v) override;
+    void apply(Formatter) override;
 
 private:
     void checkValid() const;
@@ -260,7 +262,7 @@ struct PRIMITIVES_SOURCE_API Svn : SourceUrl
     Svn(const nlohmann::json &j);
     Svn(const yaml &root);
 
-    void applyVersion(const Version &v) override;
+    void apply(Formatter) override;
 
 private:
     void checkValid() const;
@@ -292,7 +294,7 @@ struct PRIMITIVES_SOURCE_API RemoteFiles : Source
     RemoteFiles(const nlohmann::json &j);
     RemoteFiles(const yaml &root);
 
-    void applyVersion(const Version &v) override;
+    void apply(Formatter) override;
 
 private:
     SourceType getType() const override { return SourceType::RemoteFiles; }
