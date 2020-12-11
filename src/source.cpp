@@ -8,6 +8,7 @@
 #include <primitives/yaml.h>
 #include <primitives/sw/main.h>
 
+#include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
 
 #include <chrono>
@@ -108,7 +109,7 @@ source:
   tag: "{v}")");
         }
 
-        s->applyVersion("1.2.3");
+        s->apply([](auto &&s) { return boost::replace_all_copy(s, "{v}", "1.2.3"); });
 
         {
             auto t1 = s->print();
