@@ -13,16 +13,6 @@
 #include <algorithm>
 #include <map>
 
-static void throw_bad_version(const std::string &s)
-{
-    throw SW_RUNTIME_ERROR("Invalid version: " + s);
-}
-
-static void throw_bad_version_extra(const std::string &s)
-{
-    throw SW_RUNTIME_ERROR("Invalid version extra: " + s);
-}
-
 namespace primitives::version
 {
 
@@ -33,11 +23,6 @@ std::string preprocess_input(const std::string &in)
 {
     return pystring::strip(in);
 }
-
-/*static std::string preprocess_input_extra(const std::string &in)
-{
-    return pystring::lower(preprocess_input(in));
-}*/
 
 Extra::Extra(const char *s)
 {
@@ -51,7 +36,7 @@ Extra::Extra(const std::string &s)
     if (s.empty())
         throw SW_RUNTIME_ERROR("Empty extra");
     if (!parse(detail::preprocess_input(s)))
-        throw_bad_version_extra(s);
+        throw SW_RUNTIME_ERROR("Invalid version extra: " + s);
 }
 
 bool Extra::operator<(const Extra &rhs) const
@@ -87,16 +72,6 @@ std::string Extra::print() const
     return s;
 }
 
-bool is_branch(const std::string &s)
-{
-    return 1
-        && (std::isalpha(s[0]) || s[0] == '_')
-        && std::all_of(s.begin(), s.end(), [](auto &&c)
-    {
-        return std::isalnum(c) || c == '_';
-    });
-}
-
 } // namespace detail
 
 Version::Version()
@@ -126,7 +101,7 @@ Version::Version(const std::string &s)
         ps = ps.substr(0, p);
     }
     if (!parse(*this, ps))
-        throw_bad_version(s);
+        throw SW_RUNTIME_ERROR("Invalid version: " + s);
 }
 
 Version::Version(const std::initializer_list<Number> &l)
@@ -164,7 +139,7 @@ Version::Version(Number ma, Number mi, Number pa, Number tw)
 {
 }
 
-void Version::check() const
+void Version::checkValidity() const
 {
     if (std::any_of(numbers.begin(), numbers.end(), [](const auto &n) {return n < 0; }))
         throw SW_RUNTIME_ERROR("Version number cannot be less than 0");
@@ -599,147 +574,6 @@ std::string Version::format(const std::string &s) const
 #undef VAR_OPT
 #undef VAR_SMALL_OPT
 #undef VAR_CAP_OPT
-}
-
-PackageVersion::PackageVersion()
-{
-    checkAndSetFirstVersion();
-}
-
-PackageVersion::PackageVersion(const char *s)
-{
-    if (!s)
-        throw SW_RUNTIME_ERROR("Empty package version");
-    *this = PackageVersion{ std::string{s} };
-}
-
-PackageVersion::PackageVersion(const std::string &s)
-{
-    if (s.empty())
-        throw SW_RUNTIME_ERROR("Empty package version");
-
-    if (detail::is_branch(s))
-        value = s;
-    else
-        value = Version(s);
-    checkAndSetFirstVersion();
-}
-
-PackageVersion::PackageVersion(const Version &v)
-{
-    value = v;
-    checkAndSetFirstVersion();
-}
-
-bool PackageVersion::isBranch() const
-{
-    return std::holds_alternative<Branch>(value);
-}
-
-bool PackageVersion::isVersion() const
-{
-    return std::holds_alternative<Version>(value);
-}
-
-Version &PackageVersion::getVersion()
-{
-    return std::get<Version>(value);
-}
-
-const Version &PackageVersion::getVersion() const
-{
-    return std::get<Version>(value);
-}
-
-const PackageVersion::Branch &PackageVersion::getBranch() const
-{
-    return std::get<Branch>(value);
-}
-
-bool PackageVersion::isRelease() const
-{
-    if (isBranch())
-        return false;
-    return getVersion().isRelease();
-}
-
-bool PackageVersion::isPreRelease() const
-{
-    return !isRelease();
-}
-
-std::string PackageVersion::format(const std::string &s) const
-{
-    if (isBranch())
-    {
-        return fmt::format(s,
-            fmt::arg("b", getBranch()),
-            fmt::arg("v", toString())
-        );
-    }
-    else
-        return getVersion().format(s);
-}
-
-std::string PackageVersion::toString() const
-{
-    if (isBranch())
-        return getBranch();
-    return getVersion().toString();
-}
-
-void PackageVersion::checkAndSetFirstVersion()
-{
-    if (!isBranch())
-        getVersion().setFirstVersion();
-    check();
-}
-
-void PackageVersion::check() const
-{
-    if (isBranch())
-    {
-        if (getBranch().size() > 200)
-            throw_bad_version(getBranch() + ", branch must have size <= 200");
-    }
-    else
-    {
-        getVersion().check();
-    }
-}
-
-#define BRANCH_COMPARE(op)                          \
-    if (isBranch() && rhs.isBranch())               \
-        return getBranch() op rhs.getBranch();      \
-    if (isBranch())                                 \
-        return !(getBranch() op std::string{});     \
-    if (rhs.isBranch())                             \
-        return !(std::string{} op rhs.getBranch()); \
-    return value op rhs.value
-
-bool PackageVersion::operator<(const PackageVersion &rhs) const
-{
-    BRANCH_COMPARE(<);
-}
-
-bool PackageVersion::operator<=(const PackageVersion &rhs) const
-{
-    BRANCH_COMPARE(<=);
-}
-
-bool PackageVersion::operator>(const PackageVersion &rhs) const
-{
-    BRANCH_COMPARE(>);
-}
-
-bool PackageVersion::operator>=(const PackageVersion &rhs) const
-{
-    BRANCH_COMPARE(>=);
-}
-
-bool PackageVersion::operator==(const PackageVersion &rhs) const
-{
-    return value == rhs.value;
 }
 
 }

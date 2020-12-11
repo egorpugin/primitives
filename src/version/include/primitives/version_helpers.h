@@ -265,15 +265,4 @@ public:
 
 } // namespace detail
 
-using VersionSet = detail::ReverseVersionContainer<PackageVersion, std::set>;
-
-template <class ... Args>
-using VersionSetCustom = detail::ReverseVersionContainer<PackageVersion, std::set, Args...>;
-
-template <class ... Args>
-using VersionMap = detail::ReverseVersionContainer<PackageVersion, std::map, Args...>;
-
-template <class ... Args>
-using UnorderedVersionMap = detail::VersionContainer<PackageVersion, std::unordered_map, Args...>;
-
 } // namespace primitives::version

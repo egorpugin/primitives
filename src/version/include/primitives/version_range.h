@@ -86,6 +86,7 @@ struct PRIMITIVES_VERSION_API VersionRange
     VersionRange();
 
     /// from two versions [from, to]
+    // remove?
     VersionRange(const Version &from, const Version &to);
 
     /// parse from raw string
@@ -114,9 +115,6 @@ struct PRIMITIVES_VERSION_API VersionRange
     bool contains(const VersionRange &) const;
     size_t size() const;
 
-    std::optional<Version> getMinSatisfyingVersion(const std::set<Version> &) const;
-    std::optional<Version> getMaxSatisfyingVersion(const std::set<Version> &) const;
-
     // operators
     bool operator==(const VersionRange &) const;
 
@@ -142,35 +140,6 @@ private:
     /// range will be in an invalid state in case of errors
     /// optional error will be returned
     static std::optional<std::string> parse(VersionRange &v, const std::string &s);
-};
-
-struct PRIMITIVES_VERSION_API PackageVersionRange
-{
-    using Branch = PackageVersion::Branch;
-
-    /// default is any version or * or Version::min() - Version::max()
-    PackageVersionRange();
-
-    /// from string
-    PackageVersionRange(const char *);
-    PackageVersionRange(const std::string &);
-
-    // checkers
-    bool isBranch() const;
-    bool isRange() const;
-
-    const VersionRange &getRange() const;
-    const Branch &getBranch() const;
-
-    std::string toString() const;
-
-    bool contains(const PackageVersion &) const;
-    bool contains(const PackageVersionRange &) const;
-
-    bool operator==(const PackageVersionRange &) const;
-
-private:
-    std::variant<VersionRange, Branch> value;
 };
 
 } // namespace primitives::version

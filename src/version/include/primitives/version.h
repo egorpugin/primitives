@@ -22,7 +22,6 @@ namespace detail
 using Number = int64_t;
 
 std::string preprocess_input(const std::string &);
-bool is_branch(const std::string &);
 
 template <class ... Args>
 struct comparable_variant : std::variant<Args...>
@@ -135,6 +134,7 @@ struct PRIMITIVES_VERSION_API Version
     Level getMatchingLevel(const Version &v) const;
 
     void setFirstVersion();
+    void checkValidity() const;
 
     // operators
     bool operator<(const Version &) const;
@@ -169,7 +169,6 @@ private:
     Numbers numbers;
     Extra extra;
 
-    void check() const;
     Number get(Level level) const;
     std::string printVersion(const std::string &delimeter, Level level) const;
 
@@ -184,49 +183,6 @@ private:
 
     template <class F>
     static bool cmp(const Version &v1, const Version &v2, F f);
-};
-
-struct PRIMITIVES_VERSION_API PackageVersion
-{
-    using Branch = std::string;
-
-    PackageVersion();
-    PackageVersion(const char *);
-    PackageVersion(const std::string &);
-    PackageVersion(const Version &);
-    //PackageVersion(const PackageVersion &) = default;
-
-    // checkers
-    bool isBranch() const;
-    bool isVersion() const;
-    //bool isTag() const; todo - add tags?
-
-    Version &getVersion();
-    const Version &getVersion() const;
-    const Branch &getBranch() const;
-
-    bool isRelease() const;
-    bool isPreRelease() const;
-
-    [[nodiscard]]
-    std::string format(const std::string &s) const;
-    [[nodiscard]]
-    std::string toString() const;
-
-    // operators
-    bool operator<(const PackageVersion &) const;
-    bool operator>(const PackageVersion &) const;
-    bool operator<=(const PackageVersion &) const;
-    bool operator>=(const PackageVersion &) const;
-    bool operator==(const PackageVersion &) const;
-
-    //static Version min();
-
-private:
-    std::variant<Version, Branch> value;
-
-    void checkAndSetFirstVersion();
-    void check() const;
 };
 
 } // namespace primitives::version
