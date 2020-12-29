@@ -277,7 +277,7 @@ static int startup(int argc, char *argv[])
     // we also use fs::u8path() here, because normalize_path() converts it to utf-8
 
     auto cp = fs::current_path();
-    auto s = to_string(normalize_path(cp.lexically_normal()));
+    auto s = to_path_string(normalize_path(cp.lexically_normal()));
     while (!s.empty() && s.back() == '/')
         s.resize(s.size() - 1);
 #ifdef _WIN32
