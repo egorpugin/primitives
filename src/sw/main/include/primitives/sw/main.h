@@ -8,7 +8,15 @@
 
 #include <primitives/filesystem.h>
 
+int sw_main_internal(int argc, char *argv[]);
 int SW_MAIN(int argc, char *argv[]);
+
+#ifdef main
+#define SW_OLD_MAIN1(x) x
+#define SW_OLD_MAIN SW_OLD_MAIN1(main)
+int main(int argc, char *argv[]) { return sw_main_internal(argc, argv); }
+#undef main
+#endif
 
 #ifndef SW_MAIN_IMPL
 #define main SW_MAIN

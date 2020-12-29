@@ -303,7 +303,13 @@ static int startup(int argc, char *argv[])
     return 0;
 }
 
+// main or backup main
 int main(int argc, char *argv[])
+{
+    return sw_main_internal(argc, argv);
+}
+
+int sw_main_internal(int argc, char *argv[])
 {
     if (int r = startup(argc, argv))
         return r;
