@@ -180,7 +180,7 @@ void build(Solution &s)
     auto &var = p.addTarget<LibraryTarget>(name, __VA_ARGS__);  \
     setup_primitives(var)
 
-#define ADD_LIBRARY(x, ...) ADD_LIBRARY_WITH_NAME(x, #x, __VA_ARGS__)
+#define ADD_LIBRARY(x) ADD_LIBRARY_WITH_NAME(x, #x, __VA_ARGS__)
 
     ADD_LIBRARY(error_handling);
 
