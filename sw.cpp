@@ -176,11 +176,11 @@ void build(Solution &s)
         t += "src/.*"_rr;
     };
 
-#define ADD_LIBRARY_WITH_NAME(var, name, ...)                   \
-    auto &var = p.addTarget<LibraryTarget>(name, __VA_ARGS__);  \
+#define ADD_LIBRARY_WITH_NAME(var, name)           \
+    auto &var = p.addTarget<LibraryTarget>(name);  \
     setup_primitives(var)
 
-#define ADD_LIBRARY(x) ADD_LIBRARY_WITH_NAME(x, #x, __VA_ARGS__)
+#define ADD_LIBRARY(x) ADD_LIBRARY_WITH_NAME(x, #x)
 
     ADD_LIBRARY(error_handling);
 
