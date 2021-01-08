@@ -227,10 +227,10 @@ VersionRange::VersionRange()
 {
 }
 
-VersionRange::VersionRange(const Version &v1, const Version &v2)
+/*VersionRange::VersionRange(const Version &v1, const Version &v2)
 {
     range.emplace_back(v1, false, v2, false);
-}
+}*/
 
 VersionRange::VersionRange(const char *v)
 {
@@ -244,7 +244,7 @@ VersionRange::VersionRange(const std::string &s)
     auto in = detail::preprocess_input(s);
     if (in.empty())
         // * or throw error?
-        *this = VersionRange{ Version::min(), Version::max() };
+        *this = VersionRange{"*"};
     else if (auto r = parse(*this, in); r)
         throw SW_RUNTIME_ERROR("Invalid version range: " + in + ", error: " + r.value());
 }
@@ -254,7 +254,7 @@ std::optional<VersionRange> VersionRange::parse(const std::string &s)
     VersionRange vr;
     auto in = detail::preprocess_input(s);
     if (in.empty())
-        vr = VersionRange{ Version::min(), Version::max() };
+        vr = VersionRange{"*"};
     else if (auto r = parse(vr, in); r)
         return {};
     return vr;

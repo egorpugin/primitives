@@ -36,7 +36,7 @@ namespace detail
 {
 
 /// version interval
-struct RangePair
+struct PRIMITIVES_VERSION_API RangePair
 {
     struct Side
     {
@@ -87,7 +87,7 @@ struct PRIMITIVES_VERSION_API VersionRange
 
     /// from two versions [from, to]
     // remove?
-    VersionRange(const Version &from, const Version &to);
+    //VersionRange(const Version &from, const Version &to);
 
     /// parse from raw string
     VersionRange(const char *); // no explicit
