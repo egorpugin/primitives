@@ -152,6 +152,8 @@ struct PRIMITIVES_VERSION_API Version
     // add +,-?
     // int compare()?
 
+    const Numbers &getNumbers() const { return numbers; }
+
 public:
     // [min(), max())
     static Version min();
