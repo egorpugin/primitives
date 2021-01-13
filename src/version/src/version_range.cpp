@@ -169,6 +169,13 @@ std::string detail::RangePair::toString(VersionRangePairStringRepresentationType
     bool print_left = first.v > Version::min();
     bool print_right = second.v < Version::max();
 
+    if (print_left && print_right
+        && !first.strong_relation && !second.strong_relation
+        && first.v == second.v)
+    {
+        return "=" + first.toString(t);
+    }
+
     std::string s;
     if (print_left)
     {
