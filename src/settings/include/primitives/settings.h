@@ -259,14 +259,12 @@ struct parser<path, void> : parser_base
 {
     String toString(const std::any &value) const override
     {
-        SW_UNIMPLEMENTED;
-        //return std::any_cast<path>(value).u8string();
+        return to_printable_string(std::any_cast<path>(value));
     }
 
     std::any fromString(const String &value) const override
     {
-        SW_UNIMPLEMENTED;
-        //return path(value);
+        return path((const char8_t *)value.c_str());
     }
 };
 
@@ -416,9 +414,9 @@ struct base_setting
         s->saveable = false;
     }
 
-    void setSettings(const Settings &s)
+    void setSettings(const Settings &in_s)
     {
-        settings = (Settings *)&s;
+        settings = (Settings *)&in_s;
     }
 };
 
