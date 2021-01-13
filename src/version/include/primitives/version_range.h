@@ -49,7 +49,7 @@ struct PRIMITIVES_VERSION_API RangePair
         bool operator<(const Version &) const;
         bool operator>(const Version &) const;
 
-        std::string detail::RangePair::toString(VersionRangePairStringRepresentationType t) const;
+        std::string toString(VersionRangePairStringRepresentationType t) const;
     };
 
 public:
