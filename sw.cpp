@@ -118,8 +118,13 @@ static void create_git_revision(const DependencyPtr &create_git_rev, NativeExecu
         << cmd::out(t.BinaryPrivateDir / "gitrev.h");
     c->always = true;
 
-    auto u = create_git_rev->getPackage();
+#if SW_CPP_DRIVER_API_VERSION > 1
+    auto u = create_git_rev->getUnresolvedPackageId();
+    sw::UnresolvedPackageName up{ u.getName().getPath().parent().parent() / "git_rev", u.getName().getRange() };
+#else
+    auto u = create_git_rev->getUnresolvedPackage();
     sw::UnresolvedPackage up{ u.getPath().parent().parent() / "git_rev", u.getRange() };
+#endif
     t += std::make_shared<sw::Dependency>(up);
 }
 
