@@ -15,14 +15,24 @@
 namespace primitives::git_rev
 {
 
+static auto get_time(const tm *t, const char *fmt)
+{
+    std::ostringstream ss;
+    ss << std::put_time(t, fmt);
+    return ss.str();
+}
+
 std::string getBuildTime()
 {
     time_t t = SW_BUILD_TIME_T;
-    std::ostringstream ss2;
-    ss2 << "assembled on\n";
-    ss2 << std::put_time(gmtime(&t), "%d.%m.%Y %H:%M:%S UTC") << "\n";
-    ss2 << std::put_time(localtime(&t), "%d.%m.%Y %H:%M:%S %Z");
-    return ss2.str();
+    std::ostringstream ss;
+    ss << "assembled on\n";
+    auto t1 = get_time(gmtime(&t), "%d.%m.%Y %H:%M:%S UTC");
+    auto t2 = get_time(localtime(&t), "%d.%m.%Y %H:%M:%S %Z");
+    ss << t1;
+    if (t1 != t2)
+        ss << "\n" << t2;
+    return ss.str();
 }
 
 std::string getGitRevision()
