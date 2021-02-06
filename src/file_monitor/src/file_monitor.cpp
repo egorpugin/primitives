@@ -87,11 +87,7 @@ void FileMonitor::record::cb(uv_fs_event_t* handle, const char* filename, int ev
     }
     if (!filename)
         return;
-#if PRIMITIVES_FS_USE_UTF8_PATH_STRINGS
-    path fn((const char8_t *)filename);
-#else
-    auto fn = fs::u8path(filename);
-#endif
+    path fn((const path_char_t *)filename);
     if (r->mon->has_file(r->dir, fn) && r->callback)
     {
         // protected add dir

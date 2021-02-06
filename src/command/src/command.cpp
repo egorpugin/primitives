@@ -146,11 +146,7 @@ path Command::getProgram() const
 {
     if (!program_set && getArguments().empty())
         throw SW_RUNTIME_ERROR("program is not set");
-#if PRIMITIVES_FS_USE_UTF8_PATH_STRINGS
-    return (const char8_t *)getArguments()[0]->toString().c_str();
-#else
-    return getArguments()[0]->toString();
-#endif
+    return (const path_char_t *)getArguments()[0]->toString().c_str();
 }
 
 Command::Arguments &Command::getArguments()

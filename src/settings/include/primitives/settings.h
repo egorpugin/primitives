@@ -264,11 +264,7 @@ struct parser<path, void> : parser_base
 
     std::any fromString(const String &value) const override
     {
-#if PRIMITIVES_FS_USE_UTF8_PATH_STRINGS
-        return path((const char8_t *)value.c_str());
-#else
-        return path((const char *)value.c_str());
-#endif
+        return path((const path_char_t *)value.c_str());
     }
 };
 
