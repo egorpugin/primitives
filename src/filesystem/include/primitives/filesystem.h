@@ -30,8 +30,10 @@ using path = fs::path;
 // on win and C++20 we can use std::u8string for path strings
 // to convert paths in both directions safely
 using path_u8string = std::u8string;
+using path_char_t = char8_t;
 #else
 using path_u8string = String;
+using path_char_t = char;
 #endif
 
 using FilesSorted = std::set<path>;
