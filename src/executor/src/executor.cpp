@@ -31,14 +31,15 @@ size_t select_number_of_threads(int N)
     if (N > 0)
         return N;
     N = std::thread::hardware_concurrency();
-    if (N == 1)
-        N = 2;
+    /*if (N == 1)
+        N = 2; // probably bad too
     else if (N <= 8)
-        N += 2;
-    else if (N <= 64)
+        N += 2; // bad on low memory configs
+    else if (N <= 64) (8; 64] - make (32; 64]?
         N += 4;
     else
-        N += 8;
+        N += 8; // too many extra jobs?
+    */
     return N;
 }
 
