@@ -114,4 +114,7 @@ void setupSafeTls(bool prefer_native, bool strict, const path &ca_certs_fn, Stri
 PRIMITIVES_HTTP_API
 void setupSafeTls();
 
+PRIMITIVES_HTTP_API
+void setup_curl_ssl(void *);
+
 }

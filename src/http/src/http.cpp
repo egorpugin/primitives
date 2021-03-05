@@ -17,6 +17,13 @@
 
 HttpSettings httpSettings;
 
+namespace primitives::http
+{
+
+static void setup_curl_ssl(CURL *curl, const HttpRequest &request);
+
+}
+
 String getAutoProxy()
 {
     String proxy_addr;
@@ -69,8 +76,8 @@ struct CurlWrapper
     struct curl_slist *headers = nullptr;
     std::string post_data;
     std::vector<char *> escaped_strings;
-    path_u8string ca_certs_file;
-    path_u8string ca_certs_dir;
+    //path_u8string ca_certs_file;
+    //path_u8string ca_certs_dir;
 
     CurlWrapper()
     {
@@ -97,8 +104,6 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
 {
     auto wp = std::make_unique<CurlWrapper>();
     auto &w = *wp;
-    w.ca_certs_file = to_path_string(normalize_path(request.ca_certs_file));
-    w.ca_certs_dir = to_path_string(normalize_path(request.ca_certs_dir));
     auto curl = w.curl;
 
     curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
@@ -144,27 +149,7 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
     }
 
     // ssl
-    if (!w.ca_certs_file.empty())
-        curl_easy_setopt(curl, CURLOPT_CAINFO, w.ca_certs_file.c_str());
-#ifdef _WIN32
-    else
-    {
-        // by default on windows we use native ca store since curl 7.71.0
-        curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
-    }
-#else
-    // capath does not work on windows
-    // https://curl.haxx.se/libcurl/c/CURLOPT_CAPATH.html
-    else if (!w.ca_certs_dir.empty())
-        curl_easy_setopt(curl, CURLOPT_CAPATH, w.ca_certs_dir.c_str());
-#endif
-
-    if (request.ignore_ssl_checks)
-    {
-        // we always verify host
-        // we disable only peer check
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-    }
+    primitives::http::setup_curl_ssl(curl, request);
 
     // headers
     auto ct = "Content-Type: " + request.content_type;
@@ -620,6 +605,40 @@ void setupSafeTls(bool prefer_native, bool strict, const path &ca_certs_fn, Stri
 void setupSafeTls()
 {
     setupSafeTls(true, true, {});
+}
+
+static void setup_curl_ssl(CURL *curl, const HttpRequest &request)
+{
+    auto ca_certs_file = to_path_string(normalize_path(request.ca_certs_file));
+    auto ca_certs_dir = to_path_string(normalize_path(request.ca_certs_dir));
+
+    if (!ca_certs_file.empty())
+        curl_easy_setopt(curl, CURLOPT_CAINFO, ca_certs_file.c_str());
+#ifdef _WIN32
+    else
+    {
+        // by default on windows we use native ca store since curl 7.71.0
+        curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+    }
+#else
+    // capath does not work on windows
+    // https://curl.haxx.se/libcurl/c/CURLOPT_CAPATH.html
+    else if (!ca_certs_dir.empty())
+        curl_easy_setopt(curl, CURLOPT_CAPATH, ca_certs_dir.c_str());
+#endif
+
+    if (request.ignore_ssl_checks)
+    {
+        // we always verify host
+        // we disable only peer check
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+    }
+}
+
+void setup_curl_ssl(void *in)
+{
+    auto curl = (CURL *)in;
+    setup_curl_ssl(curl, httpSettings);
 }
 
 }
