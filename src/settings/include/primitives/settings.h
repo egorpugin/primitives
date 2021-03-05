@@ -268,6 +268,38 @@ struct parser<path, void> : parser_base
     }
 };
 
+// path
+template <typename U>
+struct parser<std::vector<U>, void> : parser_base
+{
+    String toString(const std::any &value) const override
+    {
+        String s;
+        for (auto &v : std::any_cast<std::vector<U>>(value))
+            s += std::to_string(v) + ",";
+        return s;
+    }
+
+    std::any fromString(const String &value) const override
+    {
+        std::vector<U> v;
+        for (auto &s : split_string(value, ", "))
+        {
+            if constexpr (std::is_same_v<U, uint64_t>)
+                v.push_back(std::stoull(s));
+            else if constexpr (std::is_same_v<U, int64_t>)
+                v.push_back(std::stoll(s));
+            else if constexpr (std::is_same_v<U, int32_t>)
+                v.push_back(std::stoi(s));
+            else if constexpr (std::is_same_v<U, String>)
+                v.push_back(s);
+            else
+                static_assert(false, "not supported");
+        }
+        return v;
+    }
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 
 PRIMITIVES_SETTINGS_API
