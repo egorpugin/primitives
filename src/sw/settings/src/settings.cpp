@@ -47,22 +47,17 @@ static std::pair<std::string, std::string> getProgramName1()
             return { {},"sw.settings: calling getProgramName(), but function is not defined (did you forget to add '-Wl,--export-dynamic' ?); result is unknown" };
     }
 #endif
-    return { f(),{} };
+    auto n = f();
+    if (n.empty())
+        return { {},"empty program name" };
+    return { n,{} };
 }
 
 std::string getProgramName()
 {
     auto [name, err] = getProgramName1();
     if (!err.empty())
-    {
-        std::cerr << err << std::endl;
-        return {};
-    }
-    if (name.empty())
-    {
-        std::cerr << "empty program name" << std::endl;
-        return {};
-    }
+        throw SW_RUNTIME_ERROR(err);
     return name;
 }
 
@@ -70,11 +65,6 @@ std::string getProgramNameSilent()
 {
     auto [name, err] = getProgramName1();
     return name;
-}
-
-path getSettingsDir()
-{
-    return get_home_directory() / ".sw_settings" / getProgramName();
 }
 
 template <class T>
@@ -93,14 +83,10 @@ primitives::SettingStorage<primitives::Settings> &getSettingStorage()
     {
         static SettingStorage<primitives::Settings> s;
         primitives::getSettingStorage(&s); // save to common storage
-        s.userConfigFilename = getSettingsDir() / YAML_SETTINGS_FILENAME;
-        auto prog = getProgramName();
-        auto sfile = prog + ".settings";
-        if (prog.empty())
-        {
-            //LOG_TRACE(logger, "load settings: getProgramName() returned nothing. Trying to load " + sfile);
-            //std::cerr << "load settings: sw.settings: calling getProgramName(), but function returned nothing; result is unknown" << std::endl;
-        }
+        auto prog_name = getProgramName();
+        auto settings_dir = get_home_directory() / ".sw_settings" / prog_name;
+        s.userConfigFilename = settings_dir / YAML_SETTINGS_FILENAME;
+        auto sfile = prog_name + ".settings";
         path local_name = sfile;
         if (fs::exists(local_name))
             s.getLocalSettings().load(local_name);
