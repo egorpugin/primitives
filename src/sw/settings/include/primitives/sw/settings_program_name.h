@@ -17,4 +17,7 @@ namespace sw
 PRIMITIVES_SW_SETTINGS_API
 std::string getProgramName();
 
+PRIMITIVES_SW_SETTINGS_API
+std::string getProgramNameSilent();
+
 }

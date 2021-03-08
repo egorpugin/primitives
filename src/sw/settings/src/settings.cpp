@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "primitives/sw/settings.h"
+#include <primitives/sw/settings.h>
 
 // this file provides definition to sw::getProgramName()
 // do not remove
@@ -23,45 +23,54 @@
 namespace sw
 {
 
-#if defined(_WIN32)// && defined(CPPAN_SHARED_BUILD)
-std::string getProgramName()
+static std::pair<std::string, std::string> getProgramName1()
 {
+#if defined(_WIN32)
     auto h = GetModuleHandle(0);
-    //auto f = (String(*)())GetProcAddress(h, "?getProgramName@sw@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
-    auto f = (String(*)())GetProcAddress(h, "?getProgramName@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
+    if (!h)
+        return { {}, "sw.settings: GetModuleHandle(0) error: " + std::to_string(GetLastError()) };
+    //auto f = (std::string(*)())GetProcAddress(h, "?getProgramName@sw@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
+    auto f = (std::string(*)())GetProcAddress(h, "?getProgramName@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ");
     if (!f)
-    {
-        //std::cerr << "sw.settings: calling getProgramName(), but function is not defined; result is unknown" << std::endl;
-        return {};
-    }
-    return f();
-}
+        return { {},"sw.settings: calling getProgramName(), but function is not defined; result is unknown" };
 #else
-std::string getProgramName()
-{
     auto h = dlopen(0, RTLD_LAZY);
     if (!h)
-    {
-        std::cerr << "sw.settings: dlopen error: " << dlerror() << std::endl;
-        return {};
-    }
-    //auto f = (String(*)())dlsym(h, "_ZN2sw14getProgramNameB5cxx11Ev");
-    auto f = (String(*)())dlsym(h, "_Z14getProgramNameB5cxx11v");
+        return { {},"sw.settings: dlopen(0) error: "s + dlerror() };
+    SCOPE_EXIT{ dlclose(h); };
+    //auto f = (std::string(*)())dlsym(h, "_ZN2sw14getProgramNameB5cxx11Ev");
+    auto f = (std::string(*)())dlsym(h, "_Z14getProgramNameB5cxx11v");
     if (!f)
     {
-        f = (String(*)())dlsym(h, "_Z14getProgramNamev");
+        f = (std::string(*)())dlsym(h, "_Z14getProgramNamev");
         if (!f)
-        {
-            dlclose(h);
-            //std::cerr << "sw.settings: calling getProgramName(), but function is not defined; result is unknown" << std::endl;
-            return {};
-        }
+            return { {},"sw.settings: calling getProgramName(), but function is not defined (did you forget to add '-Wl,--export-dynamic' ?); result is unknown" };
     }
-    auto s = f();
-    dlclose(h);
-    return s;
-}
 #endif
+    return { f(),{} };
+}
+
+std::string getProgramName()
+{
+    auto [name, err] = getProgramName1();
+    if (!err.empty())
+    {
+        std::cerr << err << std::endl;
+        return {};
+    }
+    if (name.empty())
+    {
+        std::cerr << "empty program name" << std::endl;
+        return {};
+    }
+    return name;
+}
+
+std::string getProgramNameSilent()
+{
+    auto [name, err] = getProgramName1();
+    return name;
+}
 
 path getSettingsDir()
 {

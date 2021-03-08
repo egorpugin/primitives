@@ -48,7 +48,7 @@ static path temp_directory_path(const path &subdir)
 
 static path get_crash_dir()
 {
-    auto p = temp_directory_path(::sw::getProgramName()) / "dump";
+    auto p = temp_directory_path(::sw::getProgramNameSilent()) / "dump";
     fs::create_directories(p);
     return p;
 }
