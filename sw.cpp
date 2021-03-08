@@ -385,27 +385,32 @@ void build(Solution &s)
     // tools
 
     auto &tools_embedder = p.addTarget<ExecutableTarget>("tools.embedder");
+    tools_embedder.PackageDefinitions = true;
     setup_primitives_no_all_sources(tools_embedder);
     tools_embedder += "src/tools/embedder.cpp";
     tools_embedder += filesystem, sw_main;
 
     auto &tools_embedder2 = p.addTarget<ExecutableTarget>("tools.embedder2");
+    tools_embedder2.PackageDefinitions = true;
     setup_primitives_no_all_sources(tools_embedder2);
     tools_embedder2 += "src/tools/embedder2.cpp";
     tools_embedder2 += filesystem, sw_main;
     tools_embedder2 += "org.sw.demo.xz_utils.lzma"_dep;
 
     auto &tools_sqlite2cpp = p.addTarget<ExecutableTarget>("tools.sqlpp11.sqlite2cpp");
+    tools_sqlite2cpp.PackageDefinitions = true;
     setup_primitives_no_all_sources(tools_sqlite2cpp);
     tools_sqlite2cpp += "src/tools/sqlpp11.sqlite2cpp.cpp";
     tools_sqlite2cpp += filesystem, emitter, sw_main, "org.sw.demo.sqlite3"_dep;
 
     auto &tools_syncqt = p.addTarget<ExecutableTarget>("tools.syncqt");
+    tools_syncqt.PackageDefinitions = true;
     setup_primitives_no_all_sources(tools_syncqt);
     tools_syncqt += "src/tools/syncqt.cpp";
     tools_syncqt += filesystem, sw_main;
 
     auto &stamp_gen = p.addTarget<ExecutableTarget>("tools.stamp_gen");
+    stamp_gen.PackageDefinitions = true;
     setup_primitives_no_all_sources(stamp_gen);
     stamp_gen += "src/tools/stamp_gen.cpp";
 
@@ -417,6 +422,7 @@ void build(Solution &s)
         git_rev.Interface += "src/.*"_rr;
 
         auto &create_git_rev = p.addTarget<ExecutableTarget>("tools.create_git_rev");
+        create_git_rev.PackageDefinitions = true;
         setup_primitives_no_all_sources(create_git_rev);
         create_git_rev += "src/tools/create_git_rev.cpp";
         create_git_rev += command, sw_main;
@@ -428,6 +434,7 @@ void build(Solution &s)
     auto add_test = [&test, &s, &sw_main](const String &name) -> decltype(auto)
     {
         auto &t = test.addTarget<ExecutableTarget>(name);
+        t.PackageDefinitions = true;
         t += cpp20;
         t += path("src/" + name + ".cpp");
         t += "org.sw.demo.catchorg.catch2"_dep;
