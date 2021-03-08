@@ -369,6 +369,14 @@ void build(Solution &s)
                 ;
         }
         generate_cl(std::make_shared<Dependency>(cl_generator), sw_main, "src/cl.yml", "llvm");
+        //
+        // setup executables
+        // the only thing they missing is PackageDefinitions = true;
+        // users must set it manually
+        // they cannot forget it because <primitives/sw/main.h> include will force it
+        sw_main.Public += "SW_EXECUTABLE"_def;
+        if (!sw_main.getBuildSettings().TargetOS.is(OSType::Windows))
+            sw_main.Interface.LinkOptions.push_back("-Wl,--export-dynamic");
     }
 
     ADD_LIBRARY(wt);

@@ -6,6 +6,10 @@
 
 #pragma once
 
+#ifndef SW_MAIN_IMPL
+#include <primitives/sw/sw.settings.program_name.h>
+#endif
+
 #include <primitives/filesystem.h>
 
 int sw_main_internal(int argc, char *argv[]);

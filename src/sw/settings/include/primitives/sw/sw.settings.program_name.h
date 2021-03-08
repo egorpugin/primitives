@@ -1,12 +1,18 @@
 #include <primitives/sw/settings_program_name.h>
 
-#if defined(CPPAN_EXECUTABLE) || defined(SW_EXECUTABLE)
+#if defined(SW_EXECUTABLE)
 EXPORT_FROM_EXECUTABLE
 std::string getProgramName()
 {
+    // this will trigger build error if executable forget to set
+    // PackageDefinitions = true;
+#ifndef PACKAGE_NAME_CLEAN
+#error "Set '.PackageDefinitions = true;' on your target."
+#endif
     return PACKAGE_NAME_CLEAN;
 }
 
+// use gitrev instead?
 EXPORT_FROM_EXECUTABLE
 std::string getVersionString()
 {
