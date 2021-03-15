@@ -1,6 +1,6 @@
 #include <primitives/sw/settings_program_name.h>
 
-#if defined(SW_EXECUTABLE)
+#if defined(SW_EXECUTABLE) && !defined(SW_CUSTOM_PROGRAM_NAME)
 EXPORT_FROM_EXECUTABLE
 std::string getProgramName()
 {
