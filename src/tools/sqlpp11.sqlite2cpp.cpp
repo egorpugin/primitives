@@ -130,7 +130,7 @@ auto escape_if_reserved(const String &name)
     return name;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     cl::opt<path> ddl(cl::Positional, cl::desc("<input sql script>"), cl::Required);
     cl::opt<path> target(cl::Positional, cl::desc("<output .cpp file>"), cl::Required);

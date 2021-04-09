@@ -14,7 +14,7 @@ static cl::opt<path> git(cl::Positional, cl::Required);
 static cl::opt<path> wdir(cl::Positional, cl::Required);
 static cl::opt<path> outfn(cl::Positional, cl::Required);
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     cl::ParseCommandLineOptions(argc, argv);
     String rev, status, time;
