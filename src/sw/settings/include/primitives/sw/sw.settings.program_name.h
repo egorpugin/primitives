@@ -1,14 +1,16 @@
 #include <primitives/sw/settings_program_name.h>
 
 #if defined(SW_EXECUTABLE) && !defined(SW_CUSTOM_PROGRAM_NAME)
-EXPORT_FROM_EXECUTABLE
-std::string getProgramName()
-{
-    // this will trigger build error if executable forget to set
-    // PackageDefinitions = true;
+
+// this will trigger build error if executable forget to set
+// PackageDefinitions = true;
 #ifndef PACKAGE_NAME_CLEAN
 #error "Set '.PackageDefinitions = true;' on your target."
 #endif
+
+EXPORT_FROM_EXECUTABLE
+std::string getProgramName()
+{
     return PACKAGE_NAME_CLEAN;
 }
 

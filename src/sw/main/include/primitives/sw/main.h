@@ -12,13 +12,15 @@
 
 #include <primitives/filesystem.h>
 
+#ifdef SW_MAIN_IMPL
 int sw_main_internal(int argc, char *argv[]);
 int SW_MAIN(int argc, char *argv[]);
+#endif
 
 #ifdef main
-#define SW_OLD_MAIN1(x) x
-#define SW_OLD_MAIN SW_OLD_MAIN1(main)
-int main(int argc, char *argv[]) { return sw_main_internal(argc, argv); }
+//#define SW_OLD_MAIN1(x) x
+//#define SW_OLD_MAIN SW_OLD_MAIN1(main)
+inline int main(int argc, char *argv[]) { return sw_main_internal(argc, argv); }
 #undef main
 #endif
 
