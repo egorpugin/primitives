@@ -117,4 +117,11 @@ void setupSafeTls();
 PRIMITIVES_HTTP_API
 void setup_curl_ssl(void *);
 
+//
+
+PRIMITIVES_HTTP_API
+String url_encode(const String &);
+PRIMITIVES_HTTP_API
+String url_decode(const String &);
+
 }

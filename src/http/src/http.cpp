@@ -641,4 +641,89 @@ void setup_curl_ssl(void *in)
     setup_curl_ssl(curl, httpSettings);
 }
 
+static String charToHex(char c) {
+    std::string result;
+    char first, second;
+
+    first = (c & 0xF0) / 16;
+    first += first > 9 ? 'A' - 10 : '0';
+    second = c & 0x0F;
+    second += second > 9 ? 'A' - 10 : '0';
+
+    result.append(1, first);
+    result.append(1, second);
+
+    return result;
+}
+
+String url_encode(const String &src)
+{
+    std::string result;
+    for (auto &c : src)
+    {
+        if (isalnum(c))
+        {
+            result.append(1, c);
+            continue;
+        }
+        switch (c)
+        {
+        case ' ':
+            result.append(1, '+');
+            break;
+        case '-': case '_': case '.': case '!': case '~': case '*': case '\'':
+        case '(': case ')':
+            result.append(1, c);
+            break;
+            // escape
+        default:
+            result.append(1, '%');
+            result.append(charToHex(c));
+            break;
+        }
+    }
+    return result;
+}
+
+static char hexToChar(char first, char second)
+{
+    int digit;
+
+    digit = (first >= 'A' ? ((first & 0xDF) - 'A') + 10 : (first - '0'));
+    digit *= 16;
+    digit += (second >= 'A' ? ((second & 0xDF) - 'A') + 10 : (second - '0'));
+    return static_cast<char>(digit);
+}
+
+String url_decode(const String &src)
+{
+    std::string result;
+    char c;
+    for (auto iter = src.begin(); iter != src.end(); ++iter)
+    {
+        switch (*iter)
+        {
+        case '+':
+            result.append(1, ' ');
+            break;
+        case '%':
+            // Don't assume well-formed input
+            if (std::distance(iter, src.end()) >= 2
+                && std::isxdigit(*(iter + 1)) && std::isxdigit(*(iter + 2)))
+            {
+                c = *++iter;
+                result.append(1, hexToChar(c, *++iter));
+            }
+            // Just pass the % through untouched
+            else
+                result.append(1, '%');
+            break;
+        default:
+            result.append(1, *iter);
+            break;
+        }
+    }
+    return result;
+}
+
 }
