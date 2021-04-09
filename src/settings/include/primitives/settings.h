@@ -276,7 +276,12 @@ struct parser<std::vector<U>, void> : parser_base
     {
         String s;
         for (auto &v : std::any_cast<std::vector<U>>(value))
-            s += std::to_string(v) + ",";
+        {
+            if constexpr (std::is_same_v<U, String>)
+                s += v + ",";
+            else
+                s += std::to_string(v) + ",";
+        }
         return s;
     }
 
@@ -291,10 +296,8 @@ struct parser<std::vector<U>, void> : parser_base
                 v.push_back(std::stoll(s));
             else if constexpr (std::is_same_v<U, int32_t>)
                 v.push_back(std::stoi(s));
-            else if constexpr (std::is_same_v<U, String>)
-                v.push_back(s);
             else
-                static_assert(false, "not supported");
+                v.push_back(s);
         }
         return v;
     }
