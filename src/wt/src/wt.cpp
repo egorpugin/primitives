@@ -7,8 +7,12 @@
 #include <primitives/wt.h>
 
 #include <Wt/WApplication.h>
+#include <Wt/WDialog.h>
 #include <Wt/WLabel.h>
+#include <Wt/WMenu.h>
+#include <Wt/WMenuItem.h>
 #include <Wt/WPushButton.h>
+#include <Wt/WStackedWidget.h>
 
 namespace primitives::wt
 {
@@ -83,6 +87,49 @@ void showError(const String &text)
 void showSuccess(const String &text)
 {
     showDialog("Success", text);
+}
+
+right_menu_widget::right_menu_widget() {
+    // setAttributeValue("style", "display: flex; padding-top: 10px;");
+    setAttributeValue("style", "display: flex;");
+    // auto L = std::make_unique<Wt::WHBoxLayout>();
+
+    // Create a stack where the contents will be located.
+    auto contents = std::make_unique<Wt::WStackedWidget>();
+    contents->setAttributeValue("style", "width: 100%; padding-left: 10px;");
+
+    menu = addWidget(std::make_unique<Wt::WMenu>(contents.get()));
+    menu->setStyleClass("nav nav-pills nav-stacked");
+    // menu->setInternalPathEnabled("/" + (unres_pkg.empty() ? p.toString("/") : unres_pkg));
+    // menu->setWidth(150);
+
+    addWidget(std::move(contents));
+}
+
+Wt::WMenuItem *right_menu_widget::addTab(const Wt::WString &name, std::unique_ptr<Wt::WWidget> w,
+                                         Wt::ContentLoading policy) {
+    auto mi = menu->addItem(name, std::move(w), policy);
+    return mi;
+}
+
+Wt::WMenuItem *right_menu_widget::addTab(const Wt::WString &name, const String &url,
+    std::unique_ptr<Wt::WWidget> w, Wt::ContentLoading policy) {
+    auto mi = addTab(name, std::move(w), policy);
+    mi->setPathComponent(url);
+    mi->clicked().connect([mi]() {
+        Wt::WApplication::instance()->setInternalPath(mi->pathComponent(), false);
+    });
+    return mi;
+}
+
+Wt::WMenuItem *right_menu_widget::addTab(const Wt::WString &name, const String &base_url, const String &url,
+                                         std::unique_ptr<Wt::WWidget> w, Wt::ContentLoading policy) {
+    auto mi = addTab(name, std::move(w), policy);
+    mi->setPathComponent(url);
+    mi->clicked().connect([base_url, mi]() {
+        Wt::WApplication::instance()->setInternalPath(base_url + "/" + mi->pathComponent(), false);
+    });
+    return mi;
 }
 
 }
