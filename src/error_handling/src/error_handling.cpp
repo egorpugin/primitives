@@ -15,8 +15,10 @@
 void debug_break_if_debugger_attached()
 {
 #ifdef _MSC_VER
+#ifndef NDEBUG
     if (IsDebuggerPresent())
         DebugBreak();
+#endif
 #endif
 }
 
