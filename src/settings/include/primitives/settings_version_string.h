@@ -29,7 +29,7 @@
 namespace primitives
 {
 
-EXPORT_FROM_EXECUTABLE
+PRIMITIVES_SETTINGS_API
 std::string getVersionString();
 
 }

@@ -26,4 +26,5 @@ std::string getVersionString()
     s += "assembled " __DATE__ " " __TIME__;
     return s;
 }
+
 #endif
