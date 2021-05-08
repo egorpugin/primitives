@@ -296,6 +296,10 @@ struct parser<std::vector<U>, void> : parser_base
                 v.push_back(std::stoll(s));
             else if constexpr (std::is_same_v<U, int32_t>)
                 v.push_back(std::stoi(s));
+            else if constexpr (std::is_same_v<U, double>)
+                v.push_back(std::stod(s));
+            else if constexpr (std::is_same_v<U, float>)
+                v.push_back(std::stof(s));
             else
                 v.push_back(s);
         }
