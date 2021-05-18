@@ -11,22 +11,32 @@
 #include <codecvt>
 #include <locale>
 
+Strings split_lines(const String &s)
+{
+    return split_lines(s, false);
+}
+
 Strings split_string(const String &s, const String &delims)
+{
+    return split_string(s, delims, false);
+}
+
+Strings split_lines(const String &s, bool allow_empty)
+{
+    return split_string(s, "\r\n", allow_empty);
+}
+
+Strings split_string(const String &s, const String &delims, bool allow_empty)
 {
     std::vector<String> v, lines;
     boost::split(v, s, boost::is_any_of(delims));
     for (auto &l : v)
     {
         boost::trim(l);
-        if (!l.empty())
+        if (allow_empty || !l.empty())
             lines.push_back(l);
     }
     return lines;
-}
-
-Strings split_lines(const String &s)
-{
-    return split_string(s, "\r\n");
 }
 
 #ifdef _WIN32
@@ -88,20 +98,7 @@ std::wstring normalize_string_windows_copy(std::wstring s)
 String trim_double_quotes(String s)
 {
     boost::trim(s);
-    while (!s.empty())
-    {
-        if (s.front() == '"')
-        {
-            s = s.substr(1);
-            continue;
-        }
-        if (s.back() == '"')
-        {
-            s.resize(s.size() - 1);
-            continue;
-        }
-        break;
-    }
+    boost::trim_if(s, boost::is_any_of("\""));
     boost::trim(s);
     return s;
 }

@@ -26,10 +26,16 @@ using StringHashMap = std::unordered_map<String, T>;
 using namespace std::literals;
 
 PRIMITIVES_STRING_API
+Strings split_lines(const String &s);
+
+PRIMITIVES_STRING_API
+Strings split_lines(const String &s, bool allow_empty);
+
+PRIMITIVES_STRING_API
 Strings split_string(const String &s, const String &delims);
 
 PRIMITIVES_STRING_API
-Strings split_lines(const String &s);
+Strings split_string(const String &s, const String &delims, bool allow_empty);
 
 PRIMITIVES_STRING_API
 String trim_double_quotes(String s);
