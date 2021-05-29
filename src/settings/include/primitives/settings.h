@@ -11,12 +11,17 @@
 #include "settings_version_string.h"
 
 #include <primitives/enums.h>
+#include <primitives/exceptions.h>
 #include <primitives/filesystem.h>
 #include <primitives/templates.h>
-#include <primitives/yaml.h>
 
 #include <any>
 #include <iostream>
+
+namespace YAML {
+class Node;
+}
+using yaml = YAML::Node;
 
 namespace primitives
 {

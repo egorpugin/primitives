@@ -10,6 +10,7 @@
 #include <settings_parser.h>
 
 #include <primitives/overload.h>
+#include <primitives/yaml.h>
 
 #include <boost/algorithm/string.hpp>
 
