@@ -41,7 +41,7 @@ void showDialog(const String &title, const String &text, std::function<void(void
     c->addWidget(std::make_unique<Wt::WBreak>());
 
     auto ok = c->addWidget(std::make_unique<Wt::WPushButton>("Ok"));
-    ok->clicked().connect([d = d.get(), f]{ d->accept(); f(); });
+    ok->clicked().connect([d = d.get(), f]{ d->accept(); if (f) f(); });
 
     showDialog(std::move(d));
 }
@@ -56,7 +56,7 @@ static auto showDialogYesNo1(const String &title, const String &text, std::funct
 
     auto y = c->addWidget(std::make_unique<Wt::WPushButton>("Yes"));
     y->setAttributeValue("style", "width: 100px; margin-right: 10px;");
-    y->clicked().connect([d = d.get(), f]{ d->accept(); f(); });
+    y->clicked().connect([d = d.get(), f]{ d->accept(); if (f) f(); });
     auto n = c->addWidget(std::make_unique<Wt::WPushButton>("No"));
     n->setAttributeValue("style", "width: 100px; margin-right: 10px;");
     n->clicked().connect(d.get(), &Wt::WDialog::reject);
