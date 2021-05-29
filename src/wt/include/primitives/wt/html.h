@@ -8,13 +8,28 @@
 
 #include <primitives/overload.h>
 
+#include <Wt/WContainerWidget.h>
+#include <Wt/WVBoxLayout.h>
+#include <Wt/WHBoxLayout.h>
+#include <Wt/WWidget.h>
+
 #include <variant>
 
 namespace primitives::wt::html {
 
 using namespace ::Wt;
 
-using list_variant = std::variant<std::unique_ptr<WWidget>, std::unique_ptr<WLayout>>;
+struct widget {
+    std::unique_ptr<WWidget> w;
+    int stretch = 0;
+
+    decltype(auto) operator[](int stretch) && {
+        this->stretch = stretch;
+        return std::move(*this);
+    }
+};
+
+using list_variant = std::variant<widget, std::unique_ptr<WLayout>>;
 using wlist = std::vector<list_variant>;
 
 struct div {
@@ -22,17 +37,18 @@ struct div {
     bool layout_set{ false };
 
     div() = default;
-    div(WContainerWidget *&v) { v = c.get(); }
+    div(WContainerWidget **v) { if (v) *v = c.get(); }
 
     decltype(auto) operator[](div &&w) && {
-        add_widget(std::move(w.c));
+        SW_UNIMPLEMENTED;
+        //add_widget(std::move(w.c));
         return std::move(*this);
     }
 
     decltype(auto) operator[](wlist &&w) && {
         for (auto &&e : w) {
             std::visit(overload(
-                [this](std::unique_ptr<WWidget> &&e) {
+                [this](widget &&e) {
                 add_widget(std::move(e));
             },
                 [this](std::unique_ptr<WLayout> &&e) {
@@ -43,10 +59,11 @@ struct div {
         return std::move(*this);
     }
 
-    void add_widget(auto &&w) {
+    void add_widget(widget &&w) {
         if (layout_set)
             throw SW_LOGIC_ERROR("cannot add widgets after layout is set");
-        c->addWidget(std::move(w));
+        SW_UNIMPLEMENTED;
+        //c->addWidget(std::move(w.w), w.stretch);
     }
 
     void set_layout(auto &&l) {
@@ -64,7 +81,7 @@ struct l {
     //operator std::unique_ptr<Layout>() { std::move(c); }
 
     l() = default;
-    l(Layout *&v) { v = c.get(); }
+    l(Layout **v) { if (v) *v = c.get(); }
 
     template <typename Widget>
     decltype(auto) operator[](Widget &&w) && {
@@ -75,7 +92,7 @@ struct l {
     decltype(auto) operator[](wlist &&w) && {
         for (auto &&e : w) {
             std::visit(overload(
-                [this](std::unique_ptr<WWidget> &&e) {
+                [this](widget &&e) {
                 add_widget(std::move(e));
             },
                 [this](std::unique_ptr<WLayout> &&e) {
@@ -86,8 +103,8 @@ struct l {
         return std::move(*this);
     }
 
-    void add_widget(auto &&w) {
-        c->addWidget(std::move(w));
+    void add_widget(widget &&w) {
+        c->addWidget(std::move(w.w), w.stretch);
     }
 
     void add_layout(auto &&w) {
@@ -106,8 +123,19 @@ concept html_element = std::is_same_v<T, div> || is_layout<T>;
 
 // mkw? mw?
 template <typename Widget>
+auto w(Widget **p = nullptr) {
+    auto v = std::make_unique<Widget>();
+    if (p)
+        *p = v.get();
+    return widget{ std::move(v) };
+}
+template <typename Widget>
+auto w(auto && ... args) {
+    return widget{ std::make_unique<Widget>(std::forward<decltype(args)>(args)...) };
+}
+template <typename Widget>
 auto w() {
-    return std::make_unique<Widget>();
+    return widget{ std::make_unique<Widget>() };
 }
 
 auto br() {
@@ -146,7 +174,32 @@ decltype(auto) operator+(wlist &&l, T &&w) {
     return std::move(l);
 }
 
+decltype(auto) operator/(wlist &&l, int stretch) {
+    if (l.empty())
+        throw SW_RUNTIME_ERROR("empty list");
+    std::visit(overload(
+                   [stretch](widget &e) {
+                       e.stretch = stretch;
+                   },
+                   [](std::unique_ptr<WLayout> &e) {
+                       throw SW_RUNTIME_ERROR("not a widget");
+                   }),
+               l.back());
+    return std::move(l);
 }
+
+decltype(auto) operator/(widget &&w, int stretch) {
+    w.stretch = stretch;
+    return std::move(w);
+}
+
+} // namespace primitives::wt::html
+
+namespace primitives::wt::html2 {
+
+
+
+} // namespace primitives::wt::html2
 
 /*
 *
@@ -182,4 +235,27 @@ decltype(auto) operator+(wlist &&l, T &&w) {
         ]
     ;
 
+
+
+    auto rootx =
+        hl()
+        [
+            + w<WTreeView>(&tw)
+            + w<WTreeView>()
+            + vl(&vl1)
+            [
+                + w<WTreeView>()
+                + br()
+                + br()
+                + br()
+                + w<WTreeView>()
+            ]
+            + hl()
+            [
+                + w<WTreeView>()
+                + br()
+                + w<WTreeView>()
+            ]
+        ]
+    ;
 */
