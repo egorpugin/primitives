@@ -32,7 +32,7 @@ void showDialog(std::unique_ptr<Wt::WDialog> dialog)
     showDialog(Wt::WApplication::instance(), std::move(dialog));
 }
 
-void showDialog(const String &title, const String &text)
+void showDialog(const String &title, const String &text, std::function<void(void)> f)
 {
     auto d = std::make_unique<Wt::WDialog>(title);
     auto c = d->contents();
@@ -41,7 +41,7 @@ void showDialog(const String &title, const String &text)
     c->addWidget(std::make_unique<Wt::WBreak>());
 
     auto ok = c->addWidget(std::make_unique<Wt::WPushButton>("Ok"));
-    ok->clicked().connect(d.get(), &Wt::WDialog::accept);
+    ok->clicked().connect([d = d.get(), f]{ d->accept(); f(); });
 
     showDialog(std::move(d));
 }
@@ -79,14 +79,14 @@ void showDialogNoYes(const String &title, const String &text, std::function<void
     n->addStyleClass("btn-danger");
 }
 
-void showError(const String &text)
+void showError(const String &text, std::function<void(void)> f)
 {
-    showDialog("Error", text);
+    showDialog("Error", text, f);
 }
 
-void showSuccess(const String &text)
+void showSuccess(const String &text, std::function<void(void)> f)
 {
-    showDialog("Success", text);
+    showDialog("Success", text, f);
 }
 
 right_menu_widget::right_menu_widget() {

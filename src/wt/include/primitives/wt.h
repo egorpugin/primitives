@@ -29,19 +29,19 @@ PRIMITIVES_WT_API
 void showDialog(std::unique_ptr<Wt::WDialog> dialog);
 
 PRIMITIVES_WT_API
-void showDialog(const String &title, const String &text);
+void showDialog(const String &title, const String &text, std::function<void(void)> f = {});
 
 PRIMITIVES_WT_API
-void showDialogYesNo(const String &title, const String &text, std::function<void(void)> f);
+void showDialogYesNo(const String &title, const String &text, std::function<void(void)> f = {});
 
 PRIMITIVES_WT_API
-void showDialogNoYes(const String &title, const String &text, std::function<void(void)> f);
+void showDialogNoYes(const String &title, const String &text, std::function<void(void)> f = {});
 
 PRIMITIVES_WT_API
-void showError(const String &text);
+void showError(const String &text, std::function<void(void)> f = {});
 
 PRIMITIVES_WT_API
-void showSuccess(const String &text);
+void showSuccess(const String &text, std::function<void(void)> f = {});
 
 struct PRIMITIVES_WT_API center_content_widget : Wt::WContainerWidget {
     using Wt::WContainerWidget::WContainerWidget;
