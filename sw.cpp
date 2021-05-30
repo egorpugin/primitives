@@ -380,7 +380,10 @@ void build(Solution &s)
     }
 
     ADD_LIBRARY(wt);
-    wt.Public += string, "org.sw.demo.emweb.wt.wt"_dep;
+    wt.Public += string,
+        "org.sw.demo.emweb.wt.wt"_dep,
+        "org.sw.demo.boost.hana"_dep
+        ;
 
     // tools
 
