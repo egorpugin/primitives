@@ -43,11 +43,10 @@ void showError(const String &text, std::function<void(void)> f = {});
 PRIMITIVES_WT_API
 void showSuccess(const String &text, std::function<void(void)> f = {});
 
-struct PRIMITIVES_WT_API center_content_widget : Wt::WContainerWidget {
-    using Wt::WContainerWidget::WContainerWidget;
-};
+// deprecated, for compat
+using center_content_widget = Wt::WContainerWidget;
 
-struct PRIMITIVES_WT_API right_menu_widget : center_content_widget {
+struct PRIMITIVES_WT_API right_menu_widget : Wt::WContainerWidget {
     right_menu_widget();
 
     Wt::WMenuItem *addTab(const Wt::WString &name, std::unique_ptr<Wt::WWidget> w,
@@ -85,6 +84,38 @@ struct labeled_widget : public Wt::WContainerWidget {
             setAttributeValue("style", "margin-bottom: 10px;");
         }
         addWidget(std::make_unique<Wt::WBreak>());
+    }
+};
+
+template <typename W>
+void addAttributeValue(W &w, const std::string &key, const std::string &value) {
+    auto s = w.attributeValue(key);
+    s += value;
+    w.setAttributeValue(key, s);
+}
+
+// flex layouts
+struct layout : Wt::WContainerWidget {
+    using base = Wt::WContainerWidget;
+    layout() {
+        addAttributeValue(*this, "style", "display: flex;");
+    }
+    template <typename T>
+    T *addWidget(std::unique_ptr<T> w, int stretch = 0) {
+        auto v = base::addWidget(std::move(w));
+        auto flex = std::to_string(stretch) + " " + std::to_string(stretch) + " auto;";
+        addAttributeValue(*v, "style", "flex: " + flex);
+        return v;
+    }
+};
+struct horizontal_layout : layout {
+    horizontal_layout() {
+        addAttributeValue(*this, "style", "flex-flow: row;");
+    }
+};
+struct vertical_layout : layout {
+    vertical_layout() {
+        addAttributeValue(*this, "style", "flex-flow: column;");
     }
 };
 

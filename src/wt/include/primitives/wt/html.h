@@ -7,6 +7,7 @@
 #pragma once
 
 #include <primitives/overload.h>
+#include <primitives/wt.h>
 
 #include <boost/hana/append.hpp>
 #include <boost/hana/back.hpp>
@@ -74,11 +75,25 @@ decltype(auto) operator/(auto &&a, int stretch) {
 // some predefined things, (re)move?
 
 auto vl(auto && ... args) {
-    return w<WVBoxLayout>(std::forward<decltype(args)>(args)...);
+    auto v = w<WVBoxLayout>(std::forward<decltype(args)>(args)...);
+    v.get_ref().setContentsMargins(0, 0, 0, 0);
+    return v;
 }
 auto hl(auto && ... args) {
-    return w<WHBoxLayout>(std::forward<decltype(args)>(args)...);
+    auto v = w<WHBoxLayout>(std::forward<decltype(args)>(args)...);
+    v.get_ref().setContentsMargins(0, 0, 0, 0);
+    return v;
 }
+
+auto vl_my(auto && ... args) {
+    auto v = w<vertical_layout>(std::forward<decltype(args)>(args)...);
+    return v;
+}
+auto hl_my(auto && ... args) {
+    auto v = w<horizontal_layout>(std::forward<decltype(args)>(args)...);
+    return v;
+}
+
 
 auto br(auto && ... args) {
     return w<WBreak>(std::forward<decltype(args)>(args)...);
