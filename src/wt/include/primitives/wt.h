@@ -96,26 +96,37 @@ void addAttributeValue(W &w, const std::string &key, const std::string &value) {
 
 // flex layouts
 struct layout : Wt::WContainerWidget {
+    enum type {
+        horizontal,
+        vertical,
+    };
+
+    type t;
+    int spacing;
+
     using base = Wt::WContainerWidget;
-    layout() {
+
+    layout(type t, int spacing = 0) : t(t), spacing(spacing) {
         addAttributeValue(*this, "style", "display: flex;");
+        if (t == type::horizontal)
+            addAttributeValue(*this, "style", "flex-flow: row;");
+        else if (t == type::vertical)
+            addAttributeValue(*this, "style", "flex-flow: column;");
     }
     template <typename T>
     T *addWidget(std::unique_ptr<T> w, int stretch = 0) {
+        bool add_space = count() && spacing;
+
         auto v = base::addWidget(std::move(w));
         auto flex = std::to_string(stretch) + " " + std::to_string(stretch) + " auto;";
         addAttributeValue(*v, "style", "flex: " + flex);
+        if (add_space) {
+            if (t == type::horizontal)
+                addAttributeValue(*v, "style", "margin-left: " + std::to_string(spacing) + "px;");
+            else if (t == type::vertical)
+                addAttributeValue(*v, "style", "margin-top: " + std::to_string(spacing) + "px;");
+        }
         return v;
-    }
-};
-struct horizontal_layout : layout {
-    horizontal_layout() {
-        addAttributeValue(*this, "style", "flex-flow: row;");
-    }
-};
-struct vertical_layout : layout {
-    vertical_layout() {
-        addAttributeValue(*this, "style", "flex-flow: column;");
     }
 };
 

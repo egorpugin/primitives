@@ -28,31 +28,62 @@ struct w {
     using widget_type = T;
 
     std::unique_ptr<widget_type> w_;
-    int stretch = 0;
+    // settings
+    int stretch_ = 0;
+    WString text_;
+    String url_;
+    bool tab_ = false;
 
     w(auto && ... args)
         : w_{std::make_unique<widget_type>(std::forward<decltype(args)>(args)...)} {
     }
-    w(widget_type **p) : w{} {
-        if (p)
-            *p = get_ptr();
+    w(std::unique_ptr<widget_type> in)
+        : w_{std::move(in)} {
     }
 
     auto get() { return std::move(w_); }
     widget_type &get_ref() { return *w_; }
     widget_type *get_ptr() { return &get_ref(); }
 
+    decltype(auto) ptr(widget_type **p) {
+        if (p)
+            *p = get_ptr();
+        return std::move(*this);
+    }
+    decltype(auto) stretch(int s) {
+        stretch_ = s;
+        return std::move(*this);
+    }
+    decltype(auto) text(WString &&t) {
+        text_ = t;
+        return std::move(*this);
+    }
+    decltype(auto) url(WString &&t) {
+        url_ = t;
+        return std::move(*this);
+    }
+    decltype(auto) tab(WString &&t, String &&u) {
+        text_ = t;
+        url_ = u;
+        tab_ = true;
+        return std::move(*this);
+    }
+
     // for the last element in the chain
     decltype(auto) operator/(int stretch) && {
-        this->stretch = stretch;
+        stretch_ = stretch;
         return std::move(*this);
     }
     decltype(auto) operator[](auto &&args) && {
         hana::for_each(std::move(args), [this](auto &&a) {
-            if constexpr (std::is_base_of_v<WLayout, std::decay_t<decltype(a)>::widget_type>)
-                get_ref().addLayout(std::move(a.get()), a.stretch);
+            auto &w = get_ref();
+            if constexpr (std::is_same_v<widget_type, primitives::wt::right_menu_widget>) {
+                auto t = w.addTab(a.text_, a.url_, std::move(a.get()));
+                if (a.tab_ && WApplication::instance()->internalPath() == a.url_)
+                    w.menu->select(t);
+            }
             else
-                get_ref().addWidget(std::move(a.get()), a.stretch);
+                w.addWidget(std::move(a.get()), a.stretch_);
         });
         return std::move(*this);
     }
@@ -62,38 +93,26 @@ decltype(auto) operator+(auto &&w) {
     return hana::make_tuple(std::move(w));
 }
 decltype(auto) operator+(auto &&a, auto &&b) {
-    if constexpr (!hana::Foldable<decltype(b)>::value)
-        return hana::append(std::move(a), std::move(b));
-    else
+    if constexpr (hana::Foldable<decltype(b)>::value)
         return hana::concat(std::move(a), std::move(b));
+    else
+        return hana::append(std::move(a), std::move(b));
 }
 decltype(auto) operator/(auto &&a, int stretch) {
-    hana::back(a).stretch = stretch;
+    hana::back(a).stretch_ = stretch;
     return std::move(a);
 }
 
 // some predefined things, (re)move?
 
 auto vl(auto && ... args) {
-    auto v = w<WVBoxLayout>(std::forward<decltype(args)>(args)...);
-    v.get_ref().setContentsMargins(0, 0, 0, 0);
+    auto v = w<layout>(layout::type::vertical, std::forward<decltype(args)>(args)...);
     return v;
 }
 auto hl(auto && ... args) {
-    auto v = w<WHBoxLayout>(std::forward<decltype(args)>(args)...);
-    v.get_ref().setContentsMargins(0, 0, 0, 0);
+    auto v = w<layout>(layout::type::horizontal, std::forward<decltype(args)>(args)...);
     return v;
 }
-
-auto vl_my(auto && ... args) {
-    auto v = w<vertical_layout>(std::forward<decltype(args)>(args)...);
-    return v;
-}
-auto hl_my(auto && ... args) {
-    auto v = w<horizontal_layout>(std::forward<decltype(args)>(args)...);
-    return v;
-}
-
 
 auto br(auto && ... args) {
     return w<WBreak>(std::forward<decltype(args)>(args)...);
