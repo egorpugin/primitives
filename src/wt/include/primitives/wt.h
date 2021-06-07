@@ -128,6 +128,9 @@ struct layout : Wt::WContainerWidget {
         }
         return v;
     }
+    void show() {
+        addAttributeValue(*this, "style", "display: flex;");
+    }
 };
 
 }
