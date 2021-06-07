@@ -45,27 +45,35 @@ struct w {
     widget_type &get_ref() { return *w_; }
     widget_type *get_ptr() { return &get_ref(); }
 
-    decltype(auto) ptr(widget_type **p) {
+    decltype(auto) ptr(widget_type **p) && {
         if (p)
             *p = get_ptr();
         return std::move(*this);
     }
-    decltype(auto) stretch(int s) {
+    decltype(auto) stretch(int s) && {
         stretch_ = s;
         return std::move(*this);
     }
-    decltype(auto) text(WString &&t) {
+    decltype(auto) text(WString &&t) && {
         text_ = t;
         return std::move(*this);
     }
-    decltype(auto) url(WString &&t) {
+    decltype(auto) url(WString &&t) && {
         url_ = t;
         return std::move(*this);
     }
-    decltype(auto) tab(WString &&t, String &&u) {
+    decltype(auto) id(String &&t) && {
+        get_ref().setId(t);
+        return std::move(*this);
+    }
+    decltype(auto) tab(WString &&t, String &&u) && {
         text_ = t;
         url_ = u;
         tab_ = true;
+        return std::move(*this);
+    }
+    decltype(auto) setup(auto &&f) && {
+        f(get_ref());
         return std::move(*this);
     }
 
@@ -82,8 +90,16 @@ struct w {
                 if (a.tab_ && WApplication::instance()->internalPath() == a.url_)
                     w.menu->select(t);
             }
-            else
-                w.addWidget(std::move(a.get()), a.stretch_);
+            else if constexpr (std::is_same_v<widget_type, WContainerWidget>) {
+                auto v = w.addWidget(std::move(a.get()));
+                //if (!text_.empty())
+                    //v->setText(text_);
+            }
+            else {
+                auto v = w.addWidget(std::move(a.get()), a.stretch_);
+                //if (!text_.empty())
+                    //v->setText(text_);
+            }
         });
         return std::move(*this);
     }
