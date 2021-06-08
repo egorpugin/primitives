@@ -72,6 +72,10 @@ struct w {
         tab_ = true;
         return std::move(*this);
     }
+    decltype(auto) style_class(auto &&s) && {
+        get_ref().addStyleClass(s);
+        return std::move(*this);
+    }
     decltype(auto) setup(auto &&f) && {
         f(get_ref());
         return std::move(*this);
