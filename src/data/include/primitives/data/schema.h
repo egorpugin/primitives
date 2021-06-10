@@ -76,6 +76,12 @@ FIELD_CHECK(optional);
 template <auto v>
 struct default_value {};
 
+template <typename T>
+struct is_default_value_ : std::false_type {};
+template <auto v>
+struct is_default_value_<default_value<v>> : std::true_type {};
+constexpr auto is_default_value = boost::hana::compose(boost::hana::trait<is_default_value_>, boost::hana::typeid_);
+
 //struct default_value_expression { std::string expr; };
 //or
 template <const char *expr>

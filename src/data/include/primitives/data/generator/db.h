@@ -129,7 +129,8 @@ void print_sqlpp11(primitives::CppEmitter &ctx, auto &&table) {
         return toName(s, "(\\s|_|[0-9])(\\S)");
     };
 
-    auto pk = hana::find_if(table, schema::is_primary_key);
+    //auto pk = hana::find_if(table, schema::is_primary_key);
+    auto dv = hana::find_if(table, schema::is_default_value);
 
     String sqlTableName = table[0_c].name;
     auto tableClass = toClassName(sqlTableName);
@@ -181,7 +182,7 @@ void print_sqlpp11(primitives::CppEmitter &ctx, auto &&table) {
             traitslist.push_back(NAMESPACE + "::tag::can_be_null");
             requireInsert = false;
         }
-        if (pk != hana::nothing) {
+        if (dv != hana::nothing) {
             requireInsert = false;
         }
         if (requireInsert)
@@ -222,7 +223,6 @@ std::string print_sqlpp11(auto &&structures, const std::string &ns) {
 
     primitives::CppEmitter ctx;
 
-    // start printing
     ctx.addLine("// generated file, do not edit");
     ctx.addLine();
     ctx.addLine("#pragma once");
