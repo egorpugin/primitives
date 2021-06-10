@@ -172,20 +172,26 @@ void build(Solution &s)
         return p;
     };
 
-    auto setup_primitives = [&setup_primitives_no_all_sources](auto &t)
+    auto setup_primitives_header_only = [&setup_primitives_no_all_sources](auto &t)
     {
         auto p = setup_primitives_no_all_sources(t);
         t.setRootDirectory(p);
         // explicit!
         t += "include/.*"_rr;
+    };
+    auto setup_primitives = [&setup_primitives_header_only](auto &t)
+    {
+        setup_primitives_header_only(t);
         t += "src/.*"_rr;
     };
 
 #define ADD_LIBRARY_WITH_NAME(var, name)           \
     auto &var = p.addTarget<LibraryTarget>(name);  \
     setup_primitives(var)
-
 #define ADD_LIBRARY(x) ADD_LIBRARY_WITH_NAME(x, #x)
+#define ADD_LIBRARY_HEADER_ONLY(x)                 \
+    auto &x = p.addTarget<LibraryTarget>(#x);      \
+    setup_primitives_header_only(x)
 
     ADD_LIBRARY(error_handling);
 
@@ -382,6 +388,11 @@ void build(Solution &s)
     ADD_LIBRARY(wt);
     wt.Public += string,
         "org.sw.demo.emweb.wt.wt"_dep,
+        "org.sw.demo.boost.hana"_dep
+        ;
+
+    ADD_LIBRARY_HEADER_ONLY(data);
+    data.Public +=
         "org.sw.demo.boost.hana"_dep
         ;
 
