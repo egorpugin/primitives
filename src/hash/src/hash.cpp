@@ -42,12 +42,20 @@ String generate_random_bytes(uint32_t len)
     return seq;
 }
 
+namespace primitives::hash {
+
+bytes generate_strong_random_bytes(uint32_t len) {
+    bytes bytes_(len, std::byte{ 0 });
+    if (!RAND_bytes((unsigned char *)bytes_.data(), (int)bytes_.size()))
+        throw SW_RUNTIME_ERROR("Error during getting random bytes");
+    return bytes_;
+}
+
+}
+
 String generate_strong_random_bytes(uint32_t len)
 {
-    String bytes(len, 0);
-    if (!RAND_bytes((unsigned char *)&bytes[0], (int)bytes.size()))
-        throw SW_RUNTIME_ERROR("Error during getting random bytes");
-    return bytes;
+    return primitives::hash::generate_strong_random_bytes(len);
 }
 
 String bytes_to_string(const String &bytes)
