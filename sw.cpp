@@ -271,6 +271,10 @@ void build(Solution &s)
     hash.Public += filesystem,
         "org.sw.demo.aleksey14.rhash"_dep,
         "org.sw.demo.openssl.crypto"_dep;
+    hash.Public += "src/hash.natvis";
+
+    ADD_LIBRARY(password);
+    password.Public += hash;
 
     ADD_LIBRARY(csv);
     csv += templates;
