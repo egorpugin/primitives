@@ -106,7 +106,7 @@ to this document.)";
 @@ -8,13 +14,8 @@
  compress the size of the
  changes.
- 
+
 -This paragraph contains
 -text that is outdated.
 -It will be deleted in the
@@ -144,7 +144,7 @@ to this document.)";
     }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     auto r = Catch::Session().run(argc, argv);
     return r;

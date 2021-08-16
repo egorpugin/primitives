@@ -642,7 +642,7 @@ TEST_CASE("New settings", "[settings2]")
     }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     sw::getSettingStorage();
 
@@ -653,10 +653,4 @@ int main(int argc, char **argv)
     //while (1)
     auto r = s.run(argc, argv);
     return r;
-}
-
-EXPORT_FROM_EXECUTABLE
-std::string getProgramName()
-{
-    return PACKAGE_NAME_CLEAN;
 }

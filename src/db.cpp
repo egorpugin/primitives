@@ -275,7 +275,7 @@ CREATE TABLE d (d )xxx" + type + R"xxx();
     }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     auto r = Catch::Session().run(argc, argv);
     return r;

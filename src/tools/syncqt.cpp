@@ -284,7 +284,7 @@ StringSet class_names(std::map<path, File>::value_type &ff)
     return classes;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     cl::opt<path> sdir("sdir", cl::desc("source dir"), cl::Required);
     cl::opt<path> bdir("bdir", cl::desc("binary dir"), cl::Required);

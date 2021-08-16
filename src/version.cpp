@@ -2646,7 +2646,7 @@ TEST_CASE("Package version ranges", "[package_version_range]")
     //CHECK_THROWS(VersionRange("a") < VersionRange("b || c d"));*/
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     Catch::Session s;
     auto r = s.run(argc, argv);
