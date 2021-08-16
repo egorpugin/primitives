@@ -15,8 +15,6 @@ std::string print_sql(auto &&structure, auto &&db_type) {
 
     primitives::Emitter ctx;
     auto pk = hana::find_if(structure, schema::is_primary_key);
-    auto fk = hana::find_if(structure, schema::is_foreign_key);
-    auto unique = hana::find_if(structure, schema::is_unique);
 
     auto printer = hana::make_tuple(
         [&](auto &&structure) {
@@ -24,7 +22,7 @@ std::string print_sql(auto &&structure, auto &&db_type) {
             ctx.increaseIndent();
         },
         [&](auto &&field) {
-            ctx.addLine(field[0_c].name + " "s);
+            ctx.addLine(field.field[0_c].name + " "s);
             auto type = hana::overload(
                 [](std::string &&) {
                 if constexpr (is_sqlite)
@@ -41,9 +39,9 @@ std::string print_sql(auto &&structure, auto &&db_type) {
                     return "bigint";
                 else
                     static_assert(false, "not implemented");
-            })(typename std::decay_t<decltype(field[1_c])>::type_t{});
+            })(typename std::decay_t<decltype(field.field[1_c])>::type{});
             ctx.addText(type);
-            if (!hana::contains(field, schema::field_properties::optional{})) {
+            if (!hana::contains(field.field, schema::field_properties::optional{})) {
                 ctx.addText(" NOT NULL");
             }
         },
@@ -62,34 +60,40 @@ std::string print_sql(auto &&structure, auto &&db_type) {
         ctx.addLine("PRIMARY KEY (");
         hana::for_each(hana::intersperse(pk->primary_key, delim), hana::overload(
                                                                         [&](auto &&field) {
-                                                                            ctx.addText(field[0_c].name);
+                                                                            ctx.addText(field.field[0_c].name);
                                                                         },
                                                                         [&](std::decay_t<decltype(delim)> &&f) {
                                                                             f();
                                                                         }));
         ctx.addText(")");
     }
+    auto fk = hana::find_if(structure, schema::is_foreign_key);
     if constexpr (fk != hana::nothing) {
-        ctx.addText(","s);
-        ctx.addLine("FOREIGN KEY (");
-        ctx.addText(fk->foreign_key[0_c][0_c].name);
-        ctx.addText(") REFERENCES ");
-        ctx.addText(fk->foreign_key[1_c][0_c].name);
-        ctx.addText("(");
-        ctx.addText(fk->foreign_key[0_c][0_c].name);
-        ctx.addText(")");
+        hana::for_each(hana::filter(structure, schema::is_foreign_key), [&ctx](auto &&fk) {
+            ctx.addText(","s);
+            ctx.addLine("FOREIGN KEY (");
+            ctx.addText(fk.foreign_key[0_c].field[0_c].name);
+            ctx.addText(") REFERENCES ");
+            ctx.addText(fk.foreign_key[1_c][0_c].name);
+            ctx.addText("(");
+            ctx.addText(fk.foreign_key[0_c].field[0_c].name);
+            ctx.addText(")");
+        });
     }
+    auto unique = hana::find_if(structure, schema::is_unique);
     if constexpr (unique != hana::nothing) {
-        ctx.addText(","s);
-        ctx.addLine("UNIQUE (");
-        hana::for_each(hana::intersperse(unique->unique, delim), hana::overload(
-            [&](auto &&field) {
-            ctx.addText(field[0_c].name);
-        },
-            [&](std::decay_t<decltype(delim)> &&f) {
-            f();
-        }));
-        ctx.addText(")");
+        hana::for_each(hana::filter(structure, schema::is_unique), [&ctx, &delim](auto &&unique) {
+            ctx.addText(","s);
+            ctx.addLine("UNIQUE (");
+            hana::for_each(hana::intersperse(unique.unique, delim), hana::overload(
+                [&](auto &&field) {
+                ctx.addText(field.field[0_c].name);
+            },
+                [&](std::decay_t<decltype(delim)> &&f) {
+                f();
+            }));
+            ctx.addText(")");
+        });
     }
 
     ctx.decreaseIndent();
@@ -129,7 +133,7 @@ void print_sqlpp11(primitives::CppEmitter &ctx, auto &&table) {
         return toName(s, "(\\s|_|[0-9])(\\S)");
     };
 
-    //auto pk = hana::find_if(table, schema::is_primary_key);
+    auto pk = hana::find_if(table, schema::is_primary_key);
     auto dv = hana::find_if(table, schema::is_default_value);
 
     String sqlTableName = table[0_c].name;
@@ -140,7 +144,7 @@ void print_sqlpp11(primitives::CppEmitter &ctx, auto &&table) {
     ctx.beginNamespace(tableNamespace);
 
     hana::for_each(table[1_c].fields, [&](auto &&field) {
-        String sqlColumnName = field[0_c].name;
+        String sqlColumnName = field.field[0_c].name;
         auto columnClass = toClassName(sqlColumnName);
         tableTemplateParameters += ",\n               " + tableNamespace + "::" + columnClass;
         auto columnMember = toMemberName(sqlColumnName);
@@ -166,7 +170,7 @@ void print_sqlpp11(primitives::CppEmitter &ctx, auto &&table) {
             },
             [](std::int64_t &&) {
                 return "integer";
-            })(typename std::decay_t<decltype(field[1_c])>::type_t{});
+            })(typename std::decay_t<decltype(field.field[1_c])>::type{});
 
         Strings traitslist;
         traitslist.push_back(NAMESPACE + "::" + sqlColumnType);
@@ -178,15 +182,21 @@ void print_sqlpp11(primitives::CppEmitter &ctx, auto &&table) {
             traitslist.push_back(NAMESPACE + "::tag::must_not_update");
             requireInsert = false;
         }
-        if (hana::find_if(field, schema::is_optional) != hana::nothing) {
+        if (hana::find_if(field.field, schema::is_optional) != hana::nothing) {
             traitslist.push_back(NAMESPACE + "::tag::can_be_null");
             requireInsert = false;
         }
         if (dv != hana::nothing) {
             requireInsert = false;
         }
-        if (requireInsert)
+        if (pk != hana::nothing) {
+            if (hana::contains(pk->primary_key, field)) {
+                requireInsert = false;
+            }
+        }
+        if (requireInsert) {
             traitslist.push_back(NAMESPACE + "::tag::require_insert");
+        }
         String l;
         for (auto &li : traitslist)
             l += li + ", ";
