@@ -6,14 +6,6 @@
 
 #include <primitives/wt.h>
 
-#include <Wt/WApplication.h>
-#include <Wt/WDialog.h>
-#include <Wt/WLabel.h>
-#include <Wt/WMenu.h>
-#include <Wt/WMenuItem.h>
-#include <Wt/WPushButton.h>
-#include <Wt/WStackedWidget.h>
-
 namespace primitives::wt
 {
 

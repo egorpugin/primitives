@@ -8,16 +8,51 @@
 
 #include <primitives/string.h>
 
+#include <Wt/Http/Response.h>
+#include <Wt/Http/ResponseContinuation.h>
+#include <Wt/WAbstractItemModel.h>
+#include <Wt/WAbstractTableModel.h>
+#include <Wt/WAnchor.h>
+#include <Wt/WApplication.h>
+#include <Wt/WAudio.h>
+#include <Wt/WBootstrapTheme.h>
 #include <Wt/WBreak.h>
+#include <Wt/WCheckBox.h>
 #include <Wt/WContainerWidget.h>
+#include <Wt/WDialog.h>
+#include <Wt/WEnvironment.h>
+#include <Wt/WFormModel.h>
+#include <Wt/WHBoxLayout.h>
+#include <Wt/WIntValidator.h>
+#include <Wt/WItemDelegate.h>
+#include <Wt/WItemSelectionModel.h>
 #include <Wt/WLabel.h>
-
-namespace Wt
-{
-class WMenu;
-class WMenuItem;
-class WDialog;
-}
+#include <Wt/WLengthValidator.h>
+#include <Wt/WLineEdit.h>
+#include <Wt/WMenu.h>
+#include <Wt/WMenuItem.h>
+#include <Wt/WMessageBox.h>
+#include <Wt/WNavigationBar.h>
+#include <Wt/WPopupMenu.h>
+#include <Wt/WPushButton.h>
+#include <Wt/WRadioButton.h>
+#include <Wt/WResource.h>
+#include <Wt/WSelectionBox.h>
+#include <Wt/WServer.h>
+#include <Wt/WStackedWidget.h>
+#include <Wt/WStandardItemModel.h>
+#include <Wt/WSuggestionPopup.h>
+#include <Wt/WTabWidget.h>
+#include <Wt/WTable.h>
+#include <Wt/WTableView.h>
+#include <Wt/WTemplate.h>
+#include <Wt/WTemplateFormView.h>
+#include <Wt/WTextEdit.h>
+#include <Wt/WTreeView.h>
+#include <Wt/WVBoxLayout.h>
+#include <Wt/WVideo.h>
+#include <web/WebSession.h>
+//#include <Wt/WConfiguration.h>
 
 namespace primitives::wt
 {
@@ -27,6 +62,20 @@ void showDialog(Wt::WObject *parent, std::unique_ptr<Wt::WDialog> dialog);
 
 PRIMITIVES_WT_API
 void showDialog(std::unique_ptr<Wt::WDialog> dialog);
+
+inline auto showDialog(const String &title, std::unique_ptr<Wt::WWidget> w) {
+    auto d = std::make_unique<Wt::WDialog>(title);
+    auto c = d->contents();
+    c->addWidget(std::move(w));
+    c->addNew<Wt::WBreak>();
+    c->addNew<Wt::WPushButton>(d->tr("close"))->clicked().connect([d = d.get()]() {
+        d->accept();
+    });
+    return showDialog(std::move(d));
+}
+inline auto showDialog(std::unique_ptr<Wt::WWidget> w) {
+    return showDialog({}, std::move(w));
+}
 
 PRIMITIVES_WT_API
 void showDialog(const String &title, const String &text, std::function<void(void)> f = {});
@@ -107,11 +156,11 @@ struct layout : Wt::WContainerWidget {
     using base = Wt::WContainerWidget;
 
     layout(type t, int spacing = 0) : t(t), spacing(spacing) {
-        addAttributeValue(*this, "style", "display: flex;");
+        addStyleClass("flex");
         if (t == type::horizontal)
             addAttributeValue(*this, "style", "flex-flow: row;");
         else if (t == type::vertical)
-            addAttributeValue(*this, "style", "flex-flow: column;");
+            addAttributeValue(*this, "style", "flex-flow: column; height: 100%;");
     }
     template <typename T>
     T *addWidget(std::unique_ptr<T> w, int stretch = 0) {
@@ -127,9 +176,6 @@ struct layout : Wt::WContainerWidget {
                 addAttributeValue(*v, "style", "margin-top: " + std::to_string(spacing) + "px;");
         }
         return v;
-    }
-    void show() {
-        addAttributeValue(*this, "style", "display: flex;");
     }
 };
 

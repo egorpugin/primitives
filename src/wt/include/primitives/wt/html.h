@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <primitives/exceptions.h>
 #include <primitives/overload.h>
 #include <primitives/wt.h>
 
@@ -28,6 +29,7 @@ struct w {
     using widget_type = T;
 
     std::unique_ptr<widget_type> w_;
+    widget_type *wref_ = nullptr;
     // settings
     int stretch_ = 0;
     WString text_;
@@ -40,9 +42,18 @@ struct w {
     w(std::unique_ptr<widget_type> in)
         : w_{std::move(in)} {
     }
+    w(widget_type &in)
+        : wref_{&in} {
+    }
 
-    auto get() { return std::move(w_); }
-    widget_type &get_ref() { return *w_; }
+    auto get() {
+        if (wref_)
+            throw SW_LOGIC_ERROR("cannot get owning ptr from ref widget");
+        return std::move(w_);
+    }
+    widget_type &get_ref() {
+        return wref_ ? *wref_ : *w_;
+    }
     widget_type *get_ptr() { return &get_ref(); }
 
     decltype(auto) ptr(widget_type **p) && {
@@ -58,12 +69,17 @@ struct w {
         text_ = t;
         return std::move(*this);
     }
-    decltype(auto) url(WString &&t) && {
+    decltype(auto) url(String &&t) && {
         url_ = t;
         return std::move(*this);
     }
     decltype(auto) id(String &&t) && {
         get_ref().setId(t);
+        return std::move(*this);
+    }
+    decltype(auto) tab(WString &&t) && {
+        text_ = t;
+        tab_ = true;
         return std::move(*this);
     }
     decltype(auto) tab(WString &&t, String &&u) && {
@@ -72,8 +88,12 @@ struct w {
         tab_ = true;
         return std::move(*this);
     }
-    decltype(auto) style_class(auto &&s) && {
-        get_ref().addStyleClass(s);
+    decltype(auto) style(auto &&s) && {
+        addAttributeValue(get_ref(), "style", s);
+        return std::move(*this);
+    }
+    decltype(auto) style_class(auto && ... s) && {
+        (get_ref().addStyleClass(s), ...);
         return std::move(*this);
     }
     decltype(auto) setup(auto &&f) && {
@@ -86,31 +106,43 @@ struct w {
         stretch_ = stretch;
         return std::move(*this);
     }
-    decltype(auto) operator[](auto &&args) && {
+    void add_members(auto &&args) {
         hana::for_each(std::move(args), [this](auto &&a) {
             auto &w = get_ref();
             if constexpr (std::is_same_v<widget_type, primitives::wt::right_menu_widget>) {
-                auto t = w.addTab(a.text_, a.url_, std::move(a.get()));
+                auto t = a.url_.empty() ? w.addTab(a.text_, std::move(a.get())) : w.addTab(a.text_, a.url_, std::move(a.get()));
                 if (a.tab_ && WApplication::instance()->internalPath() == a.url_)
                     w.menu->select(t);
             }
             else if constexpr (std::is_same_v<widget_type, WContainerWidget>) {
                 auto v = w.addWidget(std::move(a.get()));
                 //if (!text_.empty())
-                    //v->setText(text_);
+                //v->setText(text_);
             }
             else {
                 auto v = w.addWidget(std::move(a.get()), a.stretch_);
                 //if (!text_.empty())
-                    //v->setText(text_);
+                //v->setText(text_);
             }
         });
+    }
+    decltype(auto) operator[](auto &&args) & {
+        add_members(std::move(args));
+        return *this;
+    }
+    decltype(auto) operator[](auto &&args) && {
+        add_members(std::move(args));
         return std::move(*this);
     }
 };
+template <typename T> w(T &)->w<T>;
+//template <typename T> w(T &&)->w<T>;
 
 decltype(auto) operator+(auto &&w) {
-    return hana::make_tuple(std::move(w));
+    if constexpr (hana::Foldable<decltype(w)>::value)
+        return std::move(w);
+    else
+        return hana::make_tuple(std::move(w));
 }
 decltype(auto) operator+(auto &&a, auto &&b) {
     if constexpr (hana::Foldable<decltype(b)>::value)
@@ -138,9 +170,17 @@ auto br(auto && ... args) {
     return w<WBreak>(std::forward<decltype(args)>(args)...);
 }
 
-auto buddy(auto &&a, auto &&b) {
+template <typename T>
+auto buddy(w<T> &&a, auto &&b) {
     a.get_ref().setBuddy(b.get_ptr());
     return hana::make_tuple(std::move(a), std::move(b));
+}
+auto buddy(auto &&a, auto &&b) {
+    return buddy(w<WLabel>(a), std::move(b));
+}
+
+inline auto stretch() {
+    return w<WContainerWidget>() / 1;
 }
 
 } // namespace primitives::wt::html
