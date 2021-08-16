@@ -288,6 +288,7 @@ template <typename Container, std::ranges::range R>
 requires std::convertible_to<std::ranges::range_value_t<R>, typename Container::value_type>
 Container operator|(R &&r, to_helper<Container>) {
     return Container{ r.begin(), r.end() };
+    //return Container(std::begin(r), std::end(r));
 }
 
 }
