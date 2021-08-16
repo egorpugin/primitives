@@ -17,6 +17,7 @@
 
 #include <any>
 #include <iostream>
+#include <string>
 
 namespace YAML {
 class Node;
