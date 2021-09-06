@@ -11,7 +11,7 @@ void print_cpp_structures(auto &&ctx, auto &&structures) {
         },
         [&](auto &&field) {
             ctx.addLine();
-            if (hana::contains(field.field, schema::field_properties::optional{})) {
+            if (hana::contains(field.field, schema::field_properties::optional)) {
                 ctx.addText("std::optional<");
             }
             hana::overload(
@@ -20,8 +20,16 @@ void print_cpp_structures(auto &&ctx, auto &&structures) {
                 },
                 [&ctx](int64_t &&) {
                     ctx.addText("std::int64_t");
+                },
+                [&ctx, &field](auto &&) {
+                    ctx.addText(field.field[2_c].type);
+                    /*if (hana::contains(field.field, schema::type_{})) {
+                        throw SW_RUNTIME_ERROR("missing field text type");
+                    }
+                    else
+                        throw SW_RUNTIME_ERROR("missing field text type");*/
                 })(typename std::decay_t<decltype(field.field[1_c])>::type{});
-            if (hana::contains(field.field, schema::field_properties::optional{})) {
+            if (hana::contains(field.field, schema::field_properties::optional)) {
                 ctx.addText(">");
             }
             ctx.addText(" ");

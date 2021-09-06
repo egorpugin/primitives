@@ -9,18 +9,22 @@ namespace primitives::data::schema {
 
 inline namespace common_properties {
 
-struct name_ {
-    char name[64];
-    constexpr name_(const char *n) : name() {
-        for (int i = 0; *n; i++)
-            name[i] = *n++;
+#define TEXT_FIELD(x)                                                                                                  \
+    struct x##_ {                                                                                                      \
+        char x[64];                                                                                                    \
+        constexpr x##_(const char *n) : x() {                                                                          \
+            for (int i = 0; *n; i++)                                                                                   \
+                x[i] = *n++;                                                                                           \
+        }                                                                                                              \
+        constexpr auto operator<=>(const x##_ &) const = default;                                                      \
+    };                                                                                                                 \
+    template <x##_ v>                                                                                                  \
+    constexpr x##_ operator""_##x() {                                                                                  \
+        return v;                                                                                                      \
     }
-    constexpr auto operator<=>(const name_ &) const = default;
-};
-template <name_ n>
-constexpr name_ operator ""_name() {
-    return n;
-}
+
+TEXT_FIELD(name)
+TEXT_FIELD(type)
 
 } // namespace common_properties
 
@@ -30,8 +34,7 @@ inline namespace table_properties {
     template <typename T>                                                                                              \
     struct x##_ {                                                                                                      \
         T x;                                                                                                           \
-        constexpr x##_(T &&v) : x{v} {                                                                                 \
-        }                                                                                                              \
+        constexpr x##_(T &&v) : x{v} {}                                                                                \
     };                                                                                                                 \
     template <typename T>                                                                                              \
     x##_(T &&v)->x##_<T>;                                                                                              \
@@ -55,8 +58,14 @@ TYPED_STORAGE(fields);
 TYPED_STORAGE(primary_key);
 TYPED_STORAGE(foreign_key);
 TYPED_STORAGE(unique);
+TYPED_STORAGE(on_conflict);
+TYPED_STORAGE(on_delete);
+TYPED_STORAGE(on_update);
 
 #undef TYPED_STORAGE
+
+constexpr struct {} replace;
+constexpr struct {} cascade;
 
 } // inline namespace table_properties
 
@@ -79,10 +88,15 @@ struct type {
 template <typename T>
 constexpr boost::hana::type<T> type{};
 
-struct optional {
-    auto operator<=>(const optional &) const = default;
-};
-FIELD_CHECK(optional);
+#define BOOL_FIELD(x)                                                                                                  \
+    struct x##_ {                                                                                                      \
+        auto operator<=>(const x##_ &) const = default;                                                                \
+    };                                                                                                                 \
+    constexpr x##_ x{};                                                                                                \
+    FIELD_CHECK(x##_)
+
+BOOL_FIELD(optional);
+BOOL_FIELD(unique_field);
 
 /*struct skip_required_field_for_sqlpp {
     auto operator<=>(const skip_required_field_for_sqlpp &) const = default;
@@ -107,6 +121,7 @@ template <const char *expr>
 struct default_value_expression {};
 
 #undef FIELD_CHECK
+#undef BOOL_FIELD
 
 } // inline namespace field_properties
 
@@ -148,5 +163,12 @@ constexpr auto foreign_key(auto && ... args) {
 constexpr auto unique(auto && ... args) {
     return unique_{ boost::hana::make_tuple(std::forward<decltype(args)>(args)...) };
 }
+
+enum class sqlite3_column_type {
+    integer,
+    real,
+    text,
+    blob,
+};
 
 } // namespace primitives::data::schema

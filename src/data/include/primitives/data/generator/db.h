@@ -25,23 +25,37 @@ std::string print_sql(auto &&structure, auto &&db_type) {
             ctx.addLine(field.field[0_c].name + " "s);
             auto type = hana::overload(
                 [](std::string &&) {
-                if constexpr (is_sqlite)
-                    return "TEXT";
-                else if constexpr (is_pg)
-                    return "text";
-                else
-                    static_assert(false, "not implemented");
-            },
+                    if constexpr (is_sqlite)
+                        return "TEXT";
+                    else if constexpr (is_pg)
+                        return "text";
+                    //else
+                        //static_assert(false, "not implemented");
+                },
                 [](std::int64_t &&) {
-                if constexpr (is_sqlite)
-                    return "INTEGER";
-                else if constexpr (is_pg)
-                    return "bigint";
-                else
-                    static_assert(false, "not implemented");
-            })(typename std::decay_t<decltype(field.field[1_c])>::type{});
+                    if constexpr (is_sqlite)
+                        return "INTEGER";
+                    else if constexpr (is_pg)
+                        return "bigint";
+                    //else
+                        //static_assert(false, "not implemented");
+                },
+                [&field](auto &&) {
+                    /*if (hana::size(field.field)) {
+                        return hana::overload([](schema::sqlite3_column_type t) {
+                            switch (t) {
+                            case schema::sqlite3_column_type::blob: return "BLOB";
+                            case schema::sqlite3_column_type::integer: return "INTEGER";
+                            case schema::sqlite3_column_type::text: return "TEXT";
+                            case schema::sqlite3_column_type::real: return "REAL";
+                            }
+                        }, [](auto &&) { return "UNIMPLEMENTED"; })(field.field[3_c]);
+                    } else {*/
+                        return "UNIMPLEMENTED";
+                    //}
+                })(typename std::decay_t<decltype(field.field[1_c])>::type{});
             ctx.addText(type);
-            if (!hana::contains(field.field, schema::field_properties::optional{})) {
+            if (!hana::contains(field.field, schema::field_properties::optional)) {
                 ctx.addText(" NOT NULL");
             }
         },
@@ -86,12 +100,12 @@ std::string print_sql(auto &&structure, auto &&db_type) {
             ctx.addText(","s);
             ctx.addLine("UNIQUE (");
             hana::for_each(hana::intersperse(unique.unique, delim), hana::overload(
-                [&](auto &&field) {
-                ctx.addText(field.field[0_c].name);
-            },
-                [&](std::decay_t<decltype(delim)> &&f) {
-                f();
-            }));
+                                                                        [&](auto &&field) {
+                                                                            ctx.addText(field.field[0_c].name);
+                                                                        },
+                                                                        [&](std::decay_t<decltype(delim)> &&f) {
+                                                                            f();
+                                                                        }));
             ctx.addText(")");
         });
     }
@@ -99,6 +113,14 @@ std::string print_sql(auto &&structure, auto &&db_type) {
     ctx.decreaseIndent();
     ctx.addLine(");");
     return ctx.getText();
+}
+
+std::string print_sqls(auto &&structures, auto &&db_type) {
+    std::string s;
+    hana::for_each(structures, [&](auto &&structure) {
+        s += print_sql(structure, db_type) + "\n";
+    });
+    return s;
 }
 
 static const auto NAMESPACE = "sqlpp"s;
@@ -170,6 +192,16 @@ void print_sqlpp11(primitives::CppEmitter &ctx, auto &&table) {
             },
             [](std::int64_t &&) {
                 return "integer";
+            },
+            [&field]<typename T>(T &&x) {
+                if (1 || hana::contains(field.field, schema::sqlite3_column_type{})) {
+                    //throw SW_RUNTIME_ERROR("missing sqlite3_column_type111111");
+                    return "integeraaaaaa";
+                }
+                else
+                    //static_assert(false, "missing sqlite3_column_type");
+                    throw SW_RUNTIME_ERROR("missing sqlite3_column_type for field "s + field.field[0_c].name);
+                //return type_to_sqlite3_column(std::forward<T>(x));
             })(typename std::decay_t<decltype(field.field[1_c])>::type{});
 
         Strings traitslist;
@@ -182,7 +214,7 @@ void print_sqlpp11(primitives::CppEmitter &ctx, auto &&table) {
             traitslist.push_back(NAMESPACE + "::tag::must_not_update");
             requireInsert = false;
         }
-        if (hana::find_if(field.field, schema::is_optional) != hana::nothing) {
+        if (hana::contains(field.field, schema::field_properties::optional)) {
             traitslist.push_back(NAMESPACE + "::tag::can_be_null");
             requireInsert = false;
         }
