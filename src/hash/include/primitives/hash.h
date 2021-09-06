@@ -9,6 +9,8 @@
 #include <primitives/filesystem.h>
 #include <primitives/exceptions.h>
 
+#include <cstring>
+
 PRIMITIVES_HASH_API
 String generate_random_alnum_sequence(uint32_t len);
 
@@ -122,7 +124,7 @@ struct bytes : std::basic_string<std::byte> {
     bytes(const std::vector<uint8_t> &v) : base((std::byte *)v.data(), v.size()) {}
     operator std::vector<uint8_t>() const {
         std::vector<uint8_t> v(size());
-        memcpy(v.data(), data(), size());
+        std::memcpy(v.data(), data(), size());
         return v;
     }
 
