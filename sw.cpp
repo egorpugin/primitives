@@ -252,7 +252,7 @@ void build(Solution &s)
 
     ADD_LIBRARY(yaml);
     yaml.Public += string, templates,
-        "org.sw.demo.jbeder.yaml_cpp-master"_dep;
+        "org.sw.demo.jbeder.yaml_cpp"_dep;
 
     ADD_LIBRARY(pack);
     pack.Public += filesystem, templates,
