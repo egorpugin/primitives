@@ -36,6 +36,7 @@ struct w {
     String url_;
     bool tab_ = false;
 
+    //w() : w(std::make_unique<WContainerWidget>()) {}
     w(auto && ... args)
         : w_{std::make_unique<widget_type>(std::forward<decltype(args)>(args)...)} {
     }
@@ -115,12 +116,12 @@ struct w {
                     w.menu->select(t);
             }
             else if constexpr (std::is_same_v<widget_type, WContainerWidget>) {
-                auto v = w.addWidget(std::move(a.get()));
+                /*auto v = */w.addWidget(std::move(a.get()));
                 //if (!text_.empty())
                 //v->setText(text_);
             }
             else {
-                auto v = w.addWidget(std::move(a.get()), a.stretch_);
+                /*auto v = */w.addWidget(std::move(a.get()), a.stretch_);
                 //if (!text_.empty())
                 //v->setText(text_);
             }
@@ -136,6 +137,7 @@ struct w {
     }
 };
 template <typename T> w(T &)->w<T>;
+template <typename T> w(std::unique_ptr<T>)->w<T>;
 //template <typename T> w(T &&)->w<T>;
 
 decltype(auto) operator+(auto &&w) {
@@ -179,8 +181,11 @@ auto buddy(auto &&a, auto &&b) {
     return buddy(w<WLabel>(a), std::move(b));
 }
 
+inline auto container() {
+    return w<WContainerWidget>();
+}
 inline auto stretch() {
-    return w<WContainerWidget>() / 1;
+    return container() / 1;
 }
 
 } // namespace primitives::wt::html

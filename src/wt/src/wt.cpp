@@ -6,6 +6,8 @@
 
 #include <primitives/wt.h>
 
+#include <primitives/wt/html.h>
+
 namespace primitives::wt
 {
 
@@ -36,6 +38,34 @@ void showDialog(const String &title, const String &text, std::function<void(void
     ok->clicked().connect([d = d.get(), f]{ d->accept(); if (f) f(); });
 
     showDialog(std::move(d));
+}
+
+std::unique_ptr<Wt::WDialog> make_default_dialog(const String &title, std::unique_ptr<Wt::WWidget> in_w) {
+    using namespace primitives::wt::html;
+
+    auto d = make_default_dialog(title);
+    auto c = d->contents();
+
+    WPushButton *b;
+    w<WContainerWidget> x(*c);
+    x
+    [
+        + vl(6)
+        [
+            + w<WWidget>(std::move(in_w))
+            + stretch()
+            + hl(6)
+            [
+                + w<WPushButton>(d->tr("close")).ptr(&b)
+                + stretch()
+            ]
+        ]
+    ];
+    c->addWidget(std::make_unique<Wt::WBreak>());
+    b->clicked().connect([d = d.get()]() {
+        d->accept();
+    });
+    return d;
 }
 
 static auto showDialogYesNo1(const String &title, const String &text, std::function<void(void)> f)

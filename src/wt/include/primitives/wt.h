@@ -23,6 +23,7 @@
 #include <Wt/WEnvironment.h>
 #include <Wt/WFormModel.h>
 #include <Wt/WHBoxLayout.h>
+#include <Wt/WIcon.h>
 #include <Wt/WIntValidator.h>
 #include <Wt/WItemDelegate.h>
 #include <Wt/WItemSelectionModel.h>
@@ -63,15 +64,18 @@ void showDialog(Wt::WObject *parent, std::unique_ptr<Wt::WDialog> dialog);
 PRIMITIVES_WT_API
 void showDialog(std::unique_ptr<Wt::WDialog> dialog);
 
+inline auto make_default_dialog() {
+    return std::make_unique<Wt::WDialog>();
+}
+inline auto make_default_dialog(const String &title) {
+    auto d = make_default_dialog();
+    d->setWindowTitle(title);
+    return d;
+}
+PRIMITIVES_WT_API
+std::unique_ptr<Wt::WDialog> make_default_dialog(const String &title, std::unique_ptr<Wt::WWidget> w);
 inline auto showDialog(const String &title, std::unique_ptr<Wt::WWidget> w) {
-    auto d = std::make_unique<Wt::WDialog>(title);
-    auto c = d->contents();
-    c->addWidget(std::move(w));
-    c->addNew<Wt::WBreak>();
-    c->addNew<Wt::WPushButton>(d->tr("close"))->clicked().connect([d = d.get()]() {
-        d->accept();
-    });
-    return showDialog(std::move(d));
+    return showDialog(make_default_dialog(title, std::move(w)));
 }
 inline auto showDialog(std::unique_ptr<Wt::WWidget> w) {
     return showDialog({}, std::move(w));
@@ -166,7 +170,7 @@ struct layout : Wt::WContainerWidget {
     T *addWidget(std::unique_ptr<T> w, int stretch = 0) {
         bool add_space = count() && spacing;
 
-        auto v = base::addWidget(std::move(w));
+        auto v = base::addWidget<T>(std::move(w));
         auto flex = std::to_string(stretch) + " " + std::to_string(stretch) + " auto;";
         addAttributeValue(*v, "style", "flex: " + flex);
         if (add_space) {
