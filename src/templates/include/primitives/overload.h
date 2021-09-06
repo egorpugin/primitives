@@ -1,8 +1,8 @@
 #pragma once
 
-template<typename... Ts>
+template<typename ... Ts>
 struct overload : Ts... {
-    overload(Ts... ts) : Ts(ts)... {}
+    overload(Ts ... ts) : Ts(std::forward<Ts>(ts))... {}
     using Ts::operator()...;
 };
 //template<class... Ts> overload(Ts...) -> overload<Ts...>;
