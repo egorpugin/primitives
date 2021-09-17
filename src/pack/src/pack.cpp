@@ -9,6 +9,8 @@
 #include <primitives/exceptions.h>
 #include <primitives/templates.h>
 
+#include <iostream>
+
 #include <archive.h>
 #include <archive_entry.h>
 
@@ -154,9 +156,20 @@ FilesSorted unpack_file(const path &fn, const path &dst)
         archive_read_close(a);
     };
 
-    archive_entry *entry;
-    while (archive_read_next_header(a, &entry) == ARCHIVE_OK)
+    while (1)
     {
+        int ec;
+        archive_entry *entry;
+        while ((ec = archive_read_next_header(a, &entry)) == ARCHIVE_RETRY)
+            ;
+        if (ec == ARCHIVE_WARN) {
+            std::cerr << "libarchive warning: " << archive_error_string(a) << "\n";
+        }
+        if (ec == ARCHIVE_FATAL)
+            throw SW_RUNTIME_ERROR(archive_error_string(a));
+        if (ec == ARCHIVE_EOF)
+            break;
+
         // act on regular files only
         auto type = archive_entry_filetype(entry);
         if (type != AE_IFREG)
