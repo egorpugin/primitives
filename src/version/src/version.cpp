@@ -513,7 +513,7 @@ std::string Version::format(const std::string &s) const
     VAR_SMALL_OPT(p);
     VAR_SMALL_OPT(t);
 
-    return fmt::format(s,
+    return fmt::format(fmt::runtime(s),
         ARG(M),
         ARG(m),
         ARG(p),
