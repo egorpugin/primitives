@@ -87,8 +87,11 @@ static void download_and_unpack(const String &url, path fn, const path &unpack_d
     if (!fn.is_absolute())
         fn = unpack_dir / fn;
     download_file_checked(url, fn, max_file_size);
+    SCOPE_EXIT{
+        std::error_code ec;
+        fs::remove(fn, ec);
+    };
     unpack_file(fn, unpack_dir);
-    fs::remove(fn);
 }
 
 template <typename F>
