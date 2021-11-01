@@ -14,7 +14,7 @@ namespace primitives::wt
 void showDialog(Wt::WObject *parent, std::unique_ptr<Wt::WDialog> dialog)
 {
     auto d = parent->addChild(std::move(dialog));
-    //d->finished().connect([d](Wt::DialogCode code) { d->removeFromParent(); });
+    d->finished().connect([d](Wt::DialogCode code) { d->removeFromParent(); });
     d->show();
 
     // after show
