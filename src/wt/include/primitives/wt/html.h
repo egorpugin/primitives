@@ -115,7 +115,7 @@ struct w {
                 if (a.tab_ && WApplication::instance()->internalPath() == a.url_)
                     w.menu->select(t);
             }
-            else if constexpr (std::is_same_v<widget_type, WContainerWidget>) {
+            else if constexpr (std::is_base_of_v<WContainerWidget, widget_type>) {
                 /*auto v = */w.addWidget(std::move(a.get()));
                 //if (!text_.empty())
                 //v->setText(text_);
@@ -140,17 +140,21 @@ template <typename T> w(T &)->w<T>;
 template <typename T> w(std::unique_ptr<T>)->w<T>;
 //template <typename T> w(T &&)->w<T>;
 
-decltype(auto) operator+(auto &&w) {
-    if constexpr (hana::Foldable<decltype(w)>::value)
-        return std::move(w);
-    else
-        return hana::make_tuple(std::move(w));
+template <typename ... Types>
+auto operator+(hana::tuple<Types...> &&v) {
+    return std::move(v);
 }
-decltype(auto) operator+(auto &&a, auto &&b) {
-    if constexpr (hana::Foldable<decltype(b)>::value)
-        return hana::concat(std::move(a), std::move(b));
-    else
-        return hana::append(std::move(a), std::move(b));
+template <typename ... Types>
+auto operator+(w<Types...> &&v) {
+    return hana::make_tuple(std::move(v));
+}
+template <typename ... Types1, typename ... Types2>
+auto operator+(hana::tuple<Types1...> &&a, hana::tuple<Types2...> &&b) {
+    return hana::concat(std::move(a), std::move(b));
+}
+template <typename ... Types1, typename ... Types2>
+decltype(auto) operator+(hana::tuple<Types1...> &&a, w<Types2...> &&b) {
+    return hana::append(std::move(a), std::move(b));
 }
 decltype(auto) operator/(auto &&a, int stretch) {
     hana::back(a).stretch_ = stretch;
@@ -170,6 +174,9 @@ auto hl(auto && ... args) {
 
 auto br(auto && ... args) {
     return w<WBreak>(std::forward<decltype(args)>(args)...);
+}
+auto gbv(auto && ... args) {
+    return w<WGroupBox>(std::forward<decltype(args)>(args)...);
 }
 
 template <typename T>
