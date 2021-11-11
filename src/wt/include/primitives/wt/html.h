@@ -52,11 +52,12 @@ struct w {
             throw SW_LOGIC_ERROR("cannot get owning ptr from ref widget");
         return std::move(w_);
     }
-    widget_type &get_ref() {
+    widget_type &get_ref() const {
         return wref_ ? *wref_ : *w_;
     }
-    widget_type *get_ptr() { return &get_ref(); }
+    widget_type *get_ptr() const { return &get_ref(); }
 
+    auto ptr() const { return get_ptr(); }
     decltype(auto) ptr(widget_type **p) && {
         if (p)
             *p = get_ptr();
@@ -140,20 +141,37 @@ template <typename T> w(T &)->w<T>;
 template <typename T> w(std::unique_ptr<T>)->w<T>;
 //template <typename T> w(T &&)->w<T>;
 
-template <typename ... Types>
-auto operator+(hana::tuple<Types...> &&v) {
+template<typename T>
+concept widget_like = requires (T **x) {
+    []<typename ... Types>(w<Types...>**){}(x);
+};
+template<typename T, template <typename ...> typename Container>
+concept widget_like_container_helper = requires (T **x) {
+    []<widget_like ... Types>(Container<Types...>**){}(x);
+};
+template<typename T>
+concept widget_like_container = false
+    || widget_like_container_helper<T, std::pair>
+    || widget_like_container_helper<T, std::tuple>
+    || widget_like_container_helper<T, hana::tuple>
+    ;
+
+auto operator+(widget_like_container auto &&v) {
     return std::move(v);
 }
-template <typename ... Types>
-auto operator+(w<Types...> &&v) {
+auto operator+(widget_like auto &&v) {
     return hana::make_tuple(std::move(v));
 }
-template <typename ... Types1, typename ... Types2>
-auto operator+(hana::tuple<Types1...> &&a, hana::tuple<Types2...> &&b) {
-    return hana::concat(std::move(a), std::move(b));
+auto operator+(widget_like_container auto &&a, widget_like_container auto &&b) {
+    if constexpr (widget_like_container_helper<typename std::decay_t<decltype(b)>, std::tuple>) {
+        return hana::unpack(std::move(b), [&a](auto && ... args) {
+            return (std::move(a) + ... + std::move(args));
+        });
+    } else {
+        return hana::concat(std::move(a), std::move(b));
+    }
 }
-template <typename ... Types1, typename ... Types2>
-decltype(auto) operator+(hana::tuple<Types1...> &&a, w<Types2...> &&b) {
+decltype(auto) operator+(widget_like_container auto &&a, widget_like auto &&b) {
     return hana::append(std::move(a), std::move(b));
 }
 decltype(auto) operator/(auto &&a, int stretch) {
