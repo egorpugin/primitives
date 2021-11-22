@@ -5,7 +5,10 @@
 *.exe
 *.dll
 
+a.out
 
 /bin
 /.cppan
 /cppan-*
+
+compile_commands.json

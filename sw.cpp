@@ -177,7 +177,7 @@ void build(Solution &s)
         auto p = setup_primitives_no_all_sources(t);
         t.setRootDirectory(p);
         // explicit!
-        t += "include/.*"_rr;
+        t -= "include/.*"_rr;
     };
     auto setup_primitives = [&setup_primitives_header_only](auto &t)
     {
@@ -396,9 +396,18 @@ void build(Solution &s)
         ;
 
     ADD_LIBRARY_HEADER_ONLY(data);
-    data.Public +=
-        "org.sw.demo.boost.hana"_dep
-        ;
+    {
+        data.Public +=
+            "org.sw.demo.boost.hana"_dep
+            ;
+
+        auto &tie_gen = data.addTarget<ExecutableTarget>("tools.tie_gen");
+        tie_gen.PackageDefinitions = true;
+        setup_primitives_no_all_sources(tie_gen);
+        tie_gen += "src/data/include/primitives/data/tie_gen.cpp";
+
+        data.addCommand() << cmd::prog(tie_gen) << 100 << cmd::std_out("primitives/data/tie_for_struct.inl");
+    }
 
     // tools
 

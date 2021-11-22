@@ -11,21 +11,6 @@
 namespace primitives::wt
 {
 
-void showDialog(Wt::WObject *parent, std::unique_ptr<Wt::WDialog> dialog)
-{
-    auto d = parent->addChild(std::move(dialog));
-    d->finished().connect([d](Wt::DialogCode code) { d->removeFromParent(); });
-    d->show();
-
-    // after show
-    //getSwApplication()->navigation2->setAttributeValue("style", "z-index: 0;");
-}
-
-void showDialog(std::unique_ptr<Wt::WDialog> dialog)
-{
-    showDialog(Wt::WApplication::instance(), std::move(dialog));
-}
-
 void showDialog(const String &title, const String &text, std::function<void(void)> f)
 {
     auto d = std::make_unique<Wt::WDialog>(title);
