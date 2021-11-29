@@ -401,12 +401,12 @@ void build(Solution &s)
             "org.sw.demo.boost.hana"_dep
             ;
 
-        auto &tie_gen = data.addTarget<ExecutableTarget>("tools.tie_gen");
+        /*auto &tie_gen = data.addTarget<ExecutableTarget>("tools.tie_gen");
         tie_gen.PackageDefinitions = true;
         setup_primitives_no_all_sources(tie_gen);
         tie_gen += "src/data/include/primitives/data/tie_gen.cpp";
 
-        data.addCommand() << cmd::prog(tie_gen) << 100 << cmd::std_out("primitives/data/tie_for_struct.inl");
+        data.addCommand() << cmd::prog(tie_gen) << 100 << cmd::std_out("primitives/data/tie_for_struct.inl");*/
     }
 
     // tools

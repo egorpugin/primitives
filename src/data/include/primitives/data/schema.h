@@ -3,7 +3,7 @@
 #include <boost/hana.hpp>
 
 //#include <optional>
-//#include <string>
+#include <string>
 
 namespace primitives::data::schema {
 
@@ -17,6 +17,7 @@ inline namespace common_properties {
                 x[i] = *n++;                                                                                           \
         }                                                                                                              \
         constexpr auto operator<=>(const x##_ &) const = default;                                                      \
+        operator std::string() const { return &x[0]; }                                                                 \
     };                                                                                                                 \
     template <x##_ v>                                                                                                  \
     constexpr x##_ operator""_##x() {                                                                                  \
