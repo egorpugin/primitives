@@ -133,8 +133,8 @@ void configure(Build &s)
 
 void build(Solution &s)
 {
-    auto &p = s.addProject("primitives", "master");
-    p += "https://github.com/egorpugin/primitives"_git;
+    auto &p = s.addProject("primitives", "0.2.0");
+    p += Git("https://github.com/egorpugin/primitives", "", "", "84318fe232e2db7a30014aa66d2a63c4959e1265");
 
     auto setup_primitives_no_all_sources = [](auto &t)
     {
@@ -354,6 +354,11 @@ void build(Solution &s)
         //sw_main.Interface.LinkLibraries.push_back(main.getImportLibrary()); // main itself
         //sw_main.Interface.LinkLibraries.push_back(sw_main.getImportLibrary()); // then me (self, sw.main)
         //sw_main.Interface.LinkLibraries.push_back(sw_settings.getImportLibrary()); // then sw.settings
+        sw_main.Public -=
+            "org.sw.demo.google.breakpad.client.windows.handler-master"_dep,
+            "org.sw.demo.google.breakpad.client.windows.crash_generation.client-master"_dep,
+            "org.sw.demo.google.breakpad.client.windows.crash_generation.server-master"_dep
+            ;
         if (sw_main.getBuildSettings().TargetOS.Type == OSType::Windows)
         {
             sw_main.Public +=

@@ -735,7 +735,7 @@ void Version::format(std::string &s) const
     VAR_SMALL_OPT(p);
     VAR_SMALL_OPT(t);
 
-    s = fmt::format(s,
+    s = fmt::format(fmt::runtime(s),
         ARG(M),
         ARG(m),
         ARG(p),
