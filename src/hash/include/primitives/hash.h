@@ -130,14 +130,18 @@ struct bytes : std::basic_string<std::byte> {
 
     bytes(const std::string &v) {
         auto sz = v.size();
-        reserve(sz / 2);
+        resize(sz / 2);
         if (sz % 2 != 0)
             throw SW_RUNTIME_ERROR("bad bytes string");
         for (int i = 0; i < sz; i += 2) {
-            auto get_num = [](auto v) { return v - (v > '9' ? 'a' : '0'); };
+            auto get_num = [](auto v) {
+                if (v > '9')
+                    return v - 'a' + 10;
+                return v - '0';
+            };
             auto hi = get_num(v[i+0]) << 4;
             auto lo = get_num(v[i+1]) << 0;
-            operator[](i) = std::byte(hi | lo);
+            operator[](i / 2) = std::byte(hi | lo);
         }
     }
     operator std::string() const { return bytes_to_string(std::string((const char*)data(), size())); }
