@@ -174,11 +174,12 @@ void build(Solution &s)
 
     auto setup_primitives_header_only = [&setup_primitives_no_all_sources](auto &t)
     {
-        t.AutoDetectOptions = false;
         auto p = setup_primitives_no_all_sources(t);
         t.setRootDirectory(p);
         // explicit!
+        t.AutoDetectOptions = false;
         t -= "include/.*"_rr;
+        t.Public += "include"_idir;
     };
     auto setup_primitives = [&setup_primitives_header_only](auto &t)
     {
