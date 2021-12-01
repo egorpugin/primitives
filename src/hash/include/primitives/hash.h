@@ -117,11 +117,14 @@ inline bool check_strong_file_hash(const path &data, const String &hash)
 
 namespace primitives::hash {
 
-struct bytes : std::basic_string<std::byte> {
-    using base = std::basic_string<std::byte>;
+struct bytes : std::vector<std::byte> {
+    using base = std::vector<std::byte>;
     using base::base;
 
-    bytes(const std::vector<uint8_t> &v) : base((std::byte *)v.data(), v.size()) {}
+    bytes(const std::vector<uint8_t> &v) : base((std::byte *)v.data(), (std::byte *)v.data() + v.size()) {}
+    /*operator const std::vector<uint8_t> &() const {
+        return (const std::vector<uint8_t> &)(*this);
+    }*/
     operator std::vector<uint8_t>() const {
         std::vector<uint8_t> v(size());
         std::memcpy(v.data(), data(), size());
@@ -144,10 +147,25 @@ struct bytes : std::basic_string<std::byte> {
             operator[](i / 2) = std::byte(hi | lo);
         }
     }
-    operator std::string() const { return bytes_to_string(std::string((const char*)data(), size())); }
+    operator std::string() const { return bytes_to_string((const uint8_t*)data(), size()); }
 };
 
 PRIMITIVES_HASH_API
 bytes generate_strong_random_bytes(uint32_t len);
+
+template <size_t sz, auto = []{}>
+struct bytes_strict : bytes {
+    static_assert(sz > 0);
+
+    bytes_strict() : bytes(generate_strong_random_bytes(sz)) {}
+    bytes_strict(const std::vector<uint8_t> &v) : bytes(v) {
+        if (size() != sz)
+            throw SW_LOGIC_ERROR("bad bytes size, must be " + std::to_string(sz) + ", got " + std::to_string(size()));
+    }
+    bytes_strict(const std::string &v) : bytes(v) {
+        if (size() != sz)
+            throw SW_LOGIC_ERROR("bad bytes size, must be " + std::to_string(sz) + ", got " + std::to_string(size()));
+    }
+};
 
 }
