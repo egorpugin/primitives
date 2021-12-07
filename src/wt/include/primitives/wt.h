@@ -85,6 +85,7 @@
 #include <Wt/WAudio.h>
 #include <Wt/WCheckBox.h>
 #include <Wt/WResource.h>
+#include <Wt/WTimer.h>
 #include <Wt/Http/Response.h>
 #include <Wt/Http/ResponseContinuation.h>
 #include <web/WebController.h>
