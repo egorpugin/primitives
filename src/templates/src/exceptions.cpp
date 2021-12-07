@@ -101,6 +101,14 @@ RuntimeError::RuntimeError(const char *file, const char *function, int line, con
     doe(getMessage());
 }
 
+RuntimeError::RuntimeError(const std::string &msg, std::source_location loc, bool stacktrace)
+    : BaseException
+    //Exception
+    (loc.file_name(), loc.function_name(), loc.line(), msg, stacktrace), std::runtime_error(getMessage())
+{
+    doe(getMessage());
+}
+
 LogicError::LogicError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
     : BaseException
     //Exception

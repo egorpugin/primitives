@@ -8,6 +8,7 @@
 
 #include "debug.h"
 
+#include <source_location>
 #include <stdexcept>
 #include <string>
 
@@ -76,7 +77,9 @@ struct PRIMITIVES_TEMPLATES_API RuntimeError : detail::BaseException, /*Exceptio
 {
     RuntimeError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
     //RuntimeError(const RuntimeError &);
+    RuntimeError(const std::string &msg, std::source_location = {}, bool stacktrace = true);
 };
+using runtime_error = RuntimeError;
 
 struct PRIMITIVES_TEMPLATES_API LogicError : detail::BaseException, std::logic_error
 {
