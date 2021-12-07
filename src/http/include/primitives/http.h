@@ -39,6 +39,11 @@ struct HttpRequest : public HttpSettings
         Post,
         Delete
     };
+    struct mime_data {
+        String data;
+        String filename;
+        String type;
+    };
 
     String url;
     String agent;
@@ -50,6 +55,9 @@ struct HttpRequest : public HttpSettings
     std::unordered_map<String, String> data_kv;
     int timeout = -1;
     int connect_timeout = -1;
+    String cookie; // single string
+    path upload_file;
+    std::unordered_map<String, mime_data> form_data;
 
     HttpRequest(const HttpSettings &parent)
         : HttpSettings(parent)
@@ -108,6 +116,10 @@ bool safelyDownloadCaCertificatesBundle(const path &destfn, String url = {});
 
 PRIMITIVES_HTTP_API
 void setupSafeTls(bool prefer_native, bool strict, const path &ca_certs_fn, String url = {});
+
+inline void setupSafeTls(bool prefer_native, bool strict) {
+    setupSafeTls(prefer_native, strict, "certs.crt");
+}
 
 // native = true
 // strict = true

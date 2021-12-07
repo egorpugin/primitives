@@ -73,32 +73,42 @@ static size_t curl_write_string(char *ptr, size_t size, size_t nmemb, String *s)
 struct CurlWrapper
 {
     CURL *curl;
+    curl_mime *form = nullptr;
     struct curl_slist *headers = nullptr;
     std::string post_data;
     std::vector<char *> escaped_strings;
     //path_u8string ca_certs_file;
     //path_u8string ca_certs_dir;
+    FILE *upload_file{nullptr};
 
     CurlWrapper()
     {
         curl = curl_easy_init();
     }
-    CurlWrapper(CurlWrapper &&rhs)
-    {
+    CurlWrapper(CurlWrapper &&rhs) = delete;
+    /*{
         curl = rhs.curl; rhs.curl = nullptr;
         headers = rhs.headers; rhs.headers = nullptr;
         post_data = std::move(rhs.post_data);
         escaped_strings = std::move(rhs.escaped_strings);
-    }
+    }*/
     ~CurlWrapper()
     {
+        if (form)
+            curl_mime_free(form);
         curl_slist_free_all(headers);
-        curl_easy_cleanup(curl);
-
         for (auto &e : escaped_strings)
             curl_free(e);
+        curl_easy_cleanup(curl);
+
+        if (upload_file)
+            fclose(upload_file);
     }
 };
+
+static size_t read_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+  return fread(ptr, size, nmemb, (FILE *)userdata);
+}
 
 static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &request)
 {
@@ -107,6 +117,8 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
     auto curl = w.curl;
 
     curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
+
+    curl_easy_setopt(curl, CURLOPT_COOKIE, request.cookie.c_str());
 
     if (request.verbose)
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -125,6 +137,14 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
         curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, (long)request.connect_timeout);
     if (request.timeout != -1)
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, (long)request.timeout);
+
+    if (!request.upload_file.empty()) {
+        wp->upload_file = primitives::filesystem::fopen(request.upload_file);
+        curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+        curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)fs::file_size(request.upload_file));
+        curl_easy_setopt(curl, CURLOPT_READDATA, wp->upload_file);
+        curl_easy_setopt(curl, CURLOPT_READFUNCTION, read_callback);
+    }
 
     // proxy settings
     auto proxy_addr = getAutoProxy();
@@ -175,6 +195,20 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
             w.post_data.resize(w.post_data.size() - 1);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, w.post_data.c_str());
             curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)w.post_data.size());
+        }
+        else if (!request.form_data.empty()) {
+            wp->form = curl_mime_init(curl);
+            for (auto &&[n,v] : request.form_data) {
+                auto field = curl_mime_addpart(wp->form);
+                curl_mime_name(field, n.c_str());
+                if (!v.data.empty())
+                    curl_mime_data(field, v.data.c_str(), CURL_ZERO_TERMINATED);
+                if (!v.filename.empty())
+                    curl_mime_filedata(field, v.filename.c_str());
+                if (!v.type.empty())
+                    curl_mime_type(field, v.type.c_str());
+            }
+            curl_easy_setopt(curl, CURLOPT_MIMEPOST, wp->form);
         }
         else
         {
