@@ -31,8 +31,8 @@ namespace sw
 namespace detail
 {
 
-BaseException::BaseException(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
-    : file(file), function(function), line(line), message(msg)
+BaseException::BaseException(const std::string &msg, bool stacktrace, const std::source_location &loc)
+    : loc(loc), message(msg)
 {
     if (stacktrace && gUseStackTrace)
     {
@@ -62,17 +62,16 @@ std::string BaseException::format() const
     std::string s;
     //s += ex_type;
     //s += "Exception: " + message; // disabled for now, too poor :(
-    if (file.empty() && function.empty() && line == 0)
-        s += "Exception: " + message;
-    else
-        s += "Exception in file " + file + ":" + std::to_string(line) + ", function " + function + ": " + message;
+    s += "Exception in file "
+        + loc.file_name() + ":" + std::to_string(loc.line())
+        + ", function " + loc.function_name() + ": " + message;
     return s;
 }
 
 }
 
-Exception::Exception(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
-    : BaseException(file, function, line, msg, stacktrace), std::exception(
+Exception::Exception(const std::string &msg, bool stacktrace, const std::source_location &loc)
+    : BaseException(msg, stacktrace, loc), std::exception(
 #ifdef _MSC_VER
         getMessage()
 #endif
@@ -93,28 +92,18 @@ static void doe(const std::string &msg)
         std::this_thread::sleep_for(100ms);
 }
 
-RuntimeError::RuntimeError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
+runtime_error::runtime_error(const std::string &msg, bool stacktrace, const std::source_location &loc)
     : BaseException
     //Exception
-    (file, function, line, msg, stacktrace), std::runtime_error(getMessage())
+    (msg, stacktrace, loc), std::runtime_error(getMessage())
 {
     doe(getMessage());
 }
 
-#if __cpp_source_location
-RuntimeError::RuntimeError(const std::string &msg, std::source_location loc, bool stacktrace)
+LogicError::LogicError(const std::string &msg, bool stacktrace, const std::source_location &loc)
     : BaseException
     //Exception
-    (loc.file_name(), loc.function_name(), loc.line(), msg, stacktrace), std::runtime_error(getMessage())
-{
-    doe(getMessage());
-}
-#endif
-
-LogicError::LogicError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace)
-    : BaseException
-    //Exception
-    (file, function, line, msg, stacktrace), std::logic_error(getMessage())
+    (msg, stacktrace, loc), std::logic_error(getMessage())
 {
     doe(getMessage());
 }

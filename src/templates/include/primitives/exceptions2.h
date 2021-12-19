@@ -8,25 +8,19 @@
 
 #include "debug.h"
 
-#if __cpp_source_location
 #include <source_location>
-#endif
 #include <stdexcept>
 #include <string>
 
-#ifdef SW_EXCEPTIONS_NO_SOURCE_INFO
-#define SW_BASE_EXCEPTION(t, msg, st) t("", "", 0, msg, st)
-#else
-#define SW_BASE_EXCEPTION(t, msg, st) t(__FILE__, __func__, __LINE__, msg, st)
-#endif
+#define SW_BASE_EXCEPTION(t, msg, st) t(msg, st)
 
 #define SW_EXCEPTION_CUSTOM(msg, st) SW_BASE_EXCEPTION(sw::Exception, msg, st)
 #define SW_RUNTIME_ERROR_CUSTOM(msg, st) SW_BASE_EXCEPTION(sw::RuntimeError, msg, st)
 #define SW_LOGIC_ERROR_CUSTOM(msg, st) SW_BASE_EXCEPTION(sw::LogicError, msg, st)
 
-#define SW_EXCEPTION(msg) SW_EXCEPTION_CUSTOM(msg, true)
-#define SW_RUNTIME_ERROR(msg) SW_RUNTIME_ERROR_CUSTOM(msg, true)
-#define SW_LOGIC_ERROR(msg) SW_LOGIC_ERROR_CUSTOM(msg, true)
+#define SW_EXCEPTION(msg) SW_EXCEPTION_CUSTOM(msg)
+#define SW_RUNTIME_ERROR(msg) SW_RUNTIME_ERROR_CUSTOM(msg)
+#define SW_LOGIC_ERROR(msg) SW_LOGIC_ERROR_CUSTOM(msg)
 
 #define SW_ASSERT(x, msg) do { if (!(x)) throw SW_RUNTIME_ERROR(msg); } while (0)
 #define SW_CHECK(x) SW_ASSERT(x, #x)
@@ -45,49 +39,37 @@
         throw SW_LOGIC_ERROR("unreachable code");                                                                      \
     } while (0)
 
-namespace sw
-{
+namespace sw {
 
-namespace detail
-{
+namespace detail {
 
-struct PRIMITIVES_TEMPLATES_API BaseException
-{
-    BaseException(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
+struct PRIMITIVES_TEMPLATES_API BaseException {
+    BaseException(const std::string &msg, bool stacktrace = true, const std::source_location & = {});
 
     const char *getMessage() const;
 
 protected:
     //std::string ex_type; // ?
-    std::string file;
-    std::string function;
-    int line;
+    std::source_location loc;
     std::string message;
     mutable std::string what_;
 
     std::string format() const;
 };
 
-}
+} // namespace detail
 
-struct PRIMITIVES_TEMPLATES_API Exception : detail::BaseException, /*virtual*/ std::exception
-{
-    Exception(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
+struct PRIMITIVES_TEMPLATES_API Exception : detail::BaseException, /*virtual*/ std::exception {
+    Exception(const std::string &msg, bool stacktrace = true, const std::source_location & = {});
 };
 
-struct PRIMITIVES_TEMPLATES_API RuntimeError : detail::BaseException, /*Exception, virtual*/ std::runtime_error
-{
-    RuntimeError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
-    //RuntimeError(const RuntimeError &);
-#if __cpp_source_location
-    RuntimeError(const std::string &msg, std::source_location = {}, bool stacktrace = true);
-#endif
+struct PRIMITIVES_TEMPLATES_API runtime_error : detail::BaseException, /*Exception, virtual*/ std::runtime_error {
+    runtime_error(const std::string &msg, bool stacktrace = true, const std::source_location & = {});
 };
-using runtime_error = RuntimeError;
+using RuntimeError = runtime_error;
 
-struct PRIMITIVES_TEMPLATES_API LogicError : detail::BaseException, std::logic_error
-{
-    LogicError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
+struct PRIMITIVES_TEMPLATES_API LogicError : detail::BaseException, std::logic_error {
+    LogicError(const std::string &msg, bool stacktrace = true, const std::source_location & = {});
 };
 
-}
+} // namespace sw
