@@ -59,6 +59,7 @@
 #include <web/WebSession.h>
 #include <Wt/WAnchor.h>
 #include <Wt/WBootstrapTheme.h>
+#include <Wt/WBootstrap5Theme.h>
 #include <Wt/WFormModel.h>
 #include <Wt/WHBoxLayout.h>
 #include <Wt/WIntValidator.h>

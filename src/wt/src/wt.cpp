@@ -106,7 +106,7 @@ right_menu_widget::right_menu_widget() {
     contents->setAttributeValue("style", "width: 100%; padding-left: 10px;");
 
     menu = addWidget(std::make_unique<Wt::WMenu>(contents.get()));
-    menu->setStyleClass("nav nav-pills nav-stacked");
+    menu->setStyleClass("nav nav-pills nav-stacked flex-column");
     // menu->setInternalPathEnabled("/" + (unres_pkg.empty() ? p.toString("/") : unres_pkg));
     // menu->setWidth(150);
 
