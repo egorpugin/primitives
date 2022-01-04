@@ -296,9 +296,15 @@ Container operator|(R &&r, to_helper<Container>) {
 // Couldn't find an concept for container, however a
 // container is a range, but not a view.
 template <std::ranges::range Container>
-requires (!std::ranges::view<Container>)
+    requires (!std::ranges::view<Container>)
 auto to() {
     return detail::to_helper<Container>{};
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+#ifndef FWD
+#define FWD(x) std::forward<decltype(x)>(x)
+#endif
 
 }
