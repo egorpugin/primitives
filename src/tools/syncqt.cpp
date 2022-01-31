@@ -319,6 +319,8 @@ int main(int argc, char *argv[])
         auto files = enumerate_files(sdir / im->second);
         for (auto &f : files)
         {
+            if (is_under_root(f, sdir / im->second / "doc"))
+                continue;
             auto fn = f.filename().string();
             if (!(
                 std::regex_search(fn, r_header) &&
