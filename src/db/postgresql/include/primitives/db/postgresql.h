@@ -8,7 +8,7 @@
 
 #include <primitives/db.h>
 
-#include <pqxx/connection.hxx>
+#include <pqxx/connection>
 
 namespace primitives::db::postgresql
 {
