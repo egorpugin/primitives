@@ -16,3 +16,20 @@
     constexpr x##_ operator""_##x() {                                                                                  \
         return v;                                                                                                      \
     }
+
+namespace primitives::data {
+
+template<std::size_t N>
+struct static_string {
+    char p[N]{};
+
+    constexpr static_string(char const(&pp)[N]) {
+        std::ranges::copy(pp, p);
+    }
+    operator auto() const { return &p[0]; }
+};
+
+template<static_string s>
+constexpr auto operator "" _s() { return s; }
+
+}
