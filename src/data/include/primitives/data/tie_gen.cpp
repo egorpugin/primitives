@@ -31,9 +31,12 @@ int main(int, char *argv[]) {
     auto v = to_vector(views::iota(1, stoi(argv[1]) + 1) | views::transform([](auto &&i) {
         auto v = to_vector(views::iota(1, i + 1) | views::transform([](auto &&i) { return "a" + to_string(i); }));
         auto joined = join(v, ",");
+        string s;
+        for (auto &&e : v)
+            s += "    f(" + e + ");\n";
         return
-            "else if constexpr (N == " + to_string(i) + ") {\n    auto &["
-            + joined + "] = data;\n    return std::tie(" + joined + ");\n}";
+            "else if constexpr (N == " + to_string(i) + ") {\n    auto &&["
+            + joined + "] = data;\n" + s + "}";
     }));
     std::cout << join(v, " ");
 }

@@ -1,3 +1,7 @@
+#pragma once
+
+#include <boost/hana.hpp>
+
 #include <type_traits>
 #include <utility>
 #include <algorithm>
@@ -142,12 +146,23 @@ struct num_aggregate_unique_fields
 template <aggregate T>
 constexpr std::size_t num_aggregate_unique_fields_v = num_aggregate_unique_fields<T>::value;
 
-constexpr auto tie_as_tuple(auto &&data) {
+#if __has_builtin(__builtin_sw_number_of_fields)
+template <typename T>
+consteval std::size_t fields_count() noexcept {
+    return __builtin_sw_number_of_fields((T*)nullptr);
+}
+#endif
+
+constexpr void for_each_field(auto &&data, auto &&f) {
     using T = std::decay_t<decltype(data)>;
+#if __has_builtin(__builtin_sw_number_of_fields)
+    constexpr auto N = fields_count<T>();
+#else
     constexpr auto N = num_aggregate_unique_fields_v<T>;
+#endif
 
     if constexpr (0);
-#include <primitives/data/tie_for_struct.inl>
+#include "tie_for_struct.inl"
 }
 
 } // namespace primitives::data
