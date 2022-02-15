@@ -21,6 +21,7 @@
 #include <Wt/WContainerWidget.h>
 #include <Wt/WDialog.h>
 #include <Wt/WEnvironment.h>
+#include <Wt/WFileResource.h>
 #include <Wt/WFileUpload.h>
 #include <Wt/WFileDropWidget.h>
 #include <Wt/WFormModel.h>
