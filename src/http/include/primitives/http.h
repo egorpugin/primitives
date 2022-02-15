@@ -9,6 +9,8 @@
 #include <primitives/constants.h>
 #include <primitives/filesystem.h>
 
+#include <curl/curl.h>
+
 #include <optional>
 
 struct ProxySettings
@@ -68,6 +70,11 @@ struct HttpResponse
 {
     long http_code = 0;
     String response;
+    CURL *curl = nullptr;
+
+    ~HttpResponse() {
+        curl_easy_cleanup(curl);
+    }
 };
 
 PRIMITIVES_HTTP_API

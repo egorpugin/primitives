@@ -8,8 +8,6 @@
 
 #include <primitives/exceptions.h>
 
-#include <curl/curl.h>
-
 #ifdef _WIN32
 #include <windows.h>
 #include <Winhttp.h>
@@ -118,7 +116,10 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
 
     curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
 
-    curl_easy_setopt(curl, CURLOPT_COOKIE, request.cookie.c_str());
+    if (!request.cookie.empty())
+        curl_easy_setopt(curl, CURLOPT_COOKIE, request.cookie.c_str());
+    // enable the cookie engine
+    curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
 
     if (request.verbose)
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -290,6 +291,7 @@ HttpResponse url_request(const HttpRequest &request)
     auto curl = w->curl;
 
     HttpResponse response;
+    std::swap(response.curl, w->curl);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response.response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_string);
 
