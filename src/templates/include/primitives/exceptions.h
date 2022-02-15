@@ -8,7 +8,7 @@
 
 #include "debug.h"
 
-#if __cpp_source_location
+#if !defined(__clang__) // until v14?
 #include <source_location>
 #endif
 #include <stdexcept>
@@ -79,7 +79,7 @@ struct PRIMITIVES_TEMPLATES_API RuntimeError : detail::BaseException, /*Exceptio
 {
     RuntimeError(const char *file, const char *function, int line, const std::string &msg, bool stacktrace);
     //RuntimeError(const RuntimeError &);
-#if __cpp_source_location
+#if !defined(__clang__) // until v14?
     RuntimeError(const std::string &msg, std::source_location = {}, bool stacktrace = true);
 #endif
 };

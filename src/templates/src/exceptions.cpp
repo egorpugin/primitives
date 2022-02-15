@@ -101,7 +101,7 @@ RuntimeError::RuntimeError(const char *file, const char *function, int line, con
     doe(getMessage());
 }
 
-#if __cpp_source_location
+#if !defined(__clang__) // until v14?
 RuntimeError::RuntimeError(const std::string &msg, std::source_location loc, bool stacktrace)
     : BaseException
     //Exception
