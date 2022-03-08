@@ -60,6 +60,7 @@ struct HttpRequest : public HttpSettings
     String cookie; // single string
     path upload_file;
     std::unordered_map<String, mime_data> form_data;
+    bool follow_redirects = true;
 
     HttpRequest(const HttpSettings &parent)
         : HttpSettings(parent)
