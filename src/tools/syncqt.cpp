@@ -135,6 +135,7 @@ const StringMap<path> module_dirs {
     {"QtDesignerComponents" , "src/designer/src/components/lib"},
     {"QtWaylandCompositor" , "src/compositor"},
     {"QtWaylandClient" , "src/client"},
+    {"QtWaylandEglClientHwIntegration" , "src/hardwareintegration/client/wayland-egl"},
     {"QtWebChannel" , "src/webchannel"},
     {"QtWebEngine" , "src/webengine"},
     {"QtWebEngineWidgets" , "src/webenginewidgets"},
