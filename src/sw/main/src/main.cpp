@@ -293,7 +293,11 @@ static int startup(int argc, char *argv[])
     fs::current_path(cp);
 
     //
+#ifdef _WIN32
     sw_append_symbol_path(boost::dll::program_location().parent_path().wstring());
+#else
+    sw_append_symbol_path(boost::dll::program_location().parent_path().string());
+#endif
     sw_append_symbol_path(fs::current_path());
 
     // init settings early
