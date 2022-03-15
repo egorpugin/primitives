@@ -448,6 +448,12 @@ void build(Solution &s)
     setup_primitives_no_all_sources(stamp_gen);
     stamp_gen += "src/tools/stamp_gen.cpp";
 
+    auto &texpp = p.addTarget<ExecutableTarget>("tools.texpp");
+    texpp.PackageDefinitions = true;
+    setup_primitives_no_all_sources(texpp);
+    texpp += "src/tools/texpp.cpp";
+    texpp += sw_main;
+
     {
         auto &git_rev = p.addTarget<StaticLibraryTarget>("git_rev");
         auto r = setup_primitives_no_all_sources(git_rev);
