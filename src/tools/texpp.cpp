@@ -28,8 +28,8 @@ int main(int argc, char *argv[]) {
     regex r_include{R"xxx(\\\include\{(.*?)\})xxx"};
     smatch m;
     path fn = argv[1];
-    ofstream ofile{fn.stem() += "_processed.tex"};
-    ofstream dfile{fn.stem() += "_processed.d"};
+    ofstream ofile{argv[2]};
+    ofstream dfile{argv[3]};
     dfile << "$(TMPFILE).tex :";
     auto lines = split_lines(read_file(fn), true);
     int nline = 0;
@@ -52,17 +52,25 @@ int main(int argc, char *argv[]) {
             ofile << "\\end{enumerate}" << "\n";
             ofile << "\n";
         } else if (*it == "\\table") {
-            ofile << "%#line " << nline << " " << fn << "\n";
-            ofile << "\\begin{table}[ht!]" << "\n";
-            ofile << "\\caption{" << *++it << "}" << "\n";
-            ofile << "\\centering" << "\n";
+            bool bold_table_headers = false;
+            string caption;
             int ncols = 0;
             Strings table;
             while (*++it != "\\endtable") {
                 auto &&s = *it;
-                table.push_back(s);
-                ncols = max<int>(ncols, ranges::count(s, ';') + 1);
+                if (s == "\\boldheaders" || s == "\\жирныезаголовки") {
+                    bold_table_headers = true;
+                } else if (caption.empty()) {
+                    caption = s;
+                } else {
+                    table.push_back(s);
+                    ncols = max<int>(ncols, ranges::count(s, ';') + 1);
+                }
             }
+            ofile << "%#line " << nline << " " << fn << "\n";
+            ofile << "\\begin{table}[ht!]" << "\n";
+            ofile << "\\caption{" << caption << "}" << "\n";
+            ofile << "\\centering" << "\n";
             ofile << "\\begin{tabularx}{\\textwidth}{|";
             auto headers = split_string(table[0], ";", true);
             for (int i = 0; i < ncols; ++i) {
@@ -81,15 +89,15 @@ int main(int argc, char *argv[]) {
                 for (int i = 0; i < ncols; ++i) {
                     if (i < cols.size()) {
                         bool multicolumn = regex_search(cols[i], m, r_multicolumn);
-                        //if (!multicolumn && str == 0)
-                            //ofile << "\\textbf{";
+                        if (bold_table_headers && !multicolumn && str == 0)
+                            ofile << "\\textbf{";
                         if (str == 0 && i < headers.size() && !headers[i].empty() && headers[i][0] == '{') {
                             ofile << cols[i].substr(find_closing_curly_bracket(cols[i]) + 1);
                         } else {
                             ofile << cols[i];
                         }
-                        //if (!multicolumn && str == 0)
-                            //ofile << "}";
+                        if (bold_table_headers && !multicolumn && str == 0)
+                            ofile << "}";
                         if (multicolumn) {
                             i += stoi(m[1].str()) - 1;
                         }
