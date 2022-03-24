@@ -32,17 +32,31 @@ int main(int argc, char *argv[]) {
     ofstream dfile{argv[3]};
     dfile << "$(TMPFILE).tex :";
     auto lines = split_lines(read_file(fn), true);
-    int nline = 0;
+    // preprocessor step
     for (auto it = lines.begin(); it != lines.end();) {
-        ++nline;
         auto &s = *it++;
         if (0) {
         } else if (regex_match(s, m, r_input) || regex_match(s, m, r_include)) {
             auto fn = m[1].str();
             auto lines2 = split_lines(read_file(fn), true);
+            s = "%" + s;
             it = lines.insert(it, lines2.begin(), lines2.end());
             dfile << " " << fn;
             continue;
+        }
+    }
+    // remove %commented lines
+    for (auto it = lines.begin(); it != lines.end();) {
+        if (it->starts_with('%'))
+            it = lines.erase(it);
+        else
+            ++it;
+    }
+    int nline = 0;
+    for (auto it = lines.begin(); it != lines.end();) {
+        ++nline;
+        auto &s = *it++;
+        if (0) {
         } else if (s == "\\question") {
             ofile << "%#line " << nline << " " << fn << "\n";
             ofile << "\\question{" << *it++ << "}" << "\n";
