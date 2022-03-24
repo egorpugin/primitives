@@ -452,7 +452,7 @@ void build(Solution &s)
     texpp.PackageDefinitions = true;
     setup_primitives_no_all_sources(texpp);
     texpp += "src/tools/texpp.cpp";
-    texpp += sw_main;
+    texpp += sw_main, hash;
 
     {
         auto &git_rev = p.addTarget<StaticLibraryTarget>("git_rev");
