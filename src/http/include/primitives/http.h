@@ -73,6 +73,13 @@ struct HttpResponse
     String response;
     CURL *curl = nullptr;
 
+    HttpResponse() = default;
+    HttpResponse(const HttpResponse &) = delete;
+    HttpResponse(HttpResponse &&rhs) {
+        http_code = rhs.http_code;
+        response = std::move(rhs.response);
+        std::swap(curl, rhs.curl);
+    }
     ~HttpResponse() {
         curl_easy_cleanup(curl);
     }
