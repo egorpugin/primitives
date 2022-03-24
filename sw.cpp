@@ -152,7 +152,7 @@ void build(Solution &s)
             n = n.slice(1);
         }
         t.ApiName = "PRIMITIVES_" + boost::to_upper_copy(n2.toString("_")) + "_API";
-        t += cpp20;
+        t += cpp23;
         t.PackageDefinitions = true;
         // not all code works with this yet (e.g. hh.date)
         //t.Public.CompileOptions.push_back("-Zc:__cplusplus");
@@ -475,7 +475,7 @@ void build(Solution &s)
     {
         auto &t = test.addTarget<ExecutableTarget>(name);
         t.PackageDefinitions = true;
-        t += cpp20;
+        t += cpp23;
         t += path("src/" + name + ".cpp");
         t += "org.sw.demo.catchorg.catch2"_dep;
         if (t.getCompilerType() == CompilerType::MSVC)
