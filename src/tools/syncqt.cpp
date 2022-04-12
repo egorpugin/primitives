@@ -234,7 +234,7 @@ std::regex r_skip_header("^qt[a-z0-9]+-config(_p)?\\.h$");
 std::regex r_private_header("_p(ch)?\\.h$");
 std::vector<std::regex> r_qpa_headers;
 std::regex r_qt_class("^#pragma qt_class\\(([^)]*)\\)[\r\n]*$");
-std::regex r_class(R"((class|struct)\s+(\w+\s+)?(Q\w+))");
+std::regex r_class(R"((class|struct)\s+(\[?\[?\w+\]?\]?\s+)?(Q\w+))");
 std::regex r_typedef(R"(typedef.*\W(Q\w+);)");
 std::regex r_require(R"xx(^QT_REQUIRE_CONFIG\((.*)\);[\r\n]*$)xx");
 
