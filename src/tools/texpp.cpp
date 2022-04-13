@@ -72,11 +72,15 @@ int main(int argc, char *argv[]) {
             optional<string> caption;
             optional<string> label;
             int ncols = 0;
+            int nrows = 0;
             Strings table;
             while (*it != "\\endtable") {
                 auto &s = *it;
-                if (s == "\\boldheaders" || s == "\\жирныезаголовки") {
+                if (0) {
+                } else if (s == "\\boldheaders" || s == "\\жирныезаголовки") {
                     bold_table_headers = true;
+                } else if (s.starts_with("\\rows")) {
+                    nrows = std::stoi(s.substr(5));
                 } else if (regex_match(s, m, r_label)) {
                     label = s;
                 } else if (!caption) {
@@ -89,6 +93,10 @@ int main(int argc, char *argv[]) {
                 ++it;
             }
             ++it;
+
+            if (nrows)
+                table.resize(nrows);
+
             ofile << "%#line " << nline << " " << fn << "\n";
             ofile << "\\begin{table}[ht!]" << "\n";
             if (label)
