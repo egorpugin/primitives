@@ -69,6 +69,7 @@ int main(int argc, char *argv[]) {
             static const regex r_multicolumn{R"xxx(\\\multicolumn\{(\d+)\})xxx"};
             static const regex r_label{R"xxx(\\\label\{(.*?)\})xxx"};
             bool bold_table_headers = false;
+            bool nocaption = false;
             optional<string> caption;
             optional<string> label;
             int ncols = 0;
@@ -81,9 +82,11 @@ int main(int argc, char *argv[]) {
                     bold_table_headers = true;
                 } else if (s.starts_with("\\rows")) {
                     nrows = std::stoi(s.substr(5));
+                } else if (s.starts_with("\\nocaption")) {
+                    nocaption = true;
                 } else if (regex_match(s, m, r_label)) {
                     label = s;
-                } else if (!caption) {
+                } else if (!caption && !nocaption) {
                     caption = s;
                 } else if (s.starts_with("%")) {
                 } else {
