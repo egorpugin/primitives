@@ -151,7 +151,7 @@ path canonical(const path &p);
 
 }
 
-#if __cplusplus < 202000L
+#if __cplusplus < 202000L && !defined(_MSC_VER)
 namespace std
 {
     template<> struct hash<path>
