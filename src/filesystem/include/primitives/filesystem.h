@@ -151,6 +151,7 @@ path canonical(const path &p);
 
 }
 
+#if __cplusplus < 202000L
 namespace std
 {
     template<> struct hash<path>
@@ -161,6 +162,7 @@ namespace std
         }
     };
 }
+#endif
 
 enum class CurrentPathScope
 {
