@@ -25,8 +25,16 @@ int main(int argc, char *argv[])
         c.arguments.push_back(git.u8string());
         c.arguments.push_back("rev-parse");
         c.arguments.push_back("HEAD");
-        c.execute();
-        rev = boost::trim_copy(c.out.text);
+        error_code ec;
+        c.execute(ec);
+        if (ec)
+        {
+            rev = "unknown";
+        }
+        else
+        {
+            rev = boost::trim_copy(c.out.text);
+        }
     }
 
     {
@@ -36,12 +44,20 @@ int main(int argc, char *argv[])
         c.arguments.push_back("status");
         c.arguments.push_back("--porcelain");
         c.arguments.push_back("-uno");
-        c.execute();
-        status = boost::trim_copy(c.out.text);
-        if (status.empty())
+        error_code ec;
+        c.execute(ec);
+        if (ec)
+        {
             status = "0";
+        }
         else
-            status = std::to_string(split_lines(status).size());
+        {
+            status = boost::trim_copy(c.out.text);
+            if (status.empty())
+                status = "0";
+            else
+                status = std::to_string(split_lines(status).size());
+        }
     }
 
     {
