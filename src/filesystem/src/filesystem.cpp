@@ -503,7 +503,7 @@ path unique_path(const path &p)
 time_t file_time_type2time_t(fs::file_time_type t)
 {
     // remove defs when using C++20
-#if defined(_MSVC_STL_VERSION) && !defined(__cpp_lib_char8_t) || !defined(__APPLE__)
+#if defined(_MSVC_STL_VERSION) && !defined(__cpp_lib_char8_t) || defined(__GNUC__) || !defined(__APPLE__)
     return *(time_t *)&t; // msvc bug
 #else
     return fs::file_time_type::clock::to_time_t(t); // available only on apple right now
@@ -513,7 +513,7 @@ time_t file_time_type2time_t(fs::file_time_type t)
 fs::file_time_type time_t2file_time_type(time_t t)
 {
     // remove defs when using C++20
-#if defined(_MSVC_STL_VERSION) && !defined(__cpp_lib_char8_t) || !defined(__APPLE__)
+#if defined(_MSVC_STL_VERSION) && !defined(__cpp_lib_char8_t) || defined(__GNUC__) || !defined(__APPLE__)
     fs::file_time_type ft; // msvc bug
     *(time_t*)&ft = t;
     return ft;
