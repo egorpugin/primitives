@@ -1532,7 +1532,7 @@ TEST_CASE("Checking version ranges", "[range]")
         CHECK_FALSE(vr.contains(Version("1.2.3.0.0.0.1")));
         CHECK_FALSE(vr.contains(Version("1.2.3.0.0.0.01")));
         CHECK_FALSE(vr.contains(Version("1.2.3.0.0.00.01")));
-        CHECK(vr.toString() == ">=1.2.3 <=1.2.3");
+        CHECK(vr.toString() == "=1.2.3");
     }
 
     {
@@ -1558,7 +1558,7 @@ TEST_CASE("Checking version ranges", "[range]")
     {
         VersionRange vr("=1.2.3.4");
         auto s = vr.toString();
-        CHECK(s == ">=1.2.3.4 <=1.2.3.4");
+        CHECK(s == "=1.2.3.4");
     }
 
     {
@@ -1654,8 +1654,8 @@ TEST_CASE("Checking version ranges", "[range]")
 
     {
         VersionRange vr("=1");
-        CHECK(vr.toString() == ">=1.0.0 <=1.0.0");
-        CHECK(VersionRange("= 1").toString() == ">=1.0.0 <=1.0.0");
+        CHECK(vr.toString() == "=1.0.0");
+        CHECK(VersionRange("= 1").toString() == "=1.0.0");
     }
 
     {
@@ -1960,7 +1960,7 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange("<=3.1.4 ").toString() == "<=3.1.4");
     CHECK(VersionRange(">0.4.2").toString() == ">0.4.2");
     CHECK(VersionRange(">=2.7.1").toString() == ">=2.7.1");
-    CHECK(VersionRange("=4.6.6").toString() == ">=4.6.6 <=4.6.6");
+    CHECK(VersionRange("=4.6.6").toString() == "=4.6.6");
     CHECK(VersionRange("!=4.6.6").toString() == "<4.6.6 || >4.6.6");
     CHECK(VersionRange("!=4.6.6.8").toString() == "<4.6.6.8 || >4.6.6.8");
     CHECK(VersionRange("2.0.0 - 3.1.4").toString() == ">=2.0.0 <3.1.5");
@@ -1991,9 +1991,9 @@ TEST_CASE("Checking version ranges", "[range]")
     CHECK(VersionRange("> 1").toString() == ">1.0.0");
     CHECK(VersionRange(">= 1").toString() == ">=1.0.0");
     CHECK(VersionRange("< 2").toString() == "<2.0.0");
-    CHECK(VersionRange("== 1.2.3").toString() == ">=1.2.3 <=1.2.3");
-    CHECK(VersionRange("= 1.2.3").toString() == ">=1.2.3 <=1.2.3");
-    CHECK(VersionRange("== 1.2.3.4").toString() == ">=1.2.3.4 <=1.2.3.4");
+    CHECK(VersionRange("== 1.2.3").toString() == "=1.2.3");
+    CHECK(VersionRange("= 1.2.3").toString() == "=1.2.3");
+    CHECK(VersionRange("== 1.2.3.4").toString() == "=1.2.3.4");
 
     CHECK(VersionRange("1.2.3.4.5.6.7").toString() == ">=1.2.3.4.5.6.7 <1.2.3.4.5.6.8");
     CHECK(VersionRange("1.2.3.4.5.6.7-1").toString() == ">=1.2.3.4.5.6.7-1 <1.2.3.4.5.6.8");
