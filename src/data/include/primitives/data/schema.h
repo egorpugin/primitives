@@ -47,8 +47,9 @@ struct foreign_key {
 namespace table {
 
 template <typename Class, typename ... Fields>
-struct primary_key : fields<Class, Fields>... {
-    constexpr primary_key(Fields Class:: * ... v) : fields<Class, Fields>(v)... {}
+struct primary_key {
+    fields<Class, Fields...> fields_;
+    //constexpr primary_key(Fields Class:: * ... v) : fields<Class, Fields>(v)... {}
 };
 
 template <typename Class, typename ... Fields>
