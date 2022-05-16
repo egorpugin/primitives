@@ -10,8 +10,6 @@
 #include <primitives/sw/cl.h>
 #include <primitives/sw/settings_program_name.h>
 
-#include <iostream>
-
 static cl::opt<path> git(cl::Positional, cl::Required);
 static cl::opt<path> wdir(cl::Positional, cl::Required);
 static cl::opt<path> outfn(cl::Positional, cl::Required);
@@ -21,31 +19,18 @@ int main(int argc, char *argv[]) {
     String rev, status, time;
 
     {
-        std::cerr << "1" << std::endl;
         primitives::Command c;
         c.working_directory = wdir;
         c.arguments.push_back(git.u8string());
         c.arguments.push_back("rev-parse");
         c.arguments.push_back("HEAD");
-        std::cerr << "2" << std::endl;
-        try {
-        std::cerr << "3" << std::endl;
-            error_code ec;
-            c.execute(ec);
-        std::cerr << "4" << std::endl;
-            if (ec) {
-        std::cerr << "5" << std::endl;
-                rev = "unknown";
-            } else {
-        std::cerr << "6" << std::endl;
-                rev = boost::trim_copy(c.out.text);
-            }
-        std::cerr << "7" << std::endl;
-        } catch (...) {
-        std::cerr << "8" << std::endl;
+        error_code ec;
+        c.execute(ec);
+        if (ec) {
             rev = "unknown";
+        } else {
+            rev = boost::trim_copy(c.out.text);
         }
-        std::cerr << "9" << std::endl;
     }
 
     {
