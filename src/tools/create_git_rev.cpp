@@ -14,8 +14,7 @@ static cl::opt<path> git(cl::Positional, cl::Required);
 static cl::opt<path> wdir(cl::Positional, cl::Required);
 static cl::opt<path> outfn(cl::Positional, cl::Required);
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     cl::ParseCommandLineOptions(argc, argv);
     String rev, status, time;
 
@@ -25,15 +24,16 @@ int main(int argc, char *argv[])
         c.arguments.push_back(git.u8string());
         c.arguments.push_back("rev-parse");
         c.arguments.push_back("HEAD");
-        error_code ec;
-        c.execute(ec);
-        if (ec)
-        {
+        try {
+            error_code ec;
+            c.execute(ec);
+            if (ec) {
+                rev = "unknown";
+            } else {
+                rev = boost::trim_copy(c.out.text);
+            }
+        } catch (std::exception &) {
             rev = "unknown";
-        }
-        else
-        {
-            rev = boost::trim_copy(c.out.text);
         }
     }
 
