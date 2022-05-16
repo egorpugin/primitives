@@ -3,12 +3,12 @@ name: sw
 on: [push]
 
 jobs:
-  build:
+  win_and_mac:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-20.04, macos-11.0]
+        os: [windows-latest, macos-11.0]
 
     steps:
     - uses: actions/checkout@v1
@@ -38,3 +38,15 @@ jobs:
 
     - name: test
       run: ./sw test
+
+  linux:
+    runs-on: ubuntu-20.04
+    container: fedora:36
+    steps:
+    - uses: actions/checkout@v1
+    - name: prepare
+      run: |
+        sudo dnf -y update
+        sudo dnf -y install flex bison cmake which gcc clang clang-tools-extra lld git
+    - uses: egorpugin/sw-action@master
+    - run: ./sw -static build -compiler gcc
