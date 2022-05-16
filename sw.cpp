@@ -449,10 +449,19 @@ void build(Solution &s)
     stamp_gen += "src/tools/stamp_gen.cpp";
 
     auto &texpp = p.addTarget<ExecutableTarget>("tools.texpp");
-    texpp.PackageDefinitions = true;
-    setup_primitives_no_all_sources(texpp);
-    texpp += "src/tools/texpp.cpp";
-    texpp += sw_main, hash;
+    {
+        texpp.PackageDefinitions = true;
+        setup_primitives_no_all_sources(texpp);
+        texpp -= "src/tools/texpp.cpp";
+        texpp -= sw_main, hash;
+        if (texpp.getBuildSettings().TargetOS.Type != OSType::Windows) {
+            texpp += "src/tools/texpp.cpp";
+            texpp += sw_main, hash;
+        } else {
+            texpp.AutoDetectOptions = false;
+            texpp.Empty = true;
+        }
+    }
 
     {
         auto &git_rev = p.addTarget<StaticLibraryTarget>("git_rev");
