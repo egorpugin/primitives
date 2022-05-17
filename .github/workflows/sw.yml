@@ -50,4 +50,7 @@ jobs:
         sudo dnf -y install flex bison cmake which gcc clang clang-tools-extra lld git \
           mesa-libGL-devel mesa-libEGL-devel
     - uses: egorpugin/sw-action@master
-    - run: ./sw -static build -compiler gcc
+    - run: ./sw build -compiler gcc
+
+    - name: test
+      run: ./sw test
