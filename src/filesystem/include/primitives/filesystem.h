@@ -151,7 +151,7 @@ path canonical(const path &p);
 
 }
 
-#if defined(_MSC_VER) && _MSC_VER < 1932 || __APPLE__
+#if defined(_MSC_VER) && _MSC_VER < 1932 || __APPLE__ || defined(__GNUC__) && __GNUC__ < 11
 namespace std
 {
     template<> struct hash<path>
