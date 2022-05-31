@@ -341,6 +341,7 @@ int main(int argc, char *argv[])
         auto m = mm.first;
         std::ostringstream master;
         master << "#pragma once" << "\n";
+        master << "#include \"qglobal.h\"" << "\n";
         master << "#include <" << m << "/" << m << "Depends>" << "\n";
 
         for (auto &ff : mm.second)
