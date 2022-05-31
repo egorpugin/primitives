@@ -277,6 +277,8 @@ template <typename T,
 
 namespace primitives::templates {
 
+#if !defined(__APPLE__)
+
 namespace detail {
 
 // Type acts as a tag to find the correct operator| overload
@@ -300,6 +302,8 @@ template <std::ranges::range Container>
 auto to() {
     return detail::to_helper<Container>{};
 }
+
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 

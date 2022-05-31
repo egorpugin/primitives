@@ -392,7 +392,7 @@ void build(Solution &s)
         // users must set it manually
         // they cannot forget it because <primitives/sw/main.h> include will force it
         sw_main.Public += "SW_EXECUTABLE"_def;
-        if (!sw_main.getBuildSettings().TargetOS.is(OSType::Windows))
+        if (!sw_main.getBuildSettings().TargetOS.is(OSType::Windows) && !sw_main.getBuildSettings().TargetOS.isApple())
             sw_main.Interface.LinkOptions.push_back("-Wl,--export-dynamic");
     }
 
