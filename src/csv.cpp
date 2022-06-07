@@ -8,7 +8,7 @@
 #include <primitives/csv.h>
 
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 #define CHECK_CSV(str, ncols)                       \
     auto cols = parse_line(str, ',', '\"', '\"');   \

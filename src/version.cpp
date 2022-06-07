@@ -11,7 +11,10 @@
 #include <iostream>
 
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
+/*namespace Catch {
+    CATCH_REGISTER_REPORTER("console", ConsoleReporter)
+}*/
 
 TEST_CASE("Checking package version and ranges", "[package]")
 {
