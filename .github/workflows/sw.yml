@@ -3,39 +3,28 @@ name: sw
 on: [push]
 
 jobs:
-  win_and_mac:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, macos-12]
-
+  windows:
+    runs-on: windows-2022    
     steps:
     - uses: actions/checkout@v1
     - uses: egorpugin/sw-action@master
-
-    - name: Install (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt update
-        sudo apt install flex bison
-
-    - name: Install (macOS)
-      if: runner.os == 'macOS'
-      run: |
-        brew install flex bison
-
-    - name: build (non macOS)
-      if: runner.os != 'macOS'
-      run: ./sw build
-
-    - name: build (macOS)
-      if: runner.os == 'macOS'
+    - run: ./sw build
+    - name: test
+      run: ./sw test
+      
+  macos:
+    runs-on: windows-2022    
+    steps:
+    - uses: actions/checkout@v1
+    - uses: egorpugin/sw-action@master
+    - name: install
+      run: brew install flex bison gcc
+    - name: build
       run: |
         export PATH="/usr/local/opt/flex/bin:$PATH"
         export PATH="/usr/local/opt/bison/bin:$PATH"
+        export PATH="/usr/local/opt/gcc/bin:$PATH"
         ./sw build
-
     - name: test
       run: ./sw test
 
