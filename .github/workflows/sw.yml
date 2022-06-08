@@ -13,7 +13,7 @@ jobs:
       run: ./sw test
       
   macos:
-    runs-on: windows-2022    
+    runs-on: macos-12
     steps:
     - uses: actions/checkout@v1
     - uses: egorpugin/sw-action@master
@@ -29,7 +29,7 @@ jobs:
       run: ./sw test
 
   linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     container: fedora:36
     steps:
     - uses: actions/checkout@v1
