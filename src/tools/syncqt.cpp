@@ -340,9 +340,11 @@ int main(int argc, char *argv[])
     {
         auto m = mm.first;
         std::ostringstream master;
-        master << "#pragma once" << "\n";
-        master << "#include \"qglobal.h\"" << "\n";
+        //master << "#pragma once" << "\n";
+        master << "#ifndef QT_" << boost::to_upper_copy(m) << "_MODULE_H" << "\n";
+        master << "#define QT_" << boost::to_upper_copy(m) << "_MODULE_H" << "\n";
         master << "#include <" << m << "/" << m << "Depends>" << "\n";
+        master << "#include \"qglobal.h\"" << "\n";
 
         for (auto &ff : mm.second)
         {
@@ -405,6 +407,7 @@ int main(int argc, char *argv[])
         }
 
         master << "#include \"" << boost::to_lower_copy(m) + "version.h\"" << "\n";
+        master << "#endif" << "\n";
 
         int ma, mi, pa;
         sscanf(&version[0], "%d.%d.%d", &ma, &mi, &pa);
