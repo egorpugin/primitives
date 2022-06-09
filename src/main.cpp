@@ -11,14 +11,14 @@
 #include <primitives/executor.h>
 #include <primitives/filesystem.h>
 #include <primitives/hash.h>
-#include <primitives/sw/main.h>
+//#include <primitives/sw/main.h>
 
 #include <boost/algorithm/string.hpp>
 
 #include <chrono>
 #include <iostream>
 
-#define CATCH_CONFIG_RUNNER
+//#define CATCH_CONFIG_RUNNER
 #include <catch2/catch_all.hpp>
 
 #define REQUIRE_TIME(e, t)                                                                       \
@@ -745,10 +745,4 @@ TEST_CASE("Checking emitter", "[emitter]")
     ctx.addLine();
     ctx.addLine();
     CHECK(ctx.getText() == "\n\n");
-}
-
-int main(int argc, char *argv[])
-{
-    auto r = Catch::Session().run(argc, argv);
-    return r;
 }

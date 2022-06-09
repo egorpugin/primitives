@@ -4,13 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <primitives/sw/main.h>
+//#include <primitives/sw/main.h>
 #include <primitives/version_range.h>
 
 #include <chrono>
 #include <iostream>
 
-#define CATCH_CONFIG_RUNNER
+//#define CATCH_CONFIG_RUNNER
 #include <catch2/catch_all.hpp>
 /*namespace Catch {
     CATCH_REGISTER_REPORTER("console", ConsoleReporter)
@@ -2647,11 +2647,4 @@ TEST_CASE("Package version ranges", "[package_version_range]")
     //CHECK(VersionRange() < VersionRange("a"));
     CHECK(PackageVersionRange() != PackageVersionRange("a"));
     //CHECK_THROWS(VersionRange("a") < VersionRange("b || c d"));*/
-}
-
-int main(int argc, char *argv[])
-{
-    Catch::Session s;
-    auto r = s.run(argc, argv);
-    return r;
 }

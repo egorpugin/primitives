@@ -4,10 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <primitives/sw/main.h>
+//#include <primitives/sw/main.h>
 #include <primitives/csv.h>
 
-#define CATCH_CONFIG_RUNNER
+//#define CATCH_CONFIG_RUNNER
 #include <catch2/catch_all.hpp>
 
 #define CHECK_CSV(str, ncols)                       \
@@ -206,10 +206,4 @@ TEST_CASE("Checking csv quoted with escape symbols", "[csv]")
         CHECK(cols[0]);
         CHECK(*cols[0] == "\"");*/
     }
-}
-
-int main(int argc, char *argv[])
-{
-    auto r = Catch::Session().run(argc, argv);
-    return r;
 }

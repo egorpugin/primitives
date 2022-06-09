@@ -491,7 +491,6 @@ void build(Solution &s)
             t.CompileOptions.push_back("-bigobj");
         //else if (t.getCompilerType() == CompilerType::GNU)
             //t.CompileOptions.push_back("-Wa,-mbig-obj");
-        t += sw_main;
         return t;
     };
 
@@ -504,17 +503,17 @@ void build(Solution &s)
 
     auto &test_db = add_test("db");
     test_db += command, db_sqlite3, db_postgresql, date_time,
-        executor, hash, yaml;
+        executor, hash, yaml, sw_main;
 
     auto &test_settings = add_test("settings");
     test_settings.PackageDefinitions = true;
-    test_settings += settings;
+    test_settings += settings, sw_main;
 
     auto &test_version = add_test("version");
     test_version += version;
 
     auto &test_source = add_test("source");
-    test_source += source;
+    test_source += source, sw_main;
 
     auto &test_patch = add_test("patch");
     test_patch += patch;

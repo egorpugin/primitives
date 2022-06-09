@@ -5,12 +5,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <primitives/patch.h>
-#include <primitives/sw/main.h>
+//#include <primitives/sw/main.h>
 
 #include <chrono>
 #include <iostream>
 
-#define CATCH_CONFIG_RUNNER
+//#define CATCH_CONFIG_RUNNER
 #include <catch2/catch_all.hpp>
 
 #define REQUIRE_TIME(e, t)                                                                       \
@@ -144,8 +144,3 @@ to this document.)";
     }
 }
 
-int main(int argc, char *argv[])
-{
-    auto r = Catch::Session().run(argc, argv);
-    return r;
-}
