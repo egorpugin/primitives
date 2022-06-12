@@ -312,7 +312,7 @@ void build(Solution &s)
     setup_primitives(settings);
     settings.Public += "include"_idir;
     settings.Public += yaml, filesystem, templates,
-        "pub.egorpugin.llvm_project.llvm.support_lite-master"_dep;
+        "pub.egorpugin.llvm_project.llvm.support_lite"_dep;
     gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/settings");
     gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/path");
     if (settings.getBuildSettings().TargetOS.Type != OSType::Windows)
@@ -344,9 +344,27 @@ void build(Solution &s)
     gen_ragel("org.sw.demo.ragel-6"_dep, version, "src/version.rl");
     gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison"_dep, version, "GLR_CPP_PARSER", "src/range");
 
+    ADD_LIBRARY(version1);
+    {
+        version1.Public += "include"_idir;
+        version1.Public += "src/version.natvis";
+        version1.Public += string, templates,
+            "org.sw.demo.fmt"_dep,
+            "org.sw.demo.boost.container_hash"_dep,
+            "org.sw.demo.imageworks.pystring"_dep;
+        gen_ragel("org.sw.demo.ragel-6"_dep, version1, "src/version.rl");
+        gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison"_dep, version1, "GLR_CPP_PARSER", "src/range");
+    }
+
     ADD_LIBRARY(source);
     source.Public += command, hash, http, pack, yaml,
         "org.sw.demo.nlohmann.json"_dep;
+
+    {
+        ADD_LIBRARY(source1);
+        source1.Public += command, hash, http, pack, version1, yaml,
+            "org.sw.demo.nlohmann.json"_dep;
+    }
 
     // experimental
     /*ADD_LIBRARY_WITH_NAME(cl, "experimental.cl");
