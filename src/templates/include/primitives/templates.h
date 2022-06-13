@@ -5,7 +5,9 @@
 #include <atomic>
 #include <functional>
 #include <mutex>
+#if !defined(__APPLE__)
 #include <ranges>
+#endif
 #include <tuple>
 #include <utility>
 
