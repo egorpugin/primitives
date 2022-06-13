@@ -8,7 +8,24 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: egorpugin/sw-action@master
-    - run: ./sw build
+    - name: build
+      run: ./sw build
+    - name: test
+      run: ./sw test
+
+  linux:
+    runs-on: ubuntu-22.04
+    container: fedora:36
+    steps:
+    - uses: actions/checkout@v1
+    - name: prepare
+      run: |
+        sudo dnf -y update
+        sudo dnf -y install flex bison cmake which gcc clang clang-tools-extra lld git \
+          mesa-libGL-devel mesa-libEGL-devel
+    - uses: egorpugin/sw-action@master
+    - name: build
+      run: ./sw build -compiler gcc
     - name: test
       run: ./sw test
       
@@ -26,20 +43,8 @@ jobs:
         export PATH="/usr/local/opt/gcc/bin:$PATH"
         ./sw build -compiler gcc-11
     - name: test
-      run: ./sw test
-
-  linux:
-    runs-on: ubuntu-22.04
-    container: fedora:36
-    steps:
-    - uses: actions/checkout@v1
-    - name: prepare
       run: |
-        sudo dnf -y update
-        sudo dnf -y install flex bison cmake which gcc clang clang-tools-extra lld git \
-          mesa-libGL-devel mesa-libEGL-devel
-    - uses: egorpugin/sw-action@master
-    - run: ./sw build -compiler gcc
-
-    - name: test
-      run: ./sw test
+        export PATH="/usr/local/opt/flex/bin:$PATH"
+        export PATH="/usr/local/opt/bison/bin:$PATH"
+        export PATH="/usr/local/opt/gcc/bin:$PATH"
+        ./sw test -compiler gcc-11
