@@ -39,6 +39,8 @@ String getContent(xmlNode *from)
     if (from->type == XML_ELEMENT_NODE)
     {
         from = &from->children[0];
+        if (!from)
+            return {};
         return getContent(from);
     }
     if (from->type == XML_TEXT_NODE)
