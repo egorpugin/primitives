@@ -301,7 +301,7 @@ HttpResponse url_request(const HttpRequest &request)
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response.http_code);
 
     if (res != CURLE_OK)
-        throw SW_RUNTIME_ERROR("url = " + request.url + ", curl error: "s + curl_easy_strerror(res));
+        throw primitives::http::curl_exception{ "url = " + request.url + ", curl error: "s + curl_easy_strerror(res) };
 
     return response;
 }

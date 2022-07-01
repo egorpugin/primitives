@@ -151,4 +151,8 @@ String url_encode(const String &);
 PRIMITIVES_HTTP_API
 String url_decode(const String &);
 
+struct curl_exception : std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
 }
