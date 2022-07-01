@@ -366,6 +366,10 @@ void build(Solution &s)
             "org.sw.demo.nlohmann.json"_dep;
     }
 
+    ADD_LIBRARY_HEADER_ONLY(webdriver);
+    webdriver.Public += http,
+        "org.sw.demo.nlohmann.json"_dep;
+
     // experimental
     /*ADD_LIBRARY_WITH_NAME(cl, "experimental.cl");
     cl.Public += templates, string;
