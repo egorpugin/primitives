@@ -4,12 +4,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#pragma once
+
 #include <string>
 
-namespace primitives::git_rev
-{
+namespace primitives::git_rev {
 
 std::string getBuildTime();
 std::string getGitRevision();
+
+inline auto common_string() {
+    return getGitRevision() + "\n" + getBuildTime();
+}
 
 }
