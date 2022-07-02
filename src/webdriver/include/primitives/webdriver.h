@@ -113,6 +113,18 @@ struct element {
         self.d().make_req(req, j);
         return std::forward<decltype(self)>(self);
     }
+    decltype(auto) send_keys_if_not_equal(this auto &&self, const std::string &s) {
+        if (self.text() == s) {
+            return std::forward<decltype(self)>(self);
+        }
+        return self.send_keys(s);
+    }
+    decltype(auto) clear_and_send_keys_if_not_equal(this auto &&self, const std::string &s) {
+        if (self.text() == s) {
+            return std::forward<decltype(self)>(self);
+        }
+        return std::forward<decltype(self)>(self.clear().send_keys(s));
+    }
     decltype(auto) set_value_and_wait_for_it(this auto&& self, const std::string& s) {
         self.d().wait_full_load();
         auto tm = make_timeout();
@@ -279,6 +291,8 @@ struct webdriver {
     webdriver(std::string url = selenium_host, bool headless = false) : url_{url} {
         primitives::http::setupSafeTls();
         auto req = create_req<HttpRequest::Post>(url + "/session");
+        req.timeout = 120;
+        req.connect_timeout = 120;
         nlohmann::json j;
         auto &jc = j["capabilities"];
         nlohmann::json jfm;
