@@ -8,7 +8,7 @@
 
 #include <string>
 
-#include <windows.h>
+#include <winsock2.h>
 
 struct PRIMITIVES_WIN32HELPERS_API ServiceController
 {

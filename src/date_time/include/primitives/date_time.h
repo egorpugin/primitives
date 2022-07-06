@@ -20,23 +20,46 @@ using TimePoint = Clock::time_point;
 
 using ptime = boost::posix_time::ptime;
 
-PRIMITIVES_DATE_TIME_API
-TimePoint getUtc();
+TimePoint getUtc()
+{
+    boost::posix_time::ptime t(
+        boost::gregorian::day_clock::universal_day(),
+        boost::posix_time::second_clock::universal_time().time_of_day());
+    return Clock::from_time_t(boost::posix_time::to_time_t(t));
+}
 
-PRIMITIVES_DATE_TIME_API
-TimePoint getLocalTime();
+TimePoint getLocalTime()
+{
+    boost::posix_time::ptime t(
+        boost::gregorian::day_clock::local_day(),
+        boost::posix_time::second_clock::local_time().time_of_day());
+    return Clock::from_time_t(boost::posix_time::to_time_t(t));
+}
 
-PRIMITIVES_DATE_TIME_API
-TimePoint string2timepoint(const String &s);
+TimePoint string2timepoint(const String &s)
+{
+    boost::posix_time::ptime t;
+    std::istringstream ss(s);
+    ss >> t;
+    return Clock::from_time_t(boost::posix_time::to_time_t(t));
+}
 
-PRIMITIVES_DATE_TIME_API
-String timepoint2string(const TimePoint &t);
+String timepoint2string(const TimePoint &t)
+{
+    auto t2 = boost::posix_time::from_time_t(Clock::to_time_t(t));
+    return boost::posix_time::to_simple_string(t2);
+}
 
-PRIMITIVES_DATE_TIME_API
-time_t string2time_t(const String &s);
+time_t string2time_t(const String &s)
+{
+    return Clock::to_time_t(string2timepoint(s));
+}
 
-PRIMITIVES_DATE_TIME_API
-String local_time();
+String local_time()
+{
+    auto t = boost::posix_time::second_clock::local_time();
+    return boost::posix_time::to_simple_string(t);
+}
 
 // time of operation
 template <typename F, typename ... Args>
@@ -68,7 +91,7 @@ auto get_time_custom(F &&f, Args && ... args)
     return std::chrono::duration_cast<std::chrono::duration<T>>(t).count();
 }
 
-struct PRIMITIVES_DATE_TIME_API ScopedTime
+struct ScopedTime
 {
     using clock = std::chrono::high_resolution_clock;
 

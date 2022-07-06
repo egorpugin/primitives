@@ -138,7 +138,7 @@ void configure(Build &s)
 
 void build(Solution &s)
 {
-    auto &p = s.addProject("primitives", "0.3.0");
+    auto &p = s.addProject("primitives", "0.3.1");
     p += Git("https://github.com/egorpugin/primitives", "", "master");
 
     auto setup_primitives_no_all_sources = [](auto &t)
@@ -179,6 +179,10 @@ void build(Solution &s)
         // explicit!
         t.AutoDetectOptions = false;
         t -= "include/.*"_rr;
+        if (t.getBuildSettings().TargetOS.is(OSType::Windows)) {
+            t.Public += "NOMINMAX"_def;
+            t.Public += "WIN32_NO_LEAN_AND_MEAN"_def;
+        }
         t.Public += "include"_idir;
     };
     auto setup_primitives = [&setup_primitives_header_only](auto &t)
@@ -195,18 +199,18 @@ void build(Solution &s)
     auto &x = p.addTarget<LibraryTarget>(#x);      \
     setup_primitives_header_only(x)
 
-    ADD_LIBRARY(error_handling);
+    ADD_LIBRARY_HEADER_ONLY(error_handling);
+
+    ADD_LIBRARY_HEADER_ONLY(string);
+    string.Public += "org.sw.demo.boost.algorithm"_dep;
 
     auto &templates = p.addTarget<StaticLibraryTarget>("templates");
-    setup_primitives(templates);
-    templates += "org.sw.demo.boost.stacktrace"_dep;
+    setup_primitives_header_only(templates);
+    templates.Public += string, "org.sw.demo.boost.stacktrace"_dep;
     if (templates.getBuildSettings().TargetOS.Type != OSType::Windows)
         templates += "dl"_slib;
 
-    ADD_LIBRARY(string);
-    string.Public += "org.sw.demo.boost.algorithm"_dep;
-
-    ADD_LIBRARY(filesystem);
+    ADD_LIBRARY_HEADER_ONLY(filesystem);
     filesystem.Public += string, templates,
         "org.sw.demo.boost.filesystem"_dep,
         "org.sw.demo.boost.thread"_dep
@@ -214,14 +218,14 @@ void build(Solution &s)
     if (filesystem.getBuildSettings().TargetOS.Type != OSType::Windows)
         filesystem += "m"_slib;
 
-    ADD_LIBRARY(file_monitor);
+    ADD_LIBRARY_HEADER_ONLY(file_monitor);
     file_monitor.Public += filesystem,
         "pub.egorpugin.libuv"_dep;
 
-    ADD_LIBRARY(emitter);
+    ADD_LIBRARY_HEADER_ONLY(emitter);
     emitter.Public += filesystem;
 
-    ADD_LIBRARY(executor);
+    ADD_LIBRARY_HEADER_ONLY(executor);
     executor.Public += templates,
         "org.sw.demo.boost.asio"_dep,
         "org.sw.demo.boost.system"_dep;
@@ -233,30 +237,30 @@ void build(Solution &s)
     command.Public += file_monitor,
         "org.sw.demo.boost.process"_dep;
 
-    ADD_LIBRARY(date_time);
+    ADD_LIBRARY_HEADER_ONLY(date_time);
     date_time.Public += string,
         "org.sw.demo.boost.date_time"_dep;
 
-    ADD_LIBRARY(lock);
+    ADD_LIBRARY_HEADER_ONLY(lock);
     lock.Public += filesystem,
         "org.sw.demo.boost.interprocess"_dep;
     if (lock.getBuildSettings().TargetOS.Type == OSType::Windows)
         lock += "Advapi32.lib"_slib;
 
-    ADD_LIBRARY(log);
+    ADD_LIBRARY_HEADER_ONLY(log);
     log.Public += "org.sw.demo.boost.log"_dep;
 
-    ADD_LIBRARY(grpc_helpers);
+    ADD_LIBRARY_HEADER_ONLY(grpc_helpers);
     grpc_helpers.Public += "org.sw.demo.google.grpc.cpp"_dep, templates, log;
 
-    ADD_LIBRARY(cron);
+    ADD_LIBRARY_HEADER_ONLY(cron);
     cron.Public += executor, log;
 
-    ADD_LIBRARY(yaml);
+    ADD_LIBRARY_HEADER_ONLY(yaml);
     yaml.Public += string, templates,
         "org.sw.demo.jbeder.yaml_cpp"_dep;
 
-    ADD_LIBRARY(pack);
+    ADD_LIBRARY_HEADER_ONLY(pack);
     pack.Public += filesystem, templates,
         "org.sw.demo.libarchive.libarchive"_dep;
 
@@ -275,11 +279,11 @@ void build(Solution &s)
         "org.sw.demo.openssl.crypto"_dep;
     hash.Public += "src/hash.natvis";
 
-    ADD_LIBRARY(password);
+    ADD_LIBRARY_HEADER_ONLY(password);
     password.Public += hash;
 
-    ADD_LIBRARY(csv);
-    csv += templates;
+    ADD_LIBRARY_HEADER_ONLY(csv);
+    csv.Public += templates;
 
     ADD_LIBRARY(win32helpers);
     if (!win32helpers.getBuildSettings().TargetOS.is(OSType::Windows))

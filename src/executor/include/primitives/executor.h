@@ -7,6 +7,9 @@
 #pragma once
 
 #include <primitives/templates.h>
+#include <primitives/debug.h>
+#include <primitives/exceptions.h>
+#include <primitives/thread.h>
 
 #include <atomic>
 #include <condition_variable>
@@ -22,6 +25,13 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+//#include "log.h"
+//DECLARE_STATIC_LOGGER(logger, "executor");
+
 //
 using Task = std::function<void()>;
 
@@ -33,16 +43,32 @@ struct Future;
 template <class T>
 struct SharedState;
 
-PRIMITIVES_EXECUTOR_API
-size_t get_max_threads(int N = 4);
+size_t get_max_threads(int N = 4)
+{
+    return std::max<size_t>(N, std::thread::hardware_concurrency());
+}
 
-PRIMITIVES_EXECUTOR_API
-size_t select_number_of_threads(int N = 0);
+size_t select_number_of_threads(int N = 0)
+{
+    if (N > 0)
+        return N;
+    N = std::thread::hardware_concurrency();
+    /*if (N == 1)
+        N = 2; // probably bad too
+    else if (N <= 8)
+        N += 2; // bad on low memory configs
+    else if (N <= 64) (8; 64] - make (32; 64]?
+        N += 4;
+    else
+        N += 8; // too many extra jobs?
+    */
+    return N;
+}
 
-PRIMITIVES_EXECUTOR_API
-SW_DECLARE_GLOBAL_STATIC_FUNCTION(Executor, getExecutor);
+SW_DECLARE_GLOBAL_STATIC_FUNCTION2(Executor, default_executor_ptr, primitives::executor)
+SW_DEFINE_GLOBAL_STATIC_FUNCTION2(Executor, getExecutor, primitives::executor::default_executor_ptr)
 
-class PRIMITIVES_EXECUTOR_API TaskQueue
+class TaskQueue
 {
     using Tasks = std::deque<Task>;
     using Lock = std::unique_lock<std::mutex>;
@@ -290,7 +316,7 @@ enum class WaitStatus
     RejectIncoming,
 };
 
-struct PRIMITIVES_EXECUTOR_API Executor
+struct Executor
 {
     struct Thread
     {
@@ -307,9 +333,55 @@ struct PRIMITIVES_EXECUTOR_API Executor
     using Threads = std::vector<Thread>;
 
 public:
-    Executor(size_t nThreads = std::thread::hardware_concurrency(), const std::string &name = "");
-    Executor(const std::string &name, size_t nThreads = std::thread::hardware_concurrency());
-    ~Executor();
+    Executor(size_t nThreads = std::thread::hardware_concurrency(), const std::string &name = "")
+        : nThreads(nThreads)
+    {
+        // we keep this lock until all threads created and assigned to thread_pool var
+        // this is to prevent races on data objects
+        std::unique_lock<std::mutex> lk(m);
+
+        std::atomic<decltype(nThreads)> barrier{ 0 };
+        std::atomic<decltype(nThreads)> barrier2{ 0 };
+
+        thread_pool.resize(nThreads);
+        for (size_t i = 0; i < nThreads; i++)
+        {
+            thread_pool[i].t = make_thread([this, i, name = name, &barrier, &barrier2, nThreads]() mutable
+            {
+                // set tids early
+                {
+                    std::unique_lock<std::mutex> lk(m);
+                    thread_ids[std::this_thread::get_id()] = i;
+                    ++barrier;
+                }
+
+                // wait when all threads set their tids
+                while (barrier != nThreads)
+                    std::this_thread::sleep_for(std::chrono::microseconds(1));
+
+                // allow to proceed main thread
+                ++barrier2;
+
+                // proceed
+                run(i, name);
+            });
+        }
+
+        // allow threads to run
+        lk.unlock();
+
+        // wait when all threads set their tids
+        while (barrier2 != nThreads)
+            std::this_thread::sleep_for(std::chrono::microseconds(1));
+    }
+    Executor(const std::string &name, size_t nThreads = std::thread::hardware_concurrency())
+        : Executor(nThreads, name)
+    {
+    }
+    ~Executor()
+    {
+        join();
+    }
 
     size_t numberOfThreads() const { return nThreads; }
 
@@ -348,14 +420,90 @@ public:
         return fut;
     }
 
-    void join(); // wait & terminate all workers
-    void stop();
-    void wait(WaitStatus p = WaitStatus::BlockIncoming);
+    // wait & terminate all workers
+    void join()
+    {
+        wait();
+        stop();
+        for (auto &t : thread_pool)
+        {
+            if (t.t.joinable())
+                t.t.join();
+        }
+    }
+    void stop()
+    {
+        stopped_ = true;
+        for (auto &t : thread_pool)
+            t.q.done();
+    }
+    void wait(WaitStatus p = WaitStatus::BlockIncoming)
+    {
+        std::unique_lock<std::mutex> lk(m_wait, std::try_to_lock);
+        if (!lk.owns_lock())
+        {
+            std::unique_lock<std::mutex> lk(m_wait);
+            return;
+        }
+
+        waiting_ = p;
+
+        bool run_again = is_in_executor();
+
+        // wait for empty queues
+        for (auto &t : thread_pool)
+        {
+            while (!t.q.empty() && !stopped_)
+            {
+                if (run_again)
+                {
+                    // finish everything
+                    for (auto &t : thread_pool)
+                    {
+                        Task ta;
+                        if (t.q.try_pop(ta, thread_pool[get_n()].busy))
+                            run_task(get_n(), ta);
+                    }
+                }
+                else
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+        }
+
+        // free self
+        if (run_again)
+            thread_pool[get_n()].busy = false;
+
+        // wait for end of execution
+        for (auto &t : thread_pool)
+        {
+            while (t.busy && !stopped_)
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+
+        waiting_ = WaitStatus::Running;
+        cv_wait.notify_all();
+    }
     bool stopped() const { return stopped_; }
 
-    bool is_in_executor() const;
-    bool try_run_one();
-    bool empty() const;
+    bool is_in_executor() const
+    {
+        return thread_ids.find(std::this_thread::get_id()) != thread_ids.end();
+    }
+    bool try_run_one()
+    {
+        auto t = try_pop();
+        if (t)
+            run_task(t);
+        return !!t;
+    }
+    bool empty() const
+    {
+        return std::all_of(thread_pool.begin(), thread_pool.end(), [](const auto &t)
+        {
+            return t.empty();
+        });
+    }
 
 private:
     Threads thread_pool;
@@ -368,20 +516,112 @@ private:
     std::unordered_map<std::thread::id, size_t> thread_ids;
     std::mutex m;
 
-    void run(size_t i, const std::string &name);
-    bool run_task();
-    bool run_task(Task &t);
-    bool run_task(size_t i);
-    void run_task(size_t i, Task &t) noexcept;
-    size_t get_n() const;
-    Task get_task();
-    Task get_task(size_t i);
-    Task get_task_non_stealing();
-    Task get_task_non_stealing(size_t i);
+    void run(size_t i, const std::string &name)
+    {
+        auto n = name;
+        if (!n.empty())
+            n += " ";
+        n += std::to_string(i);
+        primitives::setThreadName(n);
 
-    void push(Task &&t);
-    Task try_pop();
-    Task try_pop(size_t i);
+        while (!stopped_)
+        {
+            if (!run_task())
+                break;
+        }
+    }
+    bool run_task()
+    {
+        return run_task(get_n());
+    }
+    bool run_task(Task &t)
+    {
+        run_task(get_n(), t);
+        return true;
+    }
+    bool run_task(size_t i)
+    {
+        auto t = get_task(i);
+
+        // double check
+        if (stopped_)
+            return false;
+
+        run_task(i, t);
+        return true;
+    }
+    void run_task(size_t i, Task &t) noexcept
+    {
+        primitives::ScopedThreadName stn(std::to_string(i) + " busy");
+
+        auto &thr = thread_pool[i];
+        t();
+        thr.busy = false;
+    }
+    size_t get_n() const
+    {
+        return thread_ids.find(std::this_thread::get_id())->second;
+    }
+    Task get_task()
+    {
+        return get_task(get_n());
+    }
+    Task get_task(size_t i)
+    {
+        auto &thr = thread_pool[i];
+        Task t = try_pop(i);
+        // no task popped, probably shutdown command was issues
+        if (!t && !thr.q.pop(t, thr.busy))
+            return Task();
+
+        return t;
+    }
+    Task get_task_non_stealing()
+    {
+        return get_task_non_stealing(get_n());
+    }
+    Task get_task_non_stealing(size_t i)
+    {
+        auto &thr = thread_pool[i];
+        Task t;
+        if (thr.q.pop(t, thr.busy))
+            return t;
+        return Task();
+    }
+
+    void push(Task &&t)
+    {
+        if (waiting_ == WaitStatus::RejectIncoming)
+            throw SW_RUNTIME_ERROR("Executor is in the wait state and rejects new jobs");
+        if (waiting_ == WaitStatus::BlockIncoming)
+        {
+            std::unique_lock<std::mutex> lk(m_wait);
+            cv_wait.wait(lk, [this] { return waiting_ == WaitStatus::Running; });
+        }
+
+        auto i = index++;
+        for (size_t n = 0; n != nThreads; ++n)
+        {
+            if (thread_pool[(i + n) % nThreads].q.try_push(std::move(t)))
+                return;
+        }
+        thread_pool[i % nThreads].q.push(std::move(t));
+    }
+    Task try_pop()
+    {
+        return try_pop(get_n());
+    }
+    Task try_pop(size_t i)
+    {
+        Task t;
+        const size_t spin_count = nThreads * 4;
+        for (auto n = 0; n != spin_count; ++n)
+        {
+            if (thread_pool[(i + n) % nThreads].q.try_pop(t, thread_pool[i].busy))
+                break;
+        }
+        return t;
+    }
     // add Task pop();
 };
 

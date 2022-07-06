@@ -28,14 +28,11 @@ static cl::opt<String> crash_server_pipe_name(CRASH_SERVER_OPTION_START,
     cl::desc("Start crash handler server."),
     cl::ReallyHidden);
 
-extern bool gUseStackTrace;
-static ::cl::opt<bool, true> bt("bt", ::cl::desc("Print backtrace"), ::cl::location(gUseStackTrace), ::cl::Hidden, ::cl::sub(::cl::getAllSubCommands()));
-extern bool gDebugOnException;
-static ::cl::opt<bool, true> doe("doe", ::cl::desc("Debug on Exception"), ::cl::location(gDebugOnException), ::cl::Hidden, ::cl::sub(::cl::getAllSubCommands()));
+static ::cl::opt<bool, true> bt("bt", ::cl::desc("Print backtrace"), ::cl::location(sw::gUseStackTrace), ::cl::Hidden, ::cl::sub(::cl::getAllSubCommands()));
+static ::cl::opt<bool, true> doe("doe", ::cl::desc("Debug on Exception"), ::cl::location(sw::gDebugOnException), ::cl::Hidden, ::cl::sub(::cl::getAllSubCommands()));
 static ::cl::alias bt2("st", ::cl::desc("Alias for -bt"), ::cl::aliasopt(bt));
 
-extern std::string gSymbolPath;
-static ::cl::opt<std::string, true> symbol_path("symbol-path", ::cl::desc("Set symbol path for backtrace"), ::cl::location(gSymbolPath), ::cl::Hidden, ::cl::sub(::cl::getAllSubCommands()));
+static ::cl::opt<std::string, true> symbol_path("symbol-path", ::cl::desc("Set symbol path for backtrace"), ::cl::location(sw::gSymbolPath), ::cl::Hidden, ::cl::sub(::cl::getAllSubCommands()));
 
 static ::cl::opt<int> sleep_seconds("sleep", ::cl::desc("Sleep on startup"), ::cl::Hidden, ::cl::sub(::cl::getAllSubCommands()));
 extern bool gPauseOnError;

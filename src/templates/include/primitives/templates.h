@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <functional>
+#include <iostream>
 #include <mutex>
 #if !defined(__APPLE__)
 #include <ranges>
@@ -50,7 +51,31 @@ public:
     ScopeGuard(std::once_flag *flag)
         : flag(flag)
     {}
-    ~ScopeGuard();
+    ~ScopeGuard()
+    {
+        if (!active)
+            return;
+
+        // handle not in run, but here in dtor
+        try
+        {
+            run();
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "exception was thrown in scope guard: " << e.what() << std::endl;
+            //throw;
+        }
+        catch (...)
+        {
+            std::cerr << "unknown exception was thrown in scope guard" << std::endl;
+            //throw;
+        }
+
+        // in case if we want to run dtor manually
+        // it won't shoot for the second time
+        dismiss();
+    }
 
     void dismiss()
     {
@@ -81,7 +106,16 @@ private:
     bool active{ true };
     std::once_flag *flag{ nullptr };
 
-    void run();
+    void run()
+    {
+        if (!f)
+            return;
+
+        if (flag)
+            std::call_once(*flag, f);
+        else
+            f();
+    }
 };
 
 namespace detail
@@ -268,6 +302,18 @@ template <typename T,
     t &fn(t *in)                                               \
     {                                                          \
         static t *g = nullptr;                                 \
+        if (in)                                                \
+            g = in;                                            \
+        if (g == nullptr)                                      \
+            throw SW_RUNTIME_ERROR("missing initializer"); \
+        return *g;                                             \
+    }
+
+#define SW_DECLARE_GLOBAL_STATIC_FUNCTION2(t, n, ns) \
+    namespace ns { inline t *n; }
+#define SW_DEFINE_GLOBAL_STATIC_FUNCTION2(t, fn, g)                \
+    t &fn(t *in = nullptr)                                               \
+    {                                                          \
         if (in)                                                \
             g = in;                                            \
         if (g == nullptr)                                      \

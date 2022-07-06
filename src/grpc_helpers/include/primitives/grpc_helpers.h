@@ -1,5 +1,7 @@
 #pragma once
 
+#include <primitives/exceptions.h>
+
 #include <grpcpp/impl/codegen/client_context.h>
 #include <grpcpp/impl/codegen/status.h>
 
@@ -84,6 +86,14 @@
 namespace primitives::grpc
 {
 
+std::string get_metadata_variable(const std::multimap<::grpc::string_ref, ::grpc::string_ref> &metadata, const std::string &key)
+{
+    auto i = metadata.find(key);
+    if (i == metadata.end())
+        return {};
+    return std::string(std::string_view(i->second.data(), i->second.size()));
+}
+
 struct CallResult
 {
     std::error_code ec;
@@ -92,15 +102,47 @@ struct CallResult
     operator bool() const { return !ec; }
 };
 
-PRIMITIVES_GRPC_HELPERS_API
 CallResult check_result(
     const ::grpc::Status &status,
     const ::grpc::ClientContext &context,
     const std::string &method,
     bool throws = false
-);
+)
+{
+    CallResult r;
 
-PRIMITIVES_GRPC_HELPERS_API
-std::string get_metadata_variable(const std::multimap<::grpc::string_ref, ::grpc::string_ref> &metadata, const std::string &key);
+    if (!status.ok())
+    {
+        auto err = "Method '" + method + "': RPC failed: " + std::to_string(status.error_code()) + ": " + status.error_message();
+        if (throws)
+            throw SW_RUNTIME_ERROR(err);
+        r.ec = std::make_error_code((std::errc)status.error_code());
+        r.message = err;
+        return r;
+    }
+
+    auto result = get_metadata_variable(context.GetServerTrailingMetadata(), "ec");
+    if (result.empty())
+    {
+        auto err = "Method '" + method + "': missing error code";
+        if (throws)
+            throw SW_RUNTIME_ERROR(err);
+        r.ec = std::make_error_code((std::errc)1);
+        r.message = err;
+        return r;
+    }
+    auto ec = std::stoi(result.data());
+    if (ec)
+    {
+        auto message = get_metadata_variable(context.GetServerTrailingMetadata(), "message");
+        auto err = "Method '" + method + "' returned error: ec = " + result + ", message: " + message;
+        if (throws)
+            throw SW_RUNTIME_ERROR(err);
+        r.ec = std::make_error_code((std::errc)ec);
+        r.message = err;
+    }
+
+    return r;
+}
 
 }

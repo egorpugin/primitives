@@ -6,13 +6,28 @@
 
 #pragma once
 
+#include <iostream>
 #include <string>
 
-PRIMITIVES_ERROR_HANDLING_API
-void debug_break_if_debugger_attached();
+#ifdef _MSC_VER
+#include <Windows.h>
+#endif
 
-PRIMITIVES_ERROR_HANDLING_API
-void report_fatal_error(const std::string &);
+inline void debug_break_if_debugger_attached()
+{
+#ifdef _MSC_VER
+#ifndef NDEBUG
+    if (IsDebuggerPresent())
+        DebugBreak();
+#endif
+#endif
+}
+
+inline void report_fatal_error(const std::string &s)
+{
+    std::cerr << "fatal error: " << s << "!" << std::endl;
+    exit(1);
+}
 
 namespace sw
 {
@@ -20,7 +35,19 @@ namespace sw
 /// This function calls abort(), and prints the optional message to stderr.
 /// Use the llvm_unreachable macro (that adds location info), instead of
 /// calling this function directly.
-void unreachable_internal(const char *msg = nullptr, const char *file = nullptr, unsigned line = 0);
+inline void unreachable_internal(const char *msg = nullptr, const char *file = nullptr, unsigned line = 0)
+{
+    // This code intentionally doesn't call the ErrorHandler callback, because
+    // llvm_unreachable is intended to be used to indicate "impossible"
+    // situations, and not legitimate runtime errors.
+    if (msg)
+        std::cerr << msg << "\n";
+    std::cerr << "UNREACHABLE executed";
+    if (file)
+        std::cerr << " at " << file << ":" << line;
+    std::cerr << "!\n";
+    abort();
+}
 
 }
 

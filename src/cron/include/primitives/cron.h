@@ -7,6 +7,9 @@
 #pragma once
 
 #include <primitives/templates.h>
+#include <primitives/exceptions.h>
+#include <primitives/executor.h>
+#include <primitives/thread.h>
 
 #include <chrono>
 #include <condition_variable>
@@ -15,7 +18,10 @@
 #include <mutex>
 #include <thread>
 
-class PRIMITIVES_CRON_API Cron
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER2(cron);
+
+class Cron
 {
 public:
     using Clock = std::chrono::system_clock;
@@ -60,8 +66,15 @@ public:
     using Lock = std::unique_lock<std::mutex>;
 
 public:
-    Cron();
-    ~Cron();
+    Cron()
+    {
+        t = make_thread([this] { run(); });
+    }
+    ~Cron()
+    {
+        stop();
+        t.join();
+    }
 
     void push(const TimePoint &p, const Task &t)
     {
@@ -99,8 +112,59 @@ private:
     TaskQueue tasks;
     bool done = false;
 
-    void run();
+    void run()
+    {
+        while (!done)
+        {
+            std::string error;
+            try
+            {
+                Lock lock(m);
+                if (tasks.empty())
+                    cv.wait(lock, [this] { return !tasks.empty() || done; });
+                if (done)
+                    break;
+                auto i = tasks.begin();
+                auto p = i->first;
+                if (p <= Clock::now())
+                {
+                    auto t = std::move(i->second);
+                    tasks.erase(i);
+
+                    bool fire = t.skip <= 0;
+                    if (!fire)
+                        t.skip--;
+
+                    if (t.repeat.need_repeat())
+                    {
+                        // repeat not from last fire time, but from now() to prevent multiple instant calls
+                        auto p2 = t.repeat.next_repeat();
+                        tasks.emplace(p2, t);
+                    }
+                    if (fire)
+                        getExecutor().push([t = std::move(t.task)] { t(); });
+                }
+                if (!tasks.empty() || !done)
+                    cv.wait_until(lock, tasks.begin()->first, [this] { return tasks.begin()->first <= Clock::now() || done; });
+            }
+            catch (const std::exception &e)
+            {
+                error = e.what();
+            }
+            catch (...)
+            {
+                error = "unknown exception";
+            }
+            if (!error.empty())
+            {
+                LOG_ERROR(logger, error);
+            }
+        }
+    }
 };
 
-PRIMITIVES_CRON_API
-SW_DECLARE_GLOBAL_STATIC_FUNCTION(Cron, get_cron);
+namespace primitives::cron {
+
+inline Cron cron;
+
+}
