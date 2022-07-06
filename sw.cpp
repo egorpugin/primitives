@@ -337,6 +337,8 @@ void build(Solution &s)
     //sw_settings.Interface += "src/sw.settings.program_name.cpp";
     if (sw_settings.getBuildSettings().TargetOS.Type != OSType::Windows)
         sw_settings += "dl"_slib;
+    if (sw_settings.getBuildSettings().TargetOS.Type == OSType::Linux)
+        sw_settings.Interface.LinkOptions.push_back("-Wl,--export-dynamic");
 
     ADD_LIBRARY(version);
     version.Public += "include"_idir;
@@ -418,8 +420,6 @@ void build(Solution &s)
         // users must set it manually
         // they cannot forget it because <primitives/sw/main.h> include will force it
         sw_main.Public += "SW_EXECUTABLE"_def;
-        if (!sw_main.getBuildSettings().TargetOS.is(OSType::Windows) && !sw_main.getBuildSettings().TargetOS.isApple())
-            sw_main.Interface.LinkOptions.push_back("-Wl,--export-dynamic");
     }
 
     ADD_LIBRARY_HEADER_ONLY(wt);
