@@ -322,7 +322,7 @@ void build(Solution &s)
     if (settings.getBuildSettings().TargetOS.Type != OSType::Windows)
         settings += "dl"_slib;
 
-    ADD_LIBRARY(symbol);
+    ADD_LIBRARY_HEADER_ONLY(symbol);
     symbol.Public += "BOOST_DLL_USE_STD_FS"_def;
     symbol.Public += filesystem, "org.sw.demo.boost.dll"_dep;
 
