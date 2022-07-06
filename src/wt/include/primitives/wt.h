@@ -8,154 +8,55 @@
 
 #include <primitives/string.h>
 
-#include <Wt/Http/Response.h>
-#include <Wt/Http/ResponseContinuation.h>
-#include <Wt/WAbstractItemModel.h>
-#include <Wt/WAbstractTableModel.h>
-#include <Wt/WAnchor.h>
-#include <Wt/WApplication.h>
-#include <Wt/WAudio.h>
-#include <Wt/WBootstrapTheme.h>
-#include <Wt/WBreak.h>
-#include <Wt/WCheckBox.h>
-#include <Wt/WContainerWidget.h>
-#include <Wt/WDialog.h>
-#include <Wt/WEnvironment.h>
-#include <Wt/WFileResource.h>
-#include <Wt/WFileUpload.h>
-#include <Wt/WFileDropWidget.h>
-#include <Wt/WFormModel.h>
-#include <Wt/WGroupBox.h>
-#include <Wt/WHBoxLayout.h>
-#include <Wt/WIcon.h>
-#include <Wt/WIntValidator.h>
-#include <Wt/WItemDelegate.h>
-#include <Wt/WItemSelectionModel.h>
-#include <Wt/WLabel.h>
-#include <Wt/WLengthValidator.h>
-#include <Wt/WLineEdit.h>
-#include <Wt/WMenu.h>
-#include <Wt/WMenuItem.h>
-#include <Wt/WMessageBox.h>
-#include <Wt/WNavigationBar.h>
-#include <Wt/WPopupMenu.h>
-#include <Wt/WPushButton.h>
-#include <Wt/WRadioButton.h>
-#include <Wt/WResource.h>
-#include <Wt/WSelectionBox.h>
-#include <Wt/WServer.h>
-#include <Wt/WSignal.h>
-#include <Wt/WStackedWidget.h>
-#include <Wt/WStandardItemModel.h>
-#include <Wt/WSuggestionPopup.h>
-#include <Wt/WTabWidget.h>
-#include <Wt/WTable.h>
-#include <Wt/WTableView.h>
-#include <Wt/WTemplate.h>
-#include <Wt/WTemplateFormView.h>
-#include <Wt/WTextEdit.h>
-#include <Wt/WTreeView.h>
-#include <Wt/WVBoxLayout.h>
-#include <Wt/WVideo.h>
-#include <web/WebSession.h>
-#include <Wt/WAnchor.h>
-#include <Wt/WBootstrapTheme.h>
-#include <Wt/WBootstrap5Theme.h>
-#include <Wt/WFormModel.h>
-#include <Wt/WHBoxLayout.h>
-#include <Wt/WIntValidator.h>
-#include <Wt/WLengthValidator.h>
-#include <Wt/WLineEdit.h>
-#include <Wt/WMenu.h>
-#include <Wt/WMessageBox.h>
-#include <Wt/WNavigationBar.h>
-#include <Wt/WPopupMenu.h>
-#include <Wt/WPushButton.h>
-#include <Wt/WRadioButton.h>
-#include <Wt/WSelectionBox.h>
-#include <Wt/WStandardItemModel.h>
-#include <Wt/WSuggestionPopup.h>
-#include <Wt/WTabWidget.h>
-#include <Wt/WTable.h>
-#include <Wt/WTemplate.h>
-#include <Wt/WTemplateFormView.h>
-#include <Wt/WTextEdit.h>
-#include <Wt/WTreeView.h>
-#include <Wt/WVBoxLayout.h>
-#include <Wt/WServer.h>
-#include <Wt/WVideo.h>
-#include <Wt/WAudio.h>
-#include <Wt/WCheckBox.h>
-#include <Wt/WResource.h>
-#include <Wt/WTimer.h>
-#include <Wt/Http/Response.h>
-#include <Wt/Http/ResponseContinuation.h>
-#include <web/WebController.h>
-#include <web/WebSession.h>
-#include <Wt/WIOService.h>
-//#include <Wt/WConfiguration.h>
+#include "wt/headers.h"
 
 namespace primitives::wt
 {
 
-inline void showDialog(Wt::WObject *parent, std::unique_ptr<Wt::WDialog> dialog) {
-    auto d = parent->addChild(std::move(dialog));
-    //d->finished().connect([d](Wt::DialogCode code) { d->removeFromParent(); });
-    d->finished().connect([parent, d = dialog.get()](Wt::DialogCode) { parent->removeChild(d); });
-    d->show();
-
-    // after show
-    //getSwApplication()->navigation2->setAttributeValue("style", "z-index: 0;");
-}
-
-inline void showDialog(std::unique_ptr<Wt::WDialog> dialog) {
-    showDialog(Wt::WApplication::instance(), std::move(dialog));
-}
-
-inline auto make_default_dialog() {
-    return std::make_unique<Wt::WDialog>();
-}
-inline auto make_default_dialog(const String &title) {
-    auto d = make_default_dialog();
-    d->setWindowTitle(title);
-    return d;
-}
-PRIMITIVES_WT_API
-std::unique_ptr<Wt::WDialog> make_default_dialog(const String &title, std::unique_ptr<Wt::WWidget> w);
-inline auto showDialog(const String &title, std::unique_ptr<Wt::WWidget> w) {
-    return showDialog(make_default_dialog(title, std::move(w)));
-}
-inline auto showDialog(std::unique_ptr<Wt::WWidget> w) {
-    return showDialog({}, std::move(w));
-}
-
-PRIMITIVES_WT_API
-void showDialog(const String &title, const String &text, std::function<void(void)> f = {});
-
-PRIMITIVES_WT_API
-void showDialogYesNo(const String &title, const String &text, std::function<void(void)> f = {});
-
-PRIMITIVES_WT_API
-void showDialogNoYes(const String &title, const String &text, std::function<void(void)> f = {});
-
-PRIMITIVES_WT_API
-void showError(const String &text, std::function<void(void)> f = {});
-
-PRIMITIVES_WT_API
-void showSuccess(const String &text, std::function<void(void)> f = {});
-
 // deprecated, for compat
 using center_content_widget = Wt::WContainerWidget;
 
-struct PRIMITIVES_WT_API right_menu_widget : Wt::WContainerWidget {
-    right_menu_widget();
+struct right_menu_widget : Wt::WContainerWidget {
+    right_menu_widget(){
+        // setAttributeValue("style", "display: flex; padding-top: 10px;");
+        setAttributeValue("style", "display: flex;");
+        // auto L = std::make_unique<Wt::WHBoxLayout>();
+
+        // Create a stack where the contents will be located.
+        auto contents = std::make_unique<Wt::WStackedWidget>();
+        contents->setAttributeValue("style", "width: 100%; padding-left: 10px;");
+
+        menu = addWidget(std::make_unique<Wt::WMenu>(contents.get()));
+        menu->setStyleClass("nav nav-pills nav-stacked flex-column");
+        // menu->setInternalPathEnabled("/" + (unres_pkg.empty() ? p.toString("/") : unres_pkg));
+        // menu->setWidth(150);
+
+        addWidget(std::move(contents));
+    }
 
     Wt::WMenuItem *addTab(const Wt::WString &name, std::unique_ptr<Wt::WWidget> w,
-                          Wt::ContentLoading policy = Wt::ContentLoading::Lazy);
+                          Wt::ContentLoading policy = Wt::ContentLoading::Lazy){
+        auto mi = menu->addItem(name, std::move(w), policy);
+        return mi;
+    }
     Wt::WMenuItem *addTab(const Wt::WString &name, const String &url, std::unique_ptr<Wt::WWidget> w,
-                          Wt::ContentLoading policy = Wt::ContentLoading::Lazy);
+                          Wt::ContentLoading policy = Wt::ContentLoading::Lazy){
+        auto mi = addTab(name, std::move(w), policy);
+        mi->setPathComponent(url);
+        mi->clicked().connect([mi]() {
+            Wt::WApplication::instance()->setInternalPath(mi->pathComponent(), false);
+        });
+        return mi;
+    }
     Wt::WMenuItem *addTab(const Wt::WString &name, const String &base_url, const String &url, std::unique_ptr<Wt::WWidget> w,
-                          Wt::ContentLoading policy = Wt::ContentLoading::Lazy);
+                          Wt::ContentLoading policy = Wt::ContentLoading::Lazy){
+        auto mi = addTab(name, std::move(w), policy);
+        mi->setPathComponent(url);
+        mi->clicked().connect([base_url, mi]() {
+            Wt::WApplication::instance()->setInternalPath(base_url + "/" + mi->pathComponent(), false);
+        });
+        return mi;
+    }
 
 //private:
     Wt::WMenu *menu;

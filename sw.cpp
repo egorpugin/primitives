@@ -326,7 +326,7 @@ void build(Solution &s)
     symbol.Public += "BOOST_DLL_USE_STD_FS"_def;
     symbol.Public += filesystem, "org.sw.demo.boost.dll"_dep;
 
-    ADD_LIBRARY(xml);
+    ADD_LIBRARY_HEADER_ONLY(xml);
     xml.Public += string, templates,
         "org.sw.demo.xmlsoft.libxml2"_dep;
 
@@ -422,7 +422,7 @@ void build(Solution &s)
             sw_main.Interface.LinkOptions.push_back("-Wl,--export-dynamic");
     }
 
-    ADD_LIBRARY(wt);
+    ADD_LIBRARY_HEADER_ONLY(wt);
     wt.Public += string, templates,
         "org.sw.demo.emweb.wt.wt"_dep,
         "org.sw.demo.boost.hana"_dep
