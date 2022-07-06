@@ -16,6 +16,11 @@ deps:
 
 namespace primitives::webdriver {
 
+namespace keys {
+    constexpr inline auto tab = "\xee\x80\x84";
+    constexpr inline auto enter = "\xee\x80\x87";
+}
+
 void sleep(auto &&d) {
     std::this_thread::sleep_for(d);
 }
@@ -148,6 +153,11 @@ struct element {
     }
     std::string text() {
         auto req = create_req("text");
+        auto j = d().make_req(req);
+        return j["value"];
+    }
+    std::string attribute(auto &&name) {
+        auto req = create_req(path{ "attribute" } / name);
         auto j = d().make_req(req);
         return j["value"];
     }
