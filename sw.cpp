@@ -195,9 +195,10 @@ void build(Solution &s)
     auto &var = p.addTarget<LibraryTarget>(name);  \
     setup_primitives(var)
 #define ADD_LIBRARY(x) ADD_LIBRARY_WITH_NAME(x, #x)
-#define ADD_LIBRARY_HEADER_ONLY(x)                 \
-    auto &x = p.addTarget<LibraryTarget>(#x);      \
-    setup_primitives_header_only(x)
+#define ADD_LIBRARY_HEADER_ONLY_WITH_NAME(var, name)                 \
+    auto &var = p.addTarget<LibraryTarget>(name);      \
+    setup_primitives_header_only(var)
+#define ADD_LIBRARY_HEADER_ONLY(x) ADD_LIBRARY_HEADER_ONLY_WITH_NAME(x, #x)
 
     ADD_LIBRARY_HEADER_ONLY(error_handling);
 
@@ -298,14 +299,14 @@ void build(Solution &s)
         win32helpers += "Shell32.lib"_slib, "Ole32.lib"_slib, "Advapi32.lib"_slib, "user32.lib"_slib, "uuid.lib"_slib;
     }
 
-    ADD_LIBRARY_WITH_NAME(db_common, "db.common");
+    ADD_LIBRARY_HEADER_ONLY_WITH_NAME(db_common, "db.common");
     db_common.Public += filesystem, templates,
         "org.sw.demo.imageworks.pystring"_dep;
 
-    ADD_LIBRARY_WITH_NAME(db_sqlite3, "db.sqlite3");
+    ADD_LIBRARY_HEADER_ONLY_WITH_NAME(db_sqlite3, "db.sqlite3");
     db_sqlite3.Public += db_common, "org.sw.demo.sqlite3"_dep;
 
-    ADD_LIBRARY_WITH_NAME(db_postgresql, "db.postgresql");
+    ADD_LIBRARY_HEADER_ONLY_WITH_NAME(db_postgresql, "db.postgresql");
     db_postgresql.Public += db_common, "org.sw.demo.jtv.pqxx"_dep;
 
     auto &main = p.addTarget<StaticLibraryTarget>("main");
