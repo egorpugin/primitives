@@ -312,7 +312,7 @@ template <typename T,
 #define SW_DECLARE_GLOBAL_STATIC_FUNCTION2(t, n, ns) \
     namespace ns { inline t *n; }
 #define SW_DEFINE_GLOBAL_STATIC_FUNCTION2(t, fn, g)                \
-    t &fn(t *in = nullptr)                                               \
+    inline t &fn(t *in = nullptr)                                               \
     {                                                          \
         if (in)                                                \
             g = in;                                            \

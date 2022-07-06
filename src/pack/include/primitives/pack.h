@@ -65,7 +65,7 @@ constexpr inline auto block_size = 8192;
 
 // use sorted arrays to get predictable results
 
-bool pack_files(const path &archive, const std::map<path, path> &files, String *error = nullptr)
+inline bool pack_files(const path &archive, const std::map<path, path> &files, String *error = nullptr)
 {
     bool result = true;
     auto a = archive_write_new();
@@ -134,12 +134,12 @@ bool pack_files(const path &archive, const std::map<path, path> &files, String *
     return result;
 }
 
-bool pack_files(const path &archive, const FilesSorted &files, const path &root_dir, String *error = nullptr)
+inline bool pack_files(const path &archive, const FilesSorted &files, const path &root_dir, String *error = nullptr)
 {
     return pack_files(archive, primitives::pack::prepare_files(files, root_dir), error);
 }
 
-FilesSorted unpack_file(const path &archive, const path &dest_dir)
+inline FilesSorted unpack_file(const path &archive, const path &dest_dir)
 {
     if (!fs::exists(dest_dir))
         fs::create_directories(dest_dir);

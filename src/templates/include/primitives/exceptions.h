@@ -97,7 +97,7 @@ struct BaseException
             boost::stacktrace::stacktrace t(3, -1);
             message += "\nStacktrace:\n";
     #ifdef BOOST_MSVC
-            message += ::sw::to_string(t);
+            message += ::sw::frame_to_string(t);
     #else
             std::ostringstream ss;
             ss << t;

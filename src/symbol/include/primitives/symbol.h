@@ -21,7 +21,7 @@ inline void *getCurrentModuleSymbol()
     return (void *)&getCurrentModuleSymbol;
 }
 
-void *getModuleForSymbol(void *f = nullptr)
+inline void *getModuleForSymbol(void *f = nullptr)
 {
 #ifdef _WIN32
     HMODULE hModule = NULL;
@@ -38,7 +38,7 @@ void *getModuleForSymbol(void *f = nullptr)
 #endif
 }
 
-path getModuleNameForSymbol(void *f = nullptr)
+inline path getModuleNameForSymbol(void *f = nullptr)
 {
 #ifdef _WIN32
     auto lib = getModuleForSymbol(f);

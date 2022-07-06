@@ -20,7 +20,7 @@ using TimePoint = Clock::time_point;
 
 using ptime = boost::posix_time::ptime;
 
-TimePoint getUtc()
+inline TimePoint getUtc()
 {
     boost::posix_time::ptime t(
         boost::gregorian::day_clock::universal_day(),
@@ -28,7 +28,7 @@ TimePoint getUtc()
     return Clock::from_time_t(boost::posix_time::to_time_t(t));
 }
 
-TimePoint getLocalTime()
+inline TimePoint getLocalTime()
 {
     boost::posix_time::ptime t(
         boost::gregorian::day_clock::local_day(),
@@ -36,7 +36,7 @@ TimePoint getLocalTime()
     return Clock::from_time_t(boost::posix_time::to_time_t(t));
 }
 
-TimePoint string2timepoint(const String &s)
+inline TimePoint string2timepoint(const String &s)
 {
     boost::posix_time::ptime t;
     std::istringstream ss(s);
@@ -44,18 +44,18 @@ TimePoint string2timepoint(const String &s)
     return Clock::from_time_t(boost::posix_time::to_time_t(t));
 }
 
-String timepoint2string(const TimePoint &t)
+inline String timepoint2string(const TimePoint &t)
 {
     auto t2 = boost::posix_time::from_time_t(Clock::to_time_t(t));
     return boost::posix_time::to_simple_string(t2);
 }
 
-time_t string2time_t(const String &s)
+inline time_t string2time_t(const String &s)
 {
     return Clock::to_time_t(string2timepoint(s));
 }
 
-String local_time()
+inline String local_time()
 {
     auto t = boost::posix_time::second_clock::local_time();
     return boost::posix_time::to_simple_string(t);

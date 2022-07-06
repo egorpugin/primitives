@@ -236,7 +236,7 @@ public:
     }
 };
 
-static std::string to_string(const boost::stacktrace::frame* frames, std::size_t size) {
+static std::string frame_to_string(const boost::stacktrace::frame* frames, std::size_t size) {
     debugging_symbols idebug;
     if (!idebug.is_inited()) {
         return std::string();
@@ -259,9 +259,9 @@ static std::string to_string(const boost::stacktrace::frame* frames, std::size_t
 }
 
 template <class Allocator>
-static std::string to_string(const boost::stacktrace::basic_stacktrace<Allocator>& bt)
+static std::string frame_to_string(const boost::stacktrace::basic_stacktrace<Allocator>& bt)
 {
     if (!bt)
         return {};
-    return to_string(&bt.as_vector()[0], bt.size());
+    return frame_to_string(&bt.as_vector()[0], bt.size());
 }

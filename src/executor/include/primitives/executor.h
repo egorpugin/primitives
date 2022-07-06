@@ -43,12 +43,12 @@ struct Future;
 template <class T>
 struct SharedState;
 
-size_t get_max_threads(int N = 4)
+inline size_t get_max_threads(int N = 4)
 {
     return std::max<size_t>(N, std::thread::hardware_concurrency());
 }
 
-size_t select_number_of_threads(int N = 0)
+inline size_t select_number_of_threads(int N = 0)
 {
     if (N > 0)
         return N;

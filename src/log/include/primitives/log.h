@@ -74,7 +74,7 @@ inline boost::shared_ptr<
     boost::log::sinks::text_ostream_backend
     >> c_log;
 
-void logFormatter(boost::log::record_view const& rec, boost::log::formatting_ostream& strm)
+inline void logFormatter(boost::log::record_view const& rec, boost::log::formatting_ostream& strm)
 {
     static boost::thread_specific_ptr<boost::posix_time::time_facet> tss(0);
     if (!tss.get())
@@ -95,7 +95,7 @@ void logFormatter(boost::log::record_view const& rec, boost::log::formatting_ost
         % rec[boost::log::expressions::smessage];
 }
 
-void logFormatterSimple(boost::log::record_view const& rec, boost::log::formatting_ostream& strm)
+inline void logFormatterSimple(boost::log::record_view const& rec, boost::log::formatting_ostream& strm)
 {
     strm << boost::format("%s")
         % rec[boost::log::expressions::smessage];
@@ -112,7 +112,7 @@ struct LoggerSettings
     bool append = false;
 };
 
-void initLogger(LoggerSettings &s)
+inline void initLogger(LoggerSettings &s)
 {
     try
     {
@@ -197,7 +197,7 @@ void initLogger(LoggerSettings &s)
     }
 }
 
-void loggerFlush()
+inline void loggerFlush()
 {
     if (primitives::log::c_log)
         primitives::log::c_log->flush();
