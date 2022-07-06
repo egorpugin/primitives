@@ -86,7 +86,7 @@
 namespace primitives::grpc
 {
 
-std::string get_metadata_variable(const std::multimap<::grpc::string_ref, ::grpc::string_ref> &metadata, const std::string &key)
+inline std::string get_metadata_variable(const std::multimap<::grpc::string_ref, ::grpc::string_ref> &metadata, const std::string &key)
 {
     auto i = metadata.find(key);
     if (i == metadata.end())
@@ -102,7 +102,7 @@ struct CallResult
     operator bool() const { return !ec; }
 };
 
-CallResult check_result(
+inline CallResult check_result(
     const ::grpc::Status &status,
     const ::grpc::ClientContext &context,
     const std::string &method,
