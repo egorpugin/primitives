@@ -65,8 +65,8 @@ inline size_t select_number_of_threads(int N = 0)
     return N;
 }
 
-SW_DECLARE_GLOBAL_STATIC_FUNCTION2(Executor, default_executor_ptr, primitives::executor)
-SW_DEFINE_GLOBAL_STATIC_FUNCTION2(Executor, getExecutor, primitives::executor::default_executor_ptr)
+//SW_DECLARE_GLOBAL_STATIC_FUNCTION2(Executor, default_executor_ptr, primitives::executor)
+//SW_DEFINE_GLOBAL_STATIC_FUNCTION2(Executor, getExecutor, primitives::executor::default_executor_ptr)
 
 class TaskQueue
 {
@@ -682,14 +682,14 @@ Future<Ret>::then(F2 &&f, ArgTypes2 && ... args)
 
 // vector versions
 template <typename F>
-Future<void> whenAll(const Futures<F> &futures)
+Future<void> whenAll(auto &&executor, const Futures<F> &futures)
 {
     using Ret = void;
 
     SharedStatePtr<Ret> s;
     if (futures.empty())
     {
-        s = makeSharedState<Ret>(getExecutor());
+        s = makeSharedState<Ret>(executor);
         s->set = true;
     }
     else
@@ -740,14 +740,14 @@ Future<void> whenAll(const Futures<F> &futures)
 
 /// return a future with an index of the finished future
 template <class F>
-Future<size_t> whenAny(const Futures<F> &futures)
+Future<size_t> whenAny(auto &&executor, const Futures<F> &futures)
 {
     using Ret = size_t;
 
     SharedStatePtr<Ret> s;
     if (futures.empty())
     {
-        s = makeSharedState<Ret>(getExecutor());
+        s = makeSharedState<Ret>(executor);
         s->set = true;
     }
     else
@@ -854,7 +854,7 @@ template <
     all< is_future< std::decay_t<Futures> >::value... >::value
     >
 >
-Future<void> whenAll(Futures && ... futures)
+Future<void> whenAll(auto &&executor, Futures && ... futures)
 {
     using Ret = void;
 
@@ -864,7 +864,7 @@ Future<void> whenAll(Futures && ... futures)
     SharedStatePtr<Ret> s;
     if (sz == 0)
     {
-        s = makeSharedState<Ret>(getExecutor());
+        s = makeSharedState<Ret>(executor);
         s->set = true;
     }
     else
@@ -924,7 +924,7 @@ template <
     all< is_future< std::decay_t<Futures> >::value... >::value
     >
 >
-Future<size_t> whenAny(Futures && ... futures)
+Future<size_t> whenAny(auto &&executor, Futures && ... futures)
 {
     using Ret = size_t;
 
@@ -934,7 +934,7 @@ Future<size_t> whenAny(Futures && ... futures)
     SharedStatePtr<Ret> s;
     if (sizeof...(futures) == 0)
     {
-        s = makeSharedState<Ret>(getExecutor());
+        s = makeSharedState<Ret>(executor);
         s->set = true;
     }
     else

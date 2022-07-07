@@ -295,7 +295,7 @@ template <typename T,
 
 // globals
 
-#define SW_DECLARE_GLOBAL_STATIC_FUNCTION(t, fn) \
+/*#define SW_DECLARE_GLOBAL_STATIC_FUNCTION(t, fn) \
     t &fn(t *in = nullptr)
 
 #define SW_DEFINE_GLOBAL_STATIC_FUNCTION(t, fn)                \
@@ -319,7 +319,7 @@ template <typename T,
         if (g == nullptr)                                      \
             throw SW_RUNTIME_ERROR("missing initializer"); \
         return *g;                                             \
-    }
+    }*/
 
 ////////////////////////////////////////////////////////////////////////////////
 

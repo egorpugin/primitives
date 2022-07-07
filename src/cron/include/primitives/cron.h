@@ -66,9 +66,9 @@ public:
     using Lock = std::unique_lock<std::mutex>;
 
 public:
-    Cron()
+    Cron(auto &&executor)
     {
-        t = make_thread([this] { run(); });
+        t = make_thread([&] { run(executor); });
     }
     ~Cron()
     {
@@ -112,7 +112,7 @@ private:
     TaskQueue tasks;
     bool done = false;
 
-    void run()
+    void run(auto &&executor)
     {
         while (!done)
         {
@@ -142,7 +142,7 @@ private:
                         tasks.emplace(p2, t);
                     }
                     if (fire)
-                        getExecutor().push([t = std::move(t.task)] { t(); });
+                        executor.push([t = std::move(t.task)] { t(); });
                 }
                 if (!tasks.empty() || !done)
                     cv.wait_until(lock, tasks.begin()->first, [this] { return tasks.begin()->first <= Clock::now() || done; });
@@ -162,9 +162,3 @@ private:
         }
     }
 };
-
-namespace primitives::cron {
-
-inline Cron cron;
-
-}
