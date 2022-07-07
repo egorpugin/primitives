@@ -426,7 +426,7 @@ TEST_CASE("Checking executor", "[executor]")
         REQUIRE_NOTHROW_TIME(f2.get(), 300ms);
         REQUIRE_NOTHROW_TIME(f3.get(), 400ms);
         REQUIRE_NOTHROW_TIME(f4.get(), 500ms);
-        REQUIRE_NOTHROW_TIME(waitAll(f1, f2, f3, f4), 50ms);
+        REQUIRE_NOTHROW_TIME(waitAll(e, f1, f2, f3, f4), 50ms);
     }
 
     {
@@ -435,7 +435,7 @@ TEST_CASE("Checking executor", "[executor]")
         auto f2 = e.push([] { std::this_thread::sleep_for(200ms); return 2.0; });
         auto f3 = e.push([] { std::this_thread::sleep_for(300ms); return 'c'; });
         auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
-        waitAll(f1, f2, f3, f4);
+        waitAll(e, f1, f2, f3, f4);
         REQUIRE_NOTHROW_TIME(f1.get(), 50ms);
         REQUIRE_NOTHROW_TIME(f2.get(), 50ms);
         REQUIRE_NOTHROW_TIME(f3.get(), 50ms);
@@ -453,7 +453,7 @@ TEST_CASE("Checking executor", "[executor]")
         REQUIRE_NOTHROW_TIME(fs[1].get(), 300ms);
         REQUIRE_NOTHROW_TIME(fs[2].get(), 400ms);
         REQUIRE_NOTHROW_TIME(fs[3].get(), 500ms);
-        REQUIRE_NOTHROW_TIME(waitAll(fs), 50ms);
+        REQUIRE_NOTHROW_TIME(waitAll(e, fs), 50ms);
     }
 
     {
@@ -463,7 +463,7 @@ TEST_CASE("Checking executor", "[executor]")
         fs.push_back(e.push([] { std::this_thread::sleep_for(200ms); }));
         fs.push_back(e.push([] { std::this_thread::sleep_for(300ms); }));
         fs.push_back(e.push([] { std::this_thread::sleep_for(400ms); }));
-        waitAll(fs);
+        waitAll(e, fs);
         REQUIRE_NOTHROW_TIME(fs[0].get(), 50ms);
         REQUIRE_NOTHROW_TIME(fs[1].get(), 50ms);
         REQUIRE_NOTHROW_TIME(fs[2].get(), 50ms);
@@ -477,7 +477,7 @@ TEST_CASE("Checking executor", "[executor]")
         fs.push_back(e.push([] { std::this_thread::sleep_for(200ms * 2); }));
         fs.push_back(e.push([] { std::this_thread::sleep_for(300ms * 2); }));
         fs.push_back(e.push([] { std::this_thread::sleep_for(100ms * 2); }));
-        REQUIRE_NOTHROW_TIME(waitAny(fs), 400ms);
+        REQUIRE_NOTHROW_TIME(waitAny(e, fs), 400ms);
     }
 
     {
@@ -487,7 +487,7 @@ TEST_CASE("Checking executor", "[executor]")
         fs.push_back(e.push([] { std::this_thread::sleep_for(250ms * 2); }));
         fs.push_back(e.push([] { std::this_thread::sleep_for(300ms * 2); }));
         fs.push_back(e.push([] { std::this_thread::sleep_for(100ms * 2); })); // #3
-        auto f = whenAny(fs);
+        auto f = whenAny(e, fs);
         CHECK(f.get() == 3); // future #3 (the last one) must be first
     }
 
@@ -497,7 +497,7 @@ TEST_CASE("Checking executor", "[executor]")
         auto f2 = e.push([] { std::this_thread::sleep_for(200ms * 2); });
         auto f3 = e.push([] { std::this_thread::sleep_for(300ms * 2); });
         auto f4 = e.push([] { std::this_thread::sleep_for(400ms * 2); });
-        auto f = whenAny(f2, f1, f3, f4);
+        auto f = whenAny(e, f2, f1, f3, f4);
         CHECK(f.get() == 1);
     }
 
@@ -518,7 +518,7 @@ TEST_CASE("Checking executor", "[executor]")
         auto f2 = e.push([] { std::this_thread::sleep_for(200ms); });
         auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
         auto f1 = e.push([] { std::this_thread::sleep_for(100ms); });
-        REQUIRE_NOTHROW_TIME_MORE(waitAll(f1, f2, f3, f4), 200ms);
+        REQUIRE_NOTHROW_TIME_MORE(waitAll(e, f1, f2, f3, f4), 200ms);
     }
 
     {
@@ -527,7 +527,7 @@ TEST_CASE("Checking executor", "[executor]")
         auto f2 = e.push([] { std::this_thread::sleep_for(200ms); });
         auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
         auto f1 = e.push([] { std::this_thread::sleep_for(100ms); });
-        REQUIRE_NOTHROW_TIME(waitAll(f1, f2, f3, f4), 500ms);
+        REQUIRE_NOTHROW_TIME(waitAll(e, f1, f2, f3, f4), 500ms);
     }
 
     {
@@ -536,7 +536,7 @@ TEST_CASE("Checking executor", "[executor]")
         auto f2 = e.push([] { std::this_thread::sleep_for(200ms); });
         auto f4 = e.push([] { std::this_thread::sleep_for(400ms); });
         auto f1 = e.push([] { std::this_thread::sleep_for(100ms); });
-        REQUIRE_NOTHROW_TIME(waitAny(f1, f2, f3, f4), 200ms);
+        REQUIRE_NOTHROW_TIME(waitAny(e, f1, f2, f3, f4), 200ms);
     }
 
     {

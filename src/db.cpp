@@ -50,7 +50,7 @@ TEST_CASE("Checking db", "[db]")
 
     auto test = [](std::vector<LiteDatabase*> &sdb, const String &type)
     {
-        StringDatabaseSchemaManager m;
+        StringDatabaseSchemaManager<LiteDatabase> m;
         m.database = sdb[1];
         m.latestSchema = "CREATE TABLE a (a " + type + ")";
 

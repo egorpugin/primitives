@@ -19,6 +19,7 @@
 #include <mutex>
 #include <queue>
 #include <string>
+#include <tuple>
 #include <thread>
 #include <type_traits>
 #include <vector>
