@@ -287,7 +287,7 @@ void build(Solution &s)
     csv.Public += templates;
 
     ADD_LIBRARY(win32helpers);
-    if (!win32helpers.getBuildSettings().TargetOS.is(OSType::Windows))
+    if (!win32helpers.getBuildSettings().TargetOS.is(OSType::Windows) && !win32helpers.getBuildSettings().TargetOS.is(OSType::Mingw))
         win32helpers.DryRun = true;
     win32helpers.Public += "BOOST_DLL_USE_STD_FS"_def;
     win32helpers.Public += filesystem,
