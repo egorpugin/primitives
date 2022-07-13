@@ -1457,7 +1457,7 @@ public:
   }
 };
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__MINGW32__)
 #pragma warning(push)
 #pragma warning(disable : 4661)
 extern
@@ -1470,7 +1470,7 @@ template PRIMITIVES_SETTINGS_API class opt<unsigned>;
 template class opt<unsigned>;
 #endif
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__MINGW32__)
 #pragma warning(push)
 #pragma warning(disable : 4661)
 extern
@@ -1483,7 +1483,7 @@ template PRIMITIVES_SETTINGS_API class opt<int>;
 template class opt<int>;
 #endif
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__MINGW32__)
 #pragma warning(push)
 #pragma warning(disable : 4661)
 extern
@@ -1496,7 +1496,7 @@ template PRIMITIVES_SETTINGS_API class opt<std::string>;
 template class opt<std::string>;
 #endif
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__MINGW32__)
 #pragma warning(push)
 #pragma warning(disable : 4661)
 extern
@@ -1509,7 +1509,7 @@ template PRIMITIVES_SETTINGS_API class opt<char>;
 template class opt<char>;
 #endif
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__MINGW32__)
 #pragma warning(push)
 #pragma warning(disable : 4661)
 extern

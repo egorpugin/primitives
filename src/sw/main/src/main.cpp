@@ -55,7 +55,7 @@ static std::string get_cl_option_base()
     return "-" PACKAGE_NAME_CLEAN ".internal.start-minidump-server";
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
 #include <exception_handler.h>
 #include <crash_generation_server.h>
 #include <common/windows/guid_string.h>
@@ -196,7 +196,7 @@ void sw_append_symbol_path(const path &in)
     // not working atm
     return;
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     const auto nt_symbol_path = L"_NT_SYMBOL_PATH";
     const auto delim = L";";
     const auto max_env_var_size = 32'767;
@@ -229,7 +229,7 @@ static int startup(int argc, char *argv[])
         }
     }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     // prepare strings
     filter_message = "Unhandled exception.\nWriting minidump to "s + to_string(get_crash_dir()) + "\n";
     after_minidump_write_message = "Minidump saved.\n";
@@ -262,7 +262,7 @@ static int startup(int argc, char *argv[])
     }
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
@@ -277,7 +277,7 @@ static int startup(int argc, char *argv[])
     auto s = to_path_string(normalize_path(cp.lexically_normal()));
     while (!s.empty() && s.back() == '/')
         s.resize(s.size() - 1);
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     // windows does not change case of the disk letter if other parts unchanged
     cp = s;
     cp = normalize_path_windows(cp);
@@ -290,7 +290,7 @@ static int startup(int argc, char *argv[])
     fs::current_path(cp);
 
     //
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     sw_append_symbol_path(boost::dll::program_location().parent_path().wstring());
 #else
     sw_append_symbol_path(boost::dll::program_location().parent_path().string());
@@ -319,7 +319,7 @@ int sw_main_internal(int argc, char *argv[])
 
 void sw_enable_crash_server(int level)
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
     delete handler; // delete previous always
 
     if (level < 0)

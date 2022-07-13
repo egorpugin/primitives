@@ -186,7 +186,9 @@ inline FILE *fopen(const path &p, const char *mode = "rb")
 static String errno2str(int e)
 {
     char buf[1024];
-#ifdef _WIN32
+#if defined(__MINGW32__)
+    strerror_s(buf, sizeof(buf), e);
+#elif defined(_WIN32)
     strerror_s(buf, e);
 #else
     strerror_r(e, buf, sizeof(buf));

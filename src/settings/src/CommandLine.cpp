@@ -109,7 +109,7 @@ std::string getVersionString()
 //
 namespace primitives {
 namespace cl {
-#if defined(_WIN32) || defined(__APPLE__)
+#if (defined(_WIN32) && !defined(__MINGW32__)) || defined(__APPLE__)
 template class basic_parser<bool>;
 template class basic_parser<boolOrDefault>;
 template class basic_parser<int>;

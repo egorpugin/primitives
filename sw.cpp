@@ -179,7 +179,7 @@ void build(Solution &s)
         // explicit!
         t.AutoDetectOptions = false;
         t -= "include/.*"_rr;
-        if (t.getBuildSettings().TargetOS.is(OSType::Windows)) {
+        if (t.getBuildSettings().TargetOS.is(OSType::Windows) || t.getBuildSettings().TargetOS.is(OSType::Mingw)) {
             t.Public += "NOMINMAX"_def;
             t.Public += "WIN32_NO_LEAN_AND_MEAN"_def;
         }
@@ -208,7 +208,7 @@ void build(Solution &s)
     auto &templates = p.addTarget<StaticLibraryTarget>("templates");
     setup_primitives_header_only(templates);
     templates.Public += string, "org.sw.demo.boost.stacktrace"_dep;
-    if (templates.getBuildSettings().TargetOS.Type != OSType::Windows)
+    if (templates.getBuildSettings().TargetOS.Type != OSType::Windows && templates.getBuildSettings().TargetOS.Type != OSType::Mingw)
         templates += "dl"_slib;
 
     ADD_LIBRARY_HEADER_ONLY(filesystem);
@@ -245,7 +245,7 @@ void build(Solution &s)
     ADD_LIBRARY_HEADER_ONLY(lock);
     lock.Public += filesystem,
         "org.sw.demo.boost.interprocess"_dep;
-    if (lock.getBuildSettings().TargetOS.Type == OSType::Windows)
+    if (lock.getBuildSettings().TargetOS.Type == OSType::Windows || lock.getBuildSettings().TargetOS.Type == OSType::Mingw)
         lock += "Advapi32.lib"_slib;
 
     ADD_LIBRARY_HEADER_ONLY(log);
@@ -271,7 +271,7 @@ void build(Solution &s)
     ADD_LIBRARY(http);
     http.Public += filesystem, templates,
         "org.sw.demo.badger.curl.libcurl"_dep;
-    if (http.getBuildSettings().TargetOS.Type == OSType::Windows)
+    if (http.getBuildSettings().TargetOS.Type == OSType::Windows || http.getBuildSettings().TargetOS.Type == OSType::Mingw)
         http += "Winhttp.lib"_slib;
 
     ADD_LIBRARY(hash);
@@ -293,7 +293,7 @@ void build(Solution &s)
     win32helpers.Public += filesystem,
         "org.sw.demo.boost.dll"_dep,
         "org.sw.demo.boost.algorithm"_dep;
-    if (win32helpers.getBuildSettings().TargetOS.Type == OSType::Windows)
+    if (win32helpers.getBuildSettings().TargetOS.Type == OSType::Windows || win32helpers.getBuildSettings().TargetOS.Type == OSType::Mingw)
     {
         win32helpers.Public += "UNICODE"_d;
         win32helpers += "Shell32.lib"_slib, "Ole32.lib"_slib, "Advapi32.lib"_slib, "user32.lib"_slib, "uuid.lib"_slib;
@@ -320,7 +320,7 @@ void build(Solution &s)
         "pub.egorpugin.llvm_project.llvm.support_lite"_dep;
     gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/settings");
     gen_flex_bison_pair("org.sw.demo.lexxmark.winflexbison"_dep, settings, "LALR1_CPP_VARIANT_PARSER", "src/path");
-    if (settings.getBuildSettings().TargetOS.Type != OSType::Windows)
+    if (settings.getBuildSettings().TargetOS.Type != OSType::Windows && settings.getBuildSettings().TargetOS.Type != OSType::Mingw)
         settings += "dl"_slib;
 
     ADD_LIBRARY_HEADER_ONLY(symbol);
@@ -336,10 +336,14 @@ void build(Solution &s)
     sw_settings.Public += settings;
     sw_settings -= "src/sw.settings.program_name.cpp";
     //sw_settings.Interface += "src/sw.settings.program_name.cpp";
-    if (sw_settings.getBuildSettings().TargetOS.Type != OSType::Windows)
+    if (sw_settings.getBuildSettings().TargetOS.Type != OSType::Windows && sw_settings.getBuildSettings().TargetOS.Type != OSType::Mingw)
         sw_settings += "dl"_slib;
     if (sw_settings.getBuildSettings().TargetOS.Type == OSType::Linux)
         sw_settings.Interface.LinkOptions.push_back("-Wl,--export-dynamic");
+    if (sw_settings.getBuildSettings().TargetOS.Type == OSType::Mingw)
+    {
+        sw_settings += "ucrt"_slib;
+    }
 
     ADD_LIBRARY(version);
     version.Public += "include"_idir;
@@ -406,7 +410,7 @@ void build(Solution &s)
             "org.sw.demo.google.breakpad.client.windows.crash_generation.client-master"_dep,
             "org.sw.demo.google.breakpad.client.windows.crash_generation.server-master"_dep
             ;
-        if (sw_main.getBuildSettings().TargetOS.Type == OSType::Windows)
+        if (sw_main.getBuildSettings().TargetOS.Type == OSType::Windows) // mingw?
         {
             sw_main.Public +=
                 "org.sw.demo.google.breakpad.client.windows.handler-master"_dep,

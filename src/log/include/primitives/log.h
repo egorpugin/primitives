@@ -50,7 +50,7 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(timestamp, "TimeStamp", boost::posix_time::ptime)
 BOOST_LOG_ATTRIBUTE_KEYWORD(thread_id, "ThreadID", boost::log::attributes::current_thread_id::value_type)
 BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", boost::log::trivial::severity_level)
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
 //static auto in_mode = 0x01;
 static auto out_mode = 0x02;
 static auto app_mode = 0x08;
