@@ -197,6 +197,11 @@ inline FilesSorted unpack_file(const path &archive, const path &dest_dir)
 
         f = fs::absolute(f);
         ScopedFile o(f, "wb");
+        /*r = archive_read_data_into_fd(a, fileno(o.getHandle()));
+        if (r == ARCHIVE_EOF)
+            ;
+        if (r < ARCHIVE_OK)
+            throw SW_RUNTIME_ERROR(archive_error_string(a));*/
         while (1)
         {
             const void *buff;
