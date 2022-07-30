@@ -159,7 +159,7 @@ struct element {
     std::string attribute(auto &&name) {
         auto req = create_req(path{ "attribute" } / name);
         auto j = d().make_req(req);
-        return j["value"];
+        return j["value"].is_null() ? "" : j["value"];
     }
     /*std::string wait_for_non_empty_text() {
         auto t = make_timeout(10ms, 1s);
@@ -274,13 +274,18 @@ struct webdriver {
         }
         return req;
     }
-    auto make_req(auto &&req) {
+    auto make_req(auto &&req, bool print_response = true) {
         static const char *arr[] = {"get", "post", "delete"};
         logger() << "request (type " << (req.type < std::size(arr) ? arr[req.type] : std::to_string(req.type)) << "): " << req.url;
-        logger() << "data " << req.data;
+        if (!req.data.empty()) {
+            logger() << "data " << req.data;
+        }
         auto resp = url_request(req);
         auto jr = nlohmann::json::parse(resp.response);
-        logger() << "response (code = " << resp.http_code << "): " << jr.dump();
+        logger() << "response (code = " << resp.http_code << ")";
+        if (print_response) {
+            logger() << jr.dump();
+        }
         if (resp.http_code != 200) {
             std::string err = "error for request:\n" + req.url + "\n" + req.data + "\n";
             err += "error:\n";
@@ -290,9 +295,9 @@ struct webdriver {
         }
         return jr;
     }
-    auto make_req(auto &&req, auto &&json) {
+    auto make_req(auto &&req, auto &&json, bool print_response = true) {
         req.data = json.dump();
-        return make_req(req);
+        return make_req(req, print_response);
     }
     path make_session_url() {
         return url_ / "session" / session_id;
@@ -424,7 +429,7 @@ struct webdriver {
     }
     auto source() {
         auto req = create_req(make_session_url() / "source");
-        auto resp = make_req(req);
+        auto resp = make_req(req, false);
         return resp.dump();
     }
     void focus_frame(auto &&id) {
