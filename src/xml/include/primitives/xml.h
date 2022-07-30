@@ -15,13 +15,14 @@
 #include <iomanip>
 #include <sstream>
 
+inline
 void checkNullptr(const void *from)
 {
     if (!from)
         throw SW_RUNTIME_ERROR("nullptr");
 }
 
-PRIMITIVES_XML_API
+inline
 String getName(xmlNode *from)
 {
     checkNullptr(from);
@@ -29,7 +30,7 @@ String getName(xmlNode *from)
     return (char *)from->name;
 }
 
-PRIMITIVES_XML_API
+inline
 String getName(xmlAttr *from)
 {
     checkNullptr(from);
@@ -37,7 +38,7 @@ String getName(xmlAttr *from)
     return (char *)from->name;
 }
 
-PRIMITIVES_XML_API
+inline
 String getContent(xmlNode *from)
 {
     checkNullptr(from);
@@ -53,7 +54,8 @@ String getContent(xmlNode *from)
     throw SW_RUNTIME_ERROR("unknown node type");
 }
 
-static xmlNode *getNextRaw(xmlNode *from, const String &name)
+inline
+xmlNode *getNextRaw(xmlNode *from, const String &name)
 {
     if (!from)
         return nullptr;
@@ -72,7 +74,7 @@ static xmlNode *getNextRaw(xmlNode *from, const String &name)
     return nullptr;
 }
 
-PRIMITIVES_XML_API
+inline
 xmlNode *getNext(xmlNode *from, const String &name, int skip = 0)
 {
     while (skip--)
@@ -100,7 +102,7 @@ xmlNode *getNext(xmlNode *from, const String &name, int skip = 0)
     throw SW_RUNTIME_ERROR(name + ": not found");
 }
 
-PRIMITIVES_XML_API
+inline
 xmlNode *findNodeWithText(xmlNode *from, const String &text)
 {
     if (!from)
@@ -120,21 +122,21 @@ xmlNode *findNodeWithText(xmlNode *from, const String &text)
     return nullptr;
 }
 
-PRIMITIVES_XML_API
+inline
 void removeNode(xmlNode *n)
 {
     xmlUnlinkNode(n);
     xmlFreeNode(n);
 }
 
-PRIMITIVES_XML_API
+inline
 void removeTags(xmlNode *from, const String &tag)
 {
     while (auto n = getNextRaw(from, tag))
         removeNode(n);
 }
 
-PRIMITIVES_XML_API
+inline
 void removeComments(xmlNode *from)
 {
     if (!from)
