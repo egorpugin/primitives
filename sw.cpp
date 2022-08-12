@@ -211,6 +211,9 @@ void build(Solution &s)
     if (templates.getBuildSettings().TargetOS.Type != OSType::Windows && templates.getBuildSettings().TargetOS.Type != OSType::Mingw)
         templates += "dl"_slib;
 
+    auto &templates2 = p.addTarget<StaticLibraryTarget>("templates2");
+    setup_primitives_header_only(templates2);
+
     ADD_LIBRARY_HEADER_ONLY(filesystem);
     filesystem.Public += string, templates,
         "org.sw.demo.boost.filesystem"_dep,
