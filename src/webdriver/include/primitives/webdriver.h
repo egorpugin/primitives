@@ -7,10 +7,12 @@ deps:
 */
 
 #include <nlohmann/json.hpp>
+#include <primitives/timeout.h>
 #include <primitives/http.h>
 #include <primitives/exceptions.h>
 
 #include <algorithm>
+#include <format>
 #include <chrono>
 #include <thread>
 
@@ -21,39 +23,13 @@ namespace keys {
     constexpr inline auto enter = "\xee\x80\x87";
 }
 
-void sleep(auto &&d) {
-    std::this_thread::sleep_for(d);
-}
-inline auto make_timeout(
-    std::chrono::duration<float> start = 10ms,
-    std::chrono::duration<float> max = 100ms,
-    std::chrono::duration<float> step = 10ms,
-    std::chrono::duration<float> exception_timeout = 20s) {
-    struct timeout {
-        std::chrono::duration<float> t;
-        std::chrono::duration<float> max;
-        std::chrono::duration<float> step;
-        std::chrono::duration<float> exception_timeout;
-        std::chrono::duration<float> total;
-
-        int n{0}; // can't make lambda because we need n access, need we?
-
-        void sleep(auto &&t) {
-            total += t;
-            std::this_thread::sleep_for(t);
-            if (total > exception_timeout) {
-                throw SW_RUNTIME_ERROR("timeout");
-            }
-        }
-        void operator()() {
-            sleep(t);
-            t += step;
-            t = std::min(max, t);
-            ++n;
-        }
-    };
-    return timeout{start, max, step, exception_timeout};
-}
+struct no_such_element_exception : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
+struct element_not_interactable_exception : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
+struct javascript_error_exception : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
+struct stale_element_reference_exception : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
+struct unexpected_alert_open_exception : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
+struct no_such_alert_exception : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
+struct timeout_exception : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
 
 struct by {
     std::string strategy;
@@ -180,15 +156,19 @@ struct element {
         self.d().make_req(req, nlohmann::json::object());
         return std::forward<decltype(self)>(self);
     }
-    auto wait_for_element(auto&& v) {
-        auto t = make_timeout(10ms, 1s);
+    auto wait_for_element(auto&& v, std::chrono::duration<float> tm = 10ms, std::chrono::duration<float> max = 1s, auto && ... args) {
+        auto t = make_timeout(tm, max, args...);
         while (1) {
             try {
                 return find_element(v);
-            } catch (std::exception &e) {
+            } catch (element_not_interactable_exception &) {
+                t.simple_wait();
+            } catch (stale_element_reference_exception &) {
+                t.simple_wait();
+            } catch (no_such_element_exception &e) {
                 d().logger() << e.what();
+                t();
             }
-            t();
             d().source();
         }
     }
@@ -279,6 +259,9 @@ struct webdriver {
         logger() << "request (type " << (req.type < std::size(arr) ? arr[req.type] : std::to_string(req.type)) << "): " << req.url;
         if (!req.data.empty()) {
             logger() << "data " << req.data;
+        } else if (!req.data_kv.empty()) {
+            //for (auto &&)
+            //logger() << "data " << req.data;
         }
         auto resp = url_request(req);
         auto jr = nlohmann::json::parse(resp.response);
@@ -291,6 +274,39 @@ struct webdriver {
             err += "error:\n";
             if (jr.contains("value") && jr["value"].contains("message"))
                 err += jr["value"]["message"];
+            if (!req.data.empty() && req.data != "{}") {
+                err += "\n";
+                err += "data " + req.data;
+            } else if (!req.data_kv.empty()) {
+                err += "\n";
+                err += "data\n";
+                for (auto &&[k,v] : req.data_kv) {
+                    err += k + ": " + v;
+                }
+            }
+            if (jr.contains("value") && jr["value"].contains("error")) {
+                if (jr["value"]["error"].get<std::string_view>() == "no such element"sv) {
+                    throw no_such_element_exception(err);
+                }
+                if (jr["value"]["error"].get<std::string_view>() == "element not interactable"sv) {
+                    throw element_not_interactable_exception(err);
+                }
+                if (jr["value"]["error"].get<std::string_view>() == "javascript error"sv) {
+                    throw javascript_error_exception(err);
+                }
+                if (jr["value"]["error"].get<std::string_view>() == "stale element reference"sv) {
+                    throw stale_element_reference_exception(err);
+                }
+                if (jr["value"]["error"].get<std::string_view>() == "unexpected alert open"sv) {
+                    throw unexpected_alert_open_exception(err);
+                }
+                if (jr["value"]["error"].get<std::string_view>() == "no such alert"sv) {
+                    throw no_such_alert_exception(err);
+                }
+                if (jr["value"]["error"].get<std::string_view>() == "timeout"sv) {
+                    throw timeout_exception(err);
+                }
+            }
             throw SW_RUNTIME_ERROR(err);
         }
         return jr;
@@ -403,6 +419,10 @@ struct webdriver {
     std::string url() {
         auto req = create_req<HttpRequest::Get>(make_session_url() / "url");
         return make_req(req)["value"];
+    }
+    void close() {
+        auto req = create_req<HttpRequest::Delete>(make_session_url() / "window");
+        make_req(req);
     }
     void back() {
         auto req = create_req<HttpRequest::Post>(make_session_url() / "back");
@@ -518,6 +538,19 @@ struct webdriver {
             cs.emplace_back(c);
         }
         return cs;
+    }
+    std::optional<std::string> has_alert() {
+        try {
+            auto req = create_req<HttpRequest::Get>(make_session_url() / "alert" / "text");
+            auto j = make_req(req);
+            return j["value"].is_null() ? ""s : j["value"].get<std::string>();
+        } catch (no_such_alert_exception &) {
+            return {};
+        }
+    }
+    void accept_alert() {
+        auto req = create_req<HttpRequest::Post>(make_session_url() / "alert" / "accept");
+        make_req(req);
     }
 };
 
