@@ -12,14 +12,15 @@
 
 #include "uv_command.h"
 
-#include <primitives/file_monitor.h>
 #include <primitives/exceptions.h>
 #include <primitives/templates.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/process.hpp>
 #include <boost/process/search_path.hpp>
 
-#include <uv.h>
+// after primitives and boost
+#include <primitives/uv_loop_close.h>
 
 #include <chrono>
 #include <condition_variable>

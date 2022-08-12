@@ -7,56 +7,20 @@
 #pragma once
 
 #include <primitives/filesystem.h>
-
 #include <primitives/thread.h>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/lock_types.hpp>
-#include <uv.h>
+
+// after primitives and boost
+#include "uv_loop_close.h"
 
 #include <atomic>
 #include <functional>
 #include <memory>
 #include <thread>
 
-namespace primitives
-{
-
-namespace detail
-{
-
-inline int uv_loop_close(uv_loop_t &loop, Strings &errors)
-{
-    int r;
-    if (r = uv_loop_close(&loop); r)
-    {
-        if (r == UV_EBUSY)
-        {
-            auto wlk = [](uv_handle_t* handle, void* arg)
-            {
-                if (handle)
-                    uv_close(handle, 0);
-            };
-            uv_walk(&loop, wlk, 0);
-            while (uv_run(&loop, UV_RUN_DEFAULT) != 0)
-                ;
-            if (r = uv_loop_close(&loop); r)
-            {
-                if (r == UV_EBUSY)
-                    errors.push_back("resources were not cleaned up: "s + uv_strerror(r));
-                else
-                    errors.push_back("uv_loop_close() error: "s + uv_strerror(r));
-            }
-        }
-        else
-            errors.push_back("uv_loop_close() error: "s + uv_strerror(r));
-    }
-    return r;
-}
-
-}
-
-namespace filesystem
+namespace primitives::filesystem
 {
 
 class FileMonitor
