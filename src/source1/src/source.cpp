@@ -93,7 +93,7 @@ static void download_and_unpack(const String &url, path fn, const path &unpack_d
 }
 
 template <typename F>
-static void downloadRepository(F &&f)
+static void downloadRepository(F &&f, auto &&deleter)
 {
     std::exception_ptr eptr;
     int n_tries = 3;
@@ -106,12 +106,18 @@ static void downloadRepository(F &&f)
         }
         catch (...)
         {
+            deleter();
             if (!eptr)
                 eptr = std::current_exception();
             if (n_tries == 0)
                 std::rethrow_exception(eptr);
         }
     }
+}
+template <typename F>
+static void downloadRepository(F &&f)
+{
+    downloadRepository(f, []{});
 }
 
 static void execute_command_in_dir(const path &dir, const Command::Arguments &args)
@@ -460,7 +466,7 @@ void Git::download2(const path &dir, const String &tag) const
             execute_command_in_dir(dir, { "git", "fetch" });
             execute_command_in_dir(dir, { "git", "checkout", commit });
         }
-    });
+    }, [&]{fs::remove_all(dir / ".git");});
 }
 
 void Git::save1(nlohmann::json &j) const
