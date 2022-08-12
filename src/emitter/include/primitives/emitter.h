@@ -145,10 +145,10 @@ struct Emitter
         addLineWithIndent(s, n_indents);
     }
     // absolute indent
-    void addLineWithIndent(const Text &text, int indent)
+    void addLineWithIndent(const Text &text, int in_indent)
     {
         for (auto &s : detail::splitWithIndent(text, newline))
-            addLine(std::make_unique<Line>(s, indent));
+            addLine(std::make_unique<Line>(s, in_indent));
     }
     void addLineWithoutIndent(const Text &s)
     {
@@ -326,12 +326,12 @@ struct CppEmitter : Emitter
 {
     using Base = Emitter;
 
-    void beginBlock(const Text &s = "", bool indent = true)
+    void beginBlock(const Text &s = "", bool in_indent = true)
     {
         if (!s.empty())
             addLine(s);
         addLine("{");
-        if (indent)
+        if (in_indent)
             increaseIndent();
     }
     void endBlock(bool semicolon = false)
