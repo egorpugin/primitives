@@ -1,13 +1,18 @@
 #include <filesystem>
 #include <stdexcept>
 
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#else
+#include <sys/mman.h>
+#endif
 
 namespace primitives::templates2 {
 
 namespace fs = std::filesystem;
 
+#ifdef _WIN32
 struct handle {
     HANDLE h{INVALID_HANDLE_VALUE};
     handle() = default;
@@ -34,13 +39,18 @@ struct handle {
     }
     operator HANDLE() const { return h; }
 };
+#endif
 
 template <typename T = char>
 struct mmap_file {
     using size_type = uint64_t;
 
+#ifdef _WIN32
     handle f;
     handle m;
+#else
+    int fd;
+#endif
     T *p{nullptr};
     size_type sz;
 
@@ -49,6 +59,7 @@ struct mmap_file {
         if (sz == 0) {
             return;
         }
+#ifdef _WIN32
         f = handle{CreateFileW(fn.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0),
             [&]{ throw std::runtime_error{"cannot open file: " + fn.string()}; }
         };
@@ -60,11 +71,26 @@ struct mmap_file {
         if (!p) {
             throw std::runtime_error{"cannot map file"};
         }
+#else
+        fd = open(fn.string().c_str(), O_RDONLY);
+        if (fd == -1) {
+            throw std::runtime_error{"cannot open file: " + fn.string()};
+        }
+        p = (char *)mmap(0, sz, PROT_READ, MAP_PRIVATE, fd, 0);
+        if (p == MAP_FAILED) {
+            close(fd);
+            throw std::runtime_error{"cannot create file mapping"};
+        }
+#endif
     }
     ~mmap_file() {
+#ifdef _WIN32
         if (p) {
             UnmapViewOfFile(p);
         }
+#else
+        close(fd);
+#endif
     }
     auto &operator[](int i) { return p[i]; }
     const auto &operator[](int i) const { return p[i]; }
