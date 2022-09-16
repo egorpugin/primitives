@@ -41,10 +41,10 @@ jobs:
         export PATH="/usr/local/opt/flex/bin:$PATH"
         export PATH="/usr/local/opt/bison/bin:$PATH"
         export PATH="/usr/local/opt/gcc/bin:$PATH"
-        ./sw build -compiler gcc-11
+        ./sw build -compiler gcc-12
     - name: test
       run: |
         export PATH="/usr/local/opt/flex/bin:$PATH"
         export PATH="/usr/local/opt/bison/bin:$PATH"
         export PATH="/usr/local/opt/gcc/bin:$PATH"
-        ./sw test -compiler gcc-11
+        ./sw test -compiler gcc-12
