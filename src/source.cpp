@@ -6,7 +6,7 @@
 
 #include <primitives/source.h>
 #include <primitives/yaml.h>
-#include <primitives/sw/main.h>
+//#include <primitives/sw/main.h>
 
 #include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
@@ -14,7 +14,7 @@
 #include <chrono>
 #include <iostream>
 
-#define CATCH_CONFIG_RUNNER
+//#define CATCH_CONFIG_RUNNER
 #include <catch2/catch_all.hpp>
 
 #define REQUIRE_TIME(e, t)                                                                       \
@@ -139,10 +139,4 @@ source:
         CHECK_THROWS(Hg("url", "", "", "", 1));
         CHECK_NOTHROW(Hg("https://url", "", "", "", 1));
     }
-}
-
-int main(int argc, char *argv[])
-{
-    auto r = Catch::Session().run(argc, argv);
-    return r;
 }

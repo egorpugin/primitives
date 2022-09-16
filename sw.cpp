@@ -547,7 +547,7 @@ void build(Solution &s)
     test_version += version;
 
     auto &test_source = add_test("source");
-    test_source += source, sw_main;
+    test_source += source;
 
     auto &test_patch = add_test("patch");
     test_patch += patch;
