@@ -34,7 +34,9 @@
 #endif
 
 #ifndef _WIN32
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE // for dladdr
+#endif
 #include <dlfcn.h>
 #endif
 
