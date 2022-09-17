@@ -381,7 +381,7 @@ void build(Solution &s)
     }
 
     ADD_LIBRARY_HEADER_ONLY(webdriver);
-    webdriver.Public += http,
+    webdriver.Public += http, templates2,
         "org.sw.demo.nlohmann.json"_dep;
 
     // experimental

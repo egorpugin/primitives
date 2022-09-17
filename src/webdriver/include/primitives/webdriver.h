@@ -7,7 +7,7 @@ deps:
 */
 
 #include <nlohmann/json.hpp>
-#include <primitives/timeout.h>
+#include <primitives/templates2/timeout.h>
 #include <primitives/http.h>
 #include <primitives/exceptions.h>
 
