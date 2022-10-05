@@ -275,8 +275,11 @@ StringSet class_names(std::map<path, File>::value_type &ff)
                 classes.insert(m[1]);
             continue;
         }
-        if (line.find(';') == -1 && std::regex_search(line, m, r_class))
-            classes.insert(m[4]);
+        if (line.find(';') == -1 && std::regex_search(line, m, r_class)) {
+            if (m[4].str() != "QQueue") {
+                classes.insert(m[4]);
+            }
+        }
         if (std::regex_search(line, m, r_typedef))
             classes.insert(m[1]);
         if (std::regex_search(line, m, r_require))
