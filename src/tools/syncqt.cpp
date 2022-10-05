@@ -276,7 +276,7 @@ StringSet class_names(std::map<path, File>::value_type &ff)
             continue;
         }
         if (line.find(';') == -1 && std::regex_search(line, m, r_class)) {
-            if (m[4].str() != "QQueue") {
+            if (1) {
                 classes.insert(m[4]);
             }
         }
@@ -383,8 +383,11 @@ int main(int argc, char *argv[])
             auto oheader = bdir / "include" / m;
             if (f.public_header)
             {
-                for (auto &c : classes)
-                    write_file(oheader / c, "#include \"" + fn + "\"\n");
+                for (auto &c : classes) {
+                    if (c != "Queue") {
+                        write_file(oheader / c, "#include \"" + fn + "\"\n");
+                    }
+                }
 
                 if (!f.no_master_include)
                 {
