@@ -116,6 +116,11 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
 
     curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
 
+#ifdef _WIN32
+    // curl bug with tls1.3 on win https://github.com/curl/curl/issues/9431
+    curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_MAX_TLSv1_2);
+#endif
+
     if (!request.cookie.empty())
         curl_easy_setopt(curl, CURLOPT_COOKIE, request.cookie.c_str());
     // enable the cookie engine
