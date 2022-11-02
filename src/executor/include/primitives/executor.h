@@ -443,7 +443,7 @@ public:
         std::unique_lock<std::mutex> lk(m_wait, std::try_to_lock);
         if (!lk.owns_lock())
         {
-            std::unique_lock<std::mutex> lk(m_wait);
+            std::unique_lock<std::mutex> lk_{m_wait};
             return;
         }
 
@@ -459,10 +459,10 @@ public:
                 if (run_again)
                 {
                     // finish everything
-                    for (auto &t : thread_pool)
+                    for (auto &tt : thread_pool)
                     {
                         Task ta;
-                        if (t.q.try_pop(ta, thread_pool[get_n()].busy))
+                        if (tt.q.try_pop(ta, thread_pool[get_n()].busy))
                             run_task(get_n(), ta);
                     }
                 }

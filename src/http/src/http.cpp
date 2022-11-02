@@ -704,7 +704,7 @@ String url_encode(const String &src)
     std::string result;
     for (auto &c : src)
     {
-        if (isalnum(c))
+        if (c > 0 && c < 128 && isalnum(c))
         {
             result.append(1, c);
             continue;

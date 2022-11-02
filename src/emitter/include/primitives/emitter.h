@@ -56,7 +56,7 @@ struct Line
 
     Line() = default;
     Line(const Text &t, int n = 0)
-        : text(t), n_indents(n)
+        : n_indents(n), text(t)
     {
     }
     virtual ~Line(){}
