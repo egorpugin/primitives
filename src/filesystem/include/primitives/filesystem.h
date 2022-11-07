@@ -236,7 +236,8 @@ inline void create(const path &p)
 
 } // namespace primitives::filesystem
 
-#if defined(_MSC_VER) && _MSC_VER < 1932 || defined(__APPLE__) && !defined(__GLIBCXX__) || defined(__GLIBCXX__) && __GLIBCXX__ < 20220421 // __GLIBCXX__ < 11.3
+// was __GLIBCXX__ < 20220421 // __GLIBCXX__ < 11.3 but seems it was fedora patches
+#if defined(_MSC_VER) && _MSC_VER < 1932 || defined(__APPLE__) && !defined(__GLIBCXX__) || defined(__GLIBCXX__) && __GLIBCXX__ <= 20220421 // __GLIBCXX__ <= 11.3
 namespace std
 {
     template<> struct hash<path>
