@@ -449,7 +449,7 @@ void Option::setArgStr(StringRef S) {
   if (FullyInitialized)
     GlobalParser.updateArgStr(this, S);
   assert((S.empty() || S[0] != '-') && "Option can't start with '-");
-  ArgStr = S;
+  ArgStr = S.str();
 }
 
 // Initialise the general option category.
@@ -587,7 +587,7 @@ static Option *LookupNearestOption(StringRef Arg,
         Best = O;
         BestDistance = Distance;
         if (RHS.empty() || !PermitValue)
-          NearestString = Name;
+          NearestString = Name.str();
         else
           NearestString = (Twine(Name) + "=" + RHS).str();
       }
@@ -1219,7 +1219,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   argc = static_cast<int>(newArgv.size());
 
   // Copy the program name into ProgName, making sure not to overflow it.
-  ProgramName = sys::path::filename(StringRef(argv[0]));
+  ProgramName = sys::path::filename(StringRef(argv[0])).str();
 
   ProgramOverview = Overview;
   bool IgnoreErrors = Errs;
