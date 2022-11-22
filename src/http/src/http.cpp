@@ -148,7 +148,12 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
     if (!request.upload_file.empty()) {
         wp->upload_file = primitives::filesystem::fopen(request.upload_file);
         curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-        curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)fs::file_size(request.upload_file));
+        auto sz = (curl_off_t)fs::file_size(request.upload_file);
+        if (sz < 2 * (1LL << 30)) {
+            //curl_easy_setopt(curl, CURLOPT_INFILESIZE, sz);
+        } else {
+            //curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, sz);
+        }
         curl_easy_setopt(curl, CURLOPT_READDATA, wp->upload_file);
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, read_callback);
     }
