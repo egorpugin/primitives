@@ -423,6 +423,15 @@ inline void write_file(const path &p, const std::vector<uint8_t> &s)
     write_file1(p, s.data(), s.size(), "wb");
 }
 
+inline void write_file(const path &p, const std::span<uint8_t> &s) {
+    auto pp = p.parent_path();
+    if (!pp.empty())
+        fs::create_directories(pp);
+
+    ScopedFile f(p, "wb");
+    fwrite(s.data(), s.size(), 1, f.getHandle());
+}
+
 inline void write_file_if_different(const path &p, const String &s)
 {
     if (fs::exists(p))
