@@ -21,6 +21,7 @@
 #include <iostream>
 #include <mutex>
 #include <regex>
+#include <span>
 
 #ifdef _WIN32
 #include <Windows.h>
