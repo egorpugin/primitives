@@ -133,7 +133,28 @@ void Command::push_back(const Arguments &in)
 
 void Command::setProgram(const path &p)
 {
+#ifdef _WIN32
+    static const bool is_4nt_shell = []() {
+        auto has_str = [](auto &&env) {
+            if (auto v = getenv(env)) {
+                String s = v;
+                boost::to_lower(s);
+                return s.contains("4nt.exe");
+            }
+            return false;
+        };
+        return has_str("SHELL") || has_str("ComSpec");
+    }();
+
+    path np;
+    if (is_4nt_shell) {
+        np = normalize_path_windows(p);
+    } else {
+        np = normalize_path(p);
+    }
+#else
     auto np = normalize_path(p);
+#endif
     if (program_set)
     {
         getArguments()[0] = std::make_unique<command::SimpleArgument>(np);
