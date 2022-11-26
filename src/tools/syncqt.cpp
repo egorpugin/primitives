@@ -145,7 +145,9 @@ const StringMap<path> module_dirs {
     {"QtWinExtras" , "src/winextras"},
     {"QtX11Extras" , "src/x11extras"},
     {"QtXmlPatterns" , "src/xmlpatterns"},
-    {"QtCore5Compat" , "src/core5"},
+
+    {"QtCore5Compat", "src/core5"},
+    {"QtQmlIntegration", "src/qmlintegration"},
 };
 
 const StringMap<String> moduleheaders {
