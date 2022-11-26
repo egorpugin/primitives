@@ -416,7 +416,8 @@ void UvCommand::clean() noexcept
 void UvCommand::on_exit(uv_process_t *child_req, int64_t exit_status, int term_signal)
 {
     auto c = (UvCommand*)(child_req->data);
-    c->c.exit_code = exit_status;
+    // ignore SIGINT,SIGTERM?
+    c->c.exit_code = term_signal ? term_signal : exit_status;
     c->c.onEnd();
     uv_close((uv_handle_t*)child_req, 0);
 }
