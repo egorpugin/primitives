@@ -188,15 +188,21 @@ inline FILE *fopen(const path &p, const char *mode = "rb")
 
 static String errno2str(int e)
 {
-    char buf[1024];
+    char buf[1024] = {0};
 #if defined(__MINGW32__)
     strerror_s(buf, sizeof(buf), e);
+    return String(buf);
 #elif defined(_WIN32)
     strerror_s(buf, e);
-#else
-    strerror_r(e, buf, sizeof(buf));
-#endif
     return String(buf);
+#else
+    auto x = strerror_r(e, buf, sizeof(buf));
+    if constexpr (std::same_as<decltype(x), int>) {
+        return String(buf);
+    } else {
+        return String(x);
+    }
+#endif
 }
 
 static String errno2str()
