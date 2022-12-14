@@ -5,6 +5,81 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 class debugging_symbols : boost::noncopyable {
+#if BOOST_VERSION > 108000
+    static void try_init_com(boost::stacktrace::detail::com_holder<::IDebugSymbols>& idebug) BOOST_NOEXCEPT {
+        boost::stacktrace::detail::com_holder<::IDebugClient> iclient;
+        if (S_OK != ::DebugCreate(__uuidof(IDebugClient), iclient.to_void_ptr_ptr())) {
+            return;
+        }
+
+        boost::stacktrace::detail::com_holder< ::IDebugControl> icontrol;
+        const bool res0 = (S_OK == iclient->QueryInterface(
+            __uuidof(IDebugControl),
+            icontrol.to_void_ptr_ptr()
+        ));
+        if (!res0) {
+            return;
+        }
+
+        const bool res1 = (S_OK == iclient->AttachProcess(
+            0,
+            ::GetCurrentProcessId(),
+            DEBUG_ATTACH_NONINVASIVE | DEBUG_ATTACH_NONINVASIVE_NO_SUSPEND
+        ));
+        if (!res1) {
+            return;
+        }
+
+        if (S_OK != icontrol->WaitForEvent(DEBUG_WAIT_DEFAULT, INFINITE)) {
+            return;
+        }
+
+        // No cheking: QueryInterface sets the output parameter to NULL in case of error.
+        iclient->QueryInterface(__uuidof(IDebugSymbols), idebug.to_void_ptr_ptr());
+    }
+
+#ifndef BOOST_STACKTRACE_USE_WINDBG_CACHED
+
+    boost::stacktrace::detail::com_holder<::IDebugSymbols> idebug_;
+public:
+    debugging_symbols() BOOST_NOEXCEPT {
+        try_init_com(idebug_);
+
+        if (gSymbolPath.empty())
+            return;
+
+        // maybe AppendSymbolPath?
+        bool res = (S_OK == idebug_->SetSymbolPath(gSymbolPath.c_str()));
+        if (!res)
+            printf("cannot set symbol path\n");
+    }
+
+#else
+
+#ifdef BOOST_NO_CXX11_THREAD_LOCAL
+#   error Your compiler does not support C++11 thread_local storage. It`s impossible to build with BOOST_STACKTRACE_USE_WINDBG_CACHED.
+#endif
+
+    static com_holder< ::IDebugSymbols>& get_thread_local_debug_inst() BOOST_NOEXCEPT {
+        // [class.mfct]: A static local variable or local type in a member function always refers to the same entity, whether
+        // or not the member function is inline.
+        static thread_local com_holder< ::IDebugSymbols> idebug;
+
+        if (!idebug.is_inited()) {
+            try_init_com(idebug);
+        }
+
+        return idebug;
+    }
+
+    com_holder< ::IDebugSymbols>& idebug_;
+public:
+    debugging_symbols() BOOST_NOEXCEPT
+        : idebug_( get_thread_local_debug_inst() )
+    {}
+
+#endif // #ifndef BOOST_STACKTRACE_USE_WINDBG_CACHED
+#else // #if BOOST_VERSION > 108000
     static void try_init_com(boost::stacktrace::detail::com_holder< ::IDebugSymbols>& idebug,
         const boost::stacktrace::detail::com_global_initer& com) BOOST_NOEXCEPT {
         boost::stacktrace::detail::com_holder< ::IDebugClient> iclient(com);
@@ -84,6 +159,7 @@ public:
     {}
 
 #endif // #ifndef BOOST_STACKTRACE_USE_WINDBG_CACHED
+#endif // #if BOOST_VERSION > 108000
 
     bool is_inited() const BOOST_NOEXCEPT {
         return idebug_.is_inited();
