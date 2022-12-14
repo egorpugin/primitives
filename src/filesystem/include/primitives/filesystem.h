@@ -186,7 +186,7 @@ inline FILE *fopen(const path &p, const char *mode = "rb")
 #endif
 }
 
-static String errno2str(int e)
+static String errno2str(auto e)
 {
     char buf[1024] = {0};
 #if defined(__MINGW32__)
