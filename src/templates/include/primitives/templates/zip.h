@@ -8,8 +8,9 @@ namespace primitives::templates {
 
 template <typename... T>
 struct zip_helper {
-    struct iterator : std::iterator<std::forward_iterator_tag, std::tuple<decltype(*std::declval<T>().begin())...>> {
+    struct iterator {
     private:
+        using value_type = std::tuple<decltype(*std::declval<T>().begin())...>;
         std::tuple<decltype(std::declval<T>().begin())...> iters_;
 
         template <std::size_t... I>
