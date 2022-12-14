@@ -38,7 +38,28 @@ int main(int argc, char *argv[]) {
         if (0) {
         } else if (regex_match(s, m, r_input) || regex_match(s, m, r_include)) {
             auto fn = m[1].str();
-            auto lines2 = split_lines(read_file(fn), true);
+            string f;
+            try {
+                f = read_file(fn);
+            } catch (std::exception &) {
+                auto i = getenv("INCLUDE");
+                if (!i) {
+                    throw;
+                }
+                auto includes = split_string(i, ":", false);
+                for (path i : includes) {
+                    try {
+                        f = read_file(i / fn);
+                        fn = i / fn;
+                        break;
+                    } catch (std::exception &) {
+                    }
+                }
+                if (f.empty()) {
+                    throw;
+                }
+            }
+            auto lines2 = split_lines(f, true);
             s = "%" + s;
             it = lines.insert(it, lines2.begin(), lines2.end());
             dfile << " " << fn;
