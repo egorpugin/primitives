@@ -60,6 +60,8 @@ struct HttpRequest : public HttpSettings
     String cookie; // single string
     path upload_file;
     std::unordered_map<String, mime_data> form_data;
+    std::vector<std::pair<String, mime_data>> form_data_vec;
+    std::vector<String> headers;
     bool follow_redirects = true;
 
     HttpRequest(const HttpSettings &parent)
@@ -82,6 +84,21 @@ struct HttpResponse
     }
     ~HttpResponse() {
         curl_easy_cleanup(curl);
+    }
+
+    auto get_cookies() const {
+        std::map<String,String> cookies_;
+        struct curl_slist *cookies;
+        curl_easy_getinfo(curl, CURLINFO_COOKIELIST, &cookies);
+        for (auto p = cookies; p; p = p->next) {
+            auto desc = split_string(p->data, "\t", true);
+            if (desc.size() >= 7) {
+                cookies_[desc[5]] = desc[6];
+                break;
+            }
+        }
+        curl_slist_free_all(cookies);
+        return cookies_;
     }
 };
 

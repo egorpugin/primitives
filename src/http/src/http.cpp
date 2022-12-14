@@ -107,12 +107,27 @@ struct CurlWrapper
 static size_t read_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
   return fread(ptr, size, nmemb, (FILE *)userdata);
 }
+static int seek_callback(void *userp, curl_off_t offset, int origin) {
+    int a = 5;
+    a++;
+    return CURL_SEEKFUNC_OK;
+}
+static curlioerr ioctl_callback(CURL *handle, int cmd, void *clientp) {
+    int a = 5;
+    a++;
+    return CURLIOE_OK;
+}
 
 static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &request)
 {
     auto wp = std::make_unique<CurlWrapper>();
     auto &w = *wp;
     auto curl = w.curl;
+
+    /*curl_easy_setopt(curl, CURLOPT_SEEKFUNCTION, seek_callback);
+    curl_easy_setopt(curl, CURLOPT_SEEKDATA, 0);
+    curl_easy_setopt(curl, CURLOPT_IOCTLFUNCTION, ioctl_callback);
+    curl_easy_setopt(curl, CURLOPT_IOCTLDATA, 0);*/
 
     curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
 
@@ -185,9 +200,11 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
 
     // headers
     auto ct = "Content-Type: " + request.content_type;
-    if (!request.content_type.empty())
-    {
+    if (!request.content_type.empty()) {
         w.headers = curl_slist_append(w.headers, ct.c_str());
+    }
+    for (auto &&h : request.headers) {
+        w.headers = curl_slist_append(w.headers, h.c_str());
     }
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, w.headers);
 
@@ -195,10 +212,8 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
     switch (request.type)
     {
     case HttpRequest::Post:
-        if (!request.data_kv.empty())
-        {
-            for (auto &a : request.data_kv)
-            {
+        if (!request.data_kv.empty()) {
+            for (auto &a : request.data_kv) {
                 w.escaped_strings.push_back(curl_easy_escape(curl, a.first.c_str(), (int)a.first.size()));
                 w.post_data += w.escaped_strings.back() + std::string("=");
                 w.escaped_strings.push_back(curl_easy_escape(curl, a.second.c_str(), (int)a.second.size()));
@@ -207,23 +222,24 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
             w.post_data.resize(w.post_data.size() - 1);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, w.post_data.c_str());
             curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)w.post_data.size());
-        }
-        else if (!request.form_data.empty()) {
+        } else if (!request.form_data.empty() || !request.form_data_vec.empty()) {
             wp->form = curl_mime_init(curl);
-            for (auto &&[n,v] : request.form_data) {
-                auto field = curl_mime_addpart(wp->form);
-                curl_mime_name(field, n.c_str());
-                if (!v.data.empty())
-                    curl_mime_data(field, v.data.c_str(), CURL_ZERO_TERMINATED);
-                if (!v.filename.empty())
-                    curl_mime_filedata(field, v.filename.c_str());
-                if (!v.type.empty())
-                    curl_mime_type(field, v.type.c_str());
-            }
+            auto add = [&](auto &&v) {
+                for (auto &&[n,v] : v) {
+                    auto field = curl_mime_addpart(wp->form);
+                    curl_mime_name(field, n.c_str());
+                    if (!v.filename.empty())
+                        curl_mime_filedata(field, v.filename.c_str());
+                    else if (!v.type.empty())
+                        curl_mime_type(field, v.type.c_str());
+                    else
+                        curl_mime_data(field, v.data.c_str(), CURL_ZERO_TERMINATED);
+                }
+            };
+            add(request.form_data);
+            add(request.form_data_vec);
             curl_easy_setopt(curl, CURLOPT_MIMEPOST, wp->form);
-        }
-        else
-        {
+        } else {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.data.c_str());
         }
         break;
