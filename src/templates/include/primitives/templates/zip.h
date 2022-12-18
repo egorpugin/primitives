@@ -38,8 +38,10 @@ struct zip_helper {
             return saved;
         }
 
-        bool operator!=(const iterator &other) const {
-            return iters_ != other.iters_;
+        bool operator==(const iterator &other) const {
+            return [&]<auto ... Idx>(std::index_sequence<Idx...>) {
+                return (0 || ... || (std::get<Idx>(iters_) == std::get<Idx>(other.iters_)));
+            }(std::make_index_sequence<sizeof...(T)>{});
         }
 
         auto operator*() const {
