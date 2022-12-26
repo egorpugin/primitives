@@ -37,7 +37,7 @@ inline auto make_default_dialog(const String &title) {
     return d;
 }
 
-std::unique_ptr<Wt::WDialog> make_default_dialog(const String &title, std::unique_ptr<Wt::WWidget> w){
+std::unique_ptr<Wt::WDialog> make_default_dialog(const String &title, std::unique_ptr<Wt::WWidget> in_w) {
     using namespace primitives::wt::html;
 
     auto d = make_default_dialog(title);
