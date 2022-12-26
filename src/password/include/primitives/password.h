@@ -24,7 +24,7 @@ inline salt generate_salt(int len) {
     return primitives::hash::generate_strong_random_bytes(len);
 }
 
-password_hash generate_password(const String &in_password, const salt &salt, int password_len_bytes = 100) {
+inline password_hash generate_password(const String &in_password, const salt &salt, int password_len_bytes = 100) {
     static const auto N = 16384;
     static const auto r = 8;
     static const auto p = 2;
@@ -47,7 +47,7 @@ inline bool check_password(const String &password_entered, const password_hash &
     return generate_password(password_entered, salt) == phash;
 }
 
-std::tuple<bool, std::string> is_valid_password(const String &p){
+inline std::tuple<bool, std::string> is_valid_password(const String &p){
     if (p.size() < 8)
         return { false, "Minimum password length is 8 symbols" };
     int lower = 0;

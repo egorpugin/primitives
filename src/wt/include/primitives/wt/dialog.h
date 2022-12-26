@@ -37,7 +37,7 @@ inline auto make_default_dialog(const String &title) {
     return d;
 }
 
-std::unique_ptr<Wt::WDialog> make_default_dialog(const String &title, std::unique_ptr<Wt::WWidget> in_w) {
+inline std::unique_ptr<Wt::WDialog> make_default_dialog(const String &title, std::unique_ptr<Wt::WWidget> in_w) {
     using namespace primitives::wt::html;
 
     auto d = make_default_dialog(title);
@@ -72,7 +72,7 @@ inline auto showDialog(std::unique_ptr<Wt::WWidget> w) {
     return showDialog({}, std::move(w));
 }
 
-void showDialog(const String &title, const String &text, std::function<void(void)> f = {})
+inline void showDialog(const String &title, const String &text, std::function<void(void)> f = {})
 {
     auto d = std::make_unique<Wt::WDialog>(title);
     auto c = d->contents();
@@ -105,26 +105,26 @@ static auto showDialogYesNo1(const String &title, const String &text, std::funct
     return std::tuple{ y,n };
 }
 
-void showDialogYesNo(const String &title, const String &text, std::function<void(void)> f = {})
+inline void showDialogYesNo(const String &title, const String &text, std::function<void(void)> f = {})
 {
     auto [y, n] = showDialogYesNo1(title, text, f);
     y->addStyleClass("btn-success");
     n->addStyleClass("btn-danger");
 }
 
-void showDialogNoYes(const String &title, const String &text, std::function<void(void)> f = {})
+inline void showDialogNoYes(const String &title, const String &text, std::function<void(void)> f = {})
 {
     auto [n, y] = showDialogYesNo1(title, text, f);
     y->addStyleClass("btn-success");
     n->addStyleClass("btn-danger");
 }
 
-void showError(const String &text, std::function<void(void)> f = {})
+inline void showError(const String &text, std::function<void(void)> f = {})
 {
     showDialog("Error", text, f);
 }
 
-void showSuccess(const String &text, std::function<void(void)> f = {})
+inline void showSuccess(const String &text, std::function<void(void)> f = {})
 {
     showDialog("Success", text, f);
 }
