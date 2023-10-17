@@ -398,7 +398,34 @@ void Git::download1(const path &dir) const
         if (tag.empty())
             throw SW_RUNTIME_ERROR("empty tag, but try_v_tag_prefix is specified");
         //LOG_INFO(logger, "git: tag '" + tag + "' download failed, trying with prefix: v" + tag);
-        download2(dir, "v" + tag);
+        try {
+            download2(dir, "v" + tag);
+            ((Git&)(*this)).tag = "v" + tag;
+            return;
+        } catch (...) {
+            // try {M}.{m}{po}
+            if (tag.ends_with(".0"))
+            {
+                auto newtag = tag;
+                newtag.resize(newtag.size() - 2);
+                try
+                {
+                    download2(dir, newtag);
+                    ((Git&)(*this)).tag = newtag;
+                    return;
+                }
+                catch (...)
+                {
+                    try {
+                        download2(dir, "v" + newtag);
+                        ((Git&)(*this)).tag = "v" + newtag;
+                        return;
+                    } catch (...) {
+                    }
+                }
+            }
+        }
+        throw;
     }
 }
 
