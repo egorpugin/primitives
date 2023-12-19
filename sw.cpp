@@ -252,6 +252,7 @@ void build(Solution &s)
         lock += "Advapi32.lib"_slib;
 
     ADD_LIBRARY_HEADER_ONLY(log);
+    log.Public += "org.sw.demo.boost.format"_dep;
     log.Public += "org.sw.demo.boost.log"_dep;
 
     ADD_LIBRARY_HEADER_ONLY(grpc_helpers);
