@@ -51,11 +51,12 @@ struct mmap_file {
     handle f;
     handle m;
 #else
-    int fd;
+    int fd{-1};
 #endif
-    T *p{nullptr};
-    size_type sz;
+    T *p{};
+    size_type sz{};
 
+    mmap_file() = default;
     mmap_file(const fs::path &fn) {
         sz = fs::file_size(fn);
         if (sz == 0) {

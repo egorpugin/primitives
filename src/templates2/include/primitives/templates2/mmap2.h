@@ -64,18 +64,18 @@ struct mmap_file {
     mmap_file(const fs::path &fn, rw v) : fn{fn} {
         open(v);
     }
-    void open(const fs::path &fn) {
+    T *open(const fs::path &fn) {
         this->fn = fn;
-        open(ro{});
+        return open(ro{});
     }
-    void open(const fs::path &fn, rw v) {
+    T *open(const fs::path &fn, auto v) {
         this->fn = fn;
-        open(v);
+        return open(v);
     }
-    void open(auto mode) {
+    T *open(auto mode) {
         sz = !fs::exists(fn) ? 0 : fs::file_size(fn) / sizeof(T);
         if (sz == 0) {
-            return;
+            return p;
         }
 #ifdef _WIN32
         f = win32::handle{CreateFileW(fn.wstring().c_str(), mode.access, mode.share_mode, 0, mode.disposition,
@@ -101,14 +101,17 @@ struct mmap_file {
             throw std::runtime_error{"cannot create file mapping"};
         }
 #endif
+        return p;
     }
     void close() {
 #ifdef _WIN32
         if (p) {
+            //WINAPI_CALL(FlushViewOfFile(p, sz));
             UnmapViewOfFile(p);
+            //WINAPI_CALL(FlushFileBuffers(f));
         }
-        f.reset();
         m.reset();
+        f.reset();
 #else
         ::close(fd);
 #endif
@@ -144,7 +147,9 @@ struct mmap_file {
         close();
         auto oldsz = this->sz;
         if (!fs::exists(fn)) {
-            fs::create_directories(fn.parent_path());
+            if (!fn.parent_path().empty()) {
+                fs::create_directories(fn.parent_path());
+            }
             std::ofstream{fn};
         }
         fs::resize_file(fn, sz);
@@ -155,7 +160,9 @@ struct mmap_file {
         close();
         auto oldsz = this->sz;
         if (!fs::exists(fn)) {
-            fs::create_directories(fn.parent_path());
+            if (!fn.parent_path().empty()) {
+                fs::create_directories(fn.parent_path());
+            }
             std::ofstream{fn};
         }
         fs::resize_file(fn, oldsz ? this->sz * 2 + sz : sz * 2);
