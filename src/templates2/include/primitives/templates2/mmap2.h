@@ -5,6 +5,7 @@
 
 #include "win32.h"
 
+#include <fstream>
 #include <string.h>
 
 #ifdef _WIN32
@@ -16,7 +17,9 @@
 
 namespace primitives::templates2 {
 
+#ifdef _WIN32
 namespace win32 = ::win32;
+#endif
 
 template <typename T = uint8_t>
 struct mmap_file {
@@ -63,6 +66,9 @@ struct mmap_file {
     }
     mmap_file(const fs::path &fn, rw v) : fn{fn} {
         open(v);
+    }
+    T *open() {
+        return open(ro{});
     }
     T *open(const fs::path &fn) {
         this->fn = fn;
