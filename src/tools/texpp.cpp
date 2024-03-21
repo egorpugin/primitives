@@ -7,7 +7,12 @@ deps:
 
 #include <primitives/hash.h>
 #include <primitives/sw/main.h>
+#ifdef __clang__
+#include <fstream>
+#include <regex>
+#else
 #include <bits/stdc++.h>
+#endif
 using namespace std;
 
 size_t find_closing_curly_bracket(auto &&s) {
