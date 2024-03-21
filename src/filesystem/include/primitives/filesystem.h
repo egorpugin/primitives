@@ -467,10 +467,18 @@ inline void append_file(const path &p, const String &s)
     write_file1(p, s.data(), s.size(), "ab");
 }
 
-inline Strings read_lines(const path &p)
-{
+inline Strings read_lines(const path &p) {
     auto s = read_file(p);
     return split_lines(s);
+}
+
+inline void write_lines(const path &p, auto &&lines)
+{
+    std::string t;
+    for (auto &&s : lines) {
+        t += s + "\n"s;
+    }
+    write_file(p, t);
 }
 
 inline void remove_all_from_dir(const path &dir)
