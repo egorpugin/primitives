@@ -145,7 +145,7 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
     if (!request.username.empty())
         curl_easy_setopt(curl, CURLOPT_USERNAME, request.username.c_str());
     if (!request.password.empty())
-        curl_easy_setopt(curl, CURLOPT_USERPWD, request.password.c_str());
+        curl_easy_setopt(curl, CURLOPT_PASSWORD, request.password.c_str());
 
     if (request.follow_redirects)
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
