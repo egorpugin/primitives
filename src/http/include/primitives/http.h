@@ -78,9 +78,13 @@ struct HttpResponse
     HttpResponse() = default;
     HttpResponse(const HttpResponse &) = delete;
     HttpResponse(HttpResponse &&rhs) {
+        operator=(std::move(rhs));
+    }
+    HttpResponse &operator=(HttpResponse &&rhs) {
         http_code = rhs.http_code;
         response = std::move(rhs.response);
         std::swap(curl, rhs.curl);
+        return *this;
     }
     ~HttpResponse() {
         curl_easy_cleanup(curl);
