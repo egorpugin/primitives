@@ -6,7 +6,7 @@
 
 template<typename ... Ts>
 struct overload : Ts... {
-    overload(Ts ... ts) : Ts(FWD(ts))... {}
+    overload(Ts && ... ts) : Ts(FWD(ts))... {}
     using Ts::operator()...;
 };
 //template<class... Ts> overload(Ts...) -> overload<Ts...>;
