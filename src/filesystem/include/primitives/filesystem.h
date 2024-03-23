@@ -244,7 +244,10 @@ inline void create(const path &p)
 } // namespace primitives::filesystem
 
 // was __GLIBCXX__ < 20220421 // __GLIBCXX__ < 11.3 but seems it was fedora patches
-#if defined(_MSC_VER) && _MSC_VER < 1932 || defined(__APPLE__) && !defined(__GLIBCXX__) || defined(__GLIBCXX__) && __GLIBCXX__ <= 20220421 // __GLIBCXX__ <= 11.3
+#if 0 \
+    || defined(_MSC_VER) && _MSC_VER < 1932 \
+    || defined(__APPLE__) && !defined(__GLIBCXX__) && defined(_LIBCPP_VERSION) && _LIBCPP_VERSION < 170000 \
+    || defined(__GLIBCXX__) && __GLIBCXX__ <= 20220421 // __GLIBCXX__ <= 11.3
 namespace std
 {
     template<> struct hash<path>
