@@ -248,6 +248,10 @@ struct sqlitemgr {
     auto prepared_insert() {
         return ps<T, Options...>{this};
     }
+    template <typename T, auto... Options>
+    auto prepared_insert_or_ignore() {
+        return prepared_insert<T, db::or_ignore{}, Options...>();
+    }
 
     template <typename T>
     struct sel {
