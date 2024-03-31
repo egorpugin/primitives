@@ -263,6 +263,7 @@ static int startup(int argc, char *argv[])
 #endif
 
 #if defined(_WIN32) && !defined(__MINGW32__)
+    //SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
