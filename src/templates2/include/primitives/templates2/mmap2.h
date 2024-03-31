@@ -79,7 +79,13 @@ struct mmap_file {
         return open(v);
     }
     T *open(auto mode) {
-        sz = !fs::exists(fn) ? 0 : fs::file_size(fn) / sizeof(T);
+        auto ex = fs::exists(fn);
+        if constexpr (std::same_as<decltype(mode),ro>) {
+            if (!ex) {
+                throw std::runtime_error{"file does not exist: "s + fn.string()};
+            }
+        }
+        sz = !ex ? 0 : fs::file_size(fn) / sizeof(T);
         if (sz == 0) {
             return p;
         }
