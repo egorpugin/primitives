@@ -39,7 +39,6 @@ inline Strings split_string(const String &s, const String &delims, bool allow_em
     }
     return lines;
 }
-
 inline Strings split_string(const String &s, const String &delims) {
     return split_string(s, delims, false);
 }
@@ -47,7 +46,6 @@ inline Strings split_string(const String &s, const String &delims) {
 inline Strings split_lines(const String &s, bool allow_empty) {
     return split_string(s, "\r\n", allow_empty);
 }
-
 inline Strings split_lines(const String &s) {
     return split_lines(s, false);
 }
