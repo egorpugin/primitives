@@ -23,9 +23,14 @@ struct or_ignore {};
 
 struct timestamp {
     struct db_type;
-    using value_type = int64_t;
+    using value_type = std::string;
 
     value_type value;
+
+    timestamp &operator=(auto &&v) {
+        value = v;
+        return *this;
+    }
 };
 
 template <typename T, auto... Attributes>
@@ -95,7 +100,7 @@ template <auto Field, auto... Attributes>
 struct foreign_key : foreign_key_base, type<decltype(get_foreign_field_type(Field)), Attributes...> {
     using Table = decltype(get_table_type(Field));
     using type_base_ = type<decltype(get_foreign_field_type(Field)), Attributes...>;
-    using table_name = typename Table;
+    using table_name = Table;
     //using value_type = type_base_::value_type;
 
     foreign_key() = default;
@@ -186,8 +191,8 @@ struct pgmgr {
                                 query +=
                                     std::format("  FOREIGN KEY(\"{}\") REFERENCES \"{}\"(\"{}\")"
                                         , boost::pfr::get_name<I, T>()
-                                        , type_name<type::table_name>()
-                                        , boost::pfr::get_name<I2, type::table_name>()
+                                        , type_name<typename type::table_name>()
+                                        , boost::pfr::get_name<I2, typename type::table_name>()
                                     );
                             }
                         });
@@ -203,12 +208,12 @@ struct pgmgr {
         query += ";";
         tx.exec(query);
     }
-    template <typename T>
+    /*template <typename T>
     void create_table() {
         pqxx::work tx{c};
         create_table(tx);
         tx.commit();
-    }
+    }*/
 
     template <auto I>
     struct field_id {};
@@ -297,7 +302,6 @@ struct pgmgr {
     static auto row_to_type(const pqxx::row &r) {
         T v;
         boost::pfr::for_each_field(v, [&]<auto I>(auto &&field, std::integral_constant<size_t, I>) {
-            using T = std::decay_t<decltype(field)>;
             if constexpr (requires { field.value.value; }) {
                 r[I].to(field.value.value);
                 throw std::logic_error{"????? fix me"};
@@ -310,6 +314,62 @@ struct pgmgr {
         return v;
     }
 
+    template <typename T>
+    auto insert(pqxx::work &tx, const T &v) {
+        std::string query;
+        query += std::format("insert into \"{}\" (", type_name<T>());
+        boost::pfr::for_each_field(v, [&]<auto I>(auto &&field, std::integral_constant<size_t, I>) {
+            bool has_inc{};
+            if constexpr (requires {
+                              field.for_attributes([] {
+                              });
+                          }) {
+                field.for_attributes(overload{[&](db::autoincrement) {
+                    has_inc = true;
+                                              },
+                                              [&](auto) {
+                                              }});
+            }
+            if (!has_inc) {
+                query += std::format("\"{}\",", boost::pfr::get_name<I, T>());
+            }
+        });
+        query.resize(query.size() - 1);
+        query += ") values (";
+        boost::pfr::for_each_field(v, [&]<auto I>(auto &&field, std::integral_constant<size_t, I>) {
+            bool has_inc{};
+            if constexpr (requires {
+                              field.for_attributes([] {
+                              });
+                          }) {
+                field.for_attributes(overload{[&](db::autoincrement) {
+                                                  has_inc = true;
+                                              },
+                                              [&](auto) {
+                                              }});
+            }
+            if (!has_inc) {
+                if constexpr (requires { field.value; }) {
+                    query += std::format("'{}',", tx.conn().esc(std::format("{}", field.value)));
+                } else {
+                    query += std::format("'{}',", tx.conn().esc(std::format("{}", field)));
+                }
+            }
+        });
+        query.resize(query.size() - 1);
+        query += ") returning *";
+        auto r = tx.exec1(query);
+        tx.query_value();
+        return row_to_type<T>(r);
+    }
+
+    template <typename T>
+    auto insert(const T &v) {
+        pqxx::work tx{c};
+        auto r = insert(tx, v);
+        tx.commit();
+        return r;
+    }
     template <auto Field, auto... Fields, typename ... Types>
     auto insert(pqxx::work &tx, Types &&...values) {
         std::string query;
@@ -339,6 +399,21 @@ struct pgmgr {
     template <typename T>
     void insert(T &&value) {
     }
+
+    template <auto Field, auto... Fields, typename... Types>
+    auto delete_from(pqxx::work &tx, Types &&...values) {
+        std::string query;
+        query += std::format("delete from \"{}\" where ", db::get_table_name(Field));
+        query += std::format("\"{}\" = $1", db::get_field_name(Field));
+        tx.exec_params(query, values...);
+    }
+    template <auto Field, auto... Fields, typename... Types>
+    auto delete_from(Types &&...values) {
+        pqxx::work tx{c};
+        delete_from<Field, Fields...>(tx, values...);
+        tx.commit();
+    }
+
     struct sc_tr {
         this_type *mgr;
         sc_tr(auto *mgr) : mgr{mgr} {
@@ -385,6 +460,7 @@ struct pgmgr {
 
             iterator(auto *mgr, auto &&query) : mgr{mgr}, tx{mgr->c} {
                 r = tx.exec(query);
+                tx.commit();
                 iter = r.begin();
             }
             auto &operator*() const {
@@ -412,11 +488,20 @@ struct pgmgr {
         }
         template <auto byfield>
         auto order_by() {
-            query += std::format(" order by \"{}\"", get_field_name(byfield));
+            query += std::format(" order by \"{}\"", db::get_field_name(byfield));
             return *this;
         }
         auto order_by(auto byfield) {
-            query += std::format(" order by \"{}\"", get_field_name(byfield));
+            query += std::format(" order by \"{}\"", db::get_field_name(byfield));
+            return *this;
+        }
+        auto desc() {
+            query += std::format(" desc");
+            return *this;
+        }
+        template <auto byfield>
+        auto where(auto &&value) {
+            query += std::format(" where \"{}\" = '{}'", db::get_field_name(byfield), mgr->c.esc(std::format("{}", value)));
             return *this;
         }
         auto where(const std::string &text) {
@@ -455,7 +540,7 @@ struct pgmgr {
             query += std::format("\"{}\" = ?", db::get_field_name(ptr));
         }(Fields);*/
         auto r = tx.exec_params1(query, vals...);
-        return r[0].as<int>();
+        return r[0].template as<int>();
     }
     template <auto Field, auto... Fields, typename... FieldTypes>
     auto count(FieldTypes &&...vals) {
@@ -500,6 +585,9 @@ struct pgmgr {
 private:
     template <typename Intype>
     static auto pg_type() {
+        if constexpr (std::is_same_v<Intype, db::timestamp>) {
+            return "timestamp"sv;
+        }
         constexpr auto get_real_type = [&](){
             if constexpr (requires {typename Intype::db_type;}) {
                 return typename Intype::value_type{};
@@ -539,8 +627,6 @@ private:
             return "float8"sv;
         } else if constexpr (std::is_same_v<T, std::string>) {
             return "varchar"sv;
-        } else if constexpr (std::is_same_v<T, db::timestamp>) {
-            return "timestamp"sv;
         } else if constexpr (std::is_same_v<T, bool>) {
             return "bool"sv;
         } else {
