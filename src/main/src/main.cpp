@@ -12,15 +12,35 @@
 
 static int error = 1;
 bool gPauseOnError;
+bool gPauseOnExit;
+static bool stopped;
 
 void exit_handler()
 {
     if (error == 0)
+    {
+        if (gPauseOnExit && !stopped)
+        {
+            std::cout << "Stopped on exit as you asked. Press any key to continue...";
+            getchar();
+            stopped = true;
+        }
         return;
+    }
+    if (gPauseOnExit && !stopped)
+    {
+        std::cout << "Stopped on exit as you asked. Press any key to continue...";
+        getchar();
+        stopped = true;
+    }
     if (gPauseOnError)
     {
-        std::cout << "Stopped on error as you asked. Press any key to continue...";
-        getchar();
+        if (!stopped)
+        {
+            std::cout << "Stopped on error as you asked. Press any key to continue...";
+            getchar();
+            stopped = true;
+        }
     }
     else
         debug_break_if_debugger_attached();

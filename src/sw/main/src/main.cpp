@@ -37,6 +37,8 @@ static ::cl::opt<std::string, true> symbol_path("symbol-path", ::cl::desc("Set s
 static ::cl::opt<int> sleep_seconds("sleep", ::cl::desc("Sleep on startup"), ::cl::Hidden, ::cl::sub(::cl::getAllSubCommands()));
 extern bool gPauseOnError;
 static ::cl::opt<bool, true> pause_on_error("pause-on-error", ::cl::desc("Pause on program error"), ::cl::Hidden, ::cl::location(gPauseOnError), ::cl::sub(::cl::getAllSubCommands()));
+extern bool gPauseOnExit;
+static ::cl::opt<bool, true> pause_on_exit("pause-on-exit", ::cl::desc("Pause on program exit"), ::cl::Hidden, ::cl::location(gPauseOnExit), ::cl::sub(::cl::getAllSubCommands()));
 
 static path temp_directory_path(const path &subdir)
 {
