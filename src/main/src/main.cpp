@@ -17,22 +17,32 @@ static bool stopped;
 
 void exit_handler()
 {
-    if (error == 0)
-    {
-        if (gPauseOnExit && !stopped)
-        {
-            std::cout << "Stopped on exit as you asked. Press any key to continue...";
-            getchar();
+    auto poex = []() {
+        if (gPauseOnExit && !stopped) {
+            bool stop = true;
+#ifdef _WIN32
+            DWORD procId;
+            DWORD count = GetConsoleProcessList(&procId, 1);
+            if (count >= 2) {
+                stop = false;
+            }
+            if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+                stop = false;
+            }
+#endif
+            if (stop) {
+                std::cout << "Stopped on exit as you asked. Press any key to continue...";
+                getchar();
+            }
             stopped = true;
         }
+    };
+    if (error == 0)
+    {
+        poex();
         return;
     }
-    if (gPauseOnExit && !stopped)
-    {
-        std::cout << "Stopped on exit as you asked. Press any key to continue...";
-        getchar();
-        stopped = true;
-    }
+    poex();
     if (gPauseOnError)
     {
         if (!stopped)
