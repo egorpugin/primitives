@@ -300,7 +300,14 @@ void build(Solution &s)
     if (win32helpers.getBuildSettings().TargetOS.Type == OSType::Windows || win32helpers.getBuildSettings().TargetOS.Type == OSType::Mingw)
     {
         win32helpers.Public += "UNICODE"_d;
-        win32helpers += "Shell32.lib"_slib, "Ole32.lib"_slib, "Advapi32.lib"_slib, "user32.lib"_slib, "uuid.lib"_slib;
+        win32helpers +=
+            "Shell32.lib"_slib,
+            "Ole32.lib"_slib,
+            "Advapi32.lib"_slib,
+            "user32.lib"_slib,
+            "uuid.lib"_slib,
+            "OleAut32.lib"_slib
+            ;
     }
 
     ADD_LIBRARY_HEADER_ONLY_WITH_NAME(db_common, "db.common");

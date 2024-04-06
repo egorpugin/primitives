@@ -55,4 +55,17 @@ struct ServiceDescriptor
 PRIMITIVES_WIN32HELPERS_API
 _DWORD InstallService(ServiceDescriptor desc);
 
+struct VSInstanceInfo
+{
+  std::wstring InstanceId;
+  std::wstring VSInstallLocation;
+  std::wstring Version;
+  ULONGLONG ullVersion{};
+  bool IsWin10SDKInstalled{};
+  bool IsWin81SDKInstalled{};
+};
+
+PRIMITIVES_WIN32HELPERS_API
+std::vector<VSInstanceInfo> EnumerateVSInstances();
+
 #endif
