@@ -20,6 +20,7 @@ void Command::parse(const yaml &root)
         x.insert(x.end(), s.begin(), s.end());                                                                         \
     }
 
+    READ_OPT(varname);
     READ_OPT(option);
     READ_OPT(type);
     {
@@ -273,6 +274,7 @@ void CommandLine::parse(const yaml &root, const String &subcommand)
         Command c;
         c.owner = this;
         c.name = n;
+        c.varname = c.name;
         if (!subcommand.empty())
         {
             if (subcommand == all_subcommands_name)
@@ -319,7 +321,7 @@ void CommandLine::emitStruct(EmitterContext &ectx, const Settings &settings, con
     {
         if (c.isExternalOrLocation())
             continue;
-        ctx.addLine(c.getStructType() + " " + c.name + ";");
+        ctx.addLine(c.getStructType() + " " + c.varname + ";");
     }
     ctx.emptyLines();
 
@@ -343,7 +345,7 @@ void CommandLine::emitStruct(EmitterContext &ectx, const Settings &settings, con
         if (c.isExternalOrLocation())
             continue;
         //                                                  .getValue()?
-        ectx.c.addLine(c.name + "(cl_options." + c.getClName(settings) + "),");
+        ectx.c.addLine(c.varname + "(cl_options." + c.getClName(settings) + "),");
     }
     if (!subcommands.empty())
         ectx.c.addLine();

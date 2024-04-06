@@ -42,6 +42,7 @@ struct Command
     const CommandLine *owner = nullptr;
 
     String name;
+    String varname;
     String option; // rename to flag?
     std::optional<String> default_value; // rename to init?
     String type = "bool";
