@@ -144,7 +144,9 @@ struct Argument
 struct PRIMITIVES_COMMAND_API SimpleArgument : Argument
 {
     SimpleArgument() = default;
-    SimpleArgument(const String &s): a(s)
+    SimpleArgument(const char *s) : a(s) {
+    }
+    SimpleArgument(const String &s) : a(s)
     {
     }
     SimpleArgument(const path &p) : a(to_string(to_path_string(p)))
@@ -162,6 +164,8 @@ struct PRIMITIVES_COMMAND_API SimpleArgument : Argument
 
 private:
     String a;
+public:
+    bool affects_output{true};
 };
 
 struct PRIMITIVES_COMMAND_API SimplePositionalArgument : SimpleArgument
@@ -185,69 +189,55 @@ struct PRIMITIVES_COMMAND_API Arguments
     using const_iterator = Storage::const_iterator;
 
     Arguments() = default;
-    Arguments(const std::initializer_list<String> &l)
-    {
+    Arguments(const std::initializer_list<String> &l) {
         for (auto &e : l)
             push_back(e);
     }
-    Arguments(const Strings &l)
-    {
+    Arguments(const Strings &l) {
         for (auto &e : l)
             push_back(e);
     }
-
-    Arguments(const Arguments &rhs)
-    {
+    Arguments(const Files &l) {
+        for (auto &e : l)
+            push_back(e);
+    }
+    Arguments(const Arguments &rhs) {
         operator=(rhs);
     }
-    Arguments &operator=(const Arguments &rhs)
-    {
+    Arguments &operator=(const Arguments &rhs) {
         args.clear();
         for (auto &e : rhs)
             push_back(e->clone());
         return *this;
     }
 
-    void push_back(Element &&e)
-    {
+    template <typename A>
+    A &push_back(std::unique_ptr<A> e) {
+        auto p = e.get();
         args.push_back(std::move(e));
+        return *p;
     }
-    void push_back(const char *s)
-    {
-        push_back(String(s));
+    auto &push_back(auto &&arg) {
+        return push_back(std::make_unique<SimpleArgument>(FWD(arg)));
     }
-    void push_back(const String &s)
-    {
-        push_back(std::make_unique<SimpleArgument>(s));
-    }
-    void push_back(const path &p)
-    {
-        push_back(std::make_unique<SimpleArgument>(p));
-    }
-    void push_back(const Arguments &args2)
-    {
+    void push_back(const Arguments &args2) {
         for (auto &a : args2)
             push_back(a->clone());
     }
 
-    void push_front(Element &&e)
-    {
+    void push_front(Element &&e) {
         args.push_front(std::move(e));
     }
-    void push_front(const char *s)
-    {
+    void push_front(const char *s) {
         push_front(String(s));
     }
-    void push_front(const String &s)
-    {
+    void push_front(const String &s) {
         push_front(std::make_unique<SimpleArgument>(s));
     }
-    void push_front(const path &p)
-    {
+    void push_front(const path &p) {
         push_front(std::make_unique<SimpleArgument>(p));
     }
-    void push_front(const Arguments &args2)
-    {
+    void push_front(const Arguments &args2) {
         for (auto &a : args2)
             push_front(a->clone());
     }

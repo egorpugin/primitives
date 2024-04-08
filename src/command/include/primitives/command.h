@@ -19,6 +19,13 @@ namespace primitives
 struct Command;
 using Commands = std::unordered_set<Command*>;
 
+template <typename T> void push_back_arg(std::vector<T>);
+template <typename T> void push_back_arg(std::unordered_set<T>);
+template <typename T>
+concept Vector = requires { push_back_arg(std::decay_t<T>{}); };
+template <typename T>
+concept NotVector = !Vector<T>;
+
 // return value:
 //   1. throw if exit_code != 0
 //   2. no throw when ec is provided
@@ -105,11 +112,13 @@ public:
     String getError() const;
     Strings getErrors() const { return errors; }
 
-    void push_back(Arguments::Element);
-    void push_back(const char *);
-    void push_back(const String &);
-    void push_back(const path &);
-    void push_back(const Arguments &);
+    void push_back(const Arguments &in) {
+        arguments.push_back(in);
+    }
+    template <NotVector T>
+    auto &push_back(T &&arg) {
+        return arguments.push_back(FWD(arg));
+    }
 
     //void setInteractive(bool i);
 
