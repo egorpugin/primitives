@@ -217,7 +217,7 @@ struct PRIMITIVES_COMMAND_API Arguments
         args.push_back(std::move(e));
         return *p;
     }
-    auto &push_back(auto &&arg) {
+    SimpleArgument &push_back(auto &&arg) {
         return push_back(std::make_unique<SimpleArgument>(FWD(arg)));
     }
     void push_back(const Arguments &args2) {
