@@ -242,35 +242,30 @@ struct PRIMITIVES_COMMAND_API Arguments
             push_front(a->clone());
     }
 
-    bool empty() const { return args.empty(); }
-    size_t size() const
-    {
+    bool empty() const {
+        return args.empty();
+    }
+    size_t size() const {
         return args.size();
     }
 
-    Element &operator[](int i)
-    {
+    Element &operator[](int i) {
         return args[i];
     }
-    const Element &operator[](int i) const
-    {
+    const Element &operator[](int i) const {
         return args[i];
     }
 
-    iterator begin()
-    {
+    iterator begin() {
         return args.begin();
     }
-    iterator end()
-    {
+    iterator end() {
         return args.end();
     }
-    const_iterator begin() const
-    {
+    const_iterator begin() const {
         return args.begin();
     }
-    const_iterator end() const
-    {
+    const_iterator end() const {
         return args.end();
     }
 
