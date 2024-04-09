@@ -85,7 +85,7 @@ static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Str
             ;
         c->strict_order = 1; // run before moc
         out.insert(i / m / m);
-        //t.Interface += i / m / m; makes cyclic deps
+        //t.Interface += i / m / m; // makes cyclic deps
 
         t.Public += IncludeDirectory(i);
         t.Public += IncludeDirectory(i / m);
