@@ -144,22 +144,19 @@ struct Argument
 struct PRIMITIVES_COMMAND_API SimpleArgument : Argument
 {
     SimpleArgument() = default;
+    SimpleArgument(const std::string &s, bool affects_output) : a{s}, affects_output{affects_output} {}
     SimpleArgument(const char *s) : a(s) {
     }
-    SimpleArgument(const String &s) : a(s)
-    {
+    SimpleArgument(const String &s) : a(s) {
     }
-    SimpleArgument(const path &p) : a(to_string(to_path_string(p)))
-    {
+    SimpleArgument(const path &p) : a(to_string(to_path_string(p))) {
     }
 
-    String toString() const override
-    {
+    String toString() const override {
         return a;
     }
-    std::unique_ptr<Argument> clone() const override
-    {
-        return std::make_unique<SimpleArgument>(a);
+    std::unique_ptr<Argument> clone() const override {
+        return std::make_unique<SimpleArgument>(a, affects_output);
     }
 
 private:
