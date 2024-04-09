@@ -79,14 +79,14 @@ bool Command::isLocationOnly() const
 
 String Command::getExternalName() const
 {
-    return location.empty() ? name : location;
+    return location.empty() ? (varname.empty() ? name : varname) : location;
 }
 
 String Command::getName(const Settings &s) const
 {
     //if (!s.prefix.empty())
         //return s.prefix + name;
-    return name;
+    return varname.empty() ? name : varname;
 }
 
 String Command::getClName(const Settings &s) const
