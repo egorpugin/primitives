@@ -323,6 +323,8 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        write_file_if_different(path{bdir / "include" / m / m} += ".syncqt.h", "");
+
         auto files = enumerate_files(sdir / im->second);
         for (auto &f : files)
         {
