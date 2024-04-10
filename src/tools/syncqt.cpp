@@ -390,7 +390,7 @@ int main(int argc, char *argv[])
             {
                 for (auto &c : classes) {
                     if (c != "Queue") {
-                        write_file(oheader / c, "#include \"" + fn + "\"\n");
+                        write_file_if_different(oheader / c, "#include \"" + fn + "\"\n");
                     }
                 }
 
@@ -414,7 +414,7 @@ int main(int argc, char *argv[])
             // set abs for the moment
             //if (rel.empty())
                 rel = p;
-            write_file(oheader, "#include \"" + to_string(normalize_path(rel)) + "\"\n");
+            write_file_if_different(oheader, "#include \"" + to_string(normalize_path(rel)) + "\"\n");
         }
 
         master << "#include \"" << boost::to_lower_copy(m) + "version.h\"" << "\n";
@@ -425,18 +425,20 @@ int main(int argc, char *argv[])
         char x[10];
         sprintf(x, "0x%02d%02d%02d", ma, mi, pa);
 
-        std::ofstream v(bdir / "include" / m / (boost::to_lower_copy(m) + "version.h"));
+        std::ostringstream v;
         v << "#pragma once" << "\n";
         v << "\n";
         v << "#define " << boost::to_upper_copy(m) + "_VERSION_STR \"" << version << "\"\n";
         v << "\n";
         v << "#define " << boost::to_upper_copy(m) + "_VERSION " << x << "\n";
+        write_file_if_different(bdir / "include" / m / (boost::to_lower_copy(m) + "version.h"), v.str());
 
-        std::ofstream v2(bdir / "include" / m / (m + "Version"));
+        std::ostringstream v2;
         v2 << "#include \"" << boost::to_lower_copy(m) + "version.h" <<  "\"\n";
+        write_file_if_different(bdir / "include" / m / (m + "Version"), v2.str());
 
         // make last to perform commit
-        std::ofstream(bdir / "include" / m / m) << master.str();
+        write_file_if_different(bdir / "include" / m / m, master.str());
     }
 
     return 0;
