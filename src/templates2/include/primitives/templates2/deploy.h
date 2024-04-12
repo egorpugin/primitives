@@ -1,13 +1,19 @@
 #pragma once
 
 #include <primitives/command.h>
+//#include <primitives/executor.h>
 #include <primitives/sw/main.h>
 #include <primitives/templates2/win32_2.h>
+
+#include <fstream>
 
 #ifndef _WIN32
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #endif
+
+#include <primitives/log.h>
+DECLARE_STATIC_LOGGER(logger, "deploy");
 
 namespace primitives::deploy {
 
@@ -38,6 +44,70 @@ struct lambda_registrar {
     static wrapper &end(std::source_location loc) { value.end = loc; return value; }
 };
 
+struct thread_manager {
+    std::thread::id main_tid{std::this_thread::get_id()};
+
+    bool is_main_thread() const {
+        return main_tid == std::this_thread::get_id();
+    }
+} thread_manager_;
+
+thread_local std::string thread_name;
+thread_local std::string log_name;
+path log_dir;
+
+struct threaded_logger {
+    void log(std::string s) {
+        boost::trim(s);
+        boost::replace_all(s, "\r\n", "\n");
+        if (thread_manager_.is_main_thread()) {
+            LOG_INFO(logger, s);
+            //std::cout << s;
+        } else {
+            LOG_INFO(logger, std::format("[{}] {}", thread_name, s));
+            thread_local std::ofstream ofile{log_dir / log_name};
+            ofile << s << "\n";
+            ofile.flush(); // ?
+        }
+    }
+} threaded_logger_;
+
+struct scoped_task {
+    std::jthread t;
+    bool err{};
+    std::string name;
+    scoped_task(const std::string &n, auto &&f) {
+        name = n;
+        threaded_logger_.log(std::format("starting job: {}", name));
+        t = std::jthread{[&] {
+            try {
+                thread_name = name;
+                log_name = name + ".log";
+                f();
+            } catch (std::exception &e) {
+                err = true;
+                threaded_logger_.log(e.what());
+            } catch (...) {
+                err = true;
+                threaded_logger_.log("unknown exception");
+            }
+        }};
+    }
+    ~scoped_task() noexcept(false) {
+        t.join();
+        if (err) {
+            auto s = "error in child job: "s + name;
+            threaded_logger_.log(s);
+            if (std::uncaught_exceptions() == 0) {
+                throw std::runtime_error{s};
+            }
+        }
+    }
+};
+auto scoped_runner(auto && ... args) {
+    return scoped_task{args...};
+}
+
 /*struct command {
     primitives::Command c;
 
@@ -61,71 +131,19 @@ auto run_command(primitives::Command &c) {
     std::string out;
     c.out.action = [&](const std::string &s, bool eof) {
         out += s;
-        std::cout << s;
+        threaded_logger_.log(s);
     };
-    c.err.inherit = true;
-    std::cout << c.print() << "\n";
+    if (thread_manager_.is_main_thread()) {
+        c.err.inherit = true;
+    } else {
+        c.err.action = [](const std::string &s, bool eof) {
+            threaded_logger_.log(s);
+        };
+    }
+    threaded_logger_.log(c.print());
     c.execute();
     return out;
 }
-
-struct ssh_command {
-    auto send_command(auto &&server, auto &&remote_args) {
-        using T = std::decay_t<decltype(server)>;
-
-        primitives::Command c;
-        c.push_back("ssh");
-        c.push_back("-i");
-        c.push_back(find_key(T::key));
-        c.push_back("-o");
-        c.push_back("StrictHostKeyChecking=no");
-        c.push_back(std::format("{}@{}", T::user, T::host));
-        if constexpr (requires { T::port; }) {
-            c.push_back("-p");
-            c.push_back(std::format("{}", T::port));
-        }
-        std::string s;
-        for (auto &c : remote_args) {
-            s += c + " ";
-        }
-        if (!s.empty()) {
-            s.resize(s.size() - 1);
-        }
-        c.push_back(s);
-        return run_command(c);
-    }
-    auto send_command(auto &&server, auto &&...args) {
-        std::vector<std::string> c;
-        ((c.push_back(args)), ...);
-        return send_command(server, c);
-    }
-    static path find_key(auto &&name) {
-        path p;
-        if (auto u = getenv("USERPROFILE")) {
-            p = u;
-            p /= ".ssh";
-            p /= name;
-            if (fs::exists(p)) {
-                return p;
-            }
-        }
-        if (auto u = getenv("USER")) {
-            p = "/mnt/c/Users";
-            p /= u;
-            p /= ".ssh";
-            if (fs::exists(p / name)) {
-                return p / name;
-            }
-            p = "/cygdrive/c/Users";
-            p /= u;
-            p /= ".ssh";
-            if (fs::exists(p / name)) {
-                return p / name;
-            }
-        }
-        throw SW_RUNTIME_ERROR("cannot find ssh key: "s + name);
-    }
-};
 
 /*auto run_command(auto &&...args) {
     primitives::Command c;
@@ -151,5 +169,19 @@ auto command(const std::string &cmd, auto &&...args) {
     ssh_command s;
     return s.send_command(ssh_, cmd, args...);
 }*/
+
+inline path cygwin_path(const path &p) {
+    if (p.empty())
+        return {};
+    auto s = p.string();
+    s[0] = tolower(s[0]);
+    if (s.size() > 2) {
+        s = s.substr(0,1) + s.substr(2);
+    } else if (s.size() > 1) {
+        s = s.substr(0, 1);
+    }
+    s = "/cygdrive/"s + s;
+    return s;
+}
 
 } // namespace primitives::deploy
