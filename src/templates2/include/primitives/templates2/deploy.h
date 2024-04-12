@@ -395,7 +395,7 @@ struct ssh_base {
         return path{} / "home" / T::user;
     }
     auto rsync(this auto &&obj, auto &&...args) {
-        return ::rsync("-e", obj.connection_string(false, false), args...);
+        return primitives::deploy::rsync("-e", obj.connection_string(false, false), args...);
     }
     auto rsync_from(this auto &&obj, const std::string &from, auto &&to, const std::string &flags = "-cavP"s) {
         auto to2 = normalize_path(to);
@@ -580,7 +580,7 @@ struct ssh_base {
         if constexpr (requires { T::port; }) {
             s = std::format("[{}]:{}", T::host, T::port);
         }
-        ::command("ssh-keygen", "-R", s);
+        primitives::deploy::command("ssh-keygen", "-R", s);
     }
     void remove_all(this auto &&obj, const path &dir) {
         obj.command("rm", "-rf", normalize_path(dir));
