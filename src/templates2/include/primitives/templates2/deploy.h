@@ -1,6 +1,7 @@
 #pragma once
 
 #include <primitives/templates.h>
+#include <primitives/http.h>
 #include <primitives/command.h>
 #include <primitives/sw/main.h>
 #include <primitives/templates2/win32_2.h>
@@ -125,27 +126,40 @@ auto scoped_runner(auto && ... args) {
     return scoped_task{args...};
 }
 
+struct raw_command_tag{};
 auto create_command(auto &&...args) {
     primitives::Command c;
     (c.arguments.push_back(args), ...);
     return c;
 }
-auto run_command(primitives::Command &c) {
-    std::string out;
+auto run_command_raw(primitives::Command &c) {
     c.out.action = [&](const std::string &s, bool eof) {
-        out += s;
+        c.out.text += s;
         threaded_logger_.log(s);
     };
-    if (thread_manager_.is_main_thread()) {
-        c.err.inherit = true;
-    } else {
-        c.err.action = [](const std::string &s, bool eof) {
-            threaded_logger_.log(s);
-        };
-    }
+    c.err.action = [&](const std::string &s, bool eof) {
+        c.err.text += s;
+        threaded_logger_.log(s);
+    };
     threaded_logger_.log(c.print());
-    c.execute();
-    return out;
+    std::error_code ec;
+    c.execute(ec);
+    struct result {
+        decltype(c.exit_code)::value_type exit_code;
+        std::string out;
+        std::string err;
+    };
+    if (!c.exit_code) {
+        throw std::runtime_error{c.err.text + ": " + ec.message()};
+    }
+    return result{*c.exit_code, std::move(c.out.text), std::move(c.err.text)};
+}
+auto run_command(primitives::Command &c) {
+    auto res = run_command_raw(c);
+    if (res.exit_code) {
+        throw std::runtime_error{"command failed: " + c.print()};
+    }
+    return res.out;
 }
 auto run_command(std::vector<std::string> args) {
     primitives::Command c;
@@ -220,6 +234,151 @@ auto rsync(auto &&...args) {
     return cygwin("rsync", args...);
 }
 
+auto system(const std::string &s) {
+    return ::system(s.c_str());
+}
+
+struct sw_command {
+    auto build(auto &&...args) {
+        return command("build", args...);
+    }
+    auto build_for(auto serv, auto &&...args) {
+        if constexpr (requires { serv.os; }) {
+            if (serv.os == "macos"s) {
+                return build_for_macos(args...);
+            }
+        }
+        return build_for_linux(args...);
+    }
+    auto build_for_linux(auto &&...args) {
+        return command("build_gcc", args...);
+    }
+    auto build_for_macos(auto &&...args) {
+        return command("build_macos", args...);
+    }
+
+    auto list_targets() {
+        return boost::trim_copy(build("--list-targets"));
+    }
+
+private:
+    std::string command(auto &&...args) {
+        auto c = create_command("sw");
+        (c.arguments.push_back(args), ...);
+        return run_command_raw(c).err;
+    }
+};
+
+// can be remote
+struct sw_system {
+    path storage_dir(this auto &&obj) {
+        return boost::trim_copy(obj.command("sw", "get", "storage-dir"));
+    }
+    void remove_remote_storage(this auto &&obj) {
+        obj.remove_all(obj.storage_dir() / "etc" / "sw" / "database" / "1" / "remote");
+    }
+};
+
+template <typename Serv>
+struct systemctl {
+    struct simple_service {
+        systemctl &ctl;
+        //std::string template_;
+        std::string name;
+        std::string progname;
+        std::string desc;
+        std::string user;
+        std::string wdir;
+
+        auto start() {
+            return ctl("start", name);
+        }
+        auto stop() {
+            return ctl("stop", name);
+        }
+        auto enable() {
+            return ctl("enable", name);
+        }
+        auto disable() {
+            return ctl("disable", name);
+        }
+        auto status() {
+            // https://refspecs.linuxbase.org/LSB_3.0.0/LSB-PDA/LSB-PDA/iniscrptact.html
+            // 3 - program is not running
+            auto r = ctl(raw_command_tag{}, "status", name, "--no-pager");
+            return r;
+        }
+        void add_to_system() {
+            if (desc.empty()) {
+                desc = name;
+            }
+            if (user.empty()) {
+                user = name;
+            }
+            if (wdir.empty()) {
+                wdir = "/home/" + user;
+            }
+
+            constexpr auto service_template =
+                R"(
+[Unit]
+Description={} service
+After=network-online.target
+
+[Service]
+Type=simple
+User={}
+ExecStart={}
+WorkingDirectory={}
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+)";
+            auto service_name = name + ".service";
+            auto service = std::format(service_template, desc, user, wdir + "/" + progname, wdir);
+            ctl.serv.write_file("/etc/systemd/system/" + service_name, service);
+        }
+    };
+
+    Serv &serv;
+
+    auto operator()(auto &&...args) {
+        auto c = serv.create_command("systemctl", args...);
+        return run_command(c);
+    }
+    auto operator()(raw_command_tag, auto &&...args) {
+        auto c = serv.create_command("systemctl", args...);
+        return run_command_raw(c);
+    }
+    auto daemon_reload() {
+        return operator()("daemon-reload");
+    }
+    /*auto service(const std::string &name) {
+        return svc{*this,name};
+    }
+    auto create_simple_system_service(const std::string &name) {
+    }*/
+    auto new_simple_service() {
+        return simple_service{*this};
+    }
+    void new_simple_service_auto(const std::string &name, const std::string &progname) {
+        auto svc = new_simple_service();
+        svc.name = name;
+        svc.progname = progname;
+        svc.add_to_system();
+        daemon_reload();
+        auto r = svc.status().exit_code;
+        svc.enable();
+        svc.start();
+        r = svc.status().exit_code;
+        if (r != 0) {
+            throw std::runtime_error{"cannot start the server"};
+        }
+    }
+};
+
 template <typename F, typename T>
 struct lambda_wrapper {
     T &serv;
@@ -240,7 +399,7 @@ struct lambda_wrapper {
                 lambda = line.substr(be.begin.column() - 1);
                 lambda = lambda.substr(lambda.find('['));
                 lambda += "\n";
-            } else if (i > be.begin.line() && i < be.end.line() - 1) {
+            } else if (i > be.begin.line() && i < be.end.line()) {
                 lambda += line;
                 lambda += "\n";
             }
@@ -293,6 +452,10 @@ return f2(0);
         }
         serv.command(normalize_path(outservfn));
     }
+    void sudo(std::source_location loc = std::source_location::current()) {
+        auto scoped_sudo = serv.sudo();
+        operator()(loc);
+    }
 };
 
 struct ssh_base {
@@ -338,6 +501,9 @@ struct ssh_base {
         if constexpr (requires { T::key; }) {
             args.push_back("-i");
             args.push_back(std::format("{}", normalize_path(find_key(T::key)).string()));
+        } else {
+            args.push_back("-i");
+            args.push_back(std::format("{}", normalize_path(find_key("id_rsa")).string()));
         }
         return args;
     }
@@ -387,17 +553,17 @@ struct ssh_base {
         using T = std::decay_t<decltype(obj)>;
 
         std::string s;
-        s += std::format("{}@{}", T::user, obj.ip());
+        s += std::format("{}@{}", obj.user, obj.ip());
         return s;
     }
     path home(this auto &&obj) {
         using T = std::decay_t<decltype(obj)>;
-        return path{} / "home" / T::user;
+        return "/home/"s + obj.user;
     }
     auto rsync(this auto &&obj, auto &&...args) {
         return primitives::deploy::rsync("-e", obj.connection_string(false, false), args...);
     }
-    auto rsync_from(this auto &&obj, const std::string &from, auto &&to, const std::string &flags = "-cavP"s) {
+    auto rsync_from(this auto &&obj, const std::string &from, auto &&to, const std::string &flags = "-czavP"s) {
         auto to2 = normalize_path(to);
         to2 = cygwin_path(to2);
         return obj.rsync(flags, obj.server_string() + ":" + (obj.cwd.empty() ? "" : (obj.cwd.string() + "/")) + from, to2);
@@ -585,14 +751,93 @@ struct ssh_base {
     void remove_all(this auto &&obj, const path &dir) {
         obj.command("rm", "-rf", normalize_path(dir));
     }
-};
-
-struct sw_system {
-    path storage_dir(this auto &&obj) {
-        return boost::trim_copy(obj.command("sw", "get", "storage-dir"));
+    void system(this auto &&obj, const std::string &s) {
+        obj.command(s);
     }
-    void remove_remote_storage(this auto &&obj) {
-        obj.remove_all(obj.storage_dir() / "etc" / "sw" / "database" / "1" / "remote");
+    bool has_user(this auto &&obj, const std::string &n) {
+        auto passwd = obj.command("cat", "/etc/passwd");
+        return std::ranges::any_of(std::views::split(passwd, "\n"sv), [&](auto &&v) {
+            std::string_view line{v.begin(), v.end()};
+            return line.starts_with(n);
+        });
+    }
+    void create_user(this auto &&obj, const std::string &n) {
+        if (!obj.has_user(n)) {
+            obj.command("useradd", n
+                , "-m" // create home
+            );
+        }
+    }
+    void chmod(this auto &&obj, int r, const path &p) {
+        obj.command("chmod", std::to_string(r), normalize_path(p));
+    }
+    void chown(this auto &&obj, const path &p, const std::string &user) {
+        obj.command("chown", std::format("{}:{}",user,user), normalize_path(p));
+    }
+    void write_file(this auto &&obj, const path &p, const std::string &data) {
+        auto d = path{".sw/lambda/data"};
+        ::write_file(d / p.filename(), data);
+        obj.rsync(normalize_path(d / p.filename()), obj.server_string() + ":" + normalize_path(p).string());
+    }
+
+    struct deploy_single_target_args {
+        path localdir;
+        std::string service_name;
+        std::string target_package_path;
+        std::string settings_data;
+    };
+    void deploy_single_target(this auto &&obj, deploy_single_target_args args) {
+        ScopedCurrentPath scp{args.localdir};
+
+        sw_command s;
+        auto list_output = s.list_targets();
+        auto lines = split_lines(list_output);
+        std::string targetline;
+        if (lines.empty()) {
+            throw std::runtime_error{"empty targets"s};
+        } else if (args.target_package_path.empty() && lines.size() == 1) {
+            targetline = lines[0];
+        } else if (args.target_package_path.empty() && lines.size() != 1) {
+            throw std::runtime_error{"cant detect targets from sw output (empty or more than one): "s + list_output};
+        } else {
+            for (auto &&line : lines) {
+                if (line.starts_with(args.target_package_path)) {
+                    targetline = line;
+                }
+            }
+        }
+        if (targetline.empty()) {
+            throw std::runtime_error{"cant detect target"s};
+        }
+
+        auto pkg = split_string(targetline, "-");
+        const auto progname = pkg.at(0);
+        const auto prognamever = targetline;
+
+        if (args.service_name.empty()) {
+            args.service_name = progname;
+        }
+
+        s.build_for(obj, "-static", "-config", "r", "-config-name", "r", "--target", prognamever);
+
+        auto username = args.service_name;
+        auto root = obj.root();
+        root.create_user(username);
+        auto fn = path{".sw"} / "out" / "r" / prognamever;
+        auto home = root.login(username).home();
+        root.rsync(normalize_path(fn), root.server_string() + ":" + normalize_path(home).string());
+        auto prog = home / prognamever;
+        root.chmod(755, prog);
+        root.chown(prog, username);
+
+        if (!args.settings_data.empty()) {
+            auto settings = home / progname += ".settings";
+            root.write_file(settings, args.settings_data);
+            root.chown(settings, username);
+        }
+
+        systemctl ctl{root};
+        ctl.new_simple_service_auto(username, prognamever);
     }
 };
 
