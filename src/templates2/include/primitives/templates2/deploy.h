@@ -293,6 +293,9 @@ struct systemctl {
         auto start() {
             return ctl("start", name);
         }
+        auto restart() {
+            return ctl("restart", name);
+        }
         auto stop() {
             return ctl("stop", name);
         }
@@ -360,6 +363,9 @@ WantedBy=multi-user.target
     }
     auto create_simple_system_service(const std::string &name) {
     }*/
+    auto service(const std::string &name) {
+        return simple_service{*this};
+    }
     auto new_simple_service() {
         return simple_service{*this};
     }
@@ -371,7 +377,11 @@ WantedBy=multi-user.target
         daemon_reload();
         auto r = svc.status().exit_code;
         svc.enable();
-        svc.start();
+        if (r == 0) {
+            svc.restart();
+        } else {
+            svc.start();
+        }
         r = svc.status().exit_code;
         if (r != 0) {
             throw std::runtime_error{"cannot start the server"};
@@ -821,8 +831,16 @@ struct ssh_base {
         s.build_for(obj, "-static", "-config", "r", "-config-name", "r", "--target", prognamever);
 
         auto username = args.service_name;
+        auto service_name = args.service_name;
         auto root = obj.root();
         root.create_user(username);
+
+        systemctl ctl{root};
+        auto svc = ctl.service(service_name);
+        if (svc.status().exit_code == 0) {
+            svc.stop();
+        }
+
         auto fn = path{".sw"} / "out" / "r" / prognamever;
         auto home = root.login(username).home();
         root.rsync(normalize_path(fn), root.server_string() + ":" + normalize_path(home).string());
@@ -836,8 +854,7 @@ struct ssh_base {
             root.chown(settings, username);
         }
 
-        systemctl ctl{root};
-        ctl.new_simple_service_auto(username, prognamever);
+        ctl.new_simple_service_auto(service_name, prognamever);
     }
 };
 
