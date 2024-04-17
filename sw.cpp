@@ -169,6 +169,8 @@ void build(Solution &s)
             t.Public += "_CRT_SECURE_NO_WARNINGS"_def;
             t.Public.CompileOptions.push_back("-wd4251");
             //t.Protected.CompileOptions.push_back("/Zc:__cplusplus");
+            // use newer and conforming preprocessor everywhere
+            t.Public.CompileOptions.push_back("/Zc:preprocessor");
         }
         return p;
     };
