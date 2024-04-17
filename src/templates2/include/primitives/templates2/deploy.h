@@ -133,12 +133,13 @@ auto create_command(auto &&...args) {
     return c;
 }
 auto run_command_raw(primitives::Command &c) {
+    std::string out,err;
     c.out.action = [&](const std::string &s, bool eof) {
-        c.out.text += s;
+        out += s;
         threaded_logger_.log(s);
     };
     c.err.action = [&](const std::string &s, bool eof) {
-        c.err.text += s;
+        err += s;
         threaded_logger_.log(s);
     };
     threaded_logger_.log(c.print());
@@ -152,7 +153,7 @@ auto run_command_raw(primitives::Command &c) {
     if (!c.exit_code) {
         throw std::runtime_error{c.err.text + ": " + ec.message()};
     }
-    return result{*c.exit_code, std::move(c.out.text), std::move(c.err.text)};
+    return result{*c.exit_code, std::move(out), std::move(err)};
 }
 auto run_command(primitives::Command &c) {
     auto res = run_command_raw(c);
@@ -239,8 +240,14 @@ auto system(const std::string &s) {
 }
 
 struct sw_command {
+    auto operator()(auto &&...args) {
+        return command(args...);
+    }
     auto build(auto &&...args) {
         return command("build", args...);
+    }
+    auto run(auto &&...args) {
+        return command("run", args...);
     }
     auto build_for(auto serv, auto &&...args) {
         if constexpr (requires { serv.os; }) {
@@ -265,7 +272,11 @@ private:
     std::string command(auto &&...args) {
         auto c = create_command("sw");
         (c.arguments.push_back(args), ...);
-        return run_command_raw(c).err;
+        auto res = run_command_raw(c);
+        if (res.exit_code) {
+            throw std::runtime_error{"command failed: " + c.print()};
+        }
+        return res.err;
     }
 };
 
@@ -283,7 +294,6 @@ template <typename Serv>
 struct systemctl {
     struct simple_service {
         systemctl &ctl;
-        //std::string template_;
         std::string name;
         std::string progname;
         std::string desc;
@@ -358,13 +368,8 @@ WantedBy=multi-user.target
     auto daemon_reload() {
         return operator()("daemon-reload");
     }
-    /*auto service(const std::string &name) {
-        return svc{*this,name};
-    }
-    auto create_simple_system_service(const std::string &name) {
-    }*/
     auto service(const std::string &name) {
-        return simple_service{*this};
+        return simple_service{*this,name};
     }
     auto new_simple_service() {
         return simple_service{*this};
@@ -795,6 +800,7 @@ struct ssh_base {
         std::string service_name;
         std::string target_package_path;
         std::string settings_data;
+        std::set<path> sync_files;
     };
     void deploy_single_target(this auto &&obj, deploy_single_target_args args) {
         ScopedCurrentPath scp{args.localdir};
@@ -841,6 +847,9 @@ struct ssh_base {
             svc.stop();
         }
 
+        // maybe put our public key into 'authorized_keys'
+        // and sign in instead of root?
+
         auto fn = path{".sw"} / "out" / "r" / prognamever;
         auto home = root.login(username).home();
         root.rsync(normalize_path(fn), root.server_string() + ":" + normalize_path(home).string());
@@ -852,6 +861,12 @@ struct ssh_base {
             auto settings = home / progname += ".settings";
             root.write_file(settings, args.settings_data);
             root.chown(settings, username);
+        }
+        for (auto &&f : args.sync_files) {
+            auto dst = home / f;
+            root.rsync(normalize_path(f), root.server_string() + ":" + normalize_path(home).string());
+            root.chmod(755, dst);
+            root.chown(prog, username);
         }
 
         ctl.new_simple_service_auto(service_name, prognamever);
