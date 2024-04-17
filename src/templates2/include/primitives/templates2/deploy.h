@@ -182,6 +182,9 @@ auto command(auto &&...args) {
 inline path cygwin_path(const path &p) {
     if (p.empty())
         return {};
+    if (!p.is_absolute()) {
+        return p;
+    }
     auto s = p.string();
     s[0] = tolower(s[0]);
     if (s.size() > 2) {
@@ -265,13 +268,22 @@ struct sw_command {
     }
 
     auto list_targets() {
-        return boost::trim_copy(build("--list-targets"));
+        auto c = create_command("build", "--list-targets");
+        auto res = run_command_raw(c);
+        if (res.exit_code) {
+            throw std::runtime_error{"command failed: " + c.print()};
+        }
+        return boost::trim_copy(res.out);
     }
 
 private:
-    std::string command(auto &&...args) {
-        auto c = create_command("sw");
+    primitives::Command create_command(auto &&...args) {
+        auto c = primitives::deploy::create_command("sw");
         (c.arguments.push_back(args), ...);
+        return c;
+    }
+    std::string command(auto &&...args) {
+        auto c = create_command(args...);
         auto res = run_command_raw(c);
         if (res.exit_code) {
             throw std::runtime_error{"command failed: " + c.print()};
@@ -800,7 +812,8 @@ struct ssh_base {
         std::string service_name;
         std::string target_package_path;
         std::string settings_data;
-        std::set<path> sync_files;
+        std::set<path> sync_files_to;
+        std::set<path> sync_files_from;
     };
     void deploy_single_target(this auto &&obj, deploy_single_target_args args) {
         ScopedCurrentPath scp{args.localdir};
@@ -862,11 +875,15 @@ struct ssh_base {
             root.write_file(settings, args.settings_data);
             root.chown(settings, username);
         }
-        for (auto &&f : args.sync_files) {
+        for (auto &&f : args.sync_files_to) {
             auto dst = home / f;
             root.rsync(normalize_path(f), root.server_string() + ":" + normalize_path(home).string());
             root.chmod(755, dst);
-            root.chown(prog, username);
+            root.chown(dst, username);
+        }
+        for (auto &&f : args.sync_files_from) {
+            auto src = home / f;
+            root.rsync_from(normalize_path(src).string(), ".");
         }
 
         ctl.new_simple_service_auto(service_name, prognamever);
