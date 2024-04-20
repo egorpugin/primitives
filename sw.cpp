@@ -96,7 +96,7 @@ static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Str
     return out;
 }
 
-static void generate_cl(const DependencyPtr &clgen, NativeExecutedTarget &t, const path &fn, const String &type)
+static void generate_cl(const auto &clgen, NativeExecutedTarget &t, const path &fn, const String &type)
 {
     auto outh = t.BinaryDir / (to_string(fn.stem()) + "." + type + ".h");
     auto outcpp = t.BinaryDir / (to_string(fn.stem()) + "." + type + ".cpp");
@@ -432,7 +432,7 @@ void build(Solution &s)
                 "org.sw.demo.google.breakpad.client.windows.crash_generation.server-master"_dep
                 ;
         }
-        generate_cl(std::make_shared<Dependency>(cl_generator), sw_main, "src/cl.yml", "llvm");
+        generate_cl(cl_generator, sw_main, "src/cl.yml", "llvm");
         //
         // setup executables
         // the only thing they missing is PackageDefinitions = true;
