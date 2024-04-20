@@ -267,8 +267,8 @@ struct sw_command {
         return command("build_macos", args...);
     }
 
-    auto list_targets() {
-        auto c = create_command("build", "--list-targets");
+    auto list_targets(auto &&...args) {
+        auto c = create_command("build", "--list-targets", args...);
         auto res = run_command_raw(c);
         if (res.exit_code) {
             throw std::runtime_error{"command failed: " + c.print()};
@@ -332,6 +332,9 @@ struct systemctl {
             // 3 - program is not running
             auto r = ctl(raw_command_tag{}, "status", name, "--no-pager");
             return r;
+        }
+        void remove_from_system() {
+            ctl.serv.remove("/etc/systemd/system/" + name);
         }
         void add_to_system() {
             if (desc.empty()) {
@@ -403,6 +406,12 @@ WantedBy=multi-user.target
         if (r != 0) {
             throw std::runtime_error{"cannot start the server"};
         }
+    }
+    void delete_simple_service(const std::string &name) {
+        auto svc = service(name);
+        svc.disable();
+        svc.remove_from_system();
+        daemon_reload();
     }
 };
 
@@ -795,6 +804,11 @@ struct ssh_base {
             );
         }
     }
+    void delete_user(this auto &&obj, const std::string &n) {
+        obj.command("userdel",
+            "-r", // remove files
+            n);
+    }
     void chmod(this auto &&obj, int r, const path &p) {
         obj.command("chmod", std::to_string(r), normalize_path(p));
     }
@@ -809,17 +823,20 @@ struct ssh_base {
 
     struct deploy_single_target_args {
         path localdir;
+        path build_file;
         std::string service_name;
         std::string target_package_path;
         std::string settings_data;
-        std::set<path> sync_files_to;
+        // from copied first to special data dir
         std::set<path> sync_files_from;
+        // 'to' files copied from the other location to replace server files
+        std::set<path> sync_files_to;
     };
     void deploy_single_target(this auto &&obj, deploy_single_target_args args) {
         ScopedCurrentPath scp{args.localdir};
 
         sw_command s;
-        auto list_output = s.list_targets();
+        auto list_output = args.build_file.empty() ? s.list_targets() : s.list_targets(args.build_file);
         auto lines = split_lines(list_output);
         std::string targetline;
         if (lines.empty()) {
@@ -847,7 +864,12 @@ struct ssh_base {
             args.service_name = progname;
         }
 
-        s.build_for(obj, "-static", "-config", "r", "-config-name", "r", "--target", prognamever);
+        auto cfgname = "r";
+        if (args.build_file.empty()) {
+            s.build_for(obj, "-static", "-config", "r", "-config-name", cfgname, "--target", prognamever);
+        } else {
+            s.build_for(obj, "-static", "-config", "r", "-config-name", cfgname, args.build_file, "--target", prognamever);
+        }
 
         auto username = args.service_name;
         auto service_name = args.service_name;
@@ -863,7 +885,7 @@ struct ssh_base {
         // maybe put our public key into 'authorized_keys'
         // and sign in instead of root?
 
-        auto fn = path{".sw"} / "out" / "r" / prognamever;
+        auto fn = path{".sw"} / "out" / cfgname / prognamever;
         auto home = root.login(username).home();
         root.rsync(normalize_path(fn), root.server_string() + ":" + normalize_path(home).string());
         auto prog = home / prognamever;
@@ -875,18 +897,63 @@ struct ssh_base {
             root.write_file(settings, args.settings_data);
             root.chown(settings, username);
         }
+        // from first
+        auto local_storage_dir = path{"data"} / service_name;
+        fs::create_directories(local_storage_dir);
+        for (auto &&f : args.sync_files_from) {
+            auto src = home / f;
+            root.rsync_from(normalize_path(src).string(), local_storage_dir);
+        }
+        // then to
         for (auto &&f : args.sync_files_to) {
             auto dst = home / f;
             root.rsync(normalize_path(f), root.server_string() + ":" + normalize_path(home).string());
             root.chmod(755, dst);
             root.chown(dst, username);
         }
-        for (auto &&f : args.sync_files_from) {
-            auto src = home / f;
-            root.rsync_from(normalize_path(src).string(), ".");
-        }
 
         ctl.new_simple_service_auto(service_name, prognamever);
+    }
+    void discard_single_target(this auto &&obj, deploy_single_target_args args) {
+        ScopedCurrentPath scp{args.localdir};
+
+        sw_command s;
+        auto list_output = args.build_file.empty() ? s.list_targets() : s.list_targets(args.build_file);
+        auto lines = split_lines(list_output);
+        std::string targetline;
+        if (lines.empty()) {
+            throw std::runtime_error{"empty targets"s};
+        } else if (args.target_package_path.empty() && lines.size() == 1) {
+            targetline = lines[0];
+        } else if (args.target_package_path.empty() && lines.size() != 1) {
+            throw std::runtime_error{"cant detect targets from sw output (empty or more than one): "s + list_output};
+        } else {
+            for (auto &&line : lines) {
+                if (line.starts_with(args.target_package_path)) {
+                    targetline = line;
+                }
+            }
+        }
+        if (targetline.empty()) {
+            throw std::runtime_error{"cant detect target"s};
+        }
+
+        auto pkg = split_string(targetline, "-");
+        const auto progname = pkg.at(0);
+        const auto prognamever = targetline;
+
+        if (args.service_name.empty()) {
+            args.service_name = progname;
+        }
+
+        auto service_name = args.service_name;
+
+        auto root = obj.root();
+        systemctl ctl{root};
+        ctl.delete_simple_service(service_name);
+
+        auto username = args.service_name;
+        root.delete_user(username);
     }
 };
 
