@@ -319,10 +319,22 @@ HttpResponse url_request(const HttpRequest &request)
 
     auto res = curl_easy_perform(curl);
 
+    if (res == CURLE_PROXY) {
+        long proxycode;
+        res = curl_easy_getinfo(curl, CURLINFO_PROXY_ERROR, &proxycode);
+        if (!res && proxycode) {
+            throw primitives::http::curl_exception{
+                "url = " + request.url +
+                ", curl error: "s + curl_easy_strerror(res) +
+                ", proxy error: "s + std::to_string(proxycode) };
+        }
+    }
+
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response.http_code);
 
-    if (res != CURLE_OK)
+    if (res != CURLE_OK) {
         throw primitives::http::curl_exception{ "url = " + request.url + ", curl error: "s + curl_easy_strerror(res) };
+    }
 
     return response;
 }
