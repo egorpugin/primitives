@@ -19,6 +19,8 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "deploy");
 
+inline constexpr auto max_fedora_version = 40;
+
 namespace primitives::deploy {
 
 #ifdef _WIN32
@@ -295,7 +297,13 @@ private:
 // can be remote
 struct sw_system {
     path storage_dir(this auto &&obj) {
-        return boost::trim_copy(obj.command("sw", "get", "storage-dir"));
+        while (1) {
+            auto s = boost::trim_copy(obj.command("sw", "get", "storage-dir"));
+            if (s.starts_with("Downloading")) {
+                continue;
+            }
+            return s;
+        }
     }
     void remove_remote_storage(this auto &&obj) {
         obj.remove_all(obj.storage_dir() / "etc" / "sw" / "database" / "1" / "remote");
@@ -415,6 +423,23 @@ WantedBy=multi-user.target
     }
 };
 
+template <typename Serv>
+struct dnf {
+    Serv &serv;
+    auto operator()(auto &&...args) {
+        return serv.command("dnf", args...);
+    }
+    auto upgrade(auto &&...args) {
+        return operator()("upgrade", "-y", args...);
+    }
+    auto install(auto &&...args) {
+        return operator()("install", "-y", args...);
+    }
+    auto system_upgrade(auto &&...args) {
+        return operator()("system-upgrade", args...);
+    }
+};
+
 template <typename F, typename T>
 struct lambda_wrapper {
     T &serv;
@@ -496,8 +521,10 @@ return f2(0);
 
 struct ssh_base {
     bool sudo_mode{};
+    bool sudo_mode_with_password{};
     path cwd;
     std::string ip_;
+    bool pseudo_tty{true};
 
     std::string connection_string(this auto &&obj, bool with_server = false, bool with_t = true) {
         using T = std::decay_t<decltype(obj)>;
@@ -517,8 +544,10 @@ struct ssh_base {
 
         std::vector<std::string> args;
         args.push_back("ssh");
-        args.push_back("-t"); // allocate pseudo tty
-        args.push_back("-t"); // 2nd tty?
+        if (obj.pseudo_tty) {
+            args.push_back("-t"); // allocate pseudo tty
+            args.push_back("-t"); // force!
+        }
         args.push_back("-o");
         args.push_back("StrictHostKeyChecking=accept-new");
         args.push_back("-o");
@@ -546,11 +575,44 @@ struct ssh_base {
     std::string ip(this auto &&obj, int retries = 0) {
         using T = std::decay_t<decltype(obj)>;
 
-        if constexpr (!requires {T::resolve_host;}) {
-            obj.ip_ = T::host;
-        } else {
-            if (!T::resolve_host) {
+        if (obj.ip_.empty()) {
+            if constexpr (requires { obj.check_ips; }) {
+                auto args = obj.connection_args();
+                for (auto &&i : obj.check_ips) {
+                    auto args2 = args;
+                    args2.push_back(std::format("{}@{}", obj.user, i));
+
+                    primitives::Command c;
+                    c.push_back(args2);
+                    c.push_back("hostname");
+                    auto res = run_command_raw(c);
+                    if (res.err.contains("WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!")) {
+                        obj.remove_known_host(i);
+                        // again
+                        primitives::Command c;
+                        c.push_back(args2);
+                        c.push_back("hostname");
+                        res = run_command_raw(c);
+                    }
+                    if (res.exit_code) {
+                        continue;
+                    }
+                    if (boost::trim_copy(res.out) != obj.host) {
+                        continue;
+                    } else {
+                        obj.ip_ = i;
+                        break;
+                    }
+                }
+                if (obj.ip_.empty()) {
+                    // ??
+                }
+            } else if constexpr (!requires { T::resolve_host; }) {
                 obj.ip_ = T::host;
+            } else {
+                if (!T::resolve_host) {
+                    obj.ip_ = T::host;
+                }
             }
         }
         if (obj.ip_.empty()) {
@@ -610,6 +672,7 @@ struct ssh_base {
     auto create_command(this auto &&obj, auto &&...args) {
         primitives::Command c;
         c.push_back(obj.connection_args(true));
+        c.push_back("--"); // end of ssh args
         if (!obj.cwd.empty()) {
             c.push_back("cd");
             c.push_back(obj.cwd);
@@ -617,12 +680,20 @@ struct ssh_base {
         }
         if (obj.sudo_mode) {
             c.push_back("sudo");
+            if (obj.sudo_mode_with_password) {
+                c.push_back("-S");
+            }
         }
         (c.push_back(args), ...);
         return c;
     }
     auto command(this auto &&obj, auto &&...args) {
         auto c = obj.create_command(args...);
+        if (obj.sudo_mode_with_password) {
+            if constexpr (requires {obj.password;}) {
+                c.in.text = obj.password;
+            }
+        }
         return run_command(c);
     }
     auto sudo(this auto &&obj, bool sudo_mode = true) {
@@ -632,15 +703,34 @@ struct ssh_base {
         SwapAndRestore sr(obj.sudo_mode, true);
         return obj.command(prog, args...);
     }
+    auto sudo_with_password(this auto &&obj, bool sudo_mode = true) {
+        struct s {
+            SwapAndRestore<bool> sr1;
+            SwapAndRestore<bool> sr2;
+            SwapAndRestore<bool> sr3;
+
+            s(bool &x, bool &y, bool &z, bool mode) : sr1{x,mode}, sr2{y,mode}, sr3{z,!mode} {
+            }
+        };
+        return s{obj.sudo_mode,obj.sudo_mode_with_password,obj.pseudo_tty,sudo_mode};
+    }
+    auto sudo_with_password(this auto &&obj, auto &&prog, auto &&...args) {
+        SwapAndRestore sr1(obj.sudo_mode, true);
+        SwapAndRestore sr2(obj.sudo_mode_with_password, true);
+        SwapAndRestore sr3(obj.pseudo_tty, false);
+        auto c = obj.create_command(prog, args...);
+        c.in.text = obj.password;
+        return run_command(c);
+    }
     auto create_directories(this auto &&obj, const path &p) {
         return obj.command("mkdir", "-p", normalize_path(p));
     }
     bool is_online(this auto &&obj) {
         try {
+            auto su = obj.sudo(false);
             auto c = obj.create_command("exit");
-            std::error_code ec;
-            c.execute(ec);
-            return !ec;
+            auto ret = run_command_raw(c);
+            return !ret.exit_code;
         } catch (std::exception &e) {
             return false;
         }
@@ -649,6 +739,7 @@ struct ssh_base {
         while (!obj.is_online()) {
             threaded_logger_.log(std::format("host {} is not online yet, waiting...", obj.host));
             std::this_thread::sleep_for(5s);
+            obj.ip_.clear(); // ip can change after reboot
         }
     }
     void send_wake_on_lan_magic(this auto &&obj) {
@@ -776,13 +867,24 @@ struct ssh_base {
     path user_dir(this auto &&obj) {
         return obj.home_dir() / obj.user;
     }
-    void remove_known_host(this auto &&obj) {
+    void remove_known_host(this auto &&obj, const std::string &what = {}) {
         using T = std::decay_t<decltype(obj)>;
-        std::string s = T::host;
-        if constexpr (requires { T::port; }) {
-            s = std::format("[{}]:{}", T::host, T::port);
+        auto remove = [](auto &&what) {
+            std::string s = what;
+            if constexpr (requires { T::port; }) {
+                s = std::format("[{}]:{}", s, T::port);
+            }
+            static std::mutex m;
+            std::unique_lock lk{m}; // for safety
+            primitives::deploy::command("ssh-keygen", "-R", s);
+        };
+        remove(T::host);
+        if (!obj.ip_.empty()) {
+            remove(obj.ip_);
         }
-        primitives::deploy::command("ssh-keygen", "-R", s);
+        if (!what.empty()) {
+            remove(what);
+        }
     }
     void remove_all(this auto &&obj, const path &dir) {
         obj.command("rm", "-rf", normalize_path(dir));
@@ -819,6 +921,68 @@ struct ssh_base {
         auto d = path{".sw/lambda/data"};
         ::write_file(d / p.filename(), data);
         obj.rsync(normalize_path(d / p.filename()), obj.server_string() + ":" + normalize_path(p).string());
+    }
+    void reboot(this auto &&obj, auto &&f) {
+        try {
+            f();
+            std::this_thread::sleep_for(3s);
+            obj.wait_until_online();
+        } catch (std::exception &) {
+            // this will throw on reboot or no?
+            std::this_thread::sleep_for(3s);
+            obj.wait_until_online();
+        }
+    }
+    void reboot(this auto &&obj) {
+        auto s = obj.sudo_with_password();
+        obj.reboot([&]{ obj.command("reboot"); });
+    }
+    static auto split_string_map(const std::string &s, const std::string &kv_delim = "="s) {
+        std::map<std::string, std::string> m;
+        auto lines = split_lines(s);
+        for (auto &&line : lines) {
+            auto p = line.find(kv_delim);
+            if (p == -1) {
+                throw SW_RUNTIME_ERROR("value is missing");
+            }
+            auto k = line.substr(0, p);
+            auto v = line.substr(p + kv_delim.size());
+            m[k] = v;
+        }
+        return m;
+    }
+    auto detect_os(this auto &&obj) {
+        auto s = obj.command("cat", "/etc/os-release");
+        auto m = split_string_map(s);
+        struct distr {
+            std::string distribution;
+            int version;
+        };
+        return distr{m.at("ID"),std::stoi(m.at("VERSION_ID"))};
+    }
+    auto detect_hostname(this auto &&obj) {
+        return obj.command("hostname");
+    }
+    void upgrade_fedora(this auto &&obj) {
+        auto os = obj.detect_os();
+        auto to_version = os.version + 1;
+        if (to_version > max_fedora_version) {
+            return;
+        }
+        auto sudo = obj.sudo_with_password();
+        obj.upgrade_packages("--refresh");
+        dnf d{obj};
+        d.install("dnf-plugin-system-upgrade");
+        d.system_upgrade("download", "-y", std::format("--releasever={}", to_version));
+        obj.reboot([&] {
+            d.system_upgrade("reboot");
+        });
+    }
+    void upgrade_packages(this auto &&obj, auto &&...args) {
+        auto sudo = obj.sudo_with_password();
+        dnf d{obj};
+        d.upgrade(args...);
+        // sleep and wait for depmod finishes?
     }
 
     struct deploy_single_target_args {
