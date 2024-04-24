@@ -54,8 +54,8 @@ inline bool isDebuggerAttached()
         else
             return ::isdigit(*characterPtr) != 0 && *characterPtr != '0';
     }
-#endif
     return false;
+#endif
 }
 
 inline void debugBreak()
