@@ -359,7 +359,6 @@ struct pgmgr {
         query.resize(query.size() - 1);
         query += ") returning *";
         auto r = tx.exec1(query);
-        tx.query_value();
         return row_to_type<T>(r);
     }
 
@@ -523,6 +522,8 @@ struct pgmgr {
         /*[&](auto &&ptr, auto &&val) {
             query += std::format("\"{}\" = ?", db::get_field_name(ptr));
         }(Fields);*/
+        // we cant use query_value here, because row_to_type() does extra work
+        //return tx.query_value<decltype(db::get_table_type(Field))>(query, pqxx::params{vals...});
         auto r = tx.exec_params1(query, vals...);
         return row_to_type<decltype(db::get_table_type(Field))>(r);
     }

@@ -5,6 +5,7 @@ consteval auto type_name() {
     std::string_view fn = std::source_location::current().function_name();
     auto structstr = "struct "sv;
     auto classstr = "class "sv;
+#ifdef _MSC_VER
     fn = fn.substr(fn.rfind("<") + 1);
     fn = fn.substr(fn.rfind(":") + 1);
     if (fn.starts_with(structstr)) {
@@ -15,5 +16,9 @@ consteval auto type_name() {
         // builtin type
     }
     fn = fn.substr(0, fn.find(">"));
+#else
+    fn = fn.substr(fn.rfind("T = ") + 4);
+    fn = fn.substr(0, fn.size() - 1);
+#endif
     return fn;
 }

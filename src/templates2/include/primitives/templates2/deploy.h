@@ -181,7 +181,8 @@ auto command(auto &&...args) {
     return run_command(c);
 }
 
-inline path cygwin_path(const path &p) {
+inline path cygwin_path(path p) {
+    p = normalize_path(p);
     if (p.empty())
         return {};
     if (!p.is_absolute()) {
@@ -254,6 +255,9 @@ struct sw_command {
     auto run(auto &&...args) {
         return command("run", args...);
     }
+    auto install(auto &&...args) {
+        return command("install", args...);
+    }
     auto build_for(auto serv, auto &&...args) {
         if constexpr (requires { serv.os; }) {
             if (serv.os == "macos"s) {
@@ -316,6 +320,8 @@ struct systemctl {
         systemctl &ctl;
         std::string name;
         std::string progname;
+        std::vector<std::string> args;
+        std::string service_pre_script;
         std::string desc;
         std::string user;
         std::string wdir;
@@ -338,7 +344,7 @@ struct systemctl {
         auto status() {
             // https://refspecs.linuxbase.org/LSB_3.0.0/LSB-PDA/LSB-PDA/iniscrptact.html
             // 3 - program is not running
-            auto r = ctl(raw_command_tag{}, "status", name, "--no-pager");
+            auto r = ctl(raw_command_tag{}, "status", name, "--no-pager", "-l");
             return r;
         }
         void remove_from_system() {
@@ -364,6 +370,7 @@ After=network-online.target
 [Service]
 Type=simple
 User={}
+{}
 ExecStart={}
 WorkingDirectory={}
 Restart=always
@@ -373,7 +380,21 @@ RestartSec=3
 WantedBy=multi-user.target
 )";
             auto service_name = name + ".service";
-            auto service = std::format(service_template, desc, user, wdir + "/" + progname, wdir);
+            std::string args_s;
+            decltype(args) args2;
+            args2.push_back(wdir + "/" + progname);
+            args2.append_range(args);
+            std::string s;
+            for (auto &&a : args2) {
+                s += escape(a) + " ";
+            }
+            s.resize(s.size() - 1);
+
+            std::string pre;
+            if (!service_pre_script.empty()) {
+                pre = "ExecStartPre=/usr/bin/bash -c " + wdir + "/" + "pre.sh";
+            }
+            auto service = std::format(service_template, desc, user, pre, s, wdir);
             ctl.serv.write_file("/etc/systemd/system/" + service_name, service);
         }
     };
@@ -401,6 +422,9 @@ WantedBy=multi-user.target
         auto svc = new_simple_service();
         svc.name = name;
         svc.progname = progname;
+        new_simple_service_auto(svc);
+    }
+    void new_simple_service_auto(simple_service &svc) {
         svc.add_to_system();
         daemon_reload();
         auto r = svc.status().exit_code;
@@ -412,6 +436,7 @@ WantedBy=multi-user.target
         }
         r = svc.status().exit_code;
         if (r != 0) {
+            svc.stop();
             throw std::runtime_error{"cannot start the server"};
         }
     }
@@ -662,9 +687,7 @@ struct ssh_base {
         return primitives::deploy::rsync("-e", obj.connection_string(false, false), args...);
     }
     auto rsync_from(this auto &&obj, const std::string &from, auto &&to, const std::string &flags = "-czavP"s) {
-        auto to2 = normalize_path(to);
-        to2 = cygwin_path(to2);
-        return obj.rsync(flags, obj.server_string() + ":" + (obj.cwd.empty() ? "" : (obj.cwd.string() + "/")) + from, to2);
+        return obj.rsync(flags, obj.server_string() + ":" + (obj.cwd.empty() ? "" : (obj.cwd.string() + "/")) + from, cygwin_path(to));
     }
     /*auto rsync_to(this auto &&obj, const std::string &from, auto &&to, const std::string &flags = "-cavP"s) {
         return obj.rsync(flags, obj.server_string() + ":" + (obj.cwd.empty() ? "" : (obj.cwd.string() + "/")) + from, to);
@@ -915,7 +938,7 @@ struct ssh_base {
         obj.command("chmod", std::to_string(r), normalize_path(p));
     }
     void chown(this auto &&obj, const path &p, const std::string &user) {
-        obj.command("chown", std::format("{}:{}",user,user), normalize_path(p));
+        obj.command("chown", "-R", std::format("{}:{}",user,user), normalize_path(p));
     }
     void write_file(this auto &&obj, const path &p, const std::string &data) {
         auto d = path{".sw/lambda/data"};
@@ -957,8 +980,14 @@ struct ssh_base {
         struct distr {
             std::string distribution;
             int version;
-        };
-        return distr{m.at("ID"),std::stoi(m.at("VERSION_ID"))};
+        } d;
+        d.name = m.at("ID");
+        // ubuntu has "24.04" (remove double quotes)
+        // arch does not have VERSION_ID at all
+        if (d.name == "fedora") {
+            d.version = std::stoi(m.at("VERSION_ID"));
+        }
+        return d;
     }
     auto detect_hostname(this auto &&obj) {
         return obj.command("hostname");
@@ -986,15 +1015,27 @@ struct ssh_base {
     }
 
     struct deploy_single_target_args {
+        struct from_to_path {
+            path from;
+            path to{"."s};
+
+            from_to_path(auto &&p) : from{p} {
+            }
+            from_to_path(auto &&from, auto &&to) : from{from}, to{to} {
+            }
+        };
+
         path localdir;
         path build_file;
         std::string service_name;
+        std::vector<std::string> service_args;
+        std::string service_pre_script;
         std::string target_package_path;
         std::string settings_data;
         // from copied first to special data dir
         std::set<path> sync_files_from;
         // 'to' files copied from the other location to replace server files
-        std::set<path> sync_files_to;
+        std::vector<from_to_path> sync_files_to;
     };
     void deploy_single_target(this auto &&obj, deploy_single_target_args args) {
         ScopedCurrentPath scp{args.localdir};
@@ -1056,6 +1097,12 @@ struct ssh_base {
         root.chmod(755, prog);
         root.chown(prog, username);
 
+        if (!args.service_pre_script.empty()) {
+            root.write_file(normalize_path(home / "pre.sh"), "#!/bin/bash\n\n" + args.service_pre_script + "\n");
+            root.chmod(755, normalize_path(home / "pre.sh"));
+            root.chown(normalize_path(home / "pre.sh"), username);
+        }
+
         if (!args.settings_data.empty()) {
             auto settings = home / progname += ".settings";
             root.write_file(settings, args.settings_data);
@@ -1069,14 +1116,24 @@ struct ssh_base {
             root.rsync_from(normalize_path(src).string(), local_storage_dir);
         }
         // then to
-        for (auto &&f : args.sync_files_to) {
-            auto dst = home / f;
-            root.rsync(normalize_path(f), root.server_string() + ":" + normalize_path(home).string());
-            root.chmod(755, dst);
+        for (auto &&[from,to] : args.sync_files_to) {
+            auto dst = home / to;
+            // cant use 'a' flag because of -user and -owner flags
+            root.rsync("-crvP", cygwin_path(from), root.server_string() + ":" + normalize_path(dst).string());
+            //root.chmod(755, dst); // for dirs
+            //root.chmod(644, dst); // for files
+            // --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
             root.chown(dst, username);
         }
 
-        ctl.new_simple_service_auto(service_name, prognamever);
+        {
+            auto svc = ctl.new_simple_service();
+            svc.name = service_name;
+            svc.progname = prognamever;
+            svc.args = args.service_args;
+            svc.service_pre_script = args.service_pre_script;
+            ctl.new_simple_service_auto(svc);
+        }
     }
     void discard_single_target(this auto &&obj, deploy_single_target_args args) {
         ScopedCurrentPath scp{args.localdir};
