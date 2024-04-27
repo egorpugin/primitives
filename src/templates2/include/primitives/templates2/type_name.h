@@ -19,6 +19,7 @@ consteval auto type_name() {
 #else
     fn = fn.substr(fn.rfind("T = ") + 4);
     fn = fn.substr(0, fn.size() - 1);
+    fn = fn.substr(fn.rfind(":") + 1); // remove namespaces
 #endif
     return fn;
 }
