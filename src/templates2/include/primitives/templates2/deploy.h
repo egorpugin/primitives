@@ -358,8 +358,12 @@ struct systemctl {
             auto r = ctl(raw_command_tag{}, "status", name, "--no-pager", "-l");
             return r;
         }
+        auto service_name() const {
+            auto n = name + ".service";
+            return "/etc/systemd/system/" + n;
+        }
         void remove_from_system() {
-            ctl.serv.remove("/etc/systemd/system/" + name);
+            ctl.serv.remove(service_name());
         }
         void add_to_system() {
             if (desc.empty()) {
@@ -390,7 +394,6 @@ RestartSec=3
 [Install]
 WantedBy=multi-user.target
 )";
-            auto service_name = name + ".service";
             std::string args_s;
             decltype(args) args2;
             args2.push_back(wdir + "/" + progname);
@@ -406,7 +409,7 @@ WantedBy=multi-user.target
                 pre = "ExecStartPre=/usr/bin/bash -c " + wdir + "/" + "pre.sh";
             }
             auto service = std::format(service_template, desc, user, pre, s, wdir);
-            ctl.serv.write_file("/etc/systemd/system/" + service_name, service);
+            ctl.serv.write_file(service_name(), service);
         }
     };
 
@@ -453,7 +456,12 @@ WantedBy=multi-user.target
     }
     void delete_simple_service(const std::string &name) {
         auto svc = service(name);
-        svc.disable();
+        auto r = svc.status().exit_code;
+        // 4 = not found
+        if (r != 4) {
+            svc.stop();
+            svc.disable();
+        }
         svc.remove_from_system();
         daemon_reload();
     }
@@ -515,6 +523,9 @@ struct system_base {
         if constexpr (requires {obj.initial_setup_packages();}) {
             obj.initial_setup_packages();
         }
+
+        // for our servers Europe/Moscow
+        obj.command("timedatectl", "set-timezone", "UTC");
 
         // or ubuntu?
         // serv.create_user("egor");
@@ -1326,6 +1337,14 @@ struct ssh_base {
             }
             from_to_path(auto &&from, auto &&to) : from{from}, to{to} {
             }
+
+            /*from_to_path() = default;
+            from_to_path(const path &p) : from{p} {
+            }
+            from_to_path(const path &from, const path &to) : from{from}, to{to} {
+            }
+            from_to_path(const from_to_path &) = default;
+            from_to_path(from_to_path &&) = default;*/
         };
 
         path localdir;
@@ -1339,10 +1358,22 @@ struct ssh_base {
         std::set<path> sync_files_from;
         // 'to' files copied from the other location to replace server files
         std::vector<from_to_path> sync_files_to;
-    };
-    void deploy_single_target(this auto &&obj, deploy_single_target_args args) {
-        ScopedCurrentPath scp{args.localdir};
+        //std::vector<from_to_path> deploy_files_once;
+        //std::set<path> backup_files;
 
+        void backup_service_data(auto &&serv, const path &backup_root_dir) {
+            auto u = serv.login(service_name);
+            auto home = u.home();
+
+            auto backup_dir = backup_root_dir / service_name;
+            fs::create_directories(backup_dir);
+            for (auto &&f : sync_files_from) {
+                auto src = home / f;
+                serv.rsync_from(normalize_path(src).string(), backup_dir);
+            }
+        }
+    };
+    auto detect_targetline(this auto &&obj, auto &&args) {
         sw_command s;
         auto list_output = args.build_file.empty() ? s.list_targets() : s.list_targets(args.build_file);
         auto lines = split_lines(list_output);
@@ -1361,7 +1392,8 @@ struct ssh_base {
                 }
             }
             if (targetline.empty()) {
-                throw std::runtime_error{"cant detect targets from sw output (empty or more than one): "s + list_output};
+                throw std::runtime_error{"cant detect targets from sw output (empty or more than one): "s +
+                                         list_output};
             }
         } else {
             for (auto &&line : lines) {
@@ -1373,6 +1405,12 @@ struct ssh_base {
         if (targetline.empty()) {
             throw std::runtime_error{"cant detect target"s};
         }
+        return targetline;
+    }
+    void deploy_single_target(this auto &&obj, auto &&args) {
+        ScopedCurrentPath scp{args.localdir};
+
+        auto targetline = obj.detect_targetline(args);
 
         auto pkg = split_string(targetline, "-");
         const auto progname = pkg.at(0);
@@ -1382,6 +1420,7 @@ struct ssh_base {
             args.service_name = progname;
         }
 
+        sw_command s;
         auto cfgname = "r";
         if (args.build_file.empty()) {
             s.build_for(obj, "-static", "-config", "r", "-config-name", cfgname, "--target", prognamever);
@@ -1425,12 +1464,8 @@ struct ssh_base {
             root.chown(settings, username);
         }
         // from first
-        auto local_storage_dir = path{"data"} / service_name;
-        fs::create_directories(local_storage_dir);
-        for (auto &&f : args.sync_files_from) {
-            auto src = home / f;
-            root.rsync_from(normalize_path(src).string(), local_storage_dir);
-        }
+        args.backup_service_data(root, "data");
+        args.backup_service_data(root, obj.main_backup_dir);
         // then to
         for (auto &&[from,to] : args.sync_files_to) {
             auto dst = home / to;
@@ -1451,29 +1486,10 @@ struct ssh_base {
             ctl.new_simple_service_auto(svc);
         }
     }
-    void discard_single_target(this auto &&obj, deploy_single_target_args args) {
+    void discard_single_target(this auto &&obj, auto &&args) {
         ScopedCurrentPath scp{args.localdir};
 
-        sw_command s;
-        auto list_output = args.build_file.empty() ? s.list_targets() : s.list_targets(args.build_file);
-        auto lines = split_lines(list_output);
-        std::string targetline;
-        if (lines.empty()) {
-            throw std::runtime_error{"empty targets"s};
-        } else if (args.target_package_path.empty() && lines.size() == 1) {
-            targetline = lines[0];
-        } else if (args.target_package_path.empty() && lines.size() != 1) {
-            throw std::runtime_error{"cant detect targets from sw output (empty or more than one): "s + list_output};
-        } else {
-            for (auto &&line : lines) {
-                if (line.starts_with(args.target_package_path)) {
-                    targetline = line;
-                }
-            }
-        }
-        if (targetline.empty()) {
-            throw std::runtime_error{"cant detect target"s};
-        }
+        auto targetline = obj.detect_targetline(args);
 
         auto pkg = split_string(targetline, "-");
         const auto progname = pkg.at(0);
@@ -1484,12 +1500,19 @@ struct ssh_base {
         }
 
         auto service_name = args.service_name;
+        auto username = args.service_name;
 
         auto root = obj.root();
+        if (!root.has_user(username)) {
+            return;
+        }
+
         systemctl ctl{root};
         ctl.delete_simple_service(service_name);
 
-        auto username = args.service_name;
+        args.backup_service_data(root, "data");
+        args.backup_service_data(root, obj.main_backup_dir);
+
         root.delete_user(username);
     }
 };
