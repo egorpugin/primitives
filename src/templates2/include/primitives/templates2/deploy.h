@@ -26,7 +26,7 @@ namespace primitives::deploy {
 
 using version_type = primitives::version::Version;
 
-inline const version_type max_fedora_version = 40;
+inline const version_type max_fedora_version = "40";
 inline const version_type max_ubuntu_version = "24.4";
 
 #ifdef _WIN32
@@ -84,7 +84,22 @@ struct thread_manager {
 
 thread_local std::string thread_name;
 thread_local std::string log_name;
-path log_dir;
+path log_dir = [] {
+    path dir = ".sw/log";
+
+    std::string time = __DATE__;
+    time += " " __TIME__;
+    std::istringstream ss{time};
+    std::chrono::system_clock::time_point tp;
+    ss >> std::chrono::parse("%b %d %Y %T", tp);
+
+    path p = std::format("{:%F %H-%M-%OS}", tp);
+    //path p = __DATE__ __TIME__; // PACKAGE_PATH;
+
+    dir /= p.stem();
+    fs::create_directories(dir);
+    return dir;
+}();
 
 struct threaded_logger {
     void log(std::string s) {
@@ -92,7 +107,9 @@ struct threaded_logger {
         boost::replace_all(s, "\r\n", "\n");
         if (thread_manager_.is_main_thread()) {
             LOG_INFO(logger, s);
-            //std::cout << s;
+            static std::ofstream ofile{log_dir / "main.log"};
+            ofile << s << "\n";
+            ofile.flush(); // ?
         } else {
             LOG_INFO(logger, std::format("[{}] {}", thread_name, s));
             thread_local std::ofstream ofile{log_dir / log_name};
@@ -138,7 +155,6 @@ auto scoped_runner(auto && ... args) {
     return scoped_task{args...};
 }
 
-struct raw_command_tag{};
 auto create_command(auto &&...args) {
     primitives::Command c;
     (c.arguments.push_back(args), ...);
@@ -157,14 +173,14 @@ auto run_command_raw(primitives::Command &c) {
     threaded_logger_.log(c.print());
     std::error_code ec;
     c.execute(ec);
+    if (!c.exit_code) {
+        throw std::runtime_error{c.err.text + ": " + ec.message()};
+    }
     struct result {
         decltype(c.exit_code)::value_type exit_code;
         std::string out;
         std::string err;
     };
-    if (!c.exit_code) {
-        throw std::runtime_error{c.err.text + ": " + ec.message()};
-    }
     return result{*c.exit_code, std::move(out), std::move(err)};
 }
 auto run_command(primitives::Command &c) {
@@ -324,6 +340,8 @@ struct sw_system {
         obj.remove_all(obj.storage_dir() / "etc" / "sw" / "database" / "1" / "remote");
     }
 };
+
+struct raw_command_tag {};
 
 template <typename Serv>
 struct systemctl {
@@ -1112,8 +1130,15 @@ struct ssh_base {
         addr.sin_addr.s_addr = bcast;
         addr.sin_port = htons(port);
         // Send the packet out.
-        if (sendto(fd, message.c_str(), message.length(), 0, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) < 0) {
-            throw std::runtime_error("Failed to send packet");
+        int n = 3;
+        while (n--) {
+            int n2 = 10;
+            while (n2--) {
+                if (sendto(fd, message.c_str(), message.length(), 0, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) < 0) {
+                    throw std::runtime_error("Failed to send packet");
+                }
+            }
+            std::this_thread::sleep_for(1s);
         }
     }
     void wake_on_lan(this auto &&obj) {
@@ -1457,7 +1482,7 @@ struct ssh_base {
         std::set<path> sync_files_from;
         // 'to' files copied from the other location to replace server files
         std::vector<from_to_path> sync_files_to;
-        //std::vector<from_to_path> deploy_files_once;
+        std::vector<from_to_path> deploy_files_once;
         //std::set<path> backup_files;
         std::set<std::string> fedora_packages;
         std::set<int> tcp_ports;
@@ -1543,6 +1568,7 @@ struct ssh_base {
         auto username = args.service_name;
         auto service_name = args.service_name;
         auto root = obj.root();
+        auto first_time = !root.has_user(username);
         root.create_user(username);
 
         auto os = obj.detect_os();
@@ -1559,6 +1585,9 @@ struct ssh_base {
         auto svc = ctl.service(service_name);
         if (svc.status().exit_code == 0) {
             svc.stop();
+        }
+        if (svc.status().exit_code == 4) {
+            first_time = true;
         }
 
         // maybe put our public key into 'authorized_keys'
@@ -1585,12 +1614,9 @@ struct ssh_base {
             root.write_file(settings, args.settings_data);
             root.chown(settings, username);
         }
-        // from first
-        //args.backup_service_data(root, "data");
-        try {
+        // backup first
+        if (!first_time) {
             args.backup_service_data(root, obj.backup_dir(args.service_name));
-        } catch (std::exception &) {
-            // first deploy can fail backing up
         }
         // then to
         for (auto &&[from,to] : args.sync_files_to) {
@@ -1601,6 +1627,17 @@ struct ssh_base {
             //root.chmod(644, dst); // for files
             // --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
             root.chown(dst, username);
+        }
+        if (first_time) {
+            for (auto &&[from, to] : args.deploy_files_once) {
+                auto dst = home / to;
+                // cant use 'a' flag because of -user and -owner flags
+                root.rsync("-crvP", cygwin_path(from), root.server_string() + ":" + normalize_path(dst).string());
+                // root.chmod(755, dst); // for dirs
+                // root.chmod(644, dst); // for files
+                //  --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
+                root.chown(dst, username);
+            }
         }
 
         if (args.postgres_db) {
