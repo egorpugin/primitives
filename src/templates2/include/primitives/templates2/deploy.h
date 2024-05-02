@@ -471,6 +471,7 @@ template <typename Serv>
 struct dnf {
     Serv &serv;
     auto operator()(auto &&...args) {
+        auto s = serv.sudo();
         return serv.command("dnf", args...);
     }
     auto upgrade(auto &&...args) {
@@ -489,6 +490,7 @@ struct apt {
     Serv &serv;
 
     auto operator()(auto &&...args) {
+        auto s = serv.sudo();
         auto env = serv.scoped_environment("DEBIAN_FRONTEND", "noninteractive");
         return serv.command("apt", args...);
     }
@@ -503,6 +505,25 @@ struct apt {
     }
     auto install(auto &&...args) {
         return operator()("install", "-y", "-q", args...);
+    }
+};
+
+template <typename Serv>
+struct pacman {
+    Serv &serv;
+
+    auto operator()(auto &&...args) {
+        auto s = serv.sudo();
+        return serv.command("pacman", args...);
+    }
+    auto update(auto &&...args) {
+        return operator()("-y", args...);
+    }
+    auto upgrade(auto &&...args) {
+        return operator()("-u", args...);
+    }
+    auto install(auto &&...args) {
+        return operator()("-S", args...);
     }
 };
 
@@ -525,7 +546,7 @@ struct system_base {
         }
 
         // for our servers Europe/Moscow
-        obj.command("timedatectl", "set-timezone", "UTC");
+        serv.command("timedatectl", "set-timezone", "UTC");
 
         // or ubuntu?
         // serv.create_user("egor");
@@ -539,6 +560,7 @@ template <typename Serv>
 struct ubuntu : system_base {
     Serv &serv;
     version_type version;
+    std::string name{"ubuntu"};
 
     ubuntu(Serv &serv, version_type version) : serv{serv}, version{version} {
         initial_setup();
@@ -568,12 +590,16 @@ struct ubuntu : system_base {
         serv.command("do-release-upgrade", "-d", "--frontend=DistUpgradeViewNonInteractive");
         serv.reboot();
     }
+    void install_postgres() {
+        SW_UNIMPLEMENTED;
+    }
 };
 
 template <typename Serv>
 struct fedora : system_base {
     Serv &serv;
     version_type version;
+    std::string name{"fedora"};
 
     fedora(Serv &serv, version_type version) : serv{serv}, version{version} {
         initial_setup();
@@ -591,6 +617,49 @@ struct fedora : system_base {
         return dnf{serv};
     }
     void upgrade_system() {
+        SW_UNIMPLEMENTED;
+    }
+    void install_postgres() {
+        package_manager().install("postgresql-server");
+        auto su = serv.sudo();
+        if (!serv.exists("/var/lib/pgsql/data/pg_hba.conf")) {
+            serv.command("/usr/bin/postgresql-setup", "--initdb");
+        }
+        systemctl ctl{serv};
+        auto svc = ctl.service("postgresql");
+        svc.enable();
+        if (svc.status().exit_code != 0) {
+            svc.start();
+            if (svc.status().exit_code != 0) {
+                throw std::runtime_error{"can't start pg service"};
+            }
+        }
+    }
+};
+
+template <typename Serv>
+struct arch : system_base {
+    Serv &serv;
+    std::string name{"arch"};
+
+    arch(Serv &serv) : serv{serv} {
+        //initial_setup();
+    }
+    void initial_setup_packages() {
+    }
+    void update_packages() {
+        SW_UNIMPLEMENTED;
+        /*auto scoped_sudo = serv.sudo();
+        auto pm = package_manager();
+        pm.upgrade();*/
+    }
+    auto package_manager() {
+        return pacman{serv};
+    }
+    void upgrade_system() {
+        SW_UNIMPLEMENTED;
+    }
+    void install_postgres() {
         SW_UNIMPLEMENTED;
     }
 };
@@ -694,6 +763,7 @@ struct ssh_base {
     std::string user;
     std::string password;
     std::optional<bool> can_sudo_without_password_;
+    std::string sudo_user;
 
     std::string connection_string(this auto &&obj, bool with_server = false, bool with_t = true) {
         using T = std::decay_t<decltype(obj)>;
@@ -868,6 +938,11 @@ struct ssh_base {
                 c.push_back("-S");
             }
         }
+        if (obj.get_user() == "root" && !obj.sudo_user.empty()) {
+            c.push_back("sudo");
+            c.push_back("-u");
+            c.push_back(obj.sudo_user);
+        }
         (c.push_back(args), ...);
         return c;
     }
@@ -910,7 +985,13 @@ struct ssh_base {
         return *obj.can_sudo_without_password_;
     }
     auto sudo(this auto &&obj, bool sudo_mode = true) {
-        return SwapAndRestore(obj.sudo_mode, sudo_mode);
+        using T = std::decay_t<decltype(obj)>;
+        struct x : T {
+            SwapAndRestore<bool> sr1;
+            SwapAndRestore<bool> sr2;
+            x(bool &b1, bool b2, const T &o) : T{o}, sr1{T::sudo_mode,b2}, sr2{b1,b2} {}
+        };
+        return x(obj.sudo_mode, sudo_mode, obj);
     }
     auto sudo(this auto &&obj, auto &&prog, auto &&...args) {
         auto sr = obj.sudo();
@@ -1223,7 +1304,7 @@ struct ssh_base {
     auto detect_os(this auto &&obj) {
         using T = std::decay_t<decltype(obj)>;
         // add windows, macos
-        using os_type = std::variant<ubuntu<T>, fedora<T>>;
+        using os_type = std::variant<ubuntu<T>, fedora<T>, arch<T>>;
 
         auto s = obj.command("cat", "/etc/os-release");
         auto m = split_string_map(s);
@@ -1232,12 +1313,16 @@ struct ssh_base {
             version_type version;
         } d;
         d.distribution = boost::to_lower_copy(m.at("ID"));
-        d.version = m.at("VERSION_ID");
         if (d.distribution == "fedora") {
+            d.version = m.at("VERSION_ID");
             return os_type{fedora{obj, d.version}};
         }
         if (d.distribution == "ubuntu") {
+            d.version = m.at("VERSION_ID");
             return os_type{ubuntu{obj, d.version}};
+        }
+        if (d.distribution == "arch") {
+            return os_type{arch{obj}};
         }
         // unimplemented os
         SW_UNIMPLEMENTED;
@@ -1297,6 +1382,15 @@ struct ssh_base {
         o.user = u;
         return o;
     }
+    auto login_for_command(this auto &&obj, const std::string &u) {
+        std::decay_t<decltype(obj)> o{obj};
+        if (obj.user == "root") {
+            o.sudo_user = u;
+        } else {
+            o.user = u;
+        }
+        return o;
+    }
     auto root(this auto &&obj) {
         // not now
         auto b = false;//obj.can_sudo_without_password();
@@ -1333,7 +1427,12 @@ struct ssh_base {
             path from;
             path to{"."s};
 
-            from_to_path(auto &&p) : from{p} {
+            from_to_path(const path &p) : from{p} {
+            }
+            from_to_path(const char *p) : from{p} {
+            }
+            template <auto N>
+            from_to_path(const char (&p)[N]) : from{p} {
             }
             from_to_path(auto &&from, auto &&to) : from{from}, to{to} {
             }
@@ -1360,16 +1459,29 @@ struct ssh_base {
         std::vector<from_to_path> sync_files_to;
         //std::vector<from_to_path> deploy_files_once;
         //std::set<path> backup_files;
+        std::set<std::string> fedora_packages;
+        std::set<int> tcp_ports;
+        bool postgres_db{};
 
         void backup_service_data(auto &&serv, const path &backup_root_dir) {
             auto u = serv.login(service_name);
             auto home = u.home();
 
-            auto backup_dir = backup_root_dir / service_name;
+            auto backup_dir = backup_root_dir;
             fs::create_directories(backup_dir);
             for (auto &&f : sync_files_from) {
                 auto src = home / f;
                 serv.rsync_from(normalize_path(src).string(), backup_dir);
+            }
+
+            if (postgres_db) {
+                auto src = normalize_path(home / "pg.sql").string();
+                SCOPE_EXIT {
+                    serv.remove(src);
+                };
+                auto postgres = serv.login_for_command("postgres");
+                postgres.command("pg_dump", "-d", service_name, ">", src);
+                serv.rsync_from(src, backup_dir);
             }
         }
     };
@@ -1433,6 +1545,16 @@ struct ssh_base {
         auto root = obj.root();
         root.create_user(username);
 
+        auto os = obj.detect_os();
+        for (auto &&p : args.fedora_packages) {
+            // FIXME: match os <-> packages
+            visit(os, [&](auto &v){v.package_manager().install(p);});
+        }
+        for (auto &&p : args.tcp_ports) {
+            root.command("firewall-cmd", "--permanent", "--add-port", std::to_string(p) + "/tcp");
+        }
+        root.command("firewall-cmd", "--reload");
+
         systemctl ctl{root};
         auto svc = ctl.service(service_name);
         if (svc.status().exit_code == 0) {
@@ -1464,8 +1586,12 @@ struct ssh_base {
             root.chown(settings, username);
         }
         // from first
-        args.backup_service_data(root, "data");
-        args.backup_service_data(root, obj.main_backup_dir);
+        //args.backup_service_data(root, "data");
+        try {
+            args.backup_service_data(root, obj.backup_dir(args.service_name));
+        } catch (std::exception &) {
+            // first deploy can fail backing up
+        }
         // then to
         for (auto &&[from,to] : args.sync_files_to) {
             auto dst = home / to;
@@ -1475,6 +1601,20 @@ struct ssh_base {
             //root.chmod(644, dst); // for files
             // --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
             root.chown(dst, username);
+        }
+
+        if (args.postgres_db) {
+            visit(os, [&](auto &v) {
+                v.install_postgres();
+            });
+            auto postgres = root.login_for_command("postgres");
+            // user, not role; users can login
+            auto x = postgres.command("psql", "-t", "-c", "'select count(*) from pg_user where usename = $$raid_quiz$$;'");
+            boost::trim(x);
+            if (x == "0") {
+                postgres.command("psql", "-c", "'create user " + args.service_name + " password $$" + args.service_name + "$$;'");
+                postgres.command("psql", "-c", "'create database " + args.service_name + " owner " + args.service_name + ";'");
+            }
         }
 
         {
@@ -1507,11 +1647,24 @@ struct ssh_base {
             return;
         }
 
+        auto os = obj.detect_os();
+        auto osname = visit(os, [](auto &&v){return v.name;});
+        if (osname != "arch") {
+            for (auto &&p : args.tcp_ports) {
+                root.command("firewall-cmd", "--permanent", "--remove-port", std::to_string(p) + "/tcp");
+            }
+            root.command("firewall-cmd", "--reload");
+        }
+
         systemctl ctl{root};
         ctl.delete_simple_service(service_name);
 
-        args.backup_service_data(root, "data");
-        args.backup_service_data(root, obj.main_backup_dir);
+        //args.backup_service_data(root, "data");
+        args.backup_service_data(root, obj.backup_dir(args.service_name));
+        if (args.postgres_db) {
+            root.command("psql", "-U", "postgres", "-c", "'drop database " + args.service_name + ";'");
+            root.command("psql", "-U", "postgres", "-c", "'drop user " + args.service_name + ";'");
+        }
 
         root.delete_user(username);
     }
