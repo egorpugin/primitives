@@ -37,6 +37,9 @@ void Command::parse(const yaml &root)
     if (root["cat"].IsDefined())
         category = root["cat"].template as<decltype(category)>();
     READ_OPT(category);
+    // set current subcommand?
+    //if (category.empty()) {
+    //}
     if (root["value_desc"].IsDefined())
         value_description = root["value_desc"].template as<decltype(value_description)>();
     READ_OPT(value_description);
