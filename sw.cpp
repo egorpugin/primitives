@@ -81,11 +81,13 @@ static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Str
             << "-m" << m
             << "-v" << v
             << cmd::end()
-            << cmd::out(i / m / m)
+            // focus on anchoring to .syncqt.h header files for now
+            //<< cmd::out(i / m / m)
             << cmd::out(path{i / m / m} += ".syncqt.h")
             ;
         c->strict_order = 1; // run before moc
-        out.insert(i / m / m);
+        //out.insert(i / m / m);
+        out.insert(path{i / m / m} += ".syncqt.h");
         //t.Interface += i / m / m; // makes cyclic deps
 
         t.Public += IncludeDirectory(i);
