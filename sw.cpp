@@ -172,6 +172,13 @@ void build(Solution &s)
             // use newer and conforming preprocessor everywhere
             t.Public.CompileOptions.push_back("/Zc:preprocessor");
         }
+        if (t.getCompilerType() == CompilerType::ClangCl)
+        {
+            // clang-cl has too many windows headers warnings, so disable them all for now
+            // maybe because of -Wall above?
+            // disable all warnings!!
+            t.Public.CompileOptions.push_back("-w");
+        }
         return p;
     };
 
