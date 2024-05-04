@@ -22,6 +22,24 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "deploy");
 
+unsigned int edit_distance(const std::string &s1, const std::string &s2) {
+    const std::size_t len1 = s1.size(), len2 = s2.size();
+    std::vector<std::vector<unsigned int>> d(len1 + 1, std::vector<unsigned int>(len2 + 1));
+
+    d[0][0] = 0;
+    for (unsigned int i = 1; i <= len1; ++i)
+        d[i][0] = i;
+    for (unsigned int i = 1; i <= len2; ++i)
+        d[0][i] = i;
+
+    for (unsigned int i = 1; i <= len1; ++i)
+        for (unsigned int j = 1; j <= len2; ++j)
+            // note that std::min({arg1, arg2, arg3}) works only in C++11,
+            // for C++98 use std::min(std::min(arg1, arg2), arg3)
+            d[i][j] = std::min({d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (s1[i - 1] == s2[j - 1] ? 0 : 1)});
+    return d[len1][len2];
+}
+
 namespace primitives::deploy {
 
 using version_type = primitives::version::Version;
@@ -354,6 +372,7 @@ struct systemctl {
         std::string desc;
         std::string user;
         std::string wdir;
+        std::map<std::string, std::string> environment;
 
         auto start() {
             return ctl("start", name);
@@ -423,6 +442,9 @@ WantedBy=multi-user.target
             s.resize(s.size() - 1);
 
             std::string pre;
+            for (auto &&[k,v] : environment) {
+                pre += std::format("Environment={}={}\n", k, v);
+            }
             if (!service_pre_script.empty()) {
                 pre = "ExecStartPre=/usr/bin/bash -c " + wdir + "/" + "pre.sh";
             }
@@ -559,6 +581,7 @@ struct system_base {
         obj.update_packages();
         // reboot?
         obj.package_manager().install("htop");
+        obj.package_manager().install("rsync");
         if constexpr (requires {obj.initial_setup_packages();}) {
             obj.initial_setup_packages();
         }
@@ -1191,10 +1214,10 @@ struct ssh_base {
     std::string pubkey(this auto &&obj) {
         auto p = obj.find_key();
         if (fs::exists(path{p} += ".pub")) {
-            return boost::trim_copy(read_file(path{p} += ".pub"));
+            return boost::trim_copy(::read_file(path{p} += ".pub"));
         }
         if (fs::exists(p.parent_path() / path{p.stem()} += ".pub")) {
-            return boost::trim_copy(read_file(p.parent_path() / path{p.stem()} += ".pub"));
+            return boost::trim_copy(::read_file(p.parent_path() / path{p.stem()} += ".pub"));
         }
         throw SW_RUNTIME_ERROR("cannot find ssh public key"s);
     }
@@ -1285,6 +1308,11 @@ struct ssh_base {
     void chown(this auto &&obj, const path &p, const std::string &user) {
         obj.command("chown", "-R", std::format("{}:{}",user,user), normalize_path(p));
     }
+    auto read_file(this auto &&obj, const path &p) {
+        auto d = path{".sw/lambda/data"};
+        obj.rsync_from(normalize_path(p).string(), d / "1.txt");
+        return ::read_file(d / "1.txt");
+    }
     void write_file(this auto &&obj, const path &p, const std::string &data) {
         auto d = path{".sw/lambda/data"};
         ::write_file(d / p.filename(), data);
@@ -1331,6 +1359,12 @@ struct ssh_base {
         // add windows, macos
         using os_type = std::variant<ubuntu<T>, fedora<T>, arch<T>>;
 
+        /*
+        sw_vers
+        ProductName:    macOS
+        ProductVersion:    14.4.1
+        BuildVersion:    23E224
+        */
         auto s = obj.command("cat", "/etc/os-release");
         auto m = split_string_map(s);
         struct distr {
@@ -1433,13 +1467,14 @@ struct ssh_base {
         // serv.command("sed", "-i", "-e", "'s/UsePAM yes/UsePAM no/g'", sshd_conf);
         obj.command("sed", "-i", "-e", "'s/PermitRootLogin yes/PermitRootLogin without-password/g'", sshd_conf);
         // since ssh 7.0?
-        obj.command("sed", "-i", "-e", "'s/PermitRootLogin without-password/PermitRootLogin prohibit-password/g'",
-                     sshd_conf);
+        obj.command("sed", "-i", "-e", "'s/PermitRootLogin without-password/PermitRootLogin prohibit-password/g'", sshd_conf);
+        obj.command("sed", "-i", "-e", "'s/#PermitRootLogin prohibit-password/PermitRootLogin prohibit-password/g'", sshd_conf);
 
         obj.command("sed", "-i", "-e", "'s/#PubkeyAuthentication yes/PubkeyAuthentication yes/g'", sshd_conf);
 
         obj.command("sed", "-i", "-e", "'s/PasswordAuthentication yes/PasswordAuthentication no/g'", sshd_conf);
         obj.command("sed", "-i", "-e", "'s/#PasswordAuthentication yes/PasswordAuthentication no/g'", sshd_conf);
+        obj.command("sed", "-i", "-e", "'s/#PasswordAuthentication no/PasswordAuthentication no/g'", sshd_conf);
         obj.command("sed", "-i", "-e", "'s/#PerminEmptyPasswords no/PerminEmptyPasswords no/g'", sshd_conf);
 
         obj.command("sed", "-i", "-e", "'s/#PermitUserEnvironment no/PermitUserEnvironment yes/g'", sshd_conf);
@@ -1487,6 +1522,9 @@ struct ssh_base {
         std::set<std::string> fedora_packages;
         std::set<int> tcp_ports;
         bool postgres_db{};
+        std::function<void(void)> custom_build;
+        path custom_exe_fn;
+        std::map<std::string, std::string> environment;
 
         void backup_service_data(auto &&serv, const path &backup_root_dir) {
             auto u = serv.login(service_name);
@@ -1511,10 +1549,13 @@ struct ssh_base {
         }
     };
     auto detect_targetline(this auto &&obj, auto &&args) {
+        std::string targetline;
+        if (args.custom_build) {
+            return args.service_name;
+        }
         sw_command s;
         auto list_output = args.build_file.empty() ? s.list_targets() : s.list_targets(args.build_file);
         auto lines = split_lines(list_output);
-        std::string targetline;
         if (lines.empty()) {
             throw std::runtime_error{"empty targets"s};
         } else if (args.target_package_path.empty() && lines.size() == 1) {
@@ -1529,8 +1570,12 @@ struct ssh_base {
                 }
             }
             if (targetline.empty()) {
-                throw std::runtime_error{"cant detect targets from sw output (empty or more than one): "s +
-                                         list_output};
+                auto it = std::ranges::min_element(lines, {}, [&](auto &&el){return edit_distance(el, args.service_name);});
+                if (edit_distance(*it, args.service_name) > args.service_name.size() / 2 + 6) {
+                    throw std::runtime_error{"cant detect targets from sw output (empty or more than one): "s +
+                                             list_output};
+                }
+                targetline = *it;
             }
         } else {
             for (auto &&line : lines) {
@@ -1559,7 +1604,9 @@ struct ssh_base {
 
         sw_command s;
         auto cfgname = "r";
-        if (args.build_file.empty()) {
+        if (args.custom_build) {
+            args.custom_build();
+        } else if (args.build_file.empty()) {
             s.build_for(obj, "-static", "-config", "r", "-config-name", cfgname, "--target", prognamever);
         } else {
             s.build_for(obj, "-static", "-config", "r", "-config-name", cfgname, args.build_file, "--target", prognamever);
@@ -1594,10 +1641,13 @@ struct ssh_base {
         // and sign in instead of root?
 
         auto fn = path{".sw"} / "out" / cfgname / prognamever;
+        if (args.custom_build) {
+            fn = args.custom_exe_fn;
+        }
         auto u = root.login(username);
         auto home = u.home();
         root.rsync(normalize_path(fn), root.server_string() + ":" + normalize_path(home).string());
-        auto prog = home / prognamever;
+        auto prog = normalize_path(home / fn.filename());
         root.chmod(755, prog);
         root.chown(prog, username);
         // selinux
@@ -1654,12 +1704,19 @@ struct ssh_base {
             }
         }
 
+        if (first_time) {
+            if constexpr (requires { args.run_once(root, prog); }) {
+                args.run_once(root, prog);
+            }
+        }
+
         {
             auto svc = ctl.new_simple_service();
             svc.name = service_name;
-            svc.progname = prognamever;
+            svc.progname = fn.filename().string();
             svc.args = args.service_args;
             svc.service_pre_script = args.service_pre_script;
+            svc.environment = args.environment;
             ctl.new_simple_service_auto(svc);
         }
     }
@@ -1704,6 +1761,10 @@ struct ssh_base {
         }
 
         root.delete_user(username);
+
+        if constexpr (requires { args.cleanup(root); }) {
+            args.cleanup(root);
+        }
     }
 };
 
