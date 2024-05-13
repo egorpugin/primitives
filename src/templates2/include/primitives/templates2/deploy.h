@@ -107,11 +107,13 @@ path log_dir = [] {
 
     std::string time = __DATE__;
     time += " " __TIME__;
+#ifdef _WIN32
     std::istringstream ss{time};
     std::chrono::system_clock::time_point tp;
     ss >> std::chrono::parse("%b %d %Y %T", tp);
-
-    path p = std::format("{:%F %H-%M-%OS}", tp);
+    time = std::format("{:%F %H-%M-%OS}", tp);
+#endif
+    path p = time;
     //path p = __DATE__ __TIME__; // PACKAGE_PATH;
 
     dir /= p.stem();
@@ -582,6 +584,10 @@ struct system_base {
         // reboot?
         obj.package_manager().install("htop");
         obj.package_manager().install("rsync");
+        obj.package_manager().install("certbot");
+        //obj.package_manager().install("nginx"); // by default?
+        //obj.package_manager().install("dnsmasq"); // by default?
+        // gdb?
         if constexpr (requires {obj.initial_setup_packages();}) {
             obj.initial_setup_packages();
         }
