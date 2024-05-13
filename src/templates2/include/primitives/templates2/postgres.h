@@ -13,6 +13,20 @@ namespace primitives::postgres {
 
 namespace db {
 
+template <std::size_t N>
+struct static_string {
+    char p[N]{};
+
+    constexpr static_string(char const (&pp)[N]) { std::ranges::copy(pp, p); }
+    operator auto() const { return &p[0]; }
+    operator std::string() const { return std::string(&p[0], &p[0] + size()); }
+    static consteval size_t size() {return N-1;}
+};
+template <static_string s>
+constexpr auto operator"" _s() {
+    return s;
+}
+
 struct constraint_base {};
 
 struct autoincrement {};
@@ -56,7 +70,7 @@ struct type {
     }
 };
 
-struct contraint_unique_base {};
+struct contraint_unique_base : constraint_base {};
 template <auto Field, auto... Fields>
 struct contraint_unique : contraint_unique_base {
     void for_fields(auto &&f) {
@@ -123,10 +137,27 @@ struct foreign_key : foreign_key_base, type<decltype(get_foreign_field_type(Fiel
 
 template <auto ... Fields>
 struct new_fields {};
+template <typename ... Tables>
+struct new_tables {};
 template <auto... Fields>
 struct new_constraints {};
 
+template <typename T, auto... Fields>
+struct delete_fields {};
+
 } // namespace db
+
+struct blob : std::string {
+    using base = std::string;
+    using base::base;
+    using base::operator=;
+};
+
+/*struct blob_string : std::string {
+    using base = std::string;
+    using base::base;
+    using base::operator=;
+};*/
 
 struct pgmgr {
     using this_type = pgmgr;
@@ -135,6 +166,7 @@ struct pgmgr {
 
     pgmgr(std::string_view conn_string) : c{pqxx::zview{conn_string}} {
     }
+    operator pqxx::connection &() {return c;}
 
     template <typename T>
     void create_table(pqxx::work &tx) {
@@ -177,13 +209,20 @@ struct pgmgr {
                     query += std::format("  \"{}\" \"{}\"", boost::pfr::get_name<I, T>(),
                                          pg_type<type>());
                 }
+                /*if constexpr (requires { field != type{}; } && requires {std::format(" default ({})", field);}) {
+                    if (field != type{}) {
+                        query += std::format(" default ({})", field);
+                    }
+                }*/
                 query += ",\n";
             });
             // constraints
             boost::pfr::for_each_field(T{}, [&]<auto I>(auto &&field, std::integral_constant<size_t, I>) {
                 using type = std::decay_t<decltype(field)>;
 
-                if constexpr (std::is_base_of_v<db::foreign_key_base, type>) {
+                if constexpr (false) {
+                } else if constexpr (std::is_base_of_v<db::contraint_unique_base, type>) {
+                } else if constexpr (std::is_base_of_v<db::foreign_key_base, type>) {
                     field.for_fields([&](auto &&f) {
                         typename type::table_name vv{};
                         boost::pfr::for_each_field(vv, [&]<auto I2>(auto &&field, std::integral_constant<size_t, I2>) {
@@ -259,6 +298,20 @@ struct pgmgr {
         pqxx::work tx{c};
         update_db(tx, v);
     }
+    template <typename ... Tables>
+    void update_db(pqxx::work &tx, db::new_tables<Tables...>) {
+        (create_table<Tables>(tx),...);
+    }
+    template <typename T, auto... Fields>
+    void update_db(pqxx::work &tx, db::delete_fields<T, Fields...>) {
+        std::string q;
+        auto f = [&](auto f) {
+            std::string x = f;
+            q += std::format("alter table \"{}\" drop column \"{}\";", type_name<T>(), x);
+        };
+        (f(Fields), ...);
+        tx.exec(q);
+    }
 
     auto tx() {
         return pqxx::work{c};
@@ -269,7 +322,7 @@ struct pgmgr {
         std::string query;
         query += std::format("select \"{}\" from \"{}\"", db::get_field_name(Field), db::get_table_name(Field));
         auto r = tx.exec1(query);
-        return r[0].as<decltype(db::get_field_type(Field))>();
+        return field_to_type<decltype(db::get_field_type(Field))>(r[0]);
     }
     template <auto Field>
     decltype(db::get_field_type(Field)) select1() {
@@ -302,15 +355,47 @@ struct pgmgr {
     static auto row_to_type(const pqxx::row &r) {
         T v;
         boost::pfr::for_each_field(v, [&]<auto I>(auto &&field, std::integral_constant<size_t, I>) {
-            if constexpr (requires { field.value.value; }) {
-                r[I].to(field.value.value);
-                throw std::logic_error{"????? fix me"};
-            } else if constexpr (requires { field.value; }) {
-                r[I].to(field.value);
+            if constexpr (false) {
+            } else if constexpr (std::is_base_of_v<db::contraint_unique_base, std::decay_t<decltype(field)>>) {
             } else {
-                r[I].to(field);
+                field = field_to_type<std::decay_t<decltype(field)>>(r[I]);
             }
         });
+        return v;
+    }
+    /*template <typename T, auto ... Fields>
+    static auto row_to_type(const pqxx::row &r) {
+        T v;
+        ([&](auto &&f) {
+            boost::pfr::for_each_field(v, [&]<auto I>(auto &&field, std::integral_constant<size_t, I>) {
+                if ((void *)&(v.*f) == (void *)&field) {
+                    if constexpr (false) {
+                    } else if constexpr (std::is_base_of_v<db::contraint_unique_base, std::decay_t<decltype(field)>>) {
+                    } else {
+                        field = field_to_type<std::decay_t<decltype(field)>>(r[I]);
+                    }
+                }
+            });
+        }(Fields),...);
+        return v;
+    }*/
+    template <typename T>
+    static auto field_to_type(const pqxx::field &r) {
+        T v;
+        if constexpr (requires { v.value.value; }) {
+            r.to(v.value.value);
+            throw std::logic_error{"????? fix me"};
+        } else if constexpr (requires { v.value; }) {
+            r.to(v.value);
+        } else if constexpr (std::same_as<T, blob>) {
+            pqxx::binarystring x(r);
+            v = x.str();
+        //} else if constexpr (std::same_as<T, blob_string>) {
+            //pqxx::binarystring x(r);
+            //v = x.str();
+        } else {
+            r.to(v);
+        }
         return v;
     }
 
@@ -373,15 +458,24 @@ struct pgmgr {
     auto insert(pqxx::work &tx, Types &&...values) {
         std::string query;
         query += std::format("insert into \"{}\" (", db::get_table_name(Field));
-        query += std::format("\"{}\",", db::get_field_name(Field));
-        ([&](auto &&f) {
-            query += std::format("\"{}\",", db::get_field_name(f));
-        }(Fields),...);
+        auto x = [&](auto &&f) {
+            if constexpr (false) {
+            } else if constexpr (std::is_base_of_v<db::contraint_unique_base, std::decay_t<decltype(f)>>) {
+            } else {
+                query += std::format("\"{}\",", db::get_field_name(f));
+            }
+        };
+        x(Field);
+        (x(Fields),...);
         query.resize(query.size() - 1);
         query += ") values (";
         int id{};
-        ([&](auto &&) {
-             query += std::format("${},", ++id);
+        ([&](auto &&f) {
+            if constexpr (false) {
+            } else if constexpr (std::is_base_of_v<db::contraint_unique_base, std::decay_t<decltype(f)>>) {
+            } else {
+                query += std::format("${},", ++id);
+            }
         }(values), ...);
         query.resize(query.size() - 1);
         query += ") returning *";
@@ -518,10 +612,13 @@ struct pgmgr {
     auto select1(pqxx::work &tx, FieldTypes &&...vals) {
         std::string query;
         query += std::format("select * from \"{}\" where ", db::get_table_name(Field));
-        query += std::format("\"{}\" = $1", db::get_field_name(Field));
-        /*[&](auto &&ptr, auto &&val) {
-            query += std::format("\"{}\" = ?", db::get_field_name(ptr));
-        }(Fields);*/
+        int id{};
+        auto x = [&](auto &&ptr) {
+            query += std::format("\"{}\" = ${} and ", db::get_field_name(ptr), ++id);
+        };
+        x(Field);
+        (x(Fields),...);
+        query.resize(query.size() - 5);
         // we cant use query_value here, because row_to_type() does extra work
         //return tx.query_value<decltype(db::get_table_type(Field))>(query, pqxx::params{vals...});
         auto r = tx.exec_params1(query, vals...);
@@ -547,6 +644,15 @@ struct pgmgr {
     auto count(FieldTypes &&...vals) {
         pqxx::work tx{c};
         return count<Field,Fields...>(tx, vals...);
+    }
+    template <auto Field, auto... Fields, typename... FieldTypes>
+    auto delete_(pqxx::work &tx, FieldTypes &&...vals) {
+        std::string query;
+        query += std::format("delete from \"{}\" where ", db::get_table_name(Field));
+        query += std::format("\"{}\" = $1", db::get_field_name(Field));
+        //auto r =
+        tx.exec_params(query, vals...);
+        //return row_to_type<decltype(db::get_table_type(Field))>(r);
     }
 
     void create_tables(auto db) {
@@ -626,6 +732,10 @@ private:
             return "float4"sv;
         } else if constexpr (std::is_same_v<T, double>) {
             return "float8"sv;
+        } else if constexpr (std::is_same_v<T, blob>) {
+            return "bytea"sv;
+        //} else if constexpr (std::is_same_v<T, blob_string>) {
+            //return "varchar"sv;
         } else if constexpr (std::is_same_v<T, std::string>) {
             return "varchar"sv;
         } else if constexpr (std::is_same_v<T, bool>) {
