@@ -18,20 +18,19 @@
 
 #include "llvm-c/Support.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -44,6 +43,7 @@
 
 #include <cstdlib>
 #include <map>
+#include <optional>
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -1158,7 +1158,7 @@ void cl::ParseEnvironmentOptions(const char *progName, const char *envVar,
   assert(envVar && "Environment variable name missing");
 
   // Get the environment variable they want us to parse options out of.
-  llvm::Optional<std::string> envValue = sys::Process::GetEnv(StringRef(envVar));
+  std::optional<std::string> envValue = sys::Process::GetEnv(StringRef(envVar));
   if (!envValue)
     return;
 
