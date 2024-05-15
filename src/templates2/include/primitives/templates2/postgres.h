@@ -354,11 +354,11 @@ struct pgmgr {
         (f(Fields), ...);
         tx.exec(q);
     }
-    template <auto... Fields>
+    /*template <auto... Fields>
     void update_db(db::new_fields<Fields...> v) {
         pqxx::work tx{c};
         update_db(tx, v);
-    }
+    }*/
     template <typename ... Tables>
     void update_db(pqxx::work &tx, db::new_tables<Tables...>) {
         (create_table<Tables>(tx),...);
@@ -405,7 +405,7 @@ struct pgmgr {
     }
     template <auto Field>
     decltype(db::get_field_type(Field)) select1() {
-        pqxx::work tx{c};
+        pqxx::work tx{c}; // ok
         return select1<Field>(tx);
     }
 
@@ -459,9 +459,10 @@ struct pgmgr {
         return updater{tx, id, std::tuple{values...}, query};
     }
     template <auto... Fields, typename... Types>
-    auto update(Types &&...values) {
-        pqxx::work tx{c};
-        return update<Fields...>(tx, values...);
+    void update(Types &&...values) {
+        pqxx::work tx{c}; // not ok
+        update<Fields...>(tx, values...);
+        tx.commit();
     }
 
     template <typename T>
