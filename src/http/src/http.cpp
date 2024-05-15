@@ -273,7 +273,8 @@ static std::tuple<std::unique_ptr<CurlWrapper>, ScopedFile> setup_download_reque
 
 void download_file(const String &url, const path &fn, int64_t file_size_limit)
 {
-    auto [w,ofile] = setup_download_request(url, fn, file_size_limit);
+    auto tmpfn = path{fn} += ".dl";
+    auto [w,ofile] = setup_download_request(url, tmpfn, file_size_limit);
     auto curl = w->curl;
 
     auto res = curl_easy_perform(curl);
@@ -284,9 +285,9 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
     // manual close
     ofile.close();
 
-    auto on_error = [&fn]()
+    auto on_error = [&]()
     {
-        fs::remove(fn);
+        fs::remove(tmpfn);
     };
 
     if (res == CURLE_ABORTED_BY_CALLBACK)
@@ -305,6 +306,8 @@ void download_file(const String &url, const path &fn, int64_t file_size_limit)
         on_error();
         throw SW_RUNTIME_ERROR("url = " + url + ", http returned " + std::to_string(http_code));
     }
+
+    fs::rename(tmpfn, fn);
 }
 
 HttpResponse url_request(const HttpRequest &request)
