@@ -269,7 +269,7 @@ auto escape(const path &p) {
     return escape(p.string());
 }
 
-auto cygwin(auto &&...args) {
+auto cygwin_raw(auto &&...args) {
 #ifdef _WIN32
     primitives::Command c2;
     c2.working_directory = fs::current_path();
@@ -284,13 +284,29 @@ auto cygwin(auto &&...args) {
     (f(args), ...);
     s.resize(s.size() - 1);
     c2.push_back(s);
-    return run_command(c2);
+    return c2;
 #else
-    return command(args...);
+    return create_command(args...);
 #endif
 }
+auto cygwin(auto &&...args) {
+    auto c = cygwin_raw(args...);
+    auto res = run_command_raw(c);
+    if (res.exit_code) {
+        throw std::runtime_error{"command failed: " + c.print()};
+    }
+    return res.out;
+}
+
+struct rsync_options {
+    std::vector<std::string> flags;
+};
+
 auto rsync(auto &&...args) {
     return cygwin("rsync", args...);
+}
+auto rsync_raw(auto &&...args) {
+    return cygwin_raw("rsync", args...);
 }
 
 auto system(const std::string &s) {
@@ -660,6 +676,7 @@ struct fedora : system_base {
     }
     void initial_setup_packages() {
         //package_manager().install("setools-console");
+        package_manager().install("openssh-askpass");
         package_manager().install("policycoreutils-python-utils");
     }
     void update_packages() {
@@ -859,13 +876,12 @@ public:
         if (!can_sudo) {
             throw std::runtime_error{std::format("user {} cannot sudo", this->name)};
         }
-        SW_UNIMPLEMENTED;
         auto u = *this;
         u.name = name;
         u.password.clear();
         u.sudo_mode = true;
         u.main_user = this;
-        u.init();
+        //u.init();
         // rsync -avz --stats --rsync-path="echo <SUDOPASS> | sudo -Sv && sudo rsync"  user@192.168.1.2:/ .
         return u;
     }
@@ -950,6 +966,10 @@ public:
         }
         return users_directory() / name;
     }
+
+    void rsync() {
+
+    }
 };
 
 struct deploy_single_target_args {
@@ -1016,7 +1036,7 @@ struct deploy_single_target_args {
             SCOPE_EXIT {
                 serv.remove(src);
             };
-            auto postgres = serv.login_for_command("postgres");
+            auto postgres = serv.login("postgres");
             postgres.command("pg_dump", "-d", service_name, ">", src);
             serv.rsync_from(src, backup_dir);
         }*/
@@ -1026,7 +1046,7 @@ struct deploy_single_target_args {
 struct ssh_options {
     bool pseudo_tty{};
     bool force_pseudo_tty{};
-    bool with_server{};
+    //bool with_server{};
     bool password_auth_no{true};
 };
 
@@ -1035,12 +1055,12 @@ struct ssh_base {
     using user_type = user<T>;
 
     std::vector<user_type> users;
-    bool sudo_mode{};
+    //bool sudo_mode{};
     path cwd;
     std::string ip_;
     //os_type os;
     //std::map<std::string, std::string> environment;
-    ssh_options connection_options;
+    //ssh_options connection_options;
 
     /*auto login1(this auto &&obj, auto && ... args) {
         user u{obj,args...};
@@ -1055,27 +1075,24 @@ struct ssh_base {
         // true except user with sudo and pass
         return false;
     }
-    std::string connection_string(this auto &&obj) {
+    std::string connection_string(this auto &&obj, const ssh_options &connection_options = {}) {
         using T = std::decay_t<decltype(obj)>;
 
         std::string s;
-        for (auto &&a : obj.connection_args()) {
-            if (!obj.connection_options.pseudo_tty && a == "-t") {
-                continue;
-            }
+        for (auto &&a : obj.connection_args(connection_options)) {
             s += a + " ";
         }
         s.resize(s.size() - 1);
         return s;
     }
-    auto connection_args(this auto &&obj) {
+    auto connection_args(this auto &&obj, const ssh_options &connection_options = {}) {
         using T = std::decay_t<decltype(obj)>;
 
         std::vector<std::string> args;
         args.push_back("ssh");
-        if (obj.connection_options.pseudo_tty) {
+        if (connection_options.pseudo_tty) {
             args.push_back("-t"); // allocate pseudo tty
-            if (obj.connection_options.force_pseudo_tty) {
+            if (connection_options.force_pseudo_tty) {
                 args.push_back("-t"); // force!
             }
         }
@@ -1088,10 +1105,11 @@ struct ssh_base {
         args.push_back("-o");
         args.push_back("ServerAliveCountMax=1");
         //if (obj.sudo_mode && obj.get_user() != "root") {
-            /*if (!obj.current_user().sudo_mode_with_password()) {
+            //if (!obj.current_user().sudo_mode_with_password()) {
+            if (connection_options.password_auth_no) {
                 args.push_back("-o");
                 args.push_back("PasswordAuthentication=no");
-            }*/
+            }
         //}
         if constexpr (requires { T::port; }) {
             args.push_back("-p");
@@ -1209,18 +1227,25 @@ struct ssh_base {
         using T = std::decay_t<decltype(obj)>;
         return "/home/"s + obj.get_user();
     }*/
-    auto rsync(this auto &&obj, auto &&...args) {
+    /*auto rsync(this auto &&obj, auto &&...args) {
         SwapAndRestore sr1{obj.connection_options.with_server, false};
         SwapAndRestore sr2{obj.connection_options.pseudo_tty, false};
         return primitives::deploy::rsync("-e", obj.connection_string(), args...);
     }
+    auto rsync_raw(this auto &&obj, auto &&...args) {
+        SwapAndRestore sr1{obj.connection_options.with_server, false};
+        SwapAndRestore sr2{obj.connection_options.pseudo_tty, false};
+        return primitives::deploy::rsync_raw("-e", obj.connection_string(), args...);
+    }
     auto rsync_from(this auto &&obj, const std::string &from, auto &&to, const std::string &flags = "-czavP"s) {
         return obj.rsync(flags, obj.server_string() + ":" + (obj.cwd.empty() ? "" : (obj.cwd.string() + "/")) + from, cygwin_path(to));
-    }
+    }*/
     /*auto rsync_to(this auto &&obj, const std::string &from, auto &&to, const std::string &flags = "-cavP"s) {
         return obj.rsync(flags, obj.server_string() + ":" + (obj.cwd.empty() ? "" : (obj.cwd.string() + "/")) + from, to);
     }*/
     auto create_command(this auto &&obj, auto &&...args) {
+        return obj.current_user().create_command(args...);
+
         primitives::Command c;
         SwapAndRestore sr{obj.connection_options.with_server, true};
         c.push_back(obj.connection_args());
@@ -1641,25 +1666,15 @@ struct ssh_base {
         return SwapAndRestore{obj.environment, env};
     }*/
     auto login(this auto &&obj, const std::string &u) {
-        std::decay_t<decltype(obj)> o{obj};
-        o.set_user(u);
-        return o;
-    }
-    auto login_for_command(this auto &&obj, const std::string &u) {
-        std::decay_t<decltype(obj)> o{obj};
-        SW_UNIMPLEMENTED;
-        /*if (obj.user == "root") {
-            o.sudo_user = u;
-        } else {
-            o.user = u;
-        }*/
+        auto o = obj;
+        o.users.clear();
+        o.users.emplace_back(obj.current_user().login_with_sudo(u));
         return o;
     }
     auto root(this auto &&obj) {
         auto o = obj;
-        auto u = o.users.at(0).sudo();
         o.users.clear();
-        o.users.emplace_back(u);
+        o.users.emplace_back(obj.current_user().sudo());
         return o;
     }
     void setup_ssh(this auto &&obj) {
@@ -1790,9 +1805,17 @@ struct ssh_base {
             fn = args.custom_exe_fn;
         }
         auto u = root.login(username);
-        SW_UNIMPLEMENTED;
-        /*auto home = u.home();
-        root.rsync(normalize_path(fn), root.server_string() + ":" + normalize_path(home).string());
+        auto home = u.current_user().home_dir();
+        {
+            auto c = root.rsync_raw(normalize_path(fn), root.server_string() + ":" + normalize_path(home).string(),
+                "--rsync-path=echo 000999 | sudo -S rsync");
+            //c.in.text = root.current_user().password;
+
+            auto res = run_command_raw(c);
+            if (res.exit_code) {
+                throw std::runtime_error{"command failed: " + c.print()};
+            }
+        }
         auto prog = normalize_path(home / fn.filename());
         root.chmod(755, prog);
         root.chown(prog, username);
@@ -1840,7 +1863,7 @@ struct ssh_base {
             visit(os, [&](auto &v) {
                 v.install_postgres();
             });
-            auto postgres = root.login_for_command("postgres");
+            auto postgres = root.login("postgres");
             // user, not role; users can login
             auto x = postgres.command("psql", "-t", "-c", "'select count(*) from pg_user where usename = $$raid_quiz$$;'");
             boost::trim(x);
@@ -1873,7 +1896,7 @@ struct ssh_base {
             svc.service_pre_script = args.service_pre_script;
             svc.environment = args.environment;
             ctl.new_simple_service_auto(svc);
-        }*/
+        }
     }
     void discard_single_target(this auto &&obj, auto &&args) {
         ScopedCurrentPath scp{args.localdir};
