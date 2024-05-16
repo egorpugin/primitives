@@ -22,6 +22,10 @@
 #include <primitives/log.h>
 DECLARE_STATIC_LOGGER(logger, "deploy");
 
+// TODO:
+// next item is proper paths, normalized for linuxes, for cygwin etc.
+// use env from commands
+
 unsigned int edit_distance(const std::string &s1, const std::string &s2) {
     const std::size_t len1 = s1.size(), len2 = s2.size();
     std::vector<std::vector<unsigned int>> d(len1 + 1, std::vector<unsigned int>(len2 + 1));
@@ -200,6 +204,7 @@ auto run_command_raw(primitives::Command &c) {
         decltype(c.exit_code)::value_type exit_code;
         std::string out;
         std::string err;
+        explicit operator bool() const {return exit_code == 0;}
     };
     return result{*c.exit_code, std::move(out), std::move(err)};
 }
@@ -793,31 +798,165 @@ return f2(0);
 struct ssh_key {
 };
 
+template <typename Serv>
 struct user {
+    Serv &serv;
     std::string name;
     std::string password;
-    std::optional<bool> can_sudo_without_password_;
+    bool ssh_access{};
+    bool can_sudo{};
+    bool sudo_nopasswd{};
+    // scoped settings
+    bool sudo_mode{};
+
+    user(Serv &serv, const std::string &name, const std::string &password = {})
+        : serv{serv}, name{name}, password{password} {
+        init();
+    }
+    void init() {
+        {
+            auto ret = command_raw("test", "0");
+            ssh_access = !ret.exit_code;
+        }
+        if (!ssh_access) {
+            return;
+        }
+        {
+            auto ret = command_raw("sudo", "test", "0");
+            can_sudo = sudo_nopasswd = !ret.exit_code;
+            //if (!sudo_nopasswd && ret.err.contains("sudo: a password is required")) {}
+        }
+        if (!can_sudo) {
+            SwapAndRestore sr1{sudo_mode, true};
+            auto ret = command_raw("test", "0");
+            can_sudo = !ret.exit_code;
+        }
+    }
+    bool is_root() const { return name == "root"; }
+    bool sudo_mode_with_password() const { return !sudo_nopasswd; }
+
+    auto create_command(auto &&...args) {
+        primitives::Command c;
+        c.push_back(serv.connection_args());
+        c.push_back(serv.server_string(name));
+        c.push_back("--"); // end of ssh args
+        if (!serv.cwd.empty()) {
+            c.push_back("cd");
+            c.push_back(serv.cwd);
+            c.push_back("&&");
+        }
+        if (sudo_mode && !is_root()) {
+            c.push_back("sudo");
+            if (sudo_mode_with_password()) {
+                c.push_back("-S");
+            }
+        }
+        /*if (obj.get_user() == "root" && !obj.sudo_user.empty()) {
+            c.push_back("sudo");
+            c.push_back("-u");
+            c.push_back(obj.sudo_user);
+        }*/
+
+        (c.push_back(args), ...);
+
+        if (sudo_mode_with_password()) {
+            if (password.empty()) {
+                throw std::runtime_error{"password is required for sudo command"};
+            }
+            c.in.text = password;
+        }
+        return c;
+    }
+    auto command(auto &&...args) {
+        auto c = create_command(args...);
+        return run_command(c);
+    }
+    auto command_raw(auto &&...args) {
+        auto c = create_command(args...);
+        return run_command_raw(c);
+    }
+    auto run_command(auto &&c) {
+        auto res = run_command_raw(c);
+        if (res.exit_code) {
+            throw std::runtime_error{"command failed: " + c.print()};
+        }
+        return res.out;
+    }
+    auto run_command_raw(auto &&c) {
+        auto e = home_dir() / ".ssh" / "environment";
+        auto has_env = !serv.environment.empty();
+        if (has_env) {
+            std::string s;
+            for (auto &&[k, v] : serv.environment) {
+                s += std::format("{}={}\n", k, v);
+            }
+            serv.write_file(normalize_path(e), s);
+        }
+        SCOPE_EXIT {
+            if (has_env) {
+                auto env = serv.scoped_environment();
+                serv.remove(normalize_path(e));
+            }
+        };
+        return primitives::deploy::run_command_raw(c);
+    }
+
+    path users_directory() {
+        if constexpr (requires {serv.os;}) {
+            if (serv.os == "macos"s) {
+                return "/Users";
+            }
+        }
+        return "/home";
+    }
+    path home_dir() {
+        if (is_root()) {
+            return "/root";
+        }
+        return users_directory() / name;
+    }
+};
+
+struct ssh_options {
+    bool pseudo_tty{};
+    bool force_pseudo_tty{};
+    bool with_server{};
+    bool password_auth_no{true};
 };
 
 struct ssh_base {
+    //std::map<std::string, user> users;
+    //user *u{};
     bool sudo_mode{};
-    bool sudo_mode_with_password{};
     path cwd;
     std::string ip_;
-    bool pseudo_tty{true};
     //os_type os;
     std::map<std::string, std::string> environment;
-    std::string user;
-    std::string password;
-    std::optional<bool> can_sudo_without_password_;
-    std::string sudo_user;
+    ssh_options connection_options;
 
-    std::string connection_string(this auto &&obj, bool with_server = false, bool with_t = true) {
+    auto login1(this auto &&obj, auto && ... args) {
+        user u{obj,args...};
+        //u = &users[name];
+        return u;
+    }
+    void set_user(auto && ... args){}
+    //user &current_user() { return *u; }
+    struct x{
+        bool sudo_mode_with_password() {
+            SW_UNIMPLEMENTED;
+        }
+    };
+    x current_user() { return {}; }
+    bool pseudo_tty() {
+        // true except user with sudo and pass
+        return false;
+    }
+    std::string connection_string(this auto &&obj) {
         using T = std::decay_t<decltype(obj)>;
 
         std::string s;
-        for (auto &&a : obj.connection_args(with_server)) {
-            if (!with_t && a == "-t") {
+        for (auto &&a : obj.connection_args()) {
+            if (!obj.connection_options.pseudo_tty && a == "-t") {
                 continue;
             }
             s += a + " ";
@@ -825,14 +964,16 @@ struct ssh_base {
         s.resize(s.size() - 1);
         return s;
     }
-    auto connection_args(this auto &&obj, bool with_server = false) {
+    auto connection_args(this auto &&obj) {
         using T = std::decay_t<decltype(obj)>;
 
         std::vector<std::string> args;
         args.push_back("ssh");
-        if (obj.pseudo_tty) {
+        if (obj.connection_options.pseudo_tty) {
             args.push_back("-t"); // allocate pseudo tty
-            args.push_back("-t"); // force!
+            if (obj.connection_options.force_pseudo_tty) {
+                args.push_back("-t"); // force!
+            }
         }
         args.push_back("-o");
         args.push_back("StrictHostKeyChecking=accept-new");
@@ -843,20 +984,20 @@ struct ssh_base {
         args.push_back("-o");
         args.push_back("ServerAliveCountMax=1");
         //if (obj.sudo_mode && obj.get_user() != "root") {
-            if (!obj.sudo_mode_with_password) {
+            /*if (!obj.current_user().sudo_mode_with_password()) {
                 args.push_back("-o");
                 args.push_back("PasswordAuthentication=no");
-            }
+            }*/
         //}
-        if (with_server) {
-            args.push_back(obj.server_string());
-        }
         if constexpr (requires { T::port; }) {
             args.push_back("-p");
             args.push_back(std::format("{}", T::port));
         }
         args.push_back("-i");
         args.push_back(std::format("{}", normalize_path(obj.find_key()).string()));
+        /*if (obj.connection_options.with_server) {
+            args.push_back(obj.server_string());
+        }*/
         return args;
     }
     std::string get_ip(this auto &&obj, int retries = 0) {
@@ -943,18 +1084,26 @@ struct ssh_base {
         obj.remove_known_host(obj.ip_);
         return obj.ip_;
     }
-    std::string get_user(this auto &&obj) {
+    /*std::string get_user(this auto &&obj) {
         if constexpr (requires { obj.user; }) {
             return obj.user;
         } else {
             return "root";
         }
-    }
+    }*/
     std::string server_string(this auto &&obj) {
         using T = std::decay_t<decltype(obj)>;
 
         std::string s;
-        s += std::format("{}@{}", obj.get_user(), obj.get_ip());
+        SW_UNIMPLEMENTED;
+        //s += std::format("{}@{}", obj.get_user(), obj.get_ip());
+        return s;
+    }
+    std::string server_string(this auto &&obj, auto &&username) {
+        using T = std::decay_t<decltype(obj)>;
+
+        std::string s;
+        s += std::format("{}@{}", username, obj.get_ip());
         return s;
     }
     path home(this auto &&obj) {
@@ -962,7 +1111,9 @@ struct ssh_base {
         return "/home/"s + obj.get_user();
     }
     auto rsync(this auto &&obj, auto &&...args) {
-        return primitives::deploy::rsync("-e", obj.connection_string(false, false), args...);
+        SwapAndRestore sr1{obj.connection_options.with_server, false};
+        SwapAndRestore sr2{obj.connection_options.pseudo_tty, false};
+        return primitives::deploy::rsync("-e", obj.connection_string(), args...);
     }
     auto rsync_from(this auto &&obj, const std::string &from, auto &&to, const std::string &flags = "-czavP"s) {
         return obj.rsync(flags, obj.server_string() + ":" + (obj.cwd.empty() ? "" : (obj.cwd.string() + "/")) + from, cygwin_path(to));
@@ -972,30 +1123,32 @@ struct ssh_base {
     }*/
     auto create_command(this auto &&obj, auto &&...args) {
         primitives::Command c;
-        c.push_back(obj.connection_args(true));
+        SwapAndRestore sr{obj.connection_options.with_server, true};
+        c.push_back(obj.connection_args());
         c.push_back("--"); // end of ssh args
         if (!obj.cwd.empty()) {
             c.push_back("cd");
             c.push_back(obj.cwd);
             c.push_back("&&");
         }
-        if (obj.sudo_mode && obj.get_user() != "root") {
+        SW_UNIMPLEMENTED;
+        /*if (obj.sudo_mode && obj.get_user() != "root") {
             c.push_back("sudo");
-            if (obj.sudo_mode_with_password) {
+            if (obj.current_user().sudo_mode_with_password()) {
                 c.push_back("-S");
             }
-        }
-        if (obj.get_user() == "root" && !obj.sudo_user.empty()) {
+        }*/
+        /*if (obj.get_user() == "root" && !obj.sudo_user.empty()) {
             c.push_back("sudo");
             c.push_back("-u");
             c.push_back(obj.sudo_user);
-        }
+        }*/
         (c.push_back(args), ...);
         return c;
     }
     auto command(this auto &&obj, auto &&...args) {
         auto c = obj.create_command(args...);
-        if (obj.sudo_mode_with_password) {
+        if (obj.current_user().sudo_mode_with_password()) {
             if constexpr (requires {obj.password;}) {
                 c.in.text = obj.password;
             }
@@ -1003,7 +1156,9 @@ struct ssh_base {
         return obj.run_command(c);
     }
     auto run_command(this auto &&obj, auto &&c) {
-        auto e = obj.user_dir() / ".ssh" / "environment";
+        SW_UNIMPLEMENTED;
+        //auto e = obj.user_dir() / ".ssh" / "environment";
+        auto e = path{"x"} / ".ssh" / "environment";
         auto has_env = !obj.environment.empty();
         if (has_env) {
             std::string s;
@@ -1048,12 +1203,11 @@ struct ssh_base {
         struct s {
             SwapAndRestore<bool> sr1;
             SwapAndRestore<bool> sr2;
-            SwapAndRestore<bool> sr3;
 
-            s(bool &x, bool &y, bool &z, bool mode) : sr1{x,mode}, sr2{y,mode}, sr3{z,!mode} {
+            s(bool &x, bool &y, bool mode) : sr1{x,mode}, sr2{y,mode} {
             }
         };
-        return s{obj.sudo_mode,obj.sudo_mode_with_password,obj.pseudo_tty,sudo_mode};
+        return s{obj.sudo_mode,obj.sudo_mode_with_password,sudo_mode};
     }
     auto sudo_with_password(this auto &&obj, auto &&prog, auto &&...args) {
         /*
@@ -1062,7 +1216,6 @@ struct ssh_base {
         }*/
         SwapAndRestore sr1(obj.sudo_mode, true);
         SwapAndRestore sr2(obj.sudo_mode_with_password, true);
-        SwapAndRestore sr3(obj.pseudo_tty, false);
         auto c = obj.create_command(prog, args...);
         c.in.text = obj.password;
         return obj.run_command(c);
@@ -1228,21 +1381,8 @@ struct ssh_base {
         throw SW_RUNTIME_ERROR("cannot find ssh public key"s);
     }
     auto directory(this auto &&obj, const path &dir) {
+        SW_UNIMPLEMENTED;
         return SwapAndRestore(obj.cwd, dir);
-    }
-    path home_dir(this auto &&obj) {
-        if constexpr (requires {obj.os;}) {
-            if (obj.os == "macos"s) {
-                return "/Users";
-            }
-        }
-        return "/home";
-    }
-    path user_dir(this auto &&obj) {
-        if (obj.get_user() == "root"s) {
-            return "/root";
-        }
-        return obj.home_dir() / obj.get_user();
     }
     void remove_known_host(this auto &&obj, const std::string &what = {}) {
         using T = std::decay_t<decltype(obj)>;
@@ -1444,16 +1584,17 @@ struct ssh_base {
     }
     auto login(this auto &&obj, const std::string &u) {
         std::decay_t<decltype(obj)> o{obj};
-        o.user = u;
+        o.set_user(u);
         return o;
     }
     auto login_for_command(this auto &&obj, const std::string &u) {
         std::decay_t<decltype(obj)> o{obj};
-        if (obj.user == "root") {
+        SW_UNIMPLEMENTED;
+        /*if (obj.user == "root") {
             o.sudo_user = u;
         } else {
             o.user = u;
-        }
+        }*/
         return o;
     }
     auto root(this auto &&obj) {
@@ -1528,9 +1669,12 @@ struct ssh_base {
         std::set<std::string> fedora_packages;
         std::set<int> tcp_ports;
         bool postgres_db{};
+        bool nginx{};
         std::function<void(void)> custom_build;
         path custom_exe_fn;
         std::map<std::string, std::string> environment;
+        std::string prognamever;
+        std::string cfgname{"r"};
 
         void backup_service_data(auto &&serv, const path &backup_root_dir) {
             auto u = serv.login(service_name);
@@ -1602,20 +1746,19 @@ struct ssh_base {
 
         auto pkg = split_string(targetline, "-");
         const auto progname = pkg.at(0);
-        const auto prognamever = targetline;
+        args.prognamever = targetline;
 
         if (args.service_name.empty()) {
             args.service_name = progname;
         }
 
         sw_command s;
-        auto cfgname = "r";
         if (args.custom_build) {
             args.custom_build();
         } else if (args.build_file.empty()) {
-            s.build_for(obj, "-static", "-config", "r", "-config-name", cfgname, "--target", prognamever);
+            s.build_for(obj, "-static", "-config", args.cfgname, "-config-name", args.cfgname, "--target", args.prognamever);
         } else {
-            s.build_for(obj, "-static", "-config", "r", "-config-name", cfgname, args.build_file, "--target", prognamever);
+            s.build_for(obj, "-static", "-config", args.cfgname, "-config-name", args.cfgname, args.build_file, "--target", args.prognamever);
         }
 
         auto username = args.service_name;
@@ -1623,6 +1766,15 @@ struct ssh_base {
         auto root = obj.root();
         auto first_time = !root.has_user(username);
         root.create_user(username);
+
+        if (args.nginx) {
+            args.fedora_packages.insert("nginx");
+            args.fedora_packages.insert("certbot");
+            args.tcp_ports.insert(80);
+            args.tcp_ports.insert(443);
+            // for nginx
+            root.command("setsebool", "-P", "httpd_can_network_connect", "1");
+        }
 
         auto os = obj.detect_os();
         for (auto &&p : args.fedora_packages) {
@@ -1646,8 +1798,8 @@ struct ssh_base {
         // maybe put our public key into 'authorized_keys'
         // and sign in instead of root?
 
-        auto fn = path{".sw"} / "out" / cfgname / prognamever;
-        if (args.custom_build) {
+        auto fn = path{".sw"} / "out" / args.cfgname / args.prognamever;
+        if (args.custom_build && !args.custom_exe_fn.empty()) {
             fn = args.custom_exe_fn;
         }
         auto u = root.login(username);
@@ -1705,8 +1857,17 @@ struct ssh_base {
             auto x = postgres.command("psql", "-t", "-c", "'select count(*) from pg_user where usename = $$raid_quiz$$;'");
             boost::trim(x);
             if (x == "0") {
-                postgres.command("psql", "-c", "'create user " + args.service_name + " password $$" + args.service_name + "$$;'");
-                postgres.command("psql", "-c", "'create database " + args.service_name + " owner " + args.service_name + ";'");
+                auto run_and_dont_fail_on_exists = [&](auto && ... args2) {
+                    auto c = postgres.create_command(args2...);
+                    auto r = run_command_raw(c);
+                    if (!r) {
+                        if (!(c.out.text.contains("already exists") || c.err.text.contains("already exists"))) {
+                            throw std::runtime_error{"cant create postgres object"};
+                        }
+                    }
+                };
+                run_and_dont_fail_on_exists("psql", "-c", "'create user " + args.service_name + " password $$" + args.service_name + "$$;'");
+                run_and_dont_fail_on_exists("psql", "-c", "'create database " + args.service_name + " owner " + args.service_name + ";'");
             }
         }
 
@@ -1733,7 +1894,7 @@ struct ssh_base {
 
         auto pkg = split_string(targetline, "-");
         const auto progname = pkg.at(0);
-        const auto prognamever = targetline;
+        args.prognamever = targetline;
 
         if (args.service_name.empty()) {
             args.service_name = progname;
