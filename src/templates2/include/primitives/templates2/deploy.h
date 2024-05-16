@@ -269,7 +269,7 @@ auto escape(const path &p) {
     return escape(p.string());
 }
 
-auto cygwin_raw(auto &&...args) {
+auto cygwin_raw(const std::vector<std::string> &args) {
 #ifdef _WIN32
     primitives::Command c2;
     c2.working_directory = fs::current_path();
@@ -278,10 +278,9 @@ auto cygwin_raw(auto &&...args) {
     c2.push_back("-c");
     std::string s;
     s += std::format("cd \"{}\"; ", normalize_path(fs::current_path()).string());
-    auto f = [&](auto &&arg) {
+    for (auto &&arg : args) {
         s += escape(arg) + " ";
-    };
-    (f(args), ...);
+    }
     s.resize(s.size() - 1);
     c2.push_back(s);
     return c2;
@@ -290,7 +289,10 @@ auto cygwin_raw(auto &&...args) {
 #endif
 }
 auto cygwin(auto &&...args) {
-    auto c = cygwin_raw(args...);
+    std::vector<std::string> vargs;
+    (vargs.push_back(args), ...);
+
+    auto c = cygwin_raw(vargs);
     auto res = run_command_raw(c);
     if (res.exit_code) {
         throw std::runtime_error{"command failed: " + c.print()};
@@ -299,14 +301,31 @@ auto cygwin(auto &&...args) {
 }
 
 struct rsync_options {
-    std::vector<std::string> flags;
+    std::vector<std::string> arguments;
+    //fs::path from;
+    //fs::path to;
 };
-
-auto rsync(auto &&...args) {
-    return cygwin("rsync", args...);
+auto default_rsync_options() {
+    rsync_options opts{{"-czavP"s, "--stats"}};
+    return opts;
 }
-auto rsync_raw(auto &&...args) {
-    return cygwin_raw("rsync", args...);
+
+auto rsync_raw(const rsync_options &opts) {
+    std::vector<std::string> vargs;
+    vargs.push_back("rsync");
+    vargs.append_range(opts.arguments);
+    return cygwin_raw(vargs);
+}
+auto rsync(const rsync_options &opts) {
+    auto c = rsync_raw(opts);
+    auto res = run_command_raw(c);
+    if (res.exit_code) {
+        throw std::runtime_error{"command failed: " + c.print()};
+    }
+    return res.out;
+}
+auto make_rsync_local(const path &in) {
+    return cygwin_path(in).string();
 }
 
 auto system(const std::string &s) {
@@ -816,6 +835,13 @@ return f2(0);
 struct ssh_key {
 };
 
+struct ssh_options {
+    bool pseudo_tty{};
+    bool force_pseudo_tty{};
+    // bool with_server{};
+    bool password_auth_no{true};
+};
+
 template <typename Serv>
 struct user {
     Serv &serv;
@@ -829,8 +855,9 @@ private:
     // scoped settings
     bool sudo_mode{};
     const user *main_user{};
+    // cwd from server?
 
-    bool sudo_mode_with_password() const { return !sudo_nopasswd; }
+    bool sudo_mode_with_password() const { return is_root() || !sudo_nopasswd; }
 
 public:
     user(Serv &serv, const std::string &name, const std::string &password = {})
@@ -887,15 +914,20 @@ public:
     }
 
     auto create_command(auto &&...args) {
+        ssh_options opts{};
+        opts.pseudo_tty = true;
+        opts.force_pseudo_tty = true;
+        opts.password_auth_no = !sudo_mode_with_password();
+
         primitives::Command c;
-        c.push_back(serv.connection_args());
+        c.push_back(serv.connection_args(opts));
         c.push_back(serv.server_string(main_user ? main_user->name : name));
         c.push_back("--"); // end of ssh args
-        if (!serv.cwd.empty()) {
+        /*if (!serv.cwd.empty()) {
             c.push_back("cd");
             c.push_back(serv.cwd);
             c.push_back("&&");
-        }
+        }*/
         if (sudo_mode && !is_root()) {
             c.push_back("sudo");
             if (sudo_mode_with_password()) {
@@ -967,8 +999,41 @@ public:
         return users_directory() / name;
     }
 
-    void rsync() {
+    auto rsync_from(const path &in_from, const path &in_to, rsync_options opts = default_rsync_options()) {
+        opts.arguments.push_back("-e");
+        opts.arguments.push_back(serv.connection_string());
+        opts.arguments.push_back(make_rsync_remote(in_from));
+        opts.arguments.push_back(make_rsync_local(in_to));
+        /*if (!serv.cwd.empty()) {
+            SW_UNIMPLEMENTED;
+        }*/
+        return primitives::deploy::rsync(opts);
+    }
+    auto rsync_to(const path &in_from, const path &in_to, rsync_options opts = default_rsync_options()) {
+        //opts.arguments.push_back("--rsync-path=sudo -S rsync");
+        if (!is_root() &&  main_user && main_user) {
 
+        }
+
+        opts.arguments.push_back("-e");
+        opts.arguments.push_back(serv.connection_string());
+        opts.arguments.push_back(make_rsync_local(in_from));
+        opts.arguments.push_back(make_rsync_remote(in_to));
+        /*if (!serv.cwd.empty()) {
+            SW_UNIMPLEMENTED;
+        }*/
+        return primitives::deploy::rsync(opts);
+    }
+
+private:
+    std::string make_rsync_remote(const path &in) {
+        std::string s;
+        // respect cwd?
+        // obj.server_string(main_user ? main_user->name : name) + ":" + (obj.cwd.empty() ? "" : (obj.cwd.string() +
+        // "/"))
+        s += std::format("{}:{}", serv.server_string(main_user ? main_user->name : name),
+                            normalize_path(in).string());
+        return s;
     }
 };
 
@@ -1043,20 +1108,13 @@ struct deploy_single_target_args {
     }
 };
 
-struct ssh_options {
-    bool pseudo_tty{};
-    bool force_pseudo_tty{};
-    //bool with_server{};
-    bool password_auth_no{true};
-};
-
 template <typename T>
 struct ssh_base {
     using user_type = user<T>;
 
     std::vector<user_type> users;
     //bool sudo_mode{};
-    path cwd;
+    //path cwd;
     std::string ip_;
     //os_type os;
     //std::map<std::string, std::string> environment;
@@ -1236,25 +1294,25 @@ struct ssh_base {
         SwapAndRestore sr1{obj.connection_options.with_server, false};
         SwapAndRestore sr2{obj.connection_options.pseudo_tty, false};
         return primitives::deploy::rsync_raw("-e", obj.connection_string(), args...);
+    }*/
+    auto rsync_from(this auto &&obj, auto && ... args) {
+        return obj.current_user().rsync_from(args...);
     }
-    auto rsync_from(this auto &&obj, const std::string &from, auto &&to, const std::string &flags = "-czavP"s) {
-        return obj.rsync(flags, obj.server_string() + ":" + (obj.cwd.empty() ? "" : (obj.cwd.string() + "/")) + from, cygwin_path(to));
-    }*/
-    /*auto rsync_to(this auto &&obj, const std::string &from, auto &&to, const std::string &flags = "-cavP"s) {
-        return obj.rsync(flags, obj.server_string() + ":" + (obj.cwd.empty() ? "" : (obj.cwd.string() + "/")) + from, to);
-    }*/
+    auto rsync_to(this auto &&obj, auto && ... args) {
+        return obj.current_user().rsync_to(args...);
+    }
     auto create_command(this auto &&obj, auto &&...args) {
         return obj.current_user().create_command(args...);
 
         primitives::Command c;
-        SwapAndRestore sr{obj.connection_options.with_server, true};
+        /*SwapAndRestore sr{obj.connection_options.with_server, true};
         c.push_back(obj.connection_args());
         c.push_back("--"); // end of ssh args
-        if (!obj.cwd.empty()) {
+        /*if (!obj.cwd.empty()) {
             c.push_back("cd");
             c.push_back(obj.cwd);
             c.push_back("&&");
-        }
+        }*/
         SW_UNIMPLEMENTED;
         /*if (obj.sudo_mode && obj.get_user() != "root") {
             c.push_back("sudo");
@@ -1545,7 +1603,7 @@ struct ssh_base {
     void write_file(this auto &&obj, const path &p, const std::string &data) {
         auto d = path{".sw/lambda/data"};
         ::write_file(d / p.filename(), data);
-        obj.rsync(normalize_path(d / p.filename()), obj.server_string() + ":" + normalize_path(p).string());
+        obj.rsync_to(d / p.filename(), p);
     }
     void reboot(this auto &&obj, auto &&f) {
         try {
@@ -1652,19 +1710,6 @@ struct ssh_base {
             return false;
         }
     }
-    /*auto scoped_environment(this auto &&obj, auto && ... args) {
-        decltype(obj.environment) env;
-        auto f = [&](this auto &&f, auto &&k, auto &&v, auto && ... args2) {
-            env[k] = v;
-            if constexpr (sizeof...(args2)) {
-                f(args2...);
-            }
-        };
-        if constexpr (sizeof...(args)) {
-            f(args...);
-        }
-        return SwapAndRestore{obj.environment, env};
-    }*/
     auto login(this auto &&obj, const std::string &u) {
         auto o = obj;
         o.users.clear();
@@ -1806,16 +1851,7 @@ struct ssh_base {
         }
         auto u = root.login(username);
         auto home = u.current_user().home_dir();
-        {
-            auto c = root.rsync_raw(normalize_path(fn), root.server_string() + ":" + normalize_path(home).string(),
-                "--rsync-path=echo 000999 | sudo -S rsync");
-            //c.in.text = root.current_user().password;
-
-            auto res = run_command_raw(c);
-            if (res.exit_code) {
-                throw std::runtime_error{"command failed: " + c.print()};
-            }
-        }
+        root.rsync_to(fn, home, opts);
         auto prog = normalize_path(home / fn.filename());
         root.chmod(755, prog);
         root.chown(prog, username);
@@ -1841,7 +1877,10 @@ struct ssh_base {
         for (auto &&[from,to] : args.sync_files_to) {
             auto dst = home / to;
             // cant use 'a' flag because of -user and -owner flags
-            root.rsync("-crvP", cygwin_path(from), root.server_string() + ":" + normalize_path(dst).string());
+            rsync_options opts;
+            opts.arguments.clear();
+            opts.arguments.push_back("-crvP");
+            root.rsync_to(from, dst, opts);
             //root.chmod(755, dst); // for dirs
             //root.chmod(644, dst); // for files
             // --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
@@ -1851,7 +1890,10 @@ struct ssh_base {
             for (auto &&[from, to] : args.deploy_files_once) {
                 auto dst = home / to;
                 // cant use 'a' flag because of -user and -owner flags
-                root.rsync("-crvP", cygwin_path(from), root.server_string() + ":" + normalize_path(dst).string());
+                rsync_options opts;
+                opts.arguments.clear();
+                opts.arguments.push_back("-crvP");
+                root.rsync_to(from, dst, opts);
                 // root.chmod(755, dst); // for dirs
                 // root.chmod(644, dst); // for files
                 //  --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
