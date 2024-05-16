@@ -25,6 +25,7 @@ DECLARE_STATIC_LOGGER(logger, "deploy");
 // TODO:
 // next item is proper paths, normalized for linuxes, for cygwin etc.
 // use env from commands
+// rsync args
 
 unsigned int edit_distance(const std::string &s1, const std::string &s2) {
     const std::size_t len1 = s1.size(), len2 = s2.size();
@@ -538,8 +539,10 @@ struct apt {
 
     auto operator()(auto &&...args) {
         auto s = serv.sudo();
-        auto env = serv.scoped_environment("DEBIAN_FRONTEND", "noninteractive");
-        return serv.command("apt", args...);
+        //auto env = serv.scoped_environment("DEBIAN_FRONTEND", "noninteractive");
+        auto c = serv.create_command("apt", args...);
+        c.environment["DEBIAN_FRONTEND"] = "noninteractive";
+        serv.run_command(c);
     }
     auto update(auto &&...args) {
         return operator()("update", args...);
@@ -806,14 +809,23 @@ struct user {
     bool ssh_access{};
     bool can_sudo{};
     bool sudo_nopasswd{};
+
+private:
     // scoped settings
     bool sudo_mode{};
+    const user *main_user{};
 
+    bool sudo_mode_with_password() const { return !sudo_nopasswd; }
+
+public:
     user(Serv &serv, const std::string &name, const std::string &password = {})
         : serv{serv}, name{name}, password{password} {
         init();
     }
     void init() {
+        if (ssh_access) {
+            return;
+        }
         {
             auto ret = command_raw("test", "0");
             ssh_access = !ret.exit_code;
@@ -833,12 +845,33 @@ struct user {
         }
     }
     bool is_root() const { return name == "root"; }
-    bool sudo_mode_with_password() const { return !sudo_nopasswd; }
+    auto sudo() const {
+        if (!can_sudo) {
+            throw std::runtime_error{std::format("user {} cannot sudo", name)};
+        }
+        auto u = *this;
+        u.sudo_mode = true;
+        return u;
+    }
+    auto login_with_sudo(const std::string &name) const {
+        if (!can_sudo) {
+            throw std::runtime_error{std::format("user {} cannot sudo", this->name)};
+        }
+        SW_UNIMPLEMENTED;
+        auto u = *this;
+        u.name = name;
+        u.password.clear();
+        u.sudo_mode = true;
+        u.main_user = this;
+        u.init();
+        // rsync -avz --stats --rsync-path="echo <SUDOPASS> | sudo -Sv && sudo rsync"  user@192.168.1.2:/ .
+        return u;
+    }
 
     auto create_command(auto &&...args) {
         primitives::Command c;
         c.push_back(serv.connection_args());
-        c.push_back(serv.server_string(name));
+        c.push_back(serv.server_string(main_user ? main_user->name : name));
         c.push_back("--"); // end of ssh args
         if (!serv.cwd.empty()) {
             c.push_back("cd");
@@ -851,19 +884,20 @@ struct user {
                 c.push_back("-S");
             }
         }
-        /*if (obj.get_user() == "root" && !obj.sudo_user.empty()) {
+        if (main_user) {
             c.push_back("sudo");
             c.push_back("-u");
-            c.push_back(obj.sudo_user);
-        }*/
+            c.push_back(name);
+        }
 
         (c.push_back(args), ...);
 
         if (sudo_mode_with_password()) {
-            if (password.empty()) {
+            auto &pass = main_user ? main_user->password : password;
+            if (pass.empty()) {
                 throw std::runtime_error{"password is required for sudo command"};
             }
-            c.in.text = password;
+            c.in.text = pass;
         }
         return c;
     }
@@ -884,17 +918,16 @@ struct user {
     }
     auto run_command_raw(auto &&c) {
         auto e = home_dir() / ".ssh" / "environment";
-        auto has_env = !serv.environment.empty();
+        auto has_env = !c.environment.empty();
         if (has_env) {
             std::string s;
-            for (auto &&[k, v] : serv.environment) {
+            for (auto &&[k, v] : c.environment) {
                 s += std::format("{}={}\n", k, v);
             }
             serv.write_file(normalize_path(e), s);
         }
         SCOPE_EXIT {
             if (has_env) {
-                auto env = serv.scoped_environment();
                 serv.remove(normalize_path(e));
             }
         };
@@ -917,6 +950,77 @@ struct user {
     }
 };
 
+struct deploy_single_target_args {
+    struct from_to_path {
+        path from;
+        path to{"."s};
+
+        from_to_path(const path &p) : from{p} {
+        }
+        from_to_path(const char *p) : from{p} {
+        }
+        template <auto N>
+        from_to_path(const char (&p)[N]) : from{p} {
+        }
+        from_to_path(auto &&from, auto &&to) : from{from}, to{to} {
+        }
+
+        /*from_to_path() = default;
+        from_to_path(const path &p) : from{p} {
+        }
+        from_to_path(const path &from, const path &to) : from{from}, to{to} {
+        }
+        from_to_path(const from_to_path &) = default;
+        from_to_path(from_to_path &&) = default;*/
+    };
+
+    path localdir;
+    path build_file;
+    std::string service_name;
+    std::vector<std::string> service_args;
+    std::string service_pre_script;
+    std::string target_package_path;
+    std::string settings_data;
+    // from copied first to special data dir
+    std::set<path> sync_files_from;
+    // 'to' files copied from the other location to replace server files
+    std::vector<from_to_path> sync_files_to;
+    std::vector<from_to_path> deploy_files_once;
+    //std::set<path> backup_files;
+    std::set<std::string> fedora_packages;
+    std::set<int> tcp_ports;
+    bool postgres_db{};
+    bool nginx{};
+    std::function<void(void)> custom_build;
+    path custom_exe_fn;
+    std::map<std::string, std::string> environment;
+    std::string prognamever;
+    std::string cfgname{"r"};
+
+    void backup_service_data(auto &&serv, const path &backup_root_dir) {
+        auto u = serv.login(service_name);
+        SW_UNIMPLEMENTED;
+        /*auto home = u.home();
+
+        auto backup_dir = backup_root_dir;
+        fs::create_directories(backup_dir);
+        for (auto &&f : sync_files_from) {
+            auto src = home / f;
+            serv.rsync_from(normalize_path(src).string(), backup_dir);
+        }
+
+        if (postgres_db) {
+            auto src = normalize_path(home / "pg.sql").string();
+            SCOPE_EXIT {
+                serv.remove(src);
+            };
+            auto postgres = serv.login_for_command("postgres");
+            postgres.command("pg_dump", "-d", service_name, ">", src);
+            serv.rsync_from(src, backup_dir);
+        }*/
+    }
+};
+
 struct ssh_options {
     bool pseudo_tty{};
     bool force_pseudo_tty{};
@@ -924,29 +1028,31 @@ struct ssh_options {
     bool password_auth_no{true};
 };
 
+template <typename T>
 struct ssh_base {
-    //std::map<std::string, user> users;
-    //user *u{};
+    using user_type = user<T>;
+
+    std::map<std::string, user_type> users;
+    user_type *u{};
     bool sudo_mode{};
     path cwd;
     std::string ip_;
     //os_type os;
-    std::map<std::string, std::string> environment;
+    //std::map<std::string, std::string> environment;
     ssh_options connection_options;
 
-    auto login1(this auto &&obj, auto && ... args) {
+    /*auto login1(this auto &&obj, auto && ... args) {
         user u{obj,args...};
         //u = &users[name];
         return u;
+    }*/
+    auto &current_user() { return *u; }
+    auto &set_user(this auto &&obj, auto &&...args) {
+        user u{obj, args...};
+        auto [it,_] = obj.users.emplace(u.name, u);
+        obj.u = &it->second;
+        return obj.current_user();
     }
-    void set_user(auto && ... args){}
-    //user &current_user() { return *u; }
-    struct x{
-        bool sudo_mode_with_password() {
-            SW_UNIMPLEMENTED;
-        }
-    };
-    x current_user() { return {}; }
     bool pseudo_tty() {
         // true except user with sudo and pass
         return false;
@@ -1015,7 +1121,7 @@ struct ssh_base {
                     auto args = obj.connection_args();
                     for (auto &&i : obj.check_ips) {
                         auto args2 = args;
-                        args2.push_back(std::format("{}@{}", obj.get_user(), i));
+                        args2.push_back(std::format("{}@{}", obj.current_user().name, i));
 
                         primitives::Command c;
                         c.push_back(args2);
@@ -1092,12 +1198,7 @@ struct ssh_base {
         }
     }*/
     std::string server_string(this auto &&obj) {
-        using T = std::decay_t<decltype(obj)>;
-
-        std::string s;
-        SW_UNIMPLEMENTED;
-        //s += std::format("{}@{}", obj.get_user(), obj.get_ip());
-        return s;
+        return obj.server_string(obj.current_user().name);
     }
     std::string server_string(this auto &&obj, auto &&username) {
         using T = std::decay_t<decltype(obj)>;
@@ -1106,10 +1207,10 @@ struct ssh_base {
         s += std::format("{}@{}", username, obj.get_ip());
         return s;
     }
-    path home(this auto &&obj) {
+    /*path home(this auto &&obj) {
         using T = std::decay_t<decltype(obj)>;
         return "/home/"s + obj.get_user();
-    }
+    }*/
     auto rsync(this auto &&obj, auto &&...args) {
         SwapAndRestore sr1{obj.connection_options.with_server, false};
         SwapAndRestore sr2{obj.connection_options.pseudo_tty, false};
@@ -1147,16 +1248,18 @@ struct ssh_base {
         return c;
     }
     auto command(this auto &&obj, auto &&...args) {
-        auto c = obj.create_command(args...);
+        return obj.current_user().command(args...);
+        /*auto c = obj.create_command(args...);
         if (obj.current_user().sudo_mode_with_password()) {
             if constexpr (requires {obj.password;}) {
                 c.in.text = obj.password;
             }
         }
-        return obj.run_command(c);
+        return obj.run_command(c);*/
     }
     auto run_command(this auto &&obj, auto &&c) {
-        SW_UNIMPLEMENTED;
+        return obj.current_user().run_command(c);
+        /*SW_UNIMPLEMENTED;
         //auto e = obj.user_dir() / ".ssh" / "environment";
         auto e = path{"x"} / ".ssh" / "environment";
         auto has_env = !obj.environment.empty();
@@ -1173,7 +1276,7 @@ struct ssh_base {
                 obj.remove(normalize_path(e));
             }
         };
-        return primitives::deploy::run_command(c);
+        return primitives::deploy::run_command(c);*/
     }
     bool can_sudo_without_password(this auto &&obj) {
         if (!obj.can_sudo_without_password_) {
@@ -1430,18 +1533,18 @@ struct ssh_base {
         obj.command("useradd", n
             , "-m" // create home
         );
-        // better add key to root
+        // better add key to root?
         return;
 
         // add our ssh key
-        auto new_login = obj.login(n);
+        /*auto new_login = obj.login(n);
         auto sshdir = new_login.user_dir() / ".ssh";
         auto ak = sshdir / "authorized_keys";
         obj.create_directories(sshdir);
         obj.chmod(700, sshdir);
         obj.chown(sshdir, n);
         obj.command("echo", obj.pubkey(), "|", "sudo", "tee", "-a", normalize_path(ak));
-        obj.chmod(600, ak);
+        obj.chmod(600, ak);*/
     }
     void delete_user(this auto &&obj, const std::string &n) {
         obj.command("userdel",
@@ -1569,7 +1672,7 @@ struct ssh_base {
             return false;
         }
     }
-    auto scoped_environment(this auto &&obj, auto && ... args) {
+    /*auto scoped_environment(this auto &&obj, auto && ... args) {
         decltype(obj.environment) env;
         auto f = [&](this auto &&f, auto &&k, auto &&v, auto && ... args2) {
             env[k] = v;
@@ -1581,7 +1684,7 @@ struct ssh_base {
             f(args...);
         }
         return SwapAndRestore{obj.environment, env};
-    }
+    }*/
     auto login(this auto &&obj, const std::string &u) {
         std::decay_t<decltype(obj)> o{obj};
         o.set_user(u);
@@ -1629,75 +1732,6 @@ struct ssh_base {
         obj.command("systemctl", "restart", "sshd");
     }
 
-    struct deploy_single_target_args {
-        struct from_to_path {
-            path from;
-            path to{"."s};
-
-            from_to_path(const path &p) : from{p} {
-            }
-            from_to_path(const char *p) : from{p} {
-            }
-            template <auto N>
-            from_to_path(const char (&p)[N]) : from{p} {
-            }
-            from_to_path(auto &&from, auto &&to) : from{from}, to{to} {
-            }
-
-            /*from_to_path() = default;
-            from_to_path(const path &p) : from{p} {
-            }
-            from_to_path(const path &from, const path &to) : from{from}, to{to} {
-            }
-            from_to_path(const from_to_path &) = default;
-            from_to_path(from_to_path &&) = default;*/
-        };
-
-        path localdir;
-        path build_file;
-        std::string service_name;
-        std::vector<std::string> service_args;
-        std::string service_pre_script;
-        std::string target_package_path;
-        std::string settings_data;
-        // from copied first to special data dir
-        std::set<path> sync_files_from;
-        // 'to' files copied from the other location to replace server files
-        std::vector<from_to_path> sync_files_to;
-        std::vector<from_to_path> deploy_files_once;
-        //std::set<path> backup_files;
-        std::set<std::string> fedora_packages;
-        std::set<int> tcp_ports;
-        bool postgres_db{};
-        bool nginx{};
-        std::function<void(void)> custom_build;
-        path custom_exe_fn;
-        std::map<std::string, std::string> environment;
-        std::string prognamever;
-        std::string cfgname{"r"};
-
-        void backup_service_data(auto &&serv, const path &backup_root_dir) {
-            auto u = serv.login(service_name);
-            auto home = u.home();
-
-            auto backup_dir = backup_root_dir;
-            fs::create_directories(backup_dir);
-            for (auto &&f : sync_files_from) {
-                auto src = home / f;
-                serv.rsync_from(normalize_path(src).string(), backup_dir);
-            }
-
-            if (postgres_db) {
-                auto src = normalize_path(home / "pg.sql").string();
-                SCOPE_EXIT {
-                    serv.remove(src);
-                };
-                auto postgres = serv.login_for_command("postgres");
-                postgres.command("pg_dump", "-d", service_name, ">", src);
-                serv.rsync_from(src, backup_dir);
-            }
-        }
-    };
     auto detect_targetline(this auto &&obj, auto &&args) {
         std::string targetline;
         if (args.custom_build) {
@@ -1803,7 +1837,8 @@ struct ssh_base {
             fn = args.custom_exe_fn;
         }
         auto u = root.login(username);
-        auto home = u.home();
+        SW_UNIMPLEMENTED;
+        /*auto home = u.home();
         root.rsync(normalize_path(fn), root.server_string() + ":" + normalize_path(home).string());
         auto prog = normalize_path(home / fn.filename());
         root.chmod(755, prog);
@@ -1885,7 +1920,7 @@ struct ssh_base {
             svc.service_pre_script = args.service_pre_script;
             svc.environment = args.environment;
             ctl.new_simple_service_auto(svc);
-        }
+        }*/
     }
     void discard_single_target(this auto &&obj, auto &&args) {
         ScopedCurrentPath scp{args.localdir};
