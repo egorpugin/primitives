@@ -520,7 +520,7 @@ struct dnf {
     Serv &serv;
     auto operator()(auto &&...args) {
         auto s = serv.sudo();
-        return serv.command("dnf", args...);
+        return s.command("dnf", args...);
     }
     auto upgrade(auto &&...args) {
         return operator()("upgrade", "-y", args...);
@@ -540,9 +540,9 @@ struct apt {
     auto operator()(auto &&...args) {
         auto s = serv.sudo();
         //auto env = serv.scoped_environment("DEBIAN_FRONTEND", "noninteractive");
-        auto c = serv.create_command("apt", args...);
+        auto c = s.create_command("apt", args...);
         c.environment["DEBIAN_FRONTEND"] = "noninteractive";
-        serv.run_command(c);
+        s.run_command(c);
     }
     auto update(auto &&...args) {
         return operator()("update", args...);
@@ -564,7 +564,7 @@ struct pacman {
 
     auto operator()(auto &&...args) {
         auto s = serv.sudo();
-        return serv.command("pacman", args...);
+        return s.command("pacman", args...);
     }
     auto update(auto &&...args) {
         return operator()("-y", args...);
@@ -580,14 +580,14 @@ struct pacman {
 struct system_base {
     void initial_setup(this auto &&obj) {
         auto &serv = obj.serv;
-        auto scoped_sudo = serv.sudo();
+        auto su = serv.sudo();
         path ctor_file = "/root/.deploy/ctor";
 
-        if (serv.exists(ctor_file)) {
+        if (su.exists(ctor_file)) {
             return;
         }
 
-        serv.setup_ssh();
+        su.setup_ssh();
         obj.update_packages();
         // reboot?
         obj.package_manager().install("htop");
@@ -601,13 +601,13 @@ struct system_base {
         }
 
         // for our servers Europe/Moscow
-        serv.command("timedatectl", "set-timezone", "UTC");
+        su.command("timedatectl", "set-timezone", "UTC");
 
         // or ubuntu?
         // serv.create_user("egor");
 
-        serv.create_directories(ctor_file.parent_path());
-        serv.command("touch", ctor_file);
+        su.create_directories(ctor_file.parent_path());
+        su.command("touch", ctor_file);
     }
 };
 
@@ -621,7 +621,6 @@ struct ubuntu : system_base {
         initial_setup();
     }
     void update_packages() {
-        auto scoped_sudo = serv.sudo();
         auto pm = package_manager();
         pm.update();
         pm.upgrade();
@@ -633,17 +632,17 @@ struct ubuntu : system_base {
         if (version >= max_ubuntu_version) {
             return;
         }
-        auto scoped_sudo = serv.sudo();
+        auto su = serv.sudo();
         update_packages();
         //serv.reboot();
 
-        apt a{serv};
+        apt a{su};
         a.install("ubuntu-release-upgrader-core");
         a.dist_upgrade();
-        serv.command("iptables", "-I", "INPUT", "-p", "tcp", "--dport", "1022", "-j", "ACCEPT");
+        su.command("iptables", "-I", "INPUT", "-p", "tcp", "--dport", "1022", "-j", "ACCEPT");
         // ubuntu won't give us LTS option until xx.04.1 in August or so, so we use '-d'
-        serv.command("do-release-upgrade", "-d", "--frontend=DistUpgradeViewNonInteractive");
-        serv.reboot();
+        su.command("do-release-upgrade", "-d", "--frontend=DistUpgradeViewNonInteractive");
+        su.reboot();
     }
     void install_postgres() {
         SW_UNIMPLEMENTED;
@@ -664,7 +663,6 @@ struct fedora : system_base {
         package_manager().install("policycoreutils-python-utils");
     }
     void update_packages() {
-        auto scoped_sudo = serv.sudo();
         auto pm = package_manager();
         pm.upgrade();
     }
@@ -677,10 +675,10 @@ struct fedora : system_base {
     void install_postgres() {
         package_manager().install("postgresql-server");
         auto su = serv.sudo();
-        if (!serv.exists("/var/lib/pgsql/data/pg_hba.conf")) {
-            serv.command("/usr/bin/postgresql-setup", "--initdb");
+        if (!su.exists("/var/lib/pgsql/data/pg_hba.conf")) {
+            su.command("/usr/bin/postgresql-setup", "--initdb");
         }
-        systemctl ctl{serv};
+        systemctl ctl{su};
         auto svc = ctl.service("postgresql");
         svc.enable();
         if (svc.status().exit_code != 0) {
@@ -785,7 +783,6 @@ return f2(0);
         auto outbinfn = (p / ".sw" / "out" / conf / path{outfn}.stem()) += "-0.0.1";
         auto outservfn = path{"lambda"} / outbinfn.filename();
         {
-            auto scope = serv.sudo(false);
             serv.create_directories("lambda");
             serv.rsync("-cavP", normalize_path(outbinfn), serv.server_string() + ":" + normalize_path(outservfn).string());
             serv.command("chmod", "755", normalize_path(outservfn));
@@ -793,7 +790,8 @@ return f2(0);
         serv.command(normalize_path(outservfn));
     }
     void sudo(std::source_location loc = std::source_location::current()) {
-        auto scoped_sudo = serv.sudo();
+        SW_UNIMPLEMENTED;
+        //auto scoped_sudo = serv.sudo();
         operator()(loc);
     }
 };
@@ -822,6 +820,10 @@ public:
         : serv{serv}, name{name}, password{password} {
         init();
     }
+    user(const user &) = default;
+    user &operator=(const user &) = default;
+    user(user &&) = default;
+    user &operator=(user &&) = default;
     void init() {
         if (ssh_access) {
             return;
@@ -1032,8 +1034,7 @@ template <typename T>
 struct ssh_base {
     using user_type = user<T>;
 
-    std::map<std::string, user_type> users;
-    user_type *u{};
+    std::vector<user_type> users;
     bool sudo_mode{};
     path cwd;
     std::string ip_;
@@ -1046,12 +1047,9 @@ struct ssh_base {
         //u = &users[name];
         return u;
     }*/
-    auto &current_user() { return *u; }
+    auto &current_user() { return users.at(0); }
     auto &set_user(this auto &&obj, auto &&...args) {
-        user u{obj, args...};
-        auto [it,_] = obj.users.emplace(u.name, u);
-        obj.u = &it->second;
-        return obj.current_user();
+        return obj.users.emplace_back(obj, args...);
     }
     bool pseudo_tty() {
         // true except user with sudo and pass
@@ -1278,57 +1276,14 @@ struct ssh_base {
         };
         return primitives::deploy::run_command(c);*/
     }
-    bool can_sudo_without_password(this auto &&obj) {
-        if (!obj.can_sudo_without_password_) {
-            try {
-                obj.command("sudo", "cat", "/etc/ssh/sshd_config");
-                obj.can_sudo_without_password_ = true;
-            } catch (std::exception &e) {
-                obj.can_sudo_without_password_ = false;
-            }
-        }
-        return *obj.can_sudo_without_password_;
-    }
-    auto sudo(this auto &&obj, bool sudo_mode = true) {
-        using T = std::decay_t<decltype(obj)>;
-        struct x : T {
-            SwapAndRestore<bool> sr1;
-            SwapAndRestore<bool> sr2;
-            x(bool &b1, bool b2, const T &o) : T{o}, sr1{T::sudo_mode,b2}, sr2{b1,b2} {}
-        };
-        return x(obj.sudo_mode, sudo_mode, obj);
-    }
-    auto sudo(this auto &&obj, auto &&prog, auto &&...args) {
-        auto sr = obj.sudo();
-        return obj.command(prog, args...);
-    }
-    auto sudo_with_password(this auto &&obj, bool sudo_mode = true) {
-        struct s {
-            SwapAndRestore<bool> sr1;
-            SwapAndRestore<bool> sr2;
-
-            s(bool &x, bool &y, bool mode) : sr1{x,mode}, sr2{y,mode} {
-            }
-        };
-        return s{obj.sudo_mode,obj.sudo_mode_with_password,sudo_mode};
-    }
-    auto sudo_with_password(this auto &&obj, auto &&prog, auto &&...args) {
-        /*
-        if (obj.can_sudo_without_password()) {
-            return SwapAndRestore(obj.sudo_mode, false);
-        }*/
-        SwapAndRestore sr1(obj.sudo_mode, true);
-        SwapAndRestore sr2(obj.sudo_mode_with_password, true);
-        auto c = obj.create_command(prog, args...);
-        c.in.text = obj.password;
-        return obj.run_command(c);
+    auto sudo(this auto &&obj) {
+        return obj.root();
     }
     auto create_directories(this auto &&obj, const path &p) {
         return obj.command("mkdir", "-p", normalize_path(p));
     }
     bool is_online(this auto &&obj) {
         try {
-            auto su = obj.sudo(false);
             auto c = obj.create_command("exit");
             auto ret = run_command_raw(c);
             return !ret.exit_code;
@@ -1519,8 +1474,8 @@ struct ssh_base {
         obj.command(s);
     }
     bool has_user(this auto &&obj, const std::string &n) {
-        auto scoped_sudo = obj.sudo();
-        auto passwd = obj.command("cat", "/etc/passwd");
+        auto s = obj.sudo();
+        auto passwd = s.command("cat", "/etc/passwd");
         return std::ranges::any_of(std::views::split(passwd, "\n"sv), [&](auto &&v) {
             std::string_view line{v.begin(), v.end()};
             return line.starts_with(n);
@@ -1701,35 +1656,33 @@ struct ssh_base {
         return o;
     }
     auto root(this auto &&obj) {
-        // not now
-        auto b = false;//obj.can_sudo_without_password();
-        auto u = b ? obj : obj.login("root");
-        if (b) {
-            u.sudo_mode = b;
-        }
-        return u;
+        auto o = obj;
+        auto u = o.users.at(0).sudo();
+        o.users.clear();
+        o.users.emplace_back(u);
+        return o;
     }
     void setup_ssh(this auto &&obj) {
-        auto scoped_sudo = obj.sudo();
+        auto su = obj.sudo();
 
         auto sshd_conf = "/etc/ssh/sshd_config";
         // bad for fedora, so we don't set for ubuntu either
         // serv.command("sed", "-i", "-e", "'s/UsePAM yes/UsePAM no/g'", sshd_conf);
-        obj.command("sed", "-i", "-e", "'s/PermitRootLogin yes/PermitRootLogin without-password/g'", sshd_conf);
+        su.command("sed", "-i", "-e", "'s/PermitRootLogin yes/PermitRootLogin without-password/g'", sshd_conf);
         // since ssh 7.0?
-        obj.command("sed", "-i", "-e", "'s/PermitRootLogin without-password/PermitRootLogin prohibit-password/g'", sshd_conf);
-        obj.command("sed", "-i", "-e", "'s/#PermitRootLogin prohibit-password/PermitRootLogin prohibit-password/g'", sshd_conf);
+        su.command("sed", "-i", "-e", "'s/PermitRootLogin without-password/PermitRootLogin prohibit-password/g'", sshd_conf);
+        su.command("sed", "-i", "-e", "'s/#PermitRootLogin prohibit-password/PermitRootLogin prohibit-password/g'", sshd_conf);
 
-        obj.command("sed", "-i", "-e", "'s/#PubkeyAuthentication yes/PubkeyAuthentication yes/g'", sshd_conf);
+        su.command("sed", "-i", "-e", "'s/#PubkeyAuthentication yes/PubkeyAuthentication yes/g'", sshd_conf);
 
-        obj.command("sed", "-i", "-e", "'s/PasswordAuthentication yes/PasswordAuthentication no/g'", sshd_conf);
-        obj.command("sed", "-i", "-e", "'s/#PasswordAuthentication yes/PasswordAuthentication no/g'", sshd_conf);
-        obj.command("sed", "-i", "-e", "'s/#PasswordAuthentication no/PasswordAuthentication no/g'", sshd_conf);
-        obj.command("sed", "-i", "-e", "'s/#PerminEmptyPasswords no/PerminEmptyPasswords no/g'", sshd_conf);
+        su.command("sed", "-i", "-e", "'s/PasswordAuthentication yes/PasswordAuthentication no/g'", sshd_conf);
+        su.command("sed", "-i", "-e", "'s/#PasswordAuthentication yes/PasswordAuthentication no/g'", sshd_conf);
+        su.command("sed", "-i", "-e", "'s/#PasswordAuthentication no/PasswordAuthentication no/g'", sshd_conf);
+        su.command("sed", "-i", "-e", "'s/#PerminEmptyPasswords no/PerminEmptyPasswords no/g'", sshd_conf);
 
-        obj.command("sed", "-i", "-e", "'s/#PermitUserEnvironment no/PermitUserEnvironment yes/g'", sshd_conf);
-        obj.command("systemctl", "daemon-reload");
-        obj.command("systemctl", "restart", "sshd");
+        su.command("sed", "-i", "-e", "'s/#PermitUserEnvironment no/PermitUserEnvironment yes/g'", sshd_conf);
+        su.command("systemctl", "daemon-reload");
+        su.command("systemctl", "restart", "sshd");
     }
 
     auto detect_targetline(this auto &&obj, auto &&args) {
