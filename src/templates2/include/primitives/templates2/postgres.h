@@ -702,6 +702,7 @@ struct pgmgr {
         auto end() const {
             return 0;
         }
+        operator auto() const { return *begin(); }
         bool empty() const {
             return begin() == end();
         }
@@ -737,6 +738,12 @@ struct pgmgr {
         std::string query;
         query += std::format("select \"{0}\".* from \"{0}\"", type_name<T>());
         return sel<T>{this, query};
+    }
+    template <typename T, typename Result>
+    auto custom_select(auto &&q) {
+        std::string query;
+        query += std::format("select {1} from \"{0}\"", type_name<T>(), q);
+        return sel<Result>{this, query};
     }
     template <auto Field, auto... Fields, typename... FieldTypes>
     auto select1(pqxx::work &tx, FieldTypes &&...vals) {
