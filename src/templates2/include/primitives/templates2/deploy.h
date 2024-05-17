@@ -492,14 +492,14 @@ WantedBy=multi-user.target
                 pre = "ExecStartPre=/usr/bin/bash -c " + wdir + "/" + "pre.sh";
             }
             auto service = std::format(service_template, desc, user, pre, s, wdir);
-            ctl.serv.write_file(service_name(), service);
+            ctl.serv.sudo().write_file(service_name(), service);
         }
     };
 
     Serv &serv;
 
     auto operator()(auto &&...args) {
-        auto c = serv.create_command("systemctl", args...);
+        auto c = serv.sudo().create_command("systemctl", args...);
         return run_command(c);
     }
     auto operator()(raw_command_tag, auto &&...args) {
@@ -908,16 +908,16 @@ public:
         u.password.clear();
         u.sudo_mode = true;
         u.main_user = this;
-        //u.init();
-        // rsync -avz --stats --rsync-path="echo <SUDOPASS> | sudo -Sv && sudo rsync"  user@192.168.1.2:/ .
         return u;
     }
 
     auto create_command(auto &&...args) {
         ssh_options opts{};
-        opts.pseudo_tty = true;
-        opts.force_pseudo_tty = true;
         opts.password_auth_no = !sudo_mode_with_password();
+        if (opts.password_auth_no && sudo_mode) {
+            opts.pseudo_tty = true;
+            opts.force_pseudo_tty = true;
+        }
 
         primitives::Command c;
         c.push_back(serv.connection_args(opts));
@@ -929,20 +929,21 @@ public:
             c.push_back("&&");
         }*/
         if (sudo_mode && !is_root()) {
-            c.push_back("sudo");
-            if (sudo_mode_with_password()) {
-                c.push_back("-S");
+            if (main_user) {
+                c.push_back("sudo");
+                c.push_back("-u");
+                c.push_back(name);
+            } else {
+                c.push_back("sudo");
+                if (sudo_mode_with_password()) {
+                    c.push_back("-S");
+                }
             }
-        }
-        if (main_user) {
-            c.push_back("sudo");
-            c.push_back("-u");
-            c.push_back(name);
         }
 
         (c.push_back(args), ...);
 
-        if (sudo_mode_with_password()) {
+        if (sudo_mode && sudo_mode_with_password()) {
             auto &pass = main_user ? main_user->password : password;
             if (pass.empty()) {
                 throw std::runtime_error{"password is required for sudo command"};
@@ -967,18 +968,17 @@ public:
         return res.out;
     }
     auto run_command_raw(auto &&c) {
-        auto e = home_dir() / ".ssh" / "environment";
+        auto e = ssh_environment_file();
         auto has_env = !c.environment.empty();
+        auto old = serv.environment;
         if (has_env) {
-            std::string s;
-            for (auto &&[k, v] : c.environment) {
-                s += std::format("{}={}\n", k, v);
-            }
-            serv.write_file(normalize_path(e), s);
+            serv.environment = c.environment;
+            serv.set_environment();
         }
         SCOPE_EXIT {
             if (has_env) {
-                serv.remove(normalize_path(e));
+                serv.environment = old;
+                serv.set_environment();
             }
         };
         return primitives::deploy::run_command_raw(c);
@@ -998,6 +998,9 @@ public:
         }
         return users_directory() / name;
     }
+    path ssh_environment_file() {
+        return home_dir() / ".ssh" / "environment";
+    }
 
     auto rsync_from(const path &in_from, const path &in_to, rsync_options opts = default_rsync_options()) {
         opts.arguments.push_back("-e");
@@ -1010,9 +1013,26 @@ public:
         return primitives::deploy::rsync(opts);
     }
     auto rsync_to(const path &in_from, const path &in_to, rsync_options opts = default_rsync_options()) {
-        //opts.arguments.push_back("--rsync-path=sudo -S rsync");
-        if (!is_root() &&  main_user && main_user) {
-
+        bool pwset{};
+        auto pwdenv = "PASSWORD"s;
+        auto &s = main_user ? main_user->serv : serv;
+        // we need a tricky solution here
+        if (sudo_mode || main_user && !is_root()) {
+            auto u = " -u " + name;
+            if (!main_user) {
+                u.clear();
+            }
+            if (sudo_mode_with_password()) {
+                auto fn = "asker.sh"s;
+                s.write_file(fn, std::format("#!/bin/sh\necho ${}\n", pwdenv));
+                s.chmod(755, fn);
+                opts.arguments.push_back("--rsync-path=SUDO_ASKPASS=./" + fn + " sudo -A" + u + " rsync");
+                s.environment[pwdenv] = main_user ? main_user->password : password;
+                s.set_environment();
+                pwset = true;
+            } else {
+                opts.arguments.push_back("--rsync-path=sudo" + u + " rsync");
+            }
         }
 
         opts.arguments.push_back("-e");
@@ -1022,6 +1042,12 @@ public:
         /*if (!serv.cwd.empty()) {
             SW_UNIMPLEMENTED;
         }*/
+        SCOPE_EXIT {
+            if (pwset) {
+                s.environment.erase(pwdenv);
+                s.set_environment();
+            }
+        };
         return primitives::deploy::rsync(opts);
     }
 
@@ -1086,8 +1112,7 @@ struct deploy_single_target_args {
 
     void backup_service_data(auto &&serv, const path &backup_root_dir) {
         auto u = serv.login(service_name);
-        SW_UNIMPLEMENTED;
-        /*auto home = u.home();
+        auto home = u.current_user().home_dir();
 
         auto backup_dir = backup_root_dir;
         fs::create_directories(backup_dir);
@@ -1101,10 +1126,10 @@ struct deploy_single_target_args {
             SCOPE_EXIT {
                 serv.remove(src);
             };
-            auto postgres = serv.login("postgres");
-            postgres.command("pg_dump", "-d", service_name, ">", src);
-            serv.rsync_from(src, backup_dir);
-        }*/
+            //auto postgres = serv.login("postgres");
+            auto dump = u.command("pg_dump", "-d", service_name);
+            write_file(backup_dir / "pg.sql", dump);
+        }
     }
 };
 
@@ -1117,7 +1142,7 @@ struct ssh_base {
     //path cwd;
     std::string ip_;
     //os_type os;
-    //std::map<std::string, std::string> environment;
+    std::map<std::string, std::string> environment;
     //ssh_options connection_options;
 
     /*auto login1(this auto &&obj, auto && ... args) {
@@ -1264,13 +1289,6 @@ struct ssh_base {
         obj.remove_known_host(obj.ip_);
         return obj.ip_;
     }
-    /*std::string get_user(this auto &&obj) {
-        if constexpr (requires { obj.user; }) {
-            return obj.user;
-        } else {
-            return "root";
-        }
-    }*/
     std::string server_string(this auto &&obj) {
         return obj.server_string(obj.current_user().name);
     }
@@ -1281,25 +1299,18 @@ struct ssh_base {
         s += std::format("{}@{}", username, obj.get_ip());
         return s;
     }
-    /*path home(this auto &&obj) {
-        using T = std::decay_t<decltype(obj)>;
-        return "/home/"s + obj.get_user();
-    }*/
-    /*auto rsync(this auto &&obj, auto &&...args) {
-        SwapAndRestore sr1{obj.connection_options.with_server, false};
-        SwapAndRestore sr2{obj.connection_options.pseudo_tty, false};
-        return primitives::deploy::rsync("-e", obj.connection_string(), args...);
-    }
-    auto rsync_raw(this auto &&obj, auto &&...args) {
-        SwapAndRestore sr1{obj.connection_options.with_server, false};
-        SwapAndRestore sr2{obj.connection_options.pseudo_tty, false};
-        return primitives::deploy::rsync_raw("-e", obj.connection_string(), args...);
-    }*/
     auto rsync_from(this auto &&obj, auto && ... args) {
         return obj.current_user().rsync_from(args...);
     }
     auto rsync_to(this auto &&obj, auto && ... args) {
         return obj.current_user().rsync_to(args...);
+    }
+    void set_environment(this auto &&obj) {
+        std::string s;
+        for (auto &&[k, v] : obj.environment) {
+            s += std::format("{}={}\n", k, v);
+        }
+        obj.write_file(obj.current_user().ssh_environment_file(), s);
     }
     auto create_command(this auto &&obj, auto &&...args) {
         return obj.current_user().create_command(args...);
@@ -1330,13 +1341,6 @@ struct ssh_base {
     }
     auto command(this auto &&obj, auto &&...args) {
         return obj.current_user().command(args...);
-        /*auto c = obj.create_command(args...);
-        if (obj.current_user().sudo_mode_with_password()) {
-            if constexpr (requires {obj.password;}) {
-                c.in.text = obj.password;
-            }
-        }
-        return obj.run_command(c);*/
     }
     auto run_command(this auto &&obj, auto &&c) {
         return obj.current_user().run_command(c);
@@ -1693,8 +1697,8 @@ struct ssh_base {
         });
     }
     void upgrade_packages(this auto &&obj, auto &&...args) {
-        auto sudo = obj.sudo_with_password();
-        dnf d{obj};
+        auto sudo = obj.sudo();
+        dnf d{sudo};
         d.upgrade(args...);
         // sleep and wait for depmod finishes?
     }
@@ -1851,7 +1855,7 @@ struct ssh_base {
         }
         auto u = root.login(username);
         auto home = u.current_user().home_dir();
-        root.rsync_to(fn, home, opts);
+        u.rsync_to(fn, home);
         auto prog = normalize_path(home / fn.filename());
         root.chmod(755, prog);
         root.chown(prog, username);
@@ -1880,7 +1884,7 @@ struct ssh_base {
             rsync_options opts;
             opts.arguments.clear();
             opts.arguments.push_back("-crvP");
-            root.rsync_to(from, dst, opts);
+            u.rsync_to(from, dst, opts);
             //root.chmod(755, dst); // for dirs
             //root.chmod(644, dst); // for files
             // --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
@@ -1893,7 +1897,7 @@ struct ssh_base {
                 rsync_options opts;
                 opts.arguments.clear();
                 opts.arguments.push_back("-crvP");
-                root.rsync_to(from, dst, opts);
+                u.rsync_to(from, dst, opts);
                 // root.chmod(755, dst); // for dirs
                 // root.chmod(644, dst); // for files
                 //  --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
