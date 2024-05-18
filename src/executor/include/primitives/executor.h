@@ -175,7 +175,7 @@ struct SharedState
 
     SharedState(Executor &e) : e(e) {}
     SharedState(const SharedState &rhs)
-        : e(rhs.e), set(rhs.set), data(rhs.data), eptr(rhs.eptr)
+        : e(rhs.e), set(rhs.set.load()), data(rhs.data), eptr(rhs.eptr)
     {
     }
 
