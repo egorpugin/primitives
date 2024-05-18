@@ -630,6 +630,10 @@ struct system_base {
         obj.package_manager().install("certbot");
         //obj.package_manager().install("nginx"); // by default?
         //obj.package_manager().install("dnsmasq"); // by default?
+        // dnsmasq requires the following setup for openvpn
+        // listen-address=127.0.0.1
+        // listen-address=10.8.0.1
+        // bind-interfaces
         // gdb?
         if constexpr (requires {obj.initial_setup_packages();}) {
             obj.initial_setup_packages();
@@ -855,6 +859,7 @@ private:
     // scoped settings
     bool sudo_mode{};
     const user *main_user{};
+    std::optional<ssh_options> custom_options;
     // cwd from server?
 
     bool sudo_mode_with_password() const { return is_root() || !sudo_nopasswd; }
@@ -862,6 +867,7 @@ private:
 public:
     user(Serv &serv, const std::string &name, const std::string &password = {})
         : serv{serv}, name{name}, password{password} {
+        serv.constructing_user = this;
         init();
     }
     user(const user &) = default;
@@ -880,11 +886,15 @@ public:
             return;
         }
         {
+            // we set up our options properly, so sudo will give an error if it requires a password
+            decltype(custom_options) opts = ssh_options{};
+            opts->password_auth_no = true;
+            SwapAndRestore sr1{custom_options, opts};
             auto ret = command_raw("sudo", "test", "0");
             can_sudo = sudo_nopasswd = !ret.exit_code;
             //if (!sudo_nopasswd && ret.err.contains("sudo: a password is required")) {}
         }
-        if (!can_sudo) {
+        if (!can_sudo && !password.empty()) {
             SwapAndRestore sr1{sudo_mode, true};
             auto ret = command_raw("test", "0");
             can_sudo = !ret.exit_code;
@@ -913,10 +923,14 @@ public:
 
     auto create_command(auto &&...args) {
         ssh_options opts{};
-        opts.password_auth_no = !sudo_mode_with_password();
-        if (opts.password_auth_no && sudo_mode) {
-            opts.pseudo_tty = true;
-            opts.force_pseudo_tty = true;
+        if (custom_options) {
+            opts = *custom_options;
+        } else {
+            opts.password_auth_no = !sudo_mode || !sudo_mode_with_password();
+            if (opts.password_auth_no) {
+                opts.pseudo_tty = true;
+                opts.force_pseudo_tty = true;
+            }
         }
 
         primitives::Command c;
@@ -1138,19 +1152,17 @@ struct ssh_base {
     using user_type = user<T>;
 
     std::vector<user_type> users;
-    //bool sudo_mode{};
+    user_type *constructing_user{};
     //path cwd;
     std::string ip_;
-    //os_type os;
     std::map<std::string, std::string> environment;
-    //ssh_options connection_options;
 
-    /*auto login1(this auto &&obj, auto && ... args) {
-        user u{obj,args...};
-        //u = &users[name];
-        return u;
-    }*/
-    auto &current_user() { return users.at(0); }
+    auto &current_user() {
+        if (users.empty() && constructing_user) {
+            return *constructing_user;
+        }
+        return users.at(0);
+    }
     auto &set_user(this auto &&obj, auto &&...args) {
         return obj.users.emplace_back(obj, args...);
     }
@@ -1621,7 +1633,7 @@ struct ssh_base {
         }
     }
     void reboot(this auto &&obj) {
-        auto s = obj.sudo_with_password();
+        auto s = obj.sudo();
         obj.reboot([&]{ obj.command("reboot"); });
     }
     static auto split_string_map(const std::string &s, const std::string &kv_delim = "="s) {
