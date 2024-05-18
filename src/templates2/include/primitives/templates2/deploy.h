@@ -306,7 +306,9 @@ struct rsync_options {
     //fs::path to;
 };
 auto default_rsync_options() {
-    rsync_options opts{{"-czavP"s, "--stats"}};
+    rsync_options opts{{"-czavP"s
+        //, "--stats"
+    }};
     return opts;
 }
 
@@ -1016,17 +1018,8 @@ public:
         return home_dir() / ".ssh" / "environment";
     }
 
-    auto rsync_from(const path &in_from, const path &in_to, rsync_options opts = default_rsync_options()) {
-        opts.arguments.push_back("-e");
-        opts.arguments.push_back(serv.connection_string());
-        opts.arguments.push_back(make_rsync_remote(in_from));
-        opts.arguments.push_back(make_rsync_local(in_to));
-        /*if (!serv.cwd.empty()) {
-            SW_UNIMPLEMENTED;
-        }*/
-        return primitives::deploy::rsync(opts);
-    }
-    auto rsync_to(const path &in_from, const path &in_to, rsync_options opts = default_rsync_options()) {
+private:
+    auto rsync_base(auto &&from, auto &&to, auto &&opts) {
         bool pwset{};
         auto pwdenv = "PASSWORD"s;
         auto &s = main_user ? main_user->serv : serv;
@@ -1051,8 +1044,8 @@ public:
 
         opts.arguments.push_back("-e");
         opts.arguments.push_back(serv.connection_string());
-        opts.arguments.push_back(make_rsync_local(in_from));
-        opts.arguments.push_back(make_rsync_remote(in_to));
+        opts.arguments.push_back(from);
+        opts.arguments.push_back(to);
         /*if (!serv.cwd.empty()) {
             SW_UNIMPLEMENTED;
         }*/
@@ -1063,6 +1056,13 @@ public:
             }
         };
         return primitives::deploy::rsync(opts);
+    }
+public:
+    auto rsync_from(const path &in_from, const path &in_to, rsync_options opts = default_rsync_options()) {
+        return rsync_base(make_rsync_remote(in_from), make_rsync_local(in_to), opts);
+    }
+    auto rsync_to(const path &in_from, const path &in_to, rsync_options opts = default_rsync_options()) {
+        return rsync_base(make_rsync_local(in_from), make_rsync_remote(in_to), opts);
     }
 
 private:
