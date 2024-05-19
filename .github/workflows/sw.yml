@@ -41,7 +41,12 @@ jobs:
     - uses: egorpugin/sw-action@master
     - name: install
       run: brew install flex bison gcc m4
+    - run: sudo xcode-select -p
+    - run: which clang
+    - run: clang --version
     - run: sudo xcode-select --switch /Library/Developer/CommandLineTools
+    - run: which clang
+    - run: clang --version
     - name: build
       run: |
         export PATH="/opt/homebrew/opt/bison/bin:$PATH"
