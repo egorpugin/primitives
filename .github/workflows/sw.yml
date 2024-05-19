@@ -40,7 +40,7 @@ jobs:
     - uses: actions/checkout@v1
     - uses: egorpugin/sw-action@master
     - name: install
-      run: brew install flex bison gcc
+      run: brew install flex bison gcc m4
     - run: sudo xcode-select --switch /Library/Developer/CommandLineTools
     - name: build
       run: |
