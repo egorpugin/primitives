@@ -1030,7 +1030,7 @@ private:
                 u.clear();
             }
             if (sudo_mode_with_password()) {
-                auto fn = "asker.sh"s;
+                auto fn = ".sw/rsync/asker.sh"s;
                 s.write_file(fn, std::format("#!/bin/sh\necho ${}\n", pwdenv));
                 s.chmod(755, fn);
                 opts.arguments.push_back("--rsync-path=SUDO_ASKPASS=./" + fn + " sudo -A" + u + " rsync");
