@@ -9,7 +9,7 @@ consteval auto type_name_with_namespaces() {
     std::string_view fn = std::source_location::current().function_name();
     auto structstr = "struct "sv;
     auto classstr = "class "sv;
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
     fn = fn.substr(fn.rfind("<") + 1);
     if (fn.starts_with(structstr)) {
         fn = fn.substr(structstr.size());
