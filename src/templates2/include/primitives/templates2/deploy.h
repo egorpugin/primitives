@@ -712,7 +712,16 @@ struct fedora : system_base {
         return dnf{serv};
     }
     void upgrade_system() {
-        SW_UNIMPLEMENTED;
+        auto to_version = version_type{version.getMajor() + 1};
+        if (to_version > max_fedora_version) {
+            return;
+        }
+        auto sudo = serv.sudo();
+        sudo.upgrade_packages("--refresh");
+        dnf d{sudo};
+        d.install("dnf-plugin-system-upgrade");
+        d.system_upgrade("download", "-y", std::format("--releasever={}", to_version.getMajor()));
+        sudo.reboot([&] { d.system_upgrade("reboot"); });
     }
     void install_postgres() {
         package_manager().install("postgresql-server");
@@ -1123,6 +1132,7 @@ struct deploy_single_target_args {
     std::map<std::string, std::string> environment;
     std::string prognamever;
     std::string cfgname{"r"};
+    std::map<std::string, std::string> nginx_configs;
 
     void backup_service_data(auto &&serv, const path &backup_root_dir) {
         auto u = serv.login(service_name);
@@ -1144,6 +1154,52 @@ struct deploy_single_target_args {
             auto dump = u.command("pg_dump", "-d", service_name);
             write_file(backup_dir / "pg.sql", dump);
         }
+    }
+    static auto make_nginx_reverse_proxy_config(auto &&hostname, auto port, auto &&username) {
+        auto s = R"(
+server {
+    listen       443 ssl;
+    #listen       [::]:443 ssl;
+    http2        on;
+    server_name  HOSTNAME;
+    #root         /home/USERNAME/www/; #? www or just home dir
+
+    ssl_certificate "/etc/letsencrypt/live/HOSTNAME/fullchain.pem
+    ssl_certificate_key "/etc/letsencrypt/live/HOSTNAME/privkey.pem";
+    ssl_session_cache shared:SSL:1m;
+    ssl_session_timeout 10m;
+    ssl_ciphers PROFILE=SYSTEM;
+    ssl_prefer_server_ciphers on;
+
+    location / {
+        proxy_pass_header Cookie;
+        proxy_pass http://127.0.0.1:LOCAL_PORT/;
+
+        proxy_set_header        Host $host;
+        proxy_set_header        X-Real-IP $remote_addr;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        X-Forwarded-Proto $scheme;
+        proxy_set_header        Upgrade $http_upgrade;
+        proxy_set_header        Connection "upgrade";
+        proxy_redirect          off;
+        proxy_http_version      1.1;
+    }
+
+    location /static/ {
+        root /home/USERNAME/;
+        autoindex on;
+        expires 1h;
+        add_header Cache-Control public;
+    }
+}
+)"s;
+        boost::replace_all(s, "HOSTNAME", hostname);
+        boost::replace_all(s, "LOCAL_PORT", std::to_string(port));
+        boost::replace_all(s, "USERNAME", username);
+        return s;
+    }
+    auto add_nginx_reverse_proxy_config(auto &&hostname, auto port, auto &&username) {
+        nginx_configs[hostname] = make_nginx_reverse_proxy_config(hostname, port, username);
     }
 };
 
@@ -1383,7 +1439,7 @@ struct ssh_base {
     }
     bool is_online(this auto &&obj) {
         try {
-            auto c = obj.create_command("exit");
+            auto c = obj.create_command("test", "0");
             auto ret = run_command_raw(c);
             return !ret.exit_code;
         } catch (std::exception &e) {
@@ -1693,21 +1749,6 @@ struct ssh_base {
     auto detect_hostname(this auto &&obj) {
         return obj.command("hostname");
     }
-    void upgrade_fedora(this auto &&obj) {
-        auto os = obj.detect_os();
-        auto to_version = os.version + 1;
-        if (to_version > max_fedora_version) {
-            return;
-        }
-        auto sudo = obj.sudo_with_password();
-        obj.upgrade_packages("--refresh");
-        dnf d{obj};
-        d.install("dnf-plugin-system-upgrade");
-        d.system_upgrade("download", "-y", std::format("--releasever={}", to_version));
-        obj.reboot([&] {
-            d.system_upgrade("reboot");
-        });
-    }
     void upgrade_packages(this auto &&obj, auto &&...args) {
         auto sudo = obj.sudo();
         dnf d{sudo};
@@ -1829,6 +1870,7 @@ struct ssh_base {
         auto root = obj.root();
         auto first_time = !root.has_user(username);
         root.create_user(username);
+        systemctl ctl{root};
 
         if (args.nginx) {
             args.fedora_packages.insert("nginx");
@@ -1837,6 +1879,36 @@ struct ssh_base {
             args.tcp_ports.insert(443);
             // for nginx
             root.command("setsebool", "-P", "httpd_can_network_connect", "1");
+
+            // on the first run we must init certbot somehow (accept agreement or so)
+        }
+        if (!args.nginx_configs.empty()) {
+            // get nginx root
+            auto ng = root.read_file("/etc/nginx/nginx.conf");
+            auto p = ng.find("root");
+            if (p == -1) {
+                throw std::runtime_error{"cant find nginx root"};
+            }
+            auto e = ng.find(";", p);
+            ng = ng.substr(p+4, e-(p+4));
+            boost::trim(ng);
+
+            for (auto &&[h,s] : args.nginx_configs) {
+                auto c = root.create_command("certbot", "certonly", "-d", h, "--webroot", "--renew-by-default");
+                c.in.text = ng;
+                root.run_command(c);
+                root.write_file("/etc/nginx/conf.d/" + h + ".conf", s);
+            }
+        }
+        if (args.nginx) {
+            auto svc = ctl.service("nginx");
+            if (svc.status().exit_code != 0) {
+                svc.enable();
+                svc.start();
+            } else {
+                // or just nginx -s reload?
+                svc.restart();
+            }
         }
 
         auto os = obj.detect_os();
@@ -1849,7 +1921,6 @@ struct ssh_base {
         }
         root.command("firewall-cmd", "--reload");
 
-        systemctl ctl{root};
         auto svc = ctl.service(service_name);
         if (svc.status().exit_code == 0) {
             svc.stop();
