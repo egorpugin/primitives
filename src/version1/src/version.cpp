@@ -685,6 +685,11 @@ void Version::format(std::string &s) const
         return {};
     };
 
+    auto get_optional_number_int = [&](Level level) {
+        auto v = get_optional_number(level);
+        return v ? *v : 0;
+    };
+
     auto get_optional = [](const auto &n) -> String
     {
         if (n)
@@ -775,10 +780,12 @@ void Version::format(std::string &s) const
         fmt::arg("e", printExtra()),
         fmt::arg("b", branch),
         fmt::arg("v", toString()),
-        fmt::arg("Mm", toString(2)) // equals to {M}.{m}
+        fmt::arg("Mm", toString(2)), // equals to {M}.{m}
         //,
 
         // extended
+        fmt::arg("v5", get_optional_number_int(5)),
+        fmt::arg("v6", get_optional_number_int(6))
         /*fmt::arg("5", get(4)),
         fmt::arg("5L", create_latin_replacements_capital(get(4))),
         fmt::arg("5l", create_latin_replacements(get(4))),
