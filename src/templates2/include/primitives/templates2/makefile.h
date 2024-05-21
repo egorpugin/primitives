@@ -5,12 +5,23 @@
 
 struct makefile_am {
     using list = std::vector<std::string>;
+    struct if_desc {
+        bool if_current{true};
+        bool if_branch{};
+        bool else_branch{};
+
+        void switch_to_else() {
+            if_current = false;
+        }
+        explicit operator bool() const {
+            return if_current ? if_branch : else_branch;
+        }
+    };
 
     std::map<std::string, list> variables;
     //
     path current_fn;
-    int if_ = 0;
-    const char *p{}, *end{};
+    std::vector<if_desc> if_stack;
     enum record_type {
         keyword,
         comment,
@@ -19,7 +30,10 @@ struct makefile_am {
         list_,
     };
 
-    makefile_am(const path &fn) {
+    makefile_am(const path &fn, auto &&...defs) {
+        (load(std::string{defs} += "\n"), ...);
+        resolve_variables();
+
         SwapAndRestore sr{current_fn, fn};
         load(fn);
     }
@@ -44,72 +58,88 @@ struct makefile_am {
         }
     }
 
-    void next_record() {
-        eat_space();
+    void next_record(auto &p) {
+        eat_space(p);
         if (*p == '#') {
-            eat_line();
-            return comment;
+            eat_line(p);
+            return;
         }
         if (*p == '\n') {
-            eat_line();
-            return empty_line;
+            eat_line(p);
+            return;
         }
-        auto line = eat_token();
+        auto line = eat_token(p);
+        bool parse_cond = if_stack.empty() || if_stack.back();
         if (line.starts_with("if"sv)) {
-            ++if_;
-            eat_line();
+            eat_space(p);
+            if_desc d{};
+            if (*p == '!') {
+                ++p;
+                auto cond = eat_line(p);
+                d.if_branch = !variables.contains(std::string{cond}) && parse_cond;
+            } else {
+                auto cond = eat_line(p);
+                d.if_branch = variables.contains(std::string{cond}) && parse_cond;
+            }
+            d.else_branch = !d.if_branch && parse_cond;
+            if_stack.push_back(d);
+            return;
+        }
+        if (line.starts_with("else"sv)) {
+            if_stack.back().switch_to_else();
+            eat_line(p);
             return;
         }
         if (line.starts_with("endif"sv)) {
-            --if_;
-            eat_line();
-            return condition;
+            if_stack.pop_back();
+            eat_line(p);
+            return;
         }
-        if (if_) {
-            eat_line();
+        if (!if_stack.empty() && !if_stack.back()) {
+            eat_line(p);
             return;
         }
         if (line.starts_with("include"sv)) {
-            eat_space();
-            auto file = eat_line();
+            eat_space(p);
+            auto file = eat_line(p);
             load(current_fn.parent_path() / file);
             return;
         }
 
-        eat_space();
+        eat_space(p);
         if (*p == '=') {
             ++p;
-            eat_space();
-            variables[std::string{line}] = eat_list();
+            eat_space(p);
+            variables[std::string{line}] = eat_list(p);
             return;
         }
         if (*p == ':') {
-            variables[std::string{line}] = eat_commands();
+            variables[std::string{line}] = eat_commands(p);
             return;
         }
         if (*p == '+' && *(p+1) == '=') {
             ++p;
             ++p;
-            eat_space();
-            variables[std::string{line}].append_range(eat_list());
+            eat_space(p);
+            variables[std::string{line}].append_range(eat_list(p));
             return;
         }
 
         throw std::runtime_error{"unimplemented: unexpected symbol"};
     }
-    list eat_commands() {
-        eat_line();
+    list eat_commands(auto &p) {
+        eat_line(p);
         list l;
         while (*p == '\t') {
             ++p;
-            l.push_back(std::string{eat_line()});
+            l.push_back(std::string{eat_line(p)});
         }
         return l;
     }
-    list eat_list() {
+    list eat_list(auto &p) {
         auto start = p;
         while (1) {
-            auto line = eat_line();
+            auto line = eat_line(p);
             if (line.empty()) {
                 break;
             }
@@ -119,41 +149,41 @@ struct makefile_am {
         }
         return split_string(std::string(start,p), " \t\\");
     }
-    void eat(char c) {
+    void eat(auto &p, char c) {
         if (*p != c) {
             throw std::runtime_error{"bad char"};
         }
         ++p;
     }
-    void eat_space() {
+    void eat_space(auto &p) {
         while (isspace(*p) && *p != '\n') {
             ++p;
         }
     }
-    std::string_view eat_token() {
+    std::string_view eat_token(auto &p) {
         auto start = p;
         while (*p != ':' && !isspace(*p) && *p != '+' && *p != '=') {
             ++p;
         }
         return {start, p};
     }
-    std::string_view eat_until(char c) {
+    std::string_view eat_until(auto &p, char c) {
         auto start = p;
         while (*p != c) {
             ++p;
         }
         return {start, p};
     }
-    std::string_view eat_line() {
-        auto res = eat_until('\n');
+    std::string_view eat_line(auto &p) {
+        auto res = eat_until(p, '\n');
         ++p;
         return res;
     }
     void load(const std::string &s) {
-        p = s.data();
-        end = s.data() + s.size();
+        auto p = s.data();
+        auto end = s.data() + s.size();
         while (p < end) {
-            next_record();
+            next_record(p);
         }
     }
 };
