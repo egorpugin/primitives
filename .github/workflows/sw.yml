@@ -39,15 +39,22 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: egorpugin/sw-action@master
+    - run: which m4
     - name: install
-      run: brew install flex bison gcc
+      run: brew install flex bison gcc m4
+    - run: which m4
     - run: sudo xcode-select --switch /Library/Developer/CommandLineTools
     - run: sudo xcode-select -p
+    - run: which m4
+    - run: sudo xcode-select --install
+    - run: sudo xcode-select -p
+    - run: which m4
     - run: /usr/bin/clang --version
     - name: build
       run: |
         export PATH="/opt/homebrew/opt/bison/bin:$PATH"
         export PATH="/opt/homebrew/opt/flex/bin:$PATH"
+        export PATH="/opt/homebrew/opt/m4/bin:$PATH"
         export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
         export PATH="/opt/homebrew/opt/gcc/bin:$PATH"
         ./sw build -compiler gcc-14
@@ -55,6 +62,7 @@ jobs:
       run: |
         export PATH="/opt/homebrew/opt/bison/bin:$PATH"
         export PATH="/opt/homebrew/opt/flex/bin:$PATH"
+        export PATH="/opt/homebrew/opt/m4/bin:$PATH"
         export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
         export PATH="/opt/homebrew/opt/gcc/bin:$PATH"
         ./sw test -compiler gcc-14
