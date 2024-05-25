@@ -286,23 +286,32 @@ static int startup(int argc, char *argv[])
     cp = normalize_path_windows(cp);
     // so we take parent dir first, set cd there
     cp = cp.parent_path();
-    fs::current_path(cp);
+    // we may fail when called on unavailable paths (no perms), but ignore
+    try {
+        fs::current_path(cp);
+    } catch (std::exception &) {
+    }
     // then we restore our cwd but with our changes
 #endif
     cp = s;
-    fs::current_path(cp);
+    // we may fail when called on unavailable paths (no perms), but ignore
+    try {
+        fs::current_path(cp);
 
-    //
+        //
 #if defined(_WIN32) && !defined(__MINGW32__)
-    sw_append_symbol_path(boost::dll::program_location().parent_path().wstring());
+        sw_append_symbol_path(boost::dll::program_location().parent_path().wstring());
 #else
-    sw_append_symbol_path(boost::dll::program_location().parent_path().string());
+        sw_append_symbol_path(boost::dll::program_location().parent_path().string());
 #endif
-    sw_append_symbol_path(fs::current_path());
+        sw_append_symbol_path(fs::current_path());
 
-    // init settings early
-    // e.g. before parsing command line
-    sw::getSettingStorage();
+        // init settings early
+        // e.g. before parsing command line
+        sw::getSettingStorage();
+    } catch (std::exception &) {
+        // we still may fail with fs::current_path()
+    }
 
     return 0;
 }
