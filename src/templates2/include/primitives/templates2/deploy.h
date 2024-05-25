@@ -13,7 +13,9 @@
 
 #ifndef _WIN32
 #include <arpa/inet.h>
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <netdb.h>
 #else
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -107,24 +109,30 @@ struct thread_manager {
 
 thread_local std::string thread_name;
 thread_local std::string log_name;
-path log_dir = [] {
-    path dir = ".sw/log";
+const path &log_dir(const path &in = {}) {
+    static auto dir = [] {
+        path dir = ".sw/log";
 
-    std::string time = __DATE__;
-    time += " " __TIME__;
-#ifdef _WIN32
-    std::istringstream ss{time};
-    std::chrono::system_clock::time_point tp;
-    ss >> std::chrono::parse("%b %d %Y %T", tp);
-    time = std::format("{:%F %H-%M-%OS}", tp);
-#endif
-    path p = time;
-    //path p = __DATE__ __TIME__; // PACKAGE_PATH;
+        std::string time = __DATE__;
+        time += " " __TIME__;
 
-    dir /= p.stem();
-    fs::create_directories(dir);
+        std::istringstream ss{time};
+        std::chrono::system_clock::time_point tp;
+        ss >> std::chrono::parse("%b %d %Y %T", tp);
+        time = std::format("{:%F %H-%M-%OS}", tp);
+
+        path p = time;
+        //path p = __DATE__ __TIME__; // PACKAGE_PATH;
+
+        dir /= p.stem();
+        fs::create_directories(normalize_path(dir));
+        return dir;
+    }();
+    if (!in.empty()) {
+        dir = in;
+    }
     return dir;
-}();
+}
 
 struct threaded_logger {
     void log(std::string s) {
@@ -132,12 +140,12 @@ struct threaded_logger {
         boost::replace_all(s, "\r\n", "\n");
         if (thread_manager_.is_main_thread()) {
             LOG_INFO(logger, s);
-            static std::ofstream ofile{log_dir / "main.log"};
+            static std::ofstream ofile{log_dir() / "main.log"};
             ofile << s << "\n";
             ofile.flush(); // ?
         } else {
             LOG_INFO(logger, std::format("[{}] {}", thread_name, s));
-            thread_local std::ofstream ofile{log_dir / log_name};
+            thread_local std::ofstream ofile{log_dir() / log_name};
             ofile << s << "\n";
             ofile.flush(); // ?
         }
@@ -285,7 +293,9 @@ auto cygwin_raw(const std::vector<std::string> &args) {
     c2.push_back(s);
     return c2;
 #else
-    return create_command(args...);
+    primitives::Command c;
+    c.push_back(args);
+    return c;
 #endif
 }
 auto cygwin(auto &&...args) {
@@ -315,7 +325,9 @@ auto default_rsync_options() {
 auto rsync_raw(const rsync_options &opts) {
     std::vector<std::string> vargs;
     vargs.push_back("rsync");
-    vargs.append_range(opts.arguments);
+    for (auto &&a : opts.arguments) {
+        vargs.push_back(a);
+    }
     return cygwin_raw(vargs);
 }
 auto rsync(const rsync_options &opts) {
@@ -333,6 +345,29 @@ auto make_rsync_local(const path &in) {
 auto system(const std::string &s) {
     return ::system(s.c_str());
 }
+
+struct this_system {
+    auto command(auto &&...args) {
+        return primitives::deploy::command(args...);
+    }
+};
+
+template <typename Serv>
+struct git_command {
+    Serv &serv;
+    path dir{"."};
+
+    auto operator()(auto &&...args) {
+        return serv.command("git", "-C", dir, args...);
+    }
+    auto pull(auto &&...args) {
+        return operator()("pull", args...);
+    }
+private:
+    auto create_command() {
+        //primitives::deploy::create_command()
+    }
+};
 
 struct sw_command {
     auto operator()(auto &&...args) {
@@ -725,6 +760,8 @@ struct fedora : system_base {
     }
     void install_postgres() {
         package_manager().install("postgresql-server");
+        // exts like citext
+        package_manager().install("postgresql-contrib");
         auto su = serv.sudo();
         if (!su.exists("/var/lib/pgsql/data/pg_hba.conf")) {
             su.command("/usr/bin/postgresql-setup", "--initdb");
@@ -772,7 +809,7 @@ template <typename F, typename T>
 struct lambda_wrapper {
     T &serv;
 
-    void operator()(std::source_location loc = std::source_location::current()) {
+    void operator()(auto &&as_user, std::source_location loc = std::source_location::current()) {
         auto &be = lambda_registrar<F>::end(loc);
 
         auto fn = loc.file_name();
@@ -806,6 +843,9 @@ struct lambda_wrapper {
             pre += "\n";
             ++i;
         }
+        //pre += "threaded_logger_.log(\"before fs::current_path(home);\");\n\n";
+        pre += "fs::current_path(\"" + normalize_path(as_user.home_dir()).string() + "\");\n\n";
+        pre += "threaded_logger_.log(\"after fs::current_path(home);\");\n\n";
         pre += "auto f = ";
         pre += lambda;
         pre += R"(
@@ -834,16 +874,11 @@ return f2(0);
         auto outbinfn = (p / ".sw" / "out" / conf / path{outfn}.stem()) += "-0.0.1";
         auto outservfn = path{"lambda"} / outbinfn.filename();
         {
-            serv.create_directories("lambda");
-            serv.rsync("-cavP", normalize_path(outbinfn), serv.server_string() + ":" + normalize_path(outservfn).string());
-            serv.command("chmod", "755", normalize_path(outservfn));
+            as_user.create_directories("lambda");
+            as_user.rsync_to(outbinfn, as_user.absolute_path(outservfn));
+            as_user.command("chmod", "755", normalize_path(as_user.absolute_path(outservfn)));
         }
-        serv.command(normalize_path(outservfn));
-    }
-    void sudo(std::source_location loc = std::source_location::current()) {
-        SW_UNIMPLEMENTED;
-        //auto scoped_sudo = serv.sudo();
-        operator()(loc);
+        as_user.command(normalize_path(as_user.absolute_path(outservfn)));
     }
 };
 
@@ -1009,22 +1044,53 @@ public:
         return primitives::deploy::run_command_raw(c);
     }
 
-    path users_directory() {
-        if constexpr (requires {serv.os;}) {
-            if (serv.os == "macos"s) {
-                return "/Users";
-            }
-        }
-        return "/home";
-    }
-    path home_dir() {
+    path home_dir() const {
         if (is_root()) {
             return "/root";
         }
-        return users_directory() / name;
+        return normalize_path(serv.users_directory() / name);
+    }
+    auto create_directories(const path &p) {
+        return command("mkdir", "-p", normalize_path(absolute_path(p)));
+    }
+    path absolute_path(const path &p) const {
+        return p.is_absolute() ? p : (normalize_path(home_dir() / p));
+    }
+    bool exists(const path &p) {
+        try {
+            command("ls", normalize_path(absolute_path(p)));
+            return true;
+        } catch (std::exception &) {
+            return false;
+        }
     }
     path ssh_environment_file() {
         return home_dir() / ".ssh" / "environment";
+    }
+    path find_key() {
+        auto fn = home_dir() / ".ssh" / "id_rsa";
+        if (!exists(fn)) {
+            fn = home_dir() / ".ssh" / "id_ed25519";
+            if (!exists(fn)) {
+                return {};
+            }
+        }
+        return fn;
+    }
+    void append_file(const path &p, const std::string &data) {
+        auto d = path{".sw/lambda/data"};
+        auto fn = d / p.filename();
+        if (exists(p)) {
+            rsync_from(absolute_path(p), fn);
+            ::write_file(fn, ::read_file(fn) + data);
+        } else {
+            ::write_file(fn, data);
+        }
+        rsync_to(fn, absolute_path(p));
+    }
+
+    auto git() {
+        return git_command{*this, home_dir()};
     }
 
 private:
@@ -1158,13 +1224,30 @@ struct deploy_single_target_args {
     static auto make_nginx_reverse_proxy_config(auto &&hostname, auto port, auto &&username) {
         auto s = R"(
 server {
+        listen 80;
+        #listen [::]:80;
+
+        server_name HOSTNAME;
+
+        location / {
+            return 301 https://$host$request_uri;
+        }
+
+        location /.well-known/ {
+                root /var/www/;
+                autoindex on;
+                autoindex_localtime on;
+        }
+}
+
+server {
     listen       443 ssl;
     #listen       [::]:443 ssl;
     http2        on;
     server_name  HOSTNAME;
     #root         /home/USERNAME/www/; #? www or just home dir
 
-    ssl_certificate "/etc/letsencrypt/live/HOSTNAME/fullchain.pem
+    ssl_certificate "/etc/letsencrypt/live/HOSTNAME/fullchain.pem";
     ssl_certificate_key "/etc/letsencrypt/live/HOSTNAME/privkey.pem";
     ssl_session_cache shared:SSL:1m;
     ssl_session_timeout 10m;
@@ -1203,9 +1286,9 @@ server {
     }
 };
 
-template <typename T>
+template <typename RealType>
 struct ssh_base {
-    using user_type = user<T>;
+    using user_type = user<RealType>;
 
     std::vector<user_type> users;
     user_type *constructing_user{};
@@ -1387,7 +1470,7 @@ struct ssh_base {
         /*SwapAndRestore sr{obj.connection_options.with_server, true};
         c.push_back(obj.connection_args());
         c.push_back("--"); // end of ssh args
-        /*if (!obj.cwd.empty()) {
+        if (!obj.cwd.empty()) {
             c.push_back("cd");
             c.push_back(obj.cwd);
             c.push_back("&&");
@@ -1549,12 +1632,32 @@ struct ssh_base {
         lambda_registrar<decltype(f)>::begin(loc);
         return lambda_wrapper<decltype(f), T>(obj);
     }
+    path users_directory(this auto &&obj) {
+        if constexpr (requires {obj.os;}) {
+            if (obj.os == "macos"s) {
+                return "/Users";
+            }
+        }
+        return "/home";
+    }
+    // windows
     path find_key(this auto &&obj) {
         using T = std::decay_t<decltype(obj)>;
         if constexpr (requires { T::key; }) {
-            return find_key(T::key);
+            auto r = find_key(T::key);
+            if (r.empty()) {
+                throw SW_RUNTIME_ERROR("cannot find ssh key: "s + T::key);
+            }
+            return r;
         } else {
-            return find_key("id_rsa");
+            auto r = find_key("id_rsa");
+            if (r.empty()) {
+                r = find_key("id_ed25519");
+                if (r.empty()) {
+                    throw SW_RUNTIME_ERROR("cannot find ssh key: id_rsa");
+                }
+            }
+            return r;
         }
     }
     static path find_key(auto &&name) {
@@ -1581,7 +1684,7 @@ struct ssh_base {
                 return p / name;
             }
         }
-        throw SW_RUNTIME_ERROR("cannot find ssh key: "s + name);
+        return {};
     }
     std::string pubkey(this auto &&obj) {
         auto p = obj.find_key();
@@ -1676,6 +1779,17 @@ struct ssh_base {
         auto d = path{".sw/lambda/data"};
         ::write_file(d / p.filename(), data);
         obj.rsync_to(d / p.filename(), p);
+    }
+    void append_file(this auto &&obj, const path &p, const std::string &data) {
+        auto d = path{".sw/lambda/data"};
+        auto fn = d / p.filename();
+        if (obj.exists(p)) {
+            obj.rsync_from(p, fn);
+            ::write_file(fn, ::read_file(fn) + data);
+        } else {
+            ::write_file(fn, data);
+        }
+        obj.rsync_to(fn, p);
     }
     void reboot(this auto &&obj, auto &&f) {
         try {
@@ -1912,9 +2026,13 @@ struct ssh_base {
         }
 
         auto os = obj.detect_os();
+        std::string pkgs;
         for (auto &&p : args.fedora_packages) {
             // FIXME: match os <-> packages
-            visit(os, [&](auto &v){v.package_manager().install(p);});
+            pkgs += p + " ";
+        }
+        if (!pkgs.empty()) {
+            visit(os, [&](auto &v){v.package_manager().install(pkgs);});
         }
         for (auto &&p : args.tcp_ports) {
             root.command("firewall-cmd", "--permanent", "--add-port", std::to_string(p) + "/tcp");
@@ -1944,6 +2062,10 @@ struct ssh_base {
         root.chown(prog, username);
         // selinux
         root.command("chcon", "-t", "bin_t", normalize_path(prog));
+
+        if constexpr (requires {args.custom_steps(obj);}) {
+            args.custom_steps(obj);
+        }
 
         if (!args.service_pre_script.empty()) {
             root.write_file(normalize_path(home / "pre.sh"), "#!/bin/bash\n\n" + args.service_pre_script + "\n");
@@ -1994,7 +2116,7 @@ struct ssh_base {
             });
             auto postgres = root.login("postgres");
             // user, not role; users can login
-            auto x = postgres.command("psql", "-t", "-c", "'select count(*) from pg_user where usename = $$raid_quiz$$;'");
+            auto x = postgres.command("psql", "-t", "-c", "'select count(*) from pg_user where usename = $$" + username + "$$;'");
             boost::trim(x);
             if (x == "0") {
                 auto run_and_dont_fail_on_exists = [&](auto && ... args2) {
