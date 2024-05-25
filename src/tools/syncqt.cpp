@@ -260,7 +260,8 @@ StringSet class_names(std::map<path, File>::value_type &ff)
 {
     StringSet classes;
 
-    auto lines = read_lines(ff.first);
+    auto s = read_file(ff.first);
+    auto lines = split_lines(s);
     auto &f = ff.second;
 
     std::smatch m;
@@ -279,7 +280,20 @@ StringSet class_names(std::map<path, File>::value_type &ff)
             continue;
         }
         if (line.find(';') == -1 && std::regex_search(line, m, r_class)) {
-            if (1) {
+            bool quotes{};
+            for (auto &c : line) {
+                if (c == '"') {
+                    quotes = !quotes;
+                    if (!quotes) {
+                        c = ' ';
+                    }
+                }
+                if (quotes) {
+                    c = ' ';
+                }
+            }
+            boost::replace_all(line, "QT_DEPRECATED_X", "");
+            if (std::regex_search(line, m, r_class)) {
                 classes.insert(m[4]);
             }
         }
@@ -297,6 +311,7 @@ int main(int argc, char *argv[])
     cl::opt<path> bdir("bdir", cl::desc("binary dir"), cl::Required);
     cl::list<std::string> selected_modules_cl("modules", cl::desc("modules"), cl::SpaceSeparated);
     cl::opt<std::string> version("qt_version", cl::desc("version"), cl::Required);
+    cl::opt<path> output_file("out", cl::desc("output file"), cl::Required);
 
     cl::alias sdirA("s", cl::desc("Alias for -sdir"), cl::aliasopt(sdir));
     cl::alias bdirA("b", cl::desc("Alias for -bdir"), cl::aliasopt(bdir));
@@ -322,8 +337,6 @@ int main(int argc, char *argv[])
             std::cout << "bad module: " << m << "\n";
             continue;
         }
-
-        write_file_if_different(path{bdir / "include" / m / m} += ".syncqt.h", "");
 
         auto files = enumerate_files(sdir / im->second);
         for (auto &f : files)
@@ -440,6 +453,9 @@ int main(int argc, char *argv[])
         // make last to perform commit
         write_file_if_different(bdir / "include" / m / m, master.str());
     }
+
+    // make last to perform commit
+    write_file_if_different(output_file, "");
 
     return 0;
 }

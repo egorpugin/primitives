@@ -80,14 +80,19 @@ static Files syncqt(const DependencyPtr &sqt, NativeExecutedTarget &t, const Str
             << "-b" << t.BinaryDir
             << "-m" << m
             << "-v" << v
-            << cmd::end()
+            << "-out"
+            // but .h file is being scanned by automoc and it does not exists
+            // so it does not work well (probably only for qt5?)
+            << cmd::out(path{i / m / m} += ".syncqt")
             // focus on anchoring to .syncqt.h header files for now
+            //<< cmd::out(path{i / m / m} += ".syncqt.h")
+            // old
             //<< cmd::out(i / m / m)
-            << cmd::out(path{i / m / m} += ".syncqt.h")
+            << cmd::end()
             ;
         c->strict_order = 1; // run before moc
         //out.insert(i / m / m);
-        out.insert(path{i / m / m} += ".syncqt.h");
+        out.insert(path{i / m / m} += ".syncqt");
         //t.Interface += i / m / m; // makes cyclic deps
 
         t.Public += IncludeDirectory(i);
