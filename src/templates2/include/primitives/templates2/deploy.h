@@ -906,7 +906,7 @@ private:
     bool sudo_mode{};
     const user *main_user{};
     std::optional<ssh_options> custom_options;
-    // cwd from server?
+    path cwd;
 
     bool sudo_mode_with_password() const { return is_root() || !sudo_nopasswd; }
 
@@ -983,11 +983,11 @@ public:
         c.push_back(serv.connection_args(opts));
         c.push_back(serv.server_string(main_user ? main_user->name : name));
         c.push_back("--"); // end of ssh args
-        /*if (!serv.cwd.empty()) {
+        if (!cwd.empty()) {
             c.push_back("cd");
-            c.push_back(serv.cwd);
+            c.push_back(cwd);
             c.push_back("&&");
-        }*/
+        }
         if (sudo_mode && !is_root()) {
             if (main_user) {
                 c.push_back("sudo");
@@ -1044,6 +1044,13 @@ public:
         return primitives::deploy::run_command_raw(c);
     }
 
+    void current_path(const path &p) {
+        if (cwd.empty()) {
+            cwd = home_dir();
+        }
+        cwd /= p;
+        cwd = normalize_path(cwd);
+    }
     path home_dir() const {
         if (is_root()) {
             return "/root";
@@ -1143,11 +1150,19 @@ public:
 private:
     std::string make_rsync_remote(const path &in) {
         std::string s;
-        // respect cwd?
-        // obj.server_string(main_user ? main_user->name : name) + ":" + (obj.cwd.empty() ? "" : (obj.cwd.string() +
-        // "/"))
-        s += std::format("{}:{}", serv.server_string(main_user ? main_user->name : name),
-                            normalize_path(in).string());
+        s += serv.server_string(main_user ? main_user->name : name);
+        s += ":";
+        if (!in.is_absolute() && !cwd.empty()) {
+            s += normalize_path(cwd).string() + "/";
+            if (in.empty()) {
+                s += "."; // for safety?
+            }
+            s += normalize_path(in).string();
+        } else if (!in.is_absolute()) {
+            s += normalize_path(absolute_path(in)).string();
+        } else {
+            s += normalize_path(in).string();
+        }
         return s;
     }
 };
@@ -1518,7 +1533,7 @@ struct ssh_base {
         return obj.root();
     }
     auto create_directories(this auto &&obj, const path &p) {
-        return obj.command("mkdir", "-p", normalize_path(p));
+        return obj.current_user().create_directories(p);
     }
     bool is_online(this auto &&obj) {
         try {
@@ -1698,7 +1713,7 @@ struct ssh_base {
     }
     auto directory(this auto &&obj, const path &dir) {
         SW_UNIMPLEMENTED;
-        return SwapAndRestore(obj.cwd, dir);
+        //return SwapAndRestore(obj.cwd, dir);
     }
     void remove_known_host(this auto &&obj, const std::string &what = {}) {
         using T = std::decay_t<decltype(obj)>;
