@@ -3,15 +3,26 @@
 #include "string.h"
 
 #include <array>
+#include <bit>
+#include <numeric>
 
 // https://www.rfc-editor.org/rfc/rfc4648
 // also base 32 and base16
 
-template <auto Alphabet, auto padding = '='>
-struct base64_raw {
-    static_assert(Alphabet.size() == 64);
+template <auto Nchars, auto Alphabet, auto padding = '='>
+struct base_raw {
+    static_assert(Alphabet.size() == Nchars);
 
     using u8 = unsigned char;
+    static inline constexpr auto byte_bits = CHAR_BIT;
+    static_assert(byte_bits == 8);
+    static inline constexpr u8 base_type = Nchars;
+    static inline constexpr auto n_bits = std::countr_zero(std::bit_ceil(base_type));
+
+    static inline constexpr auto lcm = std::lcm(byte_bits, n_bits);
+    static inline constexpr auto b_size = lcm / byte_bits;
+    static inline constexpr auto b_chars = lcm / n_bits;
+    //static inline constexpr auto max_tail = (b_chars - byte_bits % n_bits) % b_chars;
 
     static consteval auto make_decoder() {
         std::array<u8, 128> alph{};
@@ -22,42 +33,76 @@ struct base64_raw {
     }
     static inline constexpr auto DecodeAlphabet = make_decoder();
 
-    struct b64 {
-        u8 b2 : 2;
-        u8 a  : 6;
-        u8 c1 : 4;
-        u8 b1 : 4;
-        u8 d  : 6;
-        u8 c2 : 2;
+    static auto name() {return std::format("base{}", Nchars);}
 
-        template <auto N> constexpr void extract(auto &s) {
-            s[0] = Alphabet[a];
-            s[1] = Alphabet[b1 + (b2 << 4)];
-            if constexpr (N > 2)
-            s[2] = Alphabet[(c1 << 2) + c2];
-            else
-            s[2] = padding;
-            if constexpr (N > 3)
-            s[3] = Alphabet[d];
-            else
-            s[3] = padding;
+    struct b {
+        // from
+        // 76543210 76543210 76543210 ...
+        // to
+        // 01234567 89...
+        template <auto start>
+        u8 get_bits() {
+            auto base = (u8*)this;
+            constexpr auto b1 = start / byte_bits;
+            constexpr auto b2 = (start + n_bits - 1) / byte_bits;
+            if (b1 == b2) {
+                constexpr auto offset = byte_bits - start % byte_bits;
+                return (base[b1] >> (offset - n_bits)) & ((1 << n_bits) - 1);
+            } else {
+                constexpr auto bits1 = byte_bits - start % byte_bits;
+                constexpr auto bits2 = n_bits - bits1;
+                auto l = base[b1] & ((1 << bits1) - 1);
+                auto r = base[b2] >> (byte_bits - bits2);
+                return (l << bits2) | r;
+            }
         }
-        template <auto N> constexpr void assign(auto data) {
-            auto &alph = DecodeAlphabet;
-            b2 = alph[data[1]] >> 4;
-            a  = alph[data[0]];
-            if constexpr (N > 2)
-            c1 = alph[data[2]] >> 2;
-            b1 = alph[data[1]];
-            if constexpr (N > 3)
-            d  = alph[data[3]];
-            if constexpr (N > 2)
-            c2 = alph[data[2]];
+        template <auto start>
+        void set_bits(u8 value) {
+            auto base = (u8*)this;
+            constexpr auto b1 = start / byte_bits;
+            constexpr auto b2 = (start + n_bits) / byte_bits;
+            if (b1 == b2) {
+                base[b1] |= value << (byte_bits - n_bits);
+            } else {
+                constexpr auto bits1 = byte_bits - start % byte_bits;
+                constexpr auto bits2 = n_bits - bits1;
+                base[b1] |= value >> bits2;
+                base[b2] |= value << (byte_bits - bits2);
+            }
+        }
+
+        // b_size -> b_chars bytes
+        template <auto N> constexpr void encode(auto &s) {
+#define X(v)                                                \
+            if constexpr (N > v)                            \
+                s[v] = Alphabet[get_bits<n_bits * v>()];    \
+            else if constexpr (v < b_chars)                 \
+                s[v] = padding
+
+            X(0);
+            X(1);
+            X(2);
+            X(3);
+            X(4);
+            X(5);
+            X(6);
+            X(7);
+#undef X
+        }
+        // b_chars -> b_size bytes
+        template <auto N> constexpr void decode(auto data) {
+#define X(v) if constexpr (N > v) set_bits<n_bits * v>(DecodeAlphabet[data[v]])
+            X(0);
+            X(1);
+            X(2);
+            X(3);
+            X(4);
+            X(5);
+            X(6);
+            X(7);
+#undef X
         }
     };
-    static inline constexpr auto b64size = 3;
-    static inline constexpr auto b64chars = 4;
-    static_assert(sizeof(b64) == b64size);
 
     static auto encode(auto &&data) {
         auto sz = data.size();
@@ -65,35 +110,36 @@ struct base64_raw {
         if (sz == 0) {
             return s;
         }
-        s.resize((sz / b64size + (sz % b64size ? 1 : 0)) * b64chars);
+        s.resize((sz / b_size + (sz % b_size ? 1 : 0)) * b_chars);
         auto out = s.data();
-        auto until = sz - sz % b64size;
-        auto p = (b64*)data.data();
+        auto until = sz - sz % b_size;
+        auto p = (b*)data.data();
         int i{};
-        for (; i < until; i += b64size, out += 4) {
-            p++->template extract<b64chars>(out);
+        for (; i < until; i += b_size, out += b_chars, p += b_size) {
+            p->template encode<b_chars>(out);
         }
+        //auto mt = max_tail;
         auto tail = sz - i;
         if (tail == 1) {
-            p->template extract<b64chars-2>(out);
+            p->template encode<b_chars-2>(out);
         } else if (tail == 2) {
-            p->template extract<b64chars-1>(out);
+            p->template encode<b_chars-1>(out);
         }
         return s;
     }
     static auto decode(auto &&data) {
         auto sz = data.size();
-        if (sz % b64chars) {
-            throw std::runtime_error{"bad base64: incorrect length"};
+        if (sz % b_chars) {
+            throw std::runtime_error{std::format("bad {}: incorrect length", name())};
         }
         std::string s;
         if (sz == 0) {
             return s;
         }
-        s.resize(sz / b64chars * b64size);
-        auto p = (b64*)s.data();
-        for (int i = 0; i < sz; i += b64chars) {
-            p++->template assign<b64chars>(&data[i]);
+        s.resize(sz / b_chars * b_size);
+        auto p = (b*)s.data();
+        for (int i = 0; i < sz; i += b_chars, p += b_size) {
+            p->template decode<b_chars>(&data[i]);
         }
         int tail{};
         tail += data[sz-1] == padding;
@@ -102,9 +148,17 @@ struct base64_raw {
         return s;
     }
 };
-struct base64    : base64_raw<"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"_s> {};
-struct base64url : base64_raw<"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"_s> {};
+struct base16    : base_raw<16, "0123456789ABCDEF"_s> {};
+struct base32    : base_raw<32, "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"_s> {};
+struct base32extended_hex
+                 : base_raw<32, "0123456789ABCDEFGHIJKLMNOPQRSTUV"_s> {};
+struct base62    : base_raw<62, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"_s> {};
+struct base64    : base_raw<64, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"_s> {};
+struct base64url : base_raw<64, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"_s> {};
+// uses variable sym length (6-7 bits), not suitable for general base-algorithm
+//struct ascii85   : base_raw<85, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~"_s> {};
 
+/*
 inline std::string operator""_b64e(const char *s, size_t len) {
     return base64::encode(std::string_view{s,len});
 }
@@ -112,14 +166,37 @@ inline std::string operator""_b64d(const char *s, size_t len) {
     return base64::decode(std::string_view{s,len});
 }
 
-/*
-    auto x1 = base64::encode("Many hands make light work."s);
-    auto x2 = base64::encode("Many hands make light work.."s);
-    auto x3 = base64::encode("Many hands make light work..."s);
-    auto x4 = "Many hands make light work."_b64e;
+auto x1 = base64::encode("Many hands make light work."s);
+auto x2 = base64::encode("Many hands make light work.."s);
+auto x3 = base64::encode("Many hands make light work..."s);
+auto x4 = "Many hands make light work."_b64e;
 
-    auto y1 = base64::decode(x1);
-    auto y2 = base64::decode(x2);
-    auto y3 = base64::decode(x3);
-    auto y4 = "TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu"_b64d;
+auto y1 = base64::decode(x1);
+auto y2 = base64::decode(x2);
+auto y3 = base64::decode(x3);
+auto y4 = "TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu"_b64d;
+
+auto base64_test() {
+    auto f = [](auto c, auto text) {
+        auto e = c.encode(text);
+        auto d = c.decode(e);
+        if (text != d) {
+            std::cerr << std::format("error: {}\n{}\n{}\n{}\n", c.name(), text, e, d);
+        }
+    };
+    auto f2 = [&](auto c) {
+        f(c, "x"s);
+        f(c, "Many hands make light work."s);
+        f(c, "Many hands make light work.."s);
+        f(c, "Many hands make light work..."s);
+        f(c, "Many hands make light work...."s);
+        f(c, "Man is distinguished, not only by his reason, but by this singular passion from other animals, which is a lust of the mind, that by a perseverance of delight in the continued and indefatigable generation of knowledge, exceeds the short vehemence of any carnal pleasure."s);
+    };
+
+    f2(base64{});
+    f2(base32{});
+    f2(base16{});
+    f2(base62{});
+}
+
 */
