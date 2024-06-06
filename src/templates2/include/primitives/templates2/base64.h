@@ -22,7 +22,7 @@ struct base_raw {
     static inline constexpr auto lcm = std::lcm(byte_bits, n_bits);
     static inline constexpr auto b_size = lcm / byte_bits;
     static inline constexpr auto b_chars = lcm / n_bits;
-    //static inline constexpr auto max_tail = (b_chars - byte_bits % n_bits) % b_chars;
+    static inline constexpr auto max_tail = b_chars - (byte_bits / n_bits + (byte_bits % n_bits ? 1 : 0));
 
     static consteval auto make_decoder() {
         std::array<u8, 128> alph{};
@@ -38,10 +38,9 @@ struct base_raw {
     struct b {
         // from
         // 76543210 76543210 76543210 ...
-        // to
-        // 01234567 89...
-        template <auto start>
-        u8 get_bits() {
+        // to         1          2
+        // 01234567 89012345 67890123 ...
+        template <auto start> u8 get_bits() {
             auto base = (u8*)this;
             constexpr auto b1 = start / byte_bits;
             constexpr auto b2 = (start + n_bits - 1) / byte_bits;
@@ -56,13 +55,13 @@ struct base_raw {
                 return (l << bits2) | r;
             }
         }
-        template <auto start>
-        void set_bits(u8 value) {
+        template <auto start> void set_bits(u8 value) {
             auto base = (u8*)this;
             constexpr auto b1 = start / byte_bits;
             constexpr auto b2 = (start + n_bits) / byte_bits;
             if (b1 == b2) {
-                base[b1] |= value << (byte_bits - n_bits);
+                constexpr auto bits1 = byte_bits - start % byte_bits - n_bits;
+                base[b1] |= value << bits1;
             } else {
                 constexpr auto bits1 = byte_bits - start % byte_bits;
                 constexpr auto bits2 = n_bits - bits1;
@@ -118,12 +117,29 @@ struct base_raw {
         for (; i < until; i += b_size, out += b_chars, p += b_size) {
             p->template encode<b_chars>(out);
         }
-        //auto mt = max_tail;
-        auto tail = sz - i;
-        if (tail == 1) {
-            p->template encode<b_chars-2>(out);
-        } else if (tail == 2) {
-            p->template encode<b_chars-1>(out);
+        if constexpr (max_tail) {
+            auto tail = sz - i;
+            auto tailbits = tail * byte_bits;
+            auto tailsize = tailbits / n_bits + (tailbits % n_bits ? 1 : 0);
+            if (false) {
+            } else if (tailsize == 0) {
+            } else if (tailsize == 1) {
+                p->template encode<1>(out);
+            } else if (tailsize == 2) {
+                p->template encode<2>(out);
+            } else if (tailsize == 3) {
+                p->template encode<3>(out);
+            } else if (tailsize == 4) {
+                p->template encode<4>(out);
+            } else if (tailsize == 5) {
+                p->template encode<5>(out);
+            } else if (tailsize == 6) {
+                p->template encode<6>(out);
+            } else if (tailsize == 7) {
+                p->template encode<7>(out);
+            } else {
+                throw std::logic_error{"unimplemented"};
+            }
         }
         return s;
     }
@@ -141,10 +157,20 @@ struct base_raw {
         for (int i = 0; i < sz; i += b_chars, p += b_size) {
             p->template decode<b_chars>(&data[i]);
         }
-        int tail{};
-        tail += data[sz-1] == padding;
-        tail += data[sz-2] == padding;
-        s.resize(s.size() - tail);
+        if constexpr (max_tail) {
+            int tailsize{};
+            auto t = max_tail;
+            while (t--) {
+                if (data[--sz] == padding) {
+                    ++tailsize;
+                } else {
+                    break;
+                }
+            }
+            auto tailbits = tailsize * n_bits;
+            auto tail = tailbits / byte_bits + (tailbits % byte_bits ? 1 : 0);
+            s.resize(s.size() - tail);
+        }
         return s;
     }
 };
@@ -185,7 +211,16 @@ auto base64_test() {
         }
     };
     auto f2 = [&](auto c) {
+        f(c, ""s);
         f(c, "x"s);
+        f(c, "xx"s);
+        f(c, "xxx"s);
+        f(c, "xxxx"s);
+        f(c, "xxxxx"s);
+        f(c, "xxxxxx"s);
+        f(c, "xxxxxxx"s);
+        f(c, "xxxxxxxx"s);
+        f(c, "xxxxxxxxx"s);
         f(c, "Many hands make light work."s);
         f(c, "Many hands make light work.."s);
         f(c, "Many hands make light work..."s);
