@@ -230,6 +230,7 @@ void build(Solution &s)
 
     auto &templates2 = p.addTarget<StaticLibraryTarget>("templates2");
     setup_primitives_header_only(templates2);
+    templates2.Public += "include/primitives/templates2/std_string_utf8.natvis";
 
     ADD_LIBRARY_HEADER_ONLY(filesystem);
     filesystem.Public += string, templates,
