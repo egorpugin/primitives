@@ -17,15 +17,16 @@ struct primary_key {};
 struct unique {};
 
 struct or_ignore {};
+struct or_replace {};
 
 template <typename T, auto... Attributes>
 struct type {
     T value;
 
-    void for_attributes(auto &&f) {
+    void for_attributes(auto &&f) const {
         (f(Attributes), ...);
     }
-    bool has_attribute(auto a) {
+    bool has_attribute(auto a) const {
         return (false || ... || std::is_same_v<decltype(a), decltype(Attributes)>);
     }
 
@@ -84,11 +85,11 @@ struct sqlitemgr {
             create_table<std::decay_t<decltype(field)>>();
         });
     }
-    template <typename T>
-    void create_table() {
+    template <typename TableName, typename T>
+    void create_table_with_name() {
         // std::print("{}\n", std::source_location::current().function_name());
         std::string query;
-        query += std::format("create table if not exists {}", type_name<T>());
+        query += std::format("create table if not exists {}", type_name<TableName>());
         if (boost::pfr::tuple_size<T>()) {
             query += " (\n";
             boost::pfr::for_each_field(T{}, [&]<auto I>(auto &&field, std::integral_constant<size_t, I>) {
@@ -135,18 +136,36 @@ struct sqlitemgr {
                             if ((void *)&(vv.*f) == (void *)&field) {
                                 query +=
                                     std::format("  FOREIGN KEY({}) REFERENCES {}({})", boost::pfr::get_name<I, T>(),
-                                                type_name<type::table_name>(), boost::pfr::get_name<I2, T>());
+                                                type_name<typename type::table_name>(), boost::pfr::get_name<I2, typename type::table_name>());
                             }
                         });
                     });
                     query += ",\n";
                 }
+                /*if constexpr (std::is_base_of_v<db::contraint_unique_base, type>) {
+                    query += std::format("  UNIQUE (");
+                    field.for_fields([&](auto &&f) {
+                        T vv{};
+                        boost::pfr::for_each_field(vv, [&]<auto I2>(auto &&field, std::integral_constant<size_t, I2>) {
+                            if ((void *)&(vv.*f) == (void *)&field) {
+                                query += std::format("{}, ", boost::pfr::get_name<I2, T>());
+                            }
+                        });
+                    });
+                    query.resize(query.size() - 2);
+                    query += std::format(")");
+                    query += ",\n";
+                }*/
             });
             query.resize(query.size() - 2);
             query += "\n)";
         }
         query += ";";
         this->query(query);
+    }
+    template <typename T>
+    void create_table() {
+        create_table_with_name<T,T>();
     }
 
     template <typename T>
@@ -181,7 +200,7 @@ struct sqlitemgr {
         // std::print("{}\n\n", query);
         sqlite_check(sqlite3_exec(db, query.c_str(), 0, 0, 0));
     }
-    template <typename T, auto... Options>
+    template <typename TableName, typename T, auto... Options>
     struct ps {
         sqlitemgr *mgr;
         T t;
@@ -193,9 +212,11 @@ struct sqlitemgr {
             query += std::format("insert ");
             (overload{[&](db::or_ignore) {
                  query += std::format("or ignore ");
+             },[&](db::or_replace) {
+                 query += std::format("or replace ");
              }}(Options),
              ...);
-            query += std::format("into {} ", type_name<T>());
+            query += std::format("into {} ", type_name<TableName>());
 
             query += " (";
             boost::pfr::for_each_field(T{}, [&]<auto I>(auto &&field, std::integral_constant<size_t, I>) {
@@ -221,7 +242,8 @@ struct sqlitemgr {
         ~ps() noexcept(false) {
             sqlite_check(sqlite3_finalize(stmt));
         }
-        auto insert(T &&value) {
+        auto insert(const T &value) {
+            auto id = 1;
             T ret;
             boost::pfr::for_each_field(value, [&]<auto I>(auto &&field, std::integral_constant<size_t, I>) {
                 using type = std::decay_t<decltype(field)>;
@@ -229,10 +251,12 @@ struct sqlitemgr {
                 if constexpr (std::is_base_of_v<db::contraint_unique_base, type>) {
                 } else if constexpr (requires { field.value; } || std::is_base_of_v<db::foreign_key_base, type>) {
                     if (!field.has_attribute(db::autoincrement{})) {
-                        sqlite_bind(db, stmt, I, field.value);
+                        sqlite_bind(db, stmt, id, field.value);
+                        ++id;
                     }
                 } else {
-                    sqlite_bind(db, stmt, I, field);
+                    sqlite_bind(db, stmt, id, field);
+                    ++id;
                 }
             });
             int rc = sqlite3_step(stmt);
@@ -246,11 +270,15 @@ struct sqlitemgr {
     };
     template <typename T, auto... Options>
     auto prepared_insert() {
-        return ps<T, Options...>{this};
+        return ps<T, T, Options...>{this};
+    }
+    template <typename TableName, typename T, auto... Options>
+    auto prepared_insert_with_name() {
+        return ps<TableName, T, Options...>{this};
     }
     template <typename T, auto... Options>
     auto prepared_insert_or_ignore() {
-        return prepared_insert<T, db::or_ignore{}, Options...>();
+        return ps<T, T, db::or_ignore{}, Options...>{this};
     }
 
     template <typename T>
@@ -264,15 +292,23 @@ struct sqlitemgr {
             sqlite3 *db;
             sqlite3_stmt *stmt;
             int rc{};
+            bool created{};
 
             iterator(auto *mgr, auto &&query, sqlite3_stmt *stmt) : mgr{mgr}, db{mgr->db}, stmt{stmt} {
                 if (!stmt) {
                     sqlite_check(sqlite3_prepare_v2(db, query.c_str(), query.size(), &this->stmt, 0));
+                    created = true;
                 }
-                operator++();
+                if (!rc) {
+                    operator++();
+                }
             }
             ~iterator() noexcept(false) {
-                sqlite_check(sqlite3_finalize(stmt));
+                if (created) {
+                    sqlite_check(sqlite3_finalize(stmt));
+                } else {
+                    sqlite_check(sqlite3_reset(stmt));
+                }
             }
             auto &operator*() const {
                 return t;
@@ -293,6 +329,10 @@ struct sqlitemgr {
                 return rc == SQLITE_DONE;
             }
         };
+        ~sel() noexcept(false) {
+            auto db = mgr->db;
+            sqlite_check(sqlite3_finalize(stmt));
+        }
         auto begin() {
             return iterator{mgr, query, stmt};
         }
@@ -325,20 +365,27 @@ struct sqlitemgr {
         query += std::format("select * from {}", type_name<T>());
         return sel<T>{this, query};
     }
-    template <typename T, auto... Fields, typename... FieldTypes>
-    auto select(FieldTypes &&...vals) {
+    template <typename TableName, typename T, auto... Fields, typename... FieldTypes>
+    auto select_with_name(FieldTypes &&...vals) {
         std::string query;
-        query += std::format("select * from {} where ", type_name<T>());
+        query += std::format("select * from {} where ", type_name<TableName>());
         // build query
+        auto and_ = "and "sv;
+        bool added{};
         (overload{[&](auto &&ptr, auto &&val) {
              T vv{};
              boost::pfr::for_each_field(vv, [&]<auto I2>(auto &&field, std::integral_constant<size_t, I2>) {
                  if ((void *)&(vv.*ptr) == (void *)&field) {
                      query += std::format("{} = ?", boost::pfr::get_name<I2, T>());
+                     query += and_;
+                     added = true;
                  }
              });
          }}(Fields, vals),
          ...);
+        if (added) {
+            query.resize(query.size() - and_.size());
+        }
         // bind
         sqlite3_stmt *stmt;
         sqlite_check(sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, 0));
@@ -359,14 +406,21 @@ struct sqlitemgr {
          ...);
         return sel<T>{this, query, stmt};
     }
+    template <typename T, auto... Fields, typename... FieldTypes>
+    auto select(FieldTypes &&...vals) {
+        return select_with_name<T,T,Fields...>(FWD(vals)...);
+    }
 
 private:
     template <typename T>
     static auto sqlite_bind(auto *db, auto *stmt, int paramid, const T &v) {
-        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int64_t>) {
+        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int64_t> || std::is_same_v<T, uint64_t>) {
             sqlite_check(sqlite3_bind_int64(stmt, paramid, v));
         } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
             assert(false);
+        } else if constexpr (std::is_same_v<std::decay_t<T>, const char *>) {
+            std::string_view sv{v};
+            sqlite_check(sqlite3_bind_text(stmt, paramid, sv.data(), sv.size(), 0));
         } else if constexpr (std::is_same_v<T, std::string>) {
             sqlite_check(sqlite3_bind_text(stmt, paramid, v.c_str(), v.size(), 0));
         } else if constexpr (std::is_same_v<T, bool>) {
@@ -390,7 +444,7 @@ private:
     }
     template <typename T>
     static T sqlite_result(auto *db, auto *stmt, int paramid) {
-        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int64_t>) {
+        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int64_t> || std::is_same_v<T, uint64_t>) {
             return sqlite3_column_int64(stmt, paramid);
         } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
             assert(false);
@@ -408,7 +462,7 @@ private:
     }
     template <typename T>
     static auto sqlite_type() {
-        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int64_t>) {
+        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int64_t> || std::is_same_v<T, uint64_t>) {
             return "integer"sv;
         } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
             return "real"sv;
@@ -423,6 +477,58 @@ private:
     }
 #undef sqlite_check
 #undef sqlite_check2
+};
+
+struct cache {
+    template <typename K, typename V>
+    struct kv {
+        using table_type = kv;
+        using key_type = K;
+        using value_type = V;
+
+        K key;
+        V value;
+
+        db::contraint_unique<&kv::key> u;
+    };
+
+    sqlitemgr mgr;
+
+    cache(const path &fn) : mgr{fn} {
+    }
+    template <typename T>
+    void register_table() {
+        mgr.create_table_with_name<T, typename T::table_type>();
+    }
+    template <typename T>
+    std::optional<typename T::value_type> find(const typename T::key_type &k) {
+        auto q = mgr.select_with_name<T, typename T::table_type, &T::key>(k);
+        if (q.empty()) {
+            return {};
+        }
+        return (*q.begin()).value;
+    }
+    template <typename T>
+    typename T::value_type find(const typename T::key_type &k, auto &&create_value) {
+        auto v = find<T>(k);
+        if (!v) {
+            create_value([&](auto &&v) {
+                set<T>(k, v);
+            });
+            while (!v) {
+                std::this_thread::sleep_for(100ms);
+                v = find<T>(k);
+            }
+        }
+        return *v;
+    }
+    template <typename T>
+    void set(const typename T::key_type &k, const typename T::value_type &v) {
+        auto tr = mgr.scoped_transaction();
+        auto ins = mgr.prepared_insert_with_name<T, typename T::table_type, db::or_replace{}>();
+        typename T::table_type tt{k,v};
+        ins.insert(tt);
+    }
 };
 
 } // namespace
