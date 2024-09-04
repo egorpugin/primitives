@@ -745,8 +745,12 @@ String url_encode(const String &src)
         case ' ':
             result.append(1, '+');
             break;
-        case '-': case '_': case '.': case '!': case '~': case '*': case '\'':
-        case '(': case ')':
+        case '-': case '_': case '.':
+        //case '!':
+        case '~':
+        //case '*':
+        //case '\'':
+        //case '(': case ')':
             result.append(1, c);
             break;
             // escape
