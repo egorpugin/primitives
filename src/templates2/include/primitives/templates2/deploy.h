@@ -1249,7 +1249,7 @@ server {
         }
 
         location /.well-known/ {
-                root /var/www/;
+                root /usr/share/nginx/html/;
                 autoindex on;
                 autoindex_localtime on;
         }
@@ -1262,8 +1262,8 @@ server {
     server_name  HOSTNAME;
     #root         /home/USERNAME/www/; #? www or just home dir
 
-    ssl_certificate "/etc/letsencrypt/live/HOSTNAME/fullchain.pem";
-    ssl_certificate_key "/etc/letsencrypt/live/HOSTNAME/privkey.pem";
+    ssl_certificate /etc/letsencrypt/live/HOSTNAME/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/HOSTNAME/privkey.pem; # managed by Certbot
     ssl_session_cache shared:SSL:1m;
     ssl_session_timeout 10m;
     ssl_ciphers PROFILE=SYSTEM;
@@ -2049,6 +2049,14 @@ struct ssh_base {
         if (!pkgs.empty()) {
             visit(os, [&](auto &v){v.package_manager().install(pkgs);});
         }
+        // make init_openvpn_server() method
+        // easyrsa --nopass init-pki
+        // easyrsa --nopass build-ca
+        // easyrsa --nopass gen-dh
+        // easyrsa --nopass build-server-full server
+        // easyrsa --nopass build-client-full client1
+        // firewall-cmd add port ........
+        // semanage port -a -t openvpn_port_t -p tcp 1198
         for (auto &&p : args.tcp_ports) {
             root.command("firewall-cmd", "--permanent", "--add-port", std::to_string(p) + "/tcp");
         }
