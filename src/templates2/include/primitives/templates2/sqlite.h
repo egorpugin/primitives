@@ -1,9 +1,9 @@
 #pragma once
 
 #include "type_name.h"
+#include "overload.h"
 
 #include <boost/pfr.hpp>
-#include <primitives/overload.h>
 #include <sqlite3.h>
 
 #include <tuple>
@@ -240,6 +240,7 @@ struct sqlitemgr {
             sqlite_check(sqlite3_prepare(db, query.c_str(), query.size(), &stmt, 0));
         }
         ~ps() noexcept(false) {
+            //sqlite3_step(stmt); // execute if no-op (like delete)? but this is prepared statement
             sqlite_check(sqlite3_finalize(stmt));
         }
         auto insert(const T &value) {
@@ -280,6 +281,10 @@ struct sqlitemgr {
     auto prepared_insert_or_ignore() {
         return ps<T, T, db::or_ignore{}, Options...>{this};
     }
+    template <typename T, auto... Options>
+    auto prepared_insert_or_replace() {
+        return ps<T, T, db::or_replace{}, Options...>{this};
+    }
 
     template <typename T>
     struct sel {
@@ -305,6 +310,7 @@ struct sqlitemgr {
             }
             ~iterator() noexcept(false) {
                 if (created) {
+                    sqlite3_step(stmt); // execute if no-op
                     sqlite_check(sqlite3_finalize(stmt));
                 } else {
                     sqlite_check(sqlite3_reset(stmt));
@@ -331,6 +337,7 @@ struct sqlitemgr {
         };
         ~sel() noexcept(false) {
             auto db = mgr->db;
+            sqlite3_step(stmt); // execute if no-op (like delete)
             sqlite_check(sqlite3_finalize(stmt));
         }
         auto begin() {
@@ -365,10 +372,15 @@ struct sqlitemgr {
         query += std::format("select * from {}", type_name<T>());
         return sel<T>{this, query};
     }
-    template <typename TableName, typename T, auto... Fields, typename... FieldTypes>
-    auto select_with_name(FieldTypes &&...vals) {
+    template <typename TableName, typename T>
+    auto select_with_name() {
         std::string query;
-        query += std::format("select * from {} where ", type_name<TableName>());
+        query += std::format("select * from {}", type_name<TableName>());
+        return sel<T>{this, query};
+    }
+    template <typename TableName, typename T, auto... Fields, typename... FieldTypes>
+    auto query_with_name(std::string query, FieldTypes &&...vals) {
+        query += std::format(" from {} where ", type_name<TableName>());
         // build query
         auto and_ = "and "sv;
         bool added{};
@@ -406,9 +418,17 @@ struct sqlitemgr {
          ...);
         return sel<T>{this, query, stmt};
     }
+    template <typename TableName, typename T, auto... Fields, typename... FieldTypes>
+    auto select_with_name(FieldTypes &&...vals) {
+        return query_with_name<TableName, T, Fields...>("select *", FWD(vals)...);
+    }
     template <typename T, auto... Fields, typename... FieldTypes>
     auto select(FieldTypes &&...vals) {
         return select_with_name<T,T,Fields...>(FWD(vals)...);
+    }
+    template <typename TableName, typename T, auto... Fields, typename... FieldTypes>
+    auto delete_with_name(FieldTypes &&...vals) {
+        return query_with_name<TableName, T, Fields...>("delete", FWD(vals)...);
     }
 
 private:
@@ -479,29 +499,31 @@ private:
 #undef sqlite_check2
 };
 
+// detail ns?
+template <typename K, typename V>
+struct kv {
+    using table_type = kv;
+    using key_type = K;
+    using value_type = V;
+
+    K key;
+    V value;
+
+    db::contraint_unique<&kv::key> u;
+};
+
+template <typename Table, typename ... Tables>
 struct cache {
-    template <typename K, typename V>
-    struct kv {
-        using table_type = kv;
-        using key_type = K;
-        using value_type = V;
-
-        K key;
-        V value;
-
-        db::contraint_unique<&kv::key> u;
-    };
-
     sqlitemgr mgr;
 
     cache(const path &fn) : mgr{fn} {
-    }
-    template <typename T>
-    void register_table() {
-        mgr.create_table_with_name<T, typename T::table_type>();
+        register_table<Table>();
+        (register_table<Tables>(),...);
     }
     template <typename T>
     std::optional<typename T::value_type> find(const typename T::key_type &k) {
+        static_assert(has_table<T>());
+
         auto q = mgr.select_with_name<T, typename T::table_type, &T::key>(k);
         if (q.empty()) {
             return {};
@@ -510,24 +532,65 @@ struct cache {
     }
     template <typename T>
     typename T::value_type find(const typename T::key_type &k, auto &&create_value) {
+        static_assert(has_table<T>());
+
         auto v = find<T>(k);
         if (!v) {
             create_value([&](auto &&v) {
                 set<T>(k, v);
             });
-            while (!v) {
+            while (!(v = find<T>(k))) {
                 std::this_thread::sleep_for(100ms);
-                v = find<T>(k);
             }
         }
         return *v;
     }
     template <typename T>
     void set(const typename T::key_type &k, const typename T::value_type &v) {
+        static_assert(has_table<T>());
+
         auto tr = mgr.scoped_transaction();
         auto ins = mgr.prepared_insert_with_name<T, typename T::table_type, db::or_replace{}>();
         typename T::table_type tt{k,v};
         ins.insert(tt);
+    }
+    template <typename T>
+    void change(const typename T::key_type &k, const typename T::value_type &c) {
+        auto v = find<T>(k);
+        set<T>(k, !v ? (typename T::value_type{} + c) : (*v + c));
+    }
+    template <typename T>
+    void inc(const typename T::key_type &k) {
+        change<T>(k, 1);
+    }
+    template <typename T>
+    void dec(const typename T::key_type &k) {
+        change<T>(k, -1);
+    }
+    template <typename T>
+    auto get_all() {
+        static_assert(has_table<T>());
+
+        std::map<typename T::key_type, typename T::value_type> m;
+        for (auto &&[k,v,_] : mgr.select_with_name<T, typename T::table_type>()) {
+            m.emplace(k,v);
+        }
+        return m;
+    }
+    template <typename T>
+    void erase(const typename T::key_type &k) {
+        static_assert(has_table<T>());
+
+        mgr.delete_with_name<T, typename T::table_type, &T::key>(k);
+    }
+
+private:
+    template <typename T> void register_table() {
+        mgr.create_table_with_name<T, typename T::table_type>();
+    }
+    template <typename T>
+    static consteval bool has_table() {
+        return (std::same_as<Table, T> || ... || std::same_as<Tables, T>);
     }
 };
 
