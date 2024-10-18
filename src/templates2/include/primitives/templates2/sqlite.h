@@ -430,6 +430,46 @@ struct sqlitemgr {
     auto delete_with_name(FieldTypes &&...vals) {
         return query_with_name<TableName, T, Fields...>("delete", FWD(vals)...);
     }
+    template <typename TableName, typename T, auto... Fields, typename... FieldTypes>
+    auto update_with_name(FieldTypes &&...vals) {
+        auto query = std::format("update {} set ", type_name<TableName>());
+        // build query
+        auto and_ = ", "sv;
+        bool added{};
+        (overload{[&](auto &&ptr, auto &&val) {
+             T vv{};
+             boost::pfr::for_each_field(vv, [&]<auto I2>(auto &&field, std::integral_constant<size_t, I2>) {
+                 if ((void *)&(vv.*ptr) == (void *)&field) {
+                     query += std::format("{} = ?", boost::pfr::get_name<I2, T>());
+                     query += and_;
+                     added = true;
+                 }
+             });
+         }}(Fields, vals),
+         ...);
+        if (added) {
+            query.resize(query.size() - and_.size());
+        }
+        // bind
+        sqlite3_stmt *stmt;
+        sqlite_check(sqlite3_prepare_v2(db, query.c_str(), query.size(), &stmt, 0));
+        auto id = 1;
+        (overload{[&](auto &&ptr, auto &&val) {
+             T vv{};
+             boost::pfr::for_each_field(vv, [&]<auto I2>(auto &&field, std::integral_constant<size_t, I2>) {
+                 if ((void *)&(vv.*ptr) == (void *)&field) {
+                     if constexpr (requires { val.value; }) {
+                         sqlite_bind(db, stmt, id, val.value);
+                     } else {
+                         sqlite_bind(db, stmt, id, val);
+                     }
+                 }
+             });
+             ++id;
+         }}(Fields, vals),
+         ...);
+        return sel<T>{this, query, stmt};
+    }
 
 private:
     template <typename T>
@@ -511,6 +551,13 @@ struct kv {
 
     db::contraint_unique<&kv::key> u;
 };
+template <typename V>
+struct v {
+    using table_type = v;
+    using value_type = V;
+
+    V value;
+};
 
 template <typename Table, typename ... Tables>
 struct cache {
@@ -519,6 +566,16 @@ struct cache {
     cache(const path &fn) : mgr{fn} {
         register_table<Table>();
         (register_table<Tables>(),...);
+    }
+    template <typename T>
+    std::optional<typename T::value_type> find() {
+        static_assert(has_table<T>());
+
+        auto q = mgr.select_with_name<T, typename T::table_type>();
+        if (q.empty()) {
+            return {};
+        }
+        return (*q.begin()).value;
     }
     template <typename T>
     std::optional<typename T::value_type> find(const typename T::key_type &k) {
@@ -546,6 +603,19 @@ struct cache {
         return *v;
     }
     template <typename T>
+    void set(const typename T::value_type &v) {
+        static_assert(has_table<T>());
+
+        auto tr = mgr.scoped_transaction();
+        if (mgr.select_with_name<T, typename T::table_type>().empty()) {
+            auto ins = mgr.prepared_insert_with_name<T, typename T::table_type>();
+            typename T::table_type tt{v};
+            ins.insert(tt);
+        } else {
+            mgr.update_with_name<T, typename T::table_type, &T::value>(v);
+        }
+    }
+    template <typename T>
     void set(const typename T::key_type &k, const typename T::value_type &v) {
         static_assert(has_table<T>());
 
@@ -555,17 +625,19 @@ struct cache {
         ins.insert(tt);
     }
     template <typename T>
-    void change(const typename T::key_type &k, const typename T::value_type &c) {
+    auto change(const typename T::key_type &k, const typename T::value_type &c) {
         auto v = find<T>(k);
-        set<T>(k, !v ? (typename T::value_type{} + c) : (*v + c));
+        auto oldval = !v ? typename T::value_type{} : *v;
+        set<T>(k, oldval + c);
+        //return oldval;
     }
     template <typename T>
-    void inc(const typename T::key_type &k) {
-        change<T>(k, 1);
+    auto inc(const typename T::key_type &k) {
+        return change<T>(k, 1);
     }
     template <typename T>
-    void dec(const typename T::key_type &k) {
-        change<T>(k, -1);
+    auto dec(const typename T::key_type &k) {
+        return change<T>(k, -1);
     }
     template <typename T>
     auto get_all() {
