@@ -632,12 +632,12 @@ struct cache {
         //return oldval;
     }
     template <typename T>
-    auto inc(const typename T::key_type &k) {
-        return change<T>(k, 1);
+    auto inc(const typename T::key_type &k, int chng = 1) {
+        return change<T>(k, chng);
     }
     template <typename T>
-    auto dec(const typename T::key_type &k) {
-        return change<T>(k, -1);
+    auto dec(const typename T::key_type &k, int chng = -1) {
+        return change<T>(k, chng);
     }
     template <typename T>
     auto get_all() {
