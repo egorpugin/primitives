@@ -7,8 +7,10 @@
 #include <primitives/sw/main.h>
 #include <primitives/templates2/win32_2.h>
 #include <primitives/templates2/overload.h>
+#include <primitives/sw/settings_program_name.h>
 
 #include <fstream>
+#include <source_location>
 #include <variant>
 
 #ifndef _WIN32
@@ -51,7 +53,7 @@ namespace primitives::deploy {
 
 using version_type = primitives::version::Version;
 
-inline const version_type max_fedora_version = "40";
+inline const version_type max_fedora_version = "41"; // get from internet?
 inline const version_type max_ubuntu_version = "24.4";
 
 #ifdef _WIN32
@@ -99,6 +101,13 @@ struct lambda_registrar {
     static wrapper &end(std::source_location loc) { value.end = loc; return value; }
 };
 
+auto current_time() {
+    return std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()};
+}
+auto current_time_string() {
+    return std::format("{:%F %H-%M-%S}", current_time());
+}
+
 struct thread_manager {
     std::thread::id main_tid{std::this_thread::get_id()};
 
@@ -113,13 +122,16 @@ const path &log_dir(const path &in = {}) {
     static auto dir = [] {
         path dir = ".sw/log";
 
-        std::string time = __DATE__;
+        /*std::string time = __DATE__;
         time += " " __TIME__;
 
         std::istringstream ss{time};
         std::chrono::system_clock::time_point tp;
-        ss >> std::chrono::parse("%b %d %Y %T", tp);
-        time = std::format("{:%F %H-%M-%OS}", tp);
+        ss >> std::chrono::parse("%b %d %Y %T", tp);*/
+
+        std::string time;
+        time = std::format("{:%F %H-%M-%OS}", current_time());
+        time += " " + sw::getProgramName();
 
         path p = time;
         //path p = __DATE__ __TIME__; // PACKAGE_PATH;
@@ -135,18 +147,26 @@ const path &log_dir(const path &in = {}) {
 }
 
 struct threaded_logger {
-    void log(std::string s) {
+    void log(std::string s, std::source_location loc = std::source_location::current()) {
         boost::trim(s);
         boost::replace_all(s, "\r\n", "\n");
+        auto make_string = [&]() {
+            return std::format(
+                //"[{}][{}:{}:{}] {}"
+                "[{}] [{}:{}] {}"
+                , current_time_string(), path{loc.file_name()}.filename().string(), loc.line()
+                //, loc.function_name() // too long = full unmangled
+                , s);
+        };
         if (thread_manager_.is_main_thread()) {
             LOG_INFO(logger, s);
             static std::ofstream ofile{log_dir() / "main.log"};
-            ofile << s << "\n";
+            ofile << make_string() << "\n";
             ofile.flush(); // ?
         } else {
             LOG_INFO(logger, std::format("[{}] {}", thread_name, s));
             thread_local std::ofstream ofile{log_dir() / log_name};
-            ofile << s << "\n";
+            ofile << make_string() << "\n";
             ofile.flush(); // ?
         }
     }
@@ -706,6 +726,7 @@ struct ubuntu : system_base {
     }
     void upgrade_system() {
         if (version >= max_ubuntu_version) {
+            threaded_logger_.log("system is already up to date"s);
             return;
         }
         auto su = serv.sudo();
@@ -719,6 +740,7 @@ struct ubuntu : system_base {
         // ubuntu won't give us LTS option until xx.04.1 in August or so, so we use '-d'
         su.command("do-release-upgrade", "-d", "--frontend=DistUpgradeViewNonInteractive");
         su.reboot();
+        threaded_logger_.log("system upgraded"s);
     }
     void install_postgres() {
         SW_UNIMPLEMENTED;
@@ -749,6 +771,7 @@ struct fedora : system_base {
     void upgrade_system() {
         auto to_version = version_type{version.getMajor() + 1};
         if (to_version > max_fedora_version) {
+            threaded_logger_.log("system is already up to date"s);
             return;
         }
         auto sudo = serv.sudo();
@@ -757,6 +780,7 @@ struct fedora : system_base {
         d.install("dnf-plugin-system-upgrade");
         d.system_upgrade("download", "-y", std::format("--releasever={}", to_version.getMajor()));
         sudo.reboot([&] { d.system_upgrade("reboot"); });
+        threaded_logger_.log("system upgraded"s);
     }
     void install_postgres() {
         package_manager().install("postgresql-server");
@@ -1385,6 +1409,8 @@ struct ssh_base {
                 if constexpr (requires { obj.check_ips; }) {
                     auto args = obj.connection_args();
                     for (auto &&i : obj.check_ips) {
+                        threaded_logger_.log("checking ip: "s + i);
+
                         auto args2 = args;
                         args2.push_back(std::format("{}@{}", obj.current_user().name, i));
 
@@ -1553,6 +1579,12 @@ struct ssh_base {
             }
             std::this_thread::sleep_for(5s);
             obj.ip_.clear(); // ip can change after reboot
+        }
+
+        if constexpr (requires { obj.host; }) {
+            threaded_logger_.log(std::format("host {} is online now: {}", obj.host, obj.ip_));
+        } else {
+            threaded_logger_.log(std::format("host {} is online now", obj.ip_));
         }
     }
     void send_wake_on_lan_magic(this auto &&obj) {
