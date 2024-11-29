@@ -2,7 +2,6 @@
 
 #include <range_parser.h>
 
-#include <fmt/format.h>
 #include <primitives/constants.h>
 #include <primitives/exceptions.h>
 #include <primitives/hash_combine.h>
