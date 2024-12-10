@@ -891,7 +891,7 @@ return f2(0);
         auto outfn = std::format("{}_{}.cpp", path{be.begin.file_name()}.stem().string(), be.begin.line());
         write_file_if_different(p / outfn, pre);
         auto conf = "static_r";
-        auto c = create_command("sw", "build_gcc", outfn, "-static", "-config-name", conf);
+        auto c = create_command("sw", "build_gcc", outfn, "-static", "-config-name", conf, "-sfc");
         c.working_directory = p;
         run_command(c);
 
@@ -1239,6 +1239,9 @@ struct deploy_single_target_args {
     std::string cfgname{"r"};
     std::map<std::string, std::string> nginx_configs;
 
+    auto cfgname_dir() {
+        return "deploy_" + cfgname;
+    }
     void backup_service_data(auto &&serv, const path &backup_root_dir) {
         auto u = serv.login(service_name);
         auto home = u.current_user().home_dir();
@@ -2021,9 +2024,9 @@ struct ssh_base {
         if (args.custom_build) {
             args.custom_build();
         } else if (args.build_file.empty()) {
-            s.build_for(obj, "-static", "-config", args.cfgname, "-config-name", args.cfgname, "--target", args.prognamever);
+            s.build_for(obj, "-static", "-config", args.cfgname, "-config-name", args.cfgname_dir(), "--target", args.prognamever);
         } else {
-            s.build_for(obj, "-static", "-config", args.cfgname, "-config-name", args.cfgname, args.build_file, "--target", args.prognamever);
+            s.build_for(obj, "-static", "-config", args.cfgname, "-config-name", args.cfgname_dir(), args.build_file, "--target", args.prognamever);
         }
 
         auto username = args.service_name;
@@ -2105,7 +2108,7 @@ struct ssh_base {
         // maybe put our public key into 'authorized_keys'
         // and sign in instead of root?
 
-        auto fn = path{".sw"} / "out" / args.cfgname / args.prognamever;
+        auto fn = path{".sw"} / "out" / args.cfgname_dir() / args.prognamever;
         if (args.custom_build && !args.custom_exe_fn.empty()) {
             fn = args.custom_exe_fn;
         }
