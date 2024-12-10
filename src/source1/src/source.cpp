@@ -695,7 +695,7 @@ void Fossil::download1(const path &dir) const
 }
 
 Cvs::Cvs(const String &url, const String &module, const String &tag, const String &branch, const String &revision)
-    : SourceUrl(url), module(module), tag(tag), branch(branch), revision(revision)
+    : SourceUrl(url), tag(tag), branch(branch), revision(revision), module(module)
 {
     checkValid();
 }
