@@ -3,9 +3,12 @@
 #include "type_name.h"
 #include "overload.h"
 
+#include <primitives/exceptions.h>
+
 #include <boost/pfr.hpp>
 #include <sqlite3.h>
 
+#include <filesystem>
 #include <tuple>
 
 namespace primitives::sqlite {
@@ -73,7 +76,7 @@ struct sqlitemgr {
     if ((x) != y)                                                                                                      \
     throw SW_RUNTIME_ERROR("sqlite error: "s + sqlite3_errmsg(db))
 #define sqlite_check(x) sqlite_check2(x, SQLITE_OK)
-    sqlitemgr(const path &p) {
+    sqlitemgr(const std::filesystem::path &p) {
         sqlite_check(sqlite3_open((const char *)p.u8string().c_str(), &db));
     }
     ~sqlitemgr() noexcept(false) {
@@ -563,7 +566,7 @@ template <typename Table, typename ... Tables>
 struct cache {
     sqlitemgr mgr;
 
-    cache(const path &fn) : mgr{fn} {
+    cache(const std::filesystem::path &fn) : mgr{fn} {
         register_table<Table>();
         (register_table<Tables>(),...);
     }
