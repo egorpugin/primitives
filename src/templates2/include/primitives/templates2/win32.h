@@ -25,6 +25,8 @@
 
 namespace win32 {
 
+using namespace std::literals;
+
 struct winapi_exception : std::runtime_error {
     using base = std::runtime_error;
     winapi_exception(const std::string &msg) : base{msg + ": "s + get_last_error()} {
