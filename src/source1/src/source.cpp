@@ -6,7 +6,7 @@
 
 #include <primitives/source.h>
 
-#include <fmt/format.h>
+//#include <fmt/format.h>
 #include <primitives/command.h>
 #include <primitives/exceptions.h>
 #include <primitives/filesystem.h>
