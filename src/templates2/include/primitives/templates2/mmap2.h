@@ -5,6 +5,8 @@
 
 #include "win32.h"
 
+#include <primitives/filesystem.h>
+
 #include <fstream>
 #include <string.h>
 
