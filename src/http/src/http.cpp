@@ -206,6 +206,8 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
     //
     switch (request.type)
     {
+    case HttpRequest::Put:
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
     case HttpRequest::Post:
         if (!request.data_kv.empty()) {
             for (auto &a : request.data_kv) {
