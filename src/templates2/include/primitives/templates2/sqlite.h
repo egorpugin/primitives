@@ -368,6 +368,13 @@ struct sqlitemgr {
             query += " where " + text;
             return *this;
         }
+        auto flatten() const {
+            std::vector<T> out;
+            for (auto &&d : *this) {
+                out.emplace_back(d);
+            }
+            return out;
+        }
     };
     template <typename T>
     auto select() {
@@ -379,6 +386,10 @@ struct sqlitemgr {
     auto select_with_name() {
         std::string query;
         query += std::format("select * from {}", type_name<TableName>());
+        return sel<T>{this, query};
+    }
+    template <typename T>
+    auto query(const std::string &query) {
         return sel<T>{this, query};
     }
     template <typename TableName, typename T, auto... Fields, typename... FieldTypes>
@@ -600,6 +611,7 @@ struct cache {
                 set<T>(k, v);
             });
             while (!(v = find<T>(k))) {
+                // error if was not set? add bool option
                 std::this_thread::sleep_for(100ms);
             }
         }
