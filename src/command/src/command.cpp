@@ -17,7 +17,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/process.hpp>
-#include <boost/process/search_path.hpp>
+#include <boost/process/v1/search_path.hpp>
 
 // after primitives and boost
 #include <primitives/uv_loop_close.h>
@@ -84,7 +84,7 @@ path resolve_executable(const path &p)
             return p;
         return fs::absolute(p);
     }
-    return boost::process::search_path(p.wstring()).wstring();
+    return boost::process::v1::search_path(p.wstring()).wstring();
 }
 
 path resolve_executable(const FilesOrdered &paths)
