@@ -56,6 +56,8 @@ using version_type = primitives::version::Version;
 inline const version_type max_fedora_version = "41"; // get from internet?
 inline const version_type max_ubuntu_version = "24.4";
 
+inline std::mutex m_ssh_keygen;
+
 #ifdef _WIN32
 struct job_object_initializer {
     job_object_initializer() {
@@ -939,6 +941,7 @@ public:
         : serv{serv}, name{name}, password{password} {
         serv.constructing_user = this;
         init();
+        //cwd = home_dir(); //? this break things atm, because this home dir is not taken into account in several places and not respected
     }
     user(const user &) = default;
     user &operator=(const user &) = default;
@@ -973,7 +976,7 @@ public:
     bool is_root() const { return name == "root"; }
     auto sudo() const {
         if (!can_sudo) {
-            throw std::runtime_error{std::format("user {} cannot sudo", name)};
+            throw std::runtime_error{std::format("user {} cannot sudo. missing password?", name)};
         }
         auto u = *this;
         u.sudo_mode = true;
@@ -981,7 +984,7 @@ public:
     }
     auto login_with_sudo(const std::string &name) const {
         if (!can_sudo) {
-            throw std::runtime_error{std::format("user {} cannot sudo", this->name)};
+            throw std::runtime_error{std::format("user {} cannot sudo. missing password?", this->name)};
         }
         auto u = *this;
         u.name = name;
@@ -1167,7 +1170,7 @@ public:
     auto rsync_from(const path &in_from, const path &in_to, rsync_options opts = default_rsync_options()) {
         return rsync_base(make_rsync_remote(in_from), make_rsync_local(in_to), opts);
     }
-    auto rsync_to(const path &in_from, const path &in_to, rsync_options opts = default_rsync_options()) {
+    auto rsync_to(const path &in_from, const path &in_to = "."s, rsync_options opts = default_rsync_options()) {
         return rsync_base(make_rsync_local(in_from), make_rsync_remote(in_to), opts);
     }
 
@@ -1757,8 +1760,7 @@ struct ssh_base {
             if constexpr (requires { T::port; }) {
                 s = std::format("[{}]:{}", s, T::port);
             }
-            static std::mutex m;
-            std::unique_lock lk{m}; // for safety
+            std::unique_lock lk{m_ssh_keygen}; // for safety
             primitives::deploy::command("ssh-keygen", "-R", s);
             cygwin("ssh-keygen", "-R", s);
         };
