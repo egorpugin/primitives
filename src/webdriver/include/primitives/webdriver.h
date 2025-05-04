@@ -30,6 +30,10 @@ struct stale_element_reference_exception : ::std::runtime_error { using ::std::r
 struct unexpected_alert_open_exception : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
 struct no_such_alert_exception : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
 struct timeout_exception : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
+struct session_not_created_exception : ::std::runtime_error {
+    using ::std::runtime_error::runtime_error;
+    std::string actual_chrome_version;
+};
 
 struct by {
     std::string strategy;
@@ -108,7 +112,7 @@ struct element {
     }
     decltype(auto) set_value_and_wait_for_it(this auto&& self, const std::string& s) {
         self.d().wait_full_load();
-        auto tm = make_timeout();
+        auto tm = primitives::date_time::make_timeout();
         while (self.text() != s) {
             tm();
             self.d().wait_full_load();
@@ -138,7 +142,7 @@ struct element {
         return j["value"].is_null() ? "" : j["value"];
     }
     /*std::string wait_for_non_empty_text() {
-        auto t = make_timeout(10ms, 1s);
+        auto t = primitives::date_time::make_timeout(10ms, 1s);
         while (1) {
             try {
                 auto te = text();
@@ -156,8 +160,14 @@ struct element {
         self.d().make_req(req, nlohmann::json::object());
         return std::forward<decltype(self)>(self);
     }
+    // not w3c standard
+    /*decltype(auto) submit(this auto &&self) {
+        auto req = self.create_req<HttpRequest::Post>("submit");
+        self.d().make_req(req, nlohmann::json::object());
+        return std::forward<decltype(self)>(self);
+    }*/
     auto wait_for_element(auto&& v, std::chrono::duration<float> tm = 10ms, std::chrono::duration<float> max = 1s, auto && ... args) {
-        auto t = make_timeout(tm, max, args...);
+        auto t = primitives::date_time::make_timeout(tm, max, args...);
         while (1) {
             try {
                 return find_element(v);
@@ -166,7 +176,7 @@ struct element {
             } catch (stale_element_reference_exception &) {
                 t.simple_wait();
             } catch (no_such_element_exception &e) {
-                d().logger() << e.what();
+                d().log(e.what());
                 t();
             }
             d().source();
@@ -193,8 +203,8 @@ struct element {
 template <typename Webdriver>
 struct window {
     Webdriver *d_{nullptr};
-    string id;
-    string type;
+    std::string id;
+    std::string type;
 
     explicit operator bool() const { return !!d_; }
     auto& d() { return *d_; }
@@ -218,21 +228,18 @@ struct window {
     }
 };
 
-static auto simple_logger = [] {
-    struct s {
-        std::ostringstream ss;
-        ~s() {
-            std::cerr << "webdriver: " << ss.str() << "\n";
-        }
-        auto &operator<<(auto &&v) {
-            return ss << v;
-        }
-    };
-    return s{};
+struct simple_logger {
+    std::ostringstream ss;
+    ~simple_logger() {
+        std::cerr << "webdriver: " << ss.str() << "\n";
+    }
+    auto &operator<<(auto &&v) {
+        return ss << v;
+    }
 };
 
 // https://www.w3.org/TR/webdriver
-template <typename Logger = decltype(simple_logger)>
+template <typename Logger = simple_logger>
 struct webdriver {
     static inline constexpr auto selenium_host = "http://localhost:4444";
     static inline constexpr auto chromedriver_host = "http://localhost:9515";
@@ -241,7 +248,6 @@ struct webdriver {
     nlohmann::json session;
     std::string session_id;
     Logger logger;
-    //auto& logger() { return logger_; }
 
     template <auto v = HttpRequest::Get>
     auto create_req(auto &&url) {
@@ -256,18 +262,18 @@ struct webdriver {
     }
     auto make_req(auto &&req, bool print_response = true) {
         static const char *arr[] = {"get", "post", "delete"};
-        logger() << "request (type " << (req.type < std::size(arr) ? arr[req.type] : std::to_string(req.type)) << "): " << req.url;
+        log(std::format("request (type {}): {}", (req.type < std::size(arr) ? arr[req.type] : std::to_string(req.type)), req.url));
         if (!req.data.empty()) {
-            logger() << "data " << req.data;
+            log(std::format("data {}", req.data));
         } else if (!req.data_kv.empty()) {
             //for (auto &&)
-            //logger() << "data " << req.data;
+            //log(std::format("data {}", req.data));
         }
         auto resp = url_request(req);
         auto jr = nlohmann::json::parse(resp.response);
-        logger() << "response (code = " << resp.http_code << ")";
+        log(std::format("response (code = {})", resp.http_code));
         if (print_response) {
-            logger() << jr.dump();
+            log(jr.dump());
         }
         if (resp.http_code != 200) {
             std::string err = "error for request:\n" + req.url + "\n" + req.data + "\n";
@@ -306,6 +312,18 @@ struct webdriver {
                 if (jr["value"]["error"].get<std::string_view>() == "timeout"sv) {
                     throw timeout_exception(err);
                 }
+                if (jr["value"]["error"].get<std::string_view>() == "session not created"sv) {
+                    session_not_created_exception s{err};
+                    std::string m = jr["value"]["message"];
+                    auto what = "Current browser version is "sv;
+                    auto p = m.find(what);
+                    if (p != -1) {
+                        auto b = p + what.size();
+                        auto e = m.find(' ', b);
+                        s.actual_chrome_version = m.substr(b, e-b);
+                    }
+                    throw s;
+                }
             }
             throw SW_RUNTIME_ERROR(err);
         }
@@ -319,7 +337,26 @@ struct webdriver {
         return url_ / "session" / session_id;
     }
 
-    webdriver(std::string url = selenium_host, bool headless = false) : url_{url} {
+    webdriver() {}
+    webdriver(std::string url, bool headless = false) {
+        init(url, headless);
+    }
+    webdriver(const webdriver&) = delete;
+    webdriver &operator=(const webdriver&) = delete;
+    webdriver(webdriver&&) = default;
+    webdriver &operator=(webdriver&&) = default;
+    ~webdriver() {
+        //logger() << "dtor";
+        if (*this) {
+            make_req(create_req<HttpRequest::Delete>(make_session_url()));
+        }
+        //logger() << "dtor end";
+    }
+    void log(auto &&x) {
+        logger << x;
+    }
+    void init(std::string url, bool headless) {
+        url_ = url;
         primitives::http::setupSafeTls();
         auto req = create_req<HttpRequest::Post>(url + "/session");
         req.timeout = 120;
@@ -333,6 +370,9 @@ struct webdriver {
         if (headless) {
             jfm["goog:chromeOptions"]["args"].push_back("--headless");
         }
+        //jfm["goog:chromeOptions"]["w3c"] = false;
+        //jfm["chromeOptions"]["w3c"] = false;
+        //jfm["w3c"] = false;
         jfm["platformName"] = "any";
         jc["firstMatch"].push_back(jfm);
         j["requiredCapabilities"] = jc;
@@ -340,17 +380,6 @@ struct webdriver {
         session_id = session["value"]["sessionId"];
         if (session_id.empty())
             throw SW_RUNTIME_ERROR("empty session id");
-    }
-    webdriver(const webdriver&) = delete;
-    webdriver &operator=(const webdriver&) = delete;
-    webdriver(webdriver&&) = default;
-    webdriver &operator=(webdriver&&) = default;
-    ~webdriver() {
-        //logger() << "dtor";
-        if (*this) {
-            make_req(create_req<HttpRequest::Delete>(make_session_url()));
-        }
-        //logger() << "dtor end";
     }
     explicit operator bool() const { return !session_id.empty(); }
     void navigate(const std::string &url) {
@@ -361,7 +390,7 @@ struct webdriver {
     }
     template <bool multi = false>
     auto find_element_base(auto&& v, auto&& req) {
-        logger() << (multi ? "find_elements: " : "find_element: ") << v.value;
+        log(std::format(multi ? "find_elements: {}" : "find_element: {}", v.value));
         nlohmann::json j;
         j["using"] = v.strategy;
         j["value"] = v.value;
@@ -405,12 +434,12 @@ struct webdriver {
         return {};
     }
     auto wait_for_element(auto &&v) {
-        auto t = make_timeout(10ms, 1s);
+        auto t = primitives::date_time::make_timeout(10ms, 1s);
         while (1) {
             try {
                 return find_element(v);
             } catch (std::exception &e) {
-                logger() << e.what();
+                log(e.what());
             }
             t();
             source();
@@ -453,7 +482,7 @@ struct webdriver {
         return resp.dump();
     }
     void focus_frame(auto &&id) {
-        logger() << "focus_frame";
+        log("focus_frame"sv);
         auto req = create_req<HttpRequest::Post>(make_session_url() / "frame");
         nlohmann::json j;
         if constexpr (requires { id.element_; }) {
@@ -467,7 +496,7 @@ struct webdriver {
         make_req(req, j);
     }
     void wait_full_load() {
-        logger() << "waiting for load";
+        log("waiting for load"sv);
         while (execute("return document.readyState") != "complete" && execute("return jQuery.active") != 0);
     }
     template <template <typename ...> typename T = std::vector>
@@ -520,7 +549,7 @@ struct webdriver {
                 return result;
             }
             wait_full_load();
-            sleep(500ms);
+            primitives::date_time::sleep(500ms);
         }
     }
     auto cookies() {
