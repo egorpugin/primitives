@@ -7,6 +7,7 @@ template<std::size_t N>
 struct static_string {
     char p[N]{};
 
+    constexpr static_string() {}
     constexpr static_string(char const(&pp)[N]) {
         std::ranges::copy(pp, p);
     }
@@ -15,6 +16,16 @@ struct static_string {
     constexpr auto end() const {return p+size();}
     constexpr auto operator[](int i) const {return p[i];}
     static constexpr auto size() {return N-1;}
+
+    operator std::string() const { return &p[0]; }
+
+    template <std::size_t N2>
+    constexpr auto operator+(const static_string<N2> &s2) const {
+        static_string<N + N2 - 1> result;
+        std::copy_n(p, N, result.p);
+        std::copy_n(s2.p, N2, result.p + N - 1);
+        return result;
+    }
 };
 template<static_string s>
 constexpr auto operator "" _s() { return s; }
