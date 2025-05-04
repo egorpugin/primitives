@@ -16,7 +16,7 @@
 #endif
 #include <windows.h>
 
-#define WINAPI_CALL(x) if (!(x)) {throw ::win32::winapi_exception{#x};}
+#define WINAPI_CALL(x) if (!(x)) {if (auto code = GetLastError()) throw ::win32::winapi_exception{#x, code};}
 
 // we use this for easy command line building/bootstrapping
 #pragma comment(lib, "advapi32.lib")
@@ -31,14 +31,25 @@ struct winapi_exception : std::runtime_error {
     using base = std::runtime_error;
     winapi_exception(const std::string &msg) : base{msg + ": "s + get_last_error()} {
     }
+    winapi_exception(const std::string &msg, auto code) : base{ msg + ": "s + get_error_text(code) } {
+    }
     std::string get_last_error() const {
         auto code = GetLastError();
-
-        LPVOID lpMsgBuf;
-        FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
-                      code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpMsgBuf, 0, NULL);
-        std::string msg = (const char *)lpMsgBuf;
-        LocalFree(lpMsgBuf);
+        return get_error_text(code);
+    }
+    static std::string get_error_text(auto code) {
+        std::string msg;
+        char buf[8192]{};
+        if (FormatMessageA(
+            //FORMAT_MESSAGE_ALLOCATE_BUFFER |
+            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+                      code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buf, sizeof(buf), NULL)) {
+            msg = buf;
+            //LocalFree(lpMsgBuf);
+        } else {
+            auto err = GetLastError();
+            msg = std::format("FormatMessageA() failed, cannot retrieve error, error code = {}", err);
+        }
 
         return "error code = "s + std::to_string(code) + ": " + msg;
     }
