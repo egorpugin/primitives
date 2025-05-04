@@ -53,8 +53,9 @@ namespace primitives::deploy {
 
 using version_type = primitives::version::Version;
 
-inline const version_type max_fedora_version = "41"; // get from internet?
+inline const version_type max_fedora_version = "42"; // get from internet?
 inline const version_type max_ubuntu_version = "24.4";
+inline const auto target_gcc_config = "build_gcc"sv;
 
 inline std::mutex m_ssh_keygen;
 
@@ -404,6 +405,9 @@ struct sw_command {
     auto install(auto &&...args) {
         return command("install", args...);
     }
+    auto build_raw(auto &&...args) {
+        return command(args...);
+    }
     auto build_for(auto serv, auto &&...args) {
         if constexpr (requires { serv.os; }) {
             SW_UNIMPLEMENTED;
@@ -414,10 +418,10 @@ struct sw_command {
         return build_for_linux(args...);
     }
     auto build_for_linux(auto &&...args) {
-        return command("build_gcc", args...);
+        return build_raw(target_gcc_config, args...);
     }
     auto build_for_macos(auto &&...args) {
-        return command("build_macos", args...);
+        return build_raw("build_macos", args...);
     }
 
     auto list_targets(auto &&...args) {
@@ -893,7 +897,7 @@ return f2(0);
         auto outfn = std::format("{}_{}.cpp", path{be.begin.file_name()}.stem().string(), be.begin.line());
         write_file_if_different(p / outfn, pre);
         auto conf = "static_r";
-        auto c = create_command("sw", "build_gcc", outfn, "-static", "-config-name", conf, "-sfc");
+        auto c = create_command("sw", target_gcc_config, outfn, "-static", "-config-name", conf, "-sfc");
         c.working_directory = p;
         run_command(c);
 
@@ -1241,6 +1245,8 @@ struct deploy_single_target_args {
     std::string prognamever;
     std::string cfgname{"r"};
     std::map<std::string, std::string> nginx_configs;
+    bool restore_from_last_backup{};
+    bool stop_and_disable_service_only{};
 
     auto cfgname_dir() {
         return "deploy_" + cfgname;
@@ -2010,6 +2016,8 @@ struct ssh_base {
         return targetline;
     }
     void deploy_single_target(this auto &&obj, auto &&args) {
+        using T = std::decay_t<decltype(obj)>;
+
         ScopedCurrentPath scp{args.localdir};
 
         auto targetline = obj.detect_targetline(args);
@@ -2022,13 +2030,31 @@ struct ssh_base {
             args.service_name = progname;
         }
 
+        auto os = obj.detect_os();
+        std::string build_command;
+        visit(os
+            , [&](fedora<T> &v) {
+                build_command = target_gcc_config;
+                auto gcc_version = v.version.getMajor() / 2 - 6;
+                build_command += std::format("{}", gcc_version);
+            }
+            , [&](auto &v) {}
+        );
+
         sw_command s;
+        auto build_cmd = [&](auto &&...args) {
+            if (build_command.empty()) {
+                s.build_for(obj, args...);
+            } else {
+                s.build_raw(build_command, args...);
+            }
+        };
         if (args.custom_build) {
             args.custom_build();
         } else if (args.build_file.empty()) {
-            s.build_for(obj, "-static", "-config", args.cfgname, "-config-name", args.cfgname_dir(), "--target", args.prognamever);
+            build_cmd("-static", "-config", args.cfgname, "-config-name", args.cfgname_dir(), "--target", args.prognamever);
         } else {
-            s.build_for(obj, "-static", "-config", args.cfgname, "-config-name", args.cfgname_dir(), args.build_file, "--target", args.prognamever);
+            build_cmd("-static", "-config", args.cfgname, "-config-name", args.cfgname_dir(), args.build_file, "--target", args.prognamever);
         }
 
         auto username = args.service_name;
@@ -2077,7 +2103,6 @@ struct ssh_base {
             }
         }
 
-        auto os = obj.detect_os();
         std::string pkgs;
         for (auto &&p : args.fedora_packages) {
             // FIXME: match os <-> packages
@@ -2141,6 +2166,26 @@ struct ssh_base {
         // backup first
         if (!first_time) {
             args.backup_service_data(root, obj.backup_dir(args.service_name));
+        }
+        if (args.restore_from_last_backup) {
+            auto backup_dir = obj.latest_backup_dir(args.service_name);
+            for (auto &&f : args.sync_files_from) {
+                auto src = backup_dir / f;
+                auto dst = home / f;
+                if (!fs::exists(src)) {
+                    threaded_logger_.log(std::format("sync_files_to: {} does not exists", src.string()));
+                    continue;
+                }
+                // cant use 'a' flag because of -user and -owner flags
+                rsync_options opts;
+                opts.arguments.clear();
+                opts.arguments.push_back("-crvP");
+                u.rsync_to(src, dst, opts);
+                //root.chmod(755, dst); // for dirs
+                //root.chmod(644, dst); // for files
+                // --chmod=Du=rwx,Dg=rx,Do=rx,Fu=rw,Fg=r,Fo=r
+                root.chown(dst, username);
+            }
         }
         // then to
         for (auto &&[from,to] : args.sync_files_to) {
@@ -2230,6 +2275,15 @@ struct ssh_base {
             return;
         }
 
+        if (args.stop_and_disable_service_only) {
+            systemctl ctl{ root };
+            auto svc = ctl.service(service_name);
+            svc.stop();
+            svc.disable();
+            args.backup_service_data(root, obj.backup_dir(args.service_name));
+            return;
+        }
+
         auto os = obj.detect_os();
         auto osname = visit(os, [](auto &&v){return v.name;});
         if (osname != "arch") {
@@ -2242,7 +2296,6 @@ struct ssh_base {
         systemctl ctl{root};
         ctl.delete_simple_service(service_name);
 
-        //args.backup_service_data(root, "data");
         args.backup_service_data(root, obj.backup_dir(args.service_name));
         if (args.postgres_db) {
             root.command("psql", "-U", "postgres", "-c", "'drop database " + args.service_name + ";'");
