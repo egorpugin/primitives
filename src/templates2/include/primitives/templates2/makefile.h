@@ -39,7 +39,10 @@ struct makefile_am {
     }
 
     void load(const path &fn) {
-        load(read_file(fn));
+        auto f = read_file(fn);
+        // TODO: handle \r without replacements
+        boost::replace_all(f, "\r\n", "\n");
+        load(f);
         resolve_variables();
     }
     void resolve_variables() {
@@ -63,6 +66,9 @@ struct makefile_am {
         if (*p == '#') {
             eat_line(p);
             return;
+        }
+        if (*p == '\r') {
+            ++p;
         }
         if (*p == '\n') {
             eat_line(p);

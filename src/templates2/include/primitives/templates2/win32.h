@@ -5,6 +5,7 @@
 
 #ifdef _WIN32
 
+#include <format>
 #include <string>
 #include <stdexcept>
 
@@ -17,6 +18,7 @@
 #include <windows.h>
 
 #define WINAPI_CALL(x) if (!(x)) {if (auto code = GetLastError()) throw ::win32::winapi_exception{#x, code};}
+#define WINAPI_CALL_HRESULT(x) {if (auto hr = (x); hr != S_OK) {throw ::win32::winapi_exception{#x, hr};}}
 
 // we use this for easy command line building/bootstrapping
 #pragma comment(lib, "advapi32.lib")
@@ -31,7 +33,9 @@ struct winapi_exception : std::runtime_error {
     using base = std::runtime_error;
     winapi_exception(const std::string &msg) : base{msg + ": "s + get_last_error()} {
     }
-    winapi_exception(const std::string &msg, auto code) : base{ msg + ": "s + get_error_text(code) } {
+    winapi_exception(const std::string &msg, DWORD code) : base{ msg + ": "s + get_error_text(code) } {
+    }
+    winapi_exception(const std::string &msg, HRESULT code) : base{ msg + std::format(": 0x{:X}", (uint32_t)code) } {
     }
     std::string get_last_error() const {
         auto code = GetLastError();

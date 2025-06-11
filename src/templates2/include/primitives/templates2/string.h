@@ -18,6 +18,7 @@ struct static_string {
     static constexpr auto size() {return N-1;}
 
     operator std::string() const { return &p[0]; }
+    operator std::string_view() const { return std::string_view{&p[0], size()}; }
 
     template <std::size_t N2>
     constexpr auto operator+(const static_string<N2> &s2) const {
