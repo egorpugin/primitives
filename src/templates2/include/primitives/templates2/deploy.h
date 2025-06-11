@@ -339,8 +339,11 @@ struct rsync_options {
     //fs::path to;
 };
 auto default_rsync_options() {
-    rsync_options opts{{"-czavP"s
-        //, "--stats"
+    rsync_options opts{{
+        "-czavP"s,
+        //"--stats",
+        "--no-owner"s,
+        "--no-group"s,
     }};
     return opts;
 }
@@ -357,6 +360,11 @@ auto rsync(const rsync_options &opts) {
     auto c = rsync_raw(opts);
     auto res = run_command_raw(c);
     if (res.exit_code) {
+        if (res.err.contains("Sorry, try again.")) {
+            if (res.err.contains("incorrect password")) {
+            }
+            throw std::runtime_error{ "command failed, probably ssh environment is not enabled: " + c.print() };
+        }
         throw std::runtime_error{"command failed: " + c.print()};
     }
     return res.out;
@@ -785,7 +793,13 @@ struct fedora : system_base {
         dnf d{sudo};
         d.install("dnf-plugin-system-upgrade");
         d.system_upgrade("download", "-y", std::format("--releasever={}", to_version.getMajor()));
-        sudo.reboot([&] { d.system_upgrade("reboot"); });
+        sudo.reboot([&] {
+            if (to_version.getMajor() >= 42) {
+                sudo.command("dnf5", "offline", "reboot", "-y");
+            } else {
+                d.system_upgrade("reboot");
+            }
+        });
         threaded_logger_.log("system upgraded"s);
     }
     void install_postgres() {
@@ -938,7 +952,7 @@ private:
     std::optional<ssh_options> custom_options;
     path cwd;
 
-    bool sudo_mode_with_password() const { return is_root() || !sudo_nopasswd; }
+    bool sudo_mode_with_password() const { return is_root() || !sudo_nopasswd || main_user && name != main_user->name; }
 
 public:
     user(Serv &serv, const std::string &name, const std::string &password = {})
@@ -1014,10 +1028,27 @@ public:
         c.push_back(serv.connection_args(opts));
         c.push_back(serv.server_string(main_user ? main_user->name : name));
         c.push_back("--"); // end of ssh args
+        auto tmpdir = "/tmp"s;
+        //auto tmpdir = "/tmp/sw"s;
+        auto tmpfile = tmpdir + "/run.sh"s;
         if (!cwd.empty()) {
-            c.push_back("cd");
-            c.push_back(cwd);
-            c.push_back("&&");
+            //c.push_back("cd");
+            //c.push_back(cwd);
+            //c.push_back("&&");
+            //c.environment["PWD"] = normalize_path(cwd).string();
+            //
+            //serv.create_directories(tmpdir);
+            auto t = std::format("#!/bin/bash\n");
+            t += std::format("cd \"{}\" && ", normalize_path(cwd).string());
+            auto add = [&](auto &&arg) {
+                if constexpr (requires {arg.string(); }) {
+                    t += std::format("\"{}\" ", arg.string());
+                } else {
+                    t += std::format("\"{}\" ", arg);
+                }
+            };
+            (add(args), ...);
+            serv.write_file(tmpfile, t);
         }
         if (sudo_mode && !is_root()) {
             if (main_user) {
@@ -1026,13 +1057,17 @@ public:
                 c.push_back(name);
             } else {
                 c.push_back("sudo");
-                if (sudo_mode_with_password()) {
-                    c.push_back("-S");
-                }
+            }
+            if (sudo_mode_with_password()) {
+                c.push_back("-S");
             }
         }
 
-        (c.push_back(args), ...);
+        if (cwd.empty()) {
+            (c.push_back(args), ...);
+        } else {
+            c.push_back(tmpfile);
+        }
 
         if (sudo_mode && sudo_mode_with_password()) {
             auto &pass = main_user ? main_user->password : password;
@@ -1081,6 +1116,9 @@ public:
         }
         cwd /= p;
         cwd = normalize_path(cwd);
+    }
+    auto current_path() {
+        return cwd;
     }
     path home_dir() const {
         if (is_root()) {
@@ -1143,10 +1181,14 @@ private:
                 u.clear();
             }
             if (sudo_mode_with_password()) {
-                auto fn = ".sw/rsync/asker.sh"s;
+                auto dir = home_dir() / ".sw" / "rsync";
+                auto fn = dir / "asker.sh"s;
+                s.create_directories(dir);
                 s.write_file(fn, std::format("#!/bin/sh\necho ${}\n", pwdenv));
                 s.chmod(755, fn);
-                opts.arguments.push_back("--rsync-path=SUDO_ASKPASS=./" + fn + " sudo -A" + u + " rsync");
+                opts.arguments.push_back("--rsync-path=SUDO_ASKPASS=" + normalize_path(fn).string() + " sudo -A" + u + " rsync");
+                //s.environment["SUDO_ASKPASS"] = normalize_path(fn).string(); // also as env file
+                // if the following does not work, sshd config does not use env file
                 s.environment[pwdenv] = main_user ? main_user->password : password;
                 s.set_environment();
                 pwset = true;
@@ -1386,9 +1428,9 @@ struct ssh_base {
         args.push_back("-o");
         args.push_back("ConnectionAttempts=10");
         args.push_back("-o");
-        args.push_back("ServerAliveInterval=5");
+        args.push_back("ServerAliveInterval=60");
         args.push_back("-o");
-        args.push_back("ServerAliveCountMax=1");
+        args.push_back("ServerAliveCountMax=999");
         //if (obj.sudo_mode && obj.get_user() != "root") {
             //if (!obj.current_user().sudo_mode_with_password()) {
             if (connection_options.password_auth_no) {
