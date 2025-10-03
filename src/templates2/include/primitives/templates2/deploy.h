@@ -225,8 +225,17 @@ auto run_command_raw(primitives::Command &c) {
     c.err.action = [&](const std::string &s, bool eof) {
         err += s;
         threaded_logger_.log(s);
-    };
+        };
     threaded_logger_.log(c.print());
+    //
+    std::string cmd;
+    for (auto &&a : c.getArguments()) {
+        auto as = a->toString();
+        boost::replace_all(as, "\"", "\\\"");
+        cmd += std::format("\"{}\" ", as);
+    }
+    threaded_logger_.log(std::format("quoted command:\n{}", cmd));
+    //
     std::error_code ec;
     c.execute(ec);
     if (!c.exit_code) {
@@ -693,7 +702,9 @@ struct system_base {
             return;
         }
 
-        su.setup_ssh();
+        if (!obj.serv.current_user().is_root()) {
+            su.setup_ssh();
+        }
         obj.update_packages();
         // reboot?
         obj.package_manager().install("htop");
@@ -952,7 +963,13 @@ private:
     std::optional<ssh_options> custom_options;
     path cwd;
 
-    bool sudo_mode_with_password() const { return is_root() || !sudo_nopasswd || main_user && name != main_user->name; }
+    bool sudo_mode_with_password() const {
+        //auto r = !sudo_nopasswd && (is_root() || main_user && name != main_user->name);
+        //return r;
+
+        auto r = is_root() || !sudo_nopasswd || main_user && name != main_user->name;
+        return r;
+    }
 
 public:
     user(Serv &serv, const std::string &name, const std::string &password = {})
@@ -992,6 +1009,7 @@ public:
         }
     }
     bool is_root() const { return name == "root"; }
+    bool operator==(std::string_view n) const { return name == n; }
     auto sudo() const {
         if (!can_sudo) {
             throw std::runtime_error{std::format("user {} cannot sudo. missing password?", name)};
@@ -1040,14 +1058,21 @@ public:
             //serv.create_directories(tmpdir);
             auto t = std::format("#!/bin/bash\n");
             t += std::format("cd \"{}\" && ", normalize_path(cwd).string());
-            auto add = [&](auto &&arg) {
-                if constexpr (requires {arg.string(); }) {
-                    t += std::format("\"{}\" ", arg.string());
-                } else {
+            auto add = overload([&](const std::string &arg) {
+                t += std::format("\"{}\" ", arg);
+                }, /*[&]<auto N>(const char(&arg)[N]) {
                     t += std::format("\"{}\" ", arg);
-                }
-            };
+                },*/ [&](const char *arg) {
+                    t += std::format("\"{}\" ", arg);
+                }, [&](const std::vector<std::string> &arg) {
+                    for (auto &&e : arg) {
+                        t += std::format("\"{}\" ", e);
+                    }
+                    }, [&](const path &arg) {
+                        t += std::format("\"{}\" ", arg.string());
+                        });
             (add(args), ...);
+            threaded_logger_.log("making run.sh:\n"s + t);
             serv.write_file(tmpfile, t);
         }
         if (sudo_mode && !is_root()) {
@@ -1154,7 +1179,7 @@ public:
         return fn;
     }
     void append_file(const path &p, const std::string &data) {
-        auto d = path{".sw/lambda/data"};
+        auto d = path{".sw/lambda/data"} += std::format("/{}", serv.id);
         auto fn = d / p.filename();
         if (exists(p)) {
             rsync_from(absolute_path(p), fn);
@@ -1183,9 +1208,10 @@ private:
             if (sudo_mode_with_password()) {
                 auto dir = home_dir() / ".sw" / "rsync";
                 auto fn = dir / "asker.sh"s;
-                s.create_directories(dir);
-                s.write_file(fn, std::format("#!/bin/sh\necho ${}\n", pwdenv));
-                s.chmod(755, fn);
+                auto su = s.sudo();
+                su.create_directories(dir);
+                su.write_file(fn, std::format("#!/bin/sh\necho ${}\n", pwdenv));
+                su.chmod(755, fn);
                 opts.arguments.push_back("--rsync-path=SUDO_ASKPASS=" + normalize_path(fn).string() + " sudo -A" + u + " rsync");
                 //s.environment["SUDO_ASKPASS"] = normalize_path(fn).string(); // also as env file
                 // if the following does not work, sshd config does not use env file
@@ -1225,13 +1251,15 @@ private:
         std::string s;
         s += serv.server_string(main_user ? main_user->name : name);
         s += ":";
-        if (!in.is_absolute() && !cwd.empty()) {
+        // is_absolute() checks on windows side, remote is usually linux with / root
+        auto is_abs = in.is_absolute() || in.string().starts_with('/');
+        if (!is_abs && !cwd.empty()) {
             s += normalize_path(cwd).string() + "/";
             if (in.empty()) {
                 s += "."; // for safety?
             }
             s += normalize_path(in).string();
-        } else if (!in.is_absolute()) {
+        } else if (!is_abs) {
             s += normalize_path(absolute_path(in)).string();
         } else {
             s += normalize_path(in).string();
@@ -1379,8 +1407,17 @@ server {
     }
 };
 
+struct ssh_base1 {
+    static inline int id0{};
+    int id{};
+
+    ssh_base1() {
+        id = ++id0;
+    }
+};
+
 template <typename RealType>
-struct ssh_base {
+struct ssh_base : ssh_base1 {
     using user_type = user<RealType>;
 
     std::vector<user_type> users;
@@ -1876,12 +1913,12 @@ struct ssh_base {
         return ::read_file(d / "1.txt");
     }
     void write_file(this auto &&obj, const path &p, const std::string &data) {
-        auto d = path{".sw/lambda/data"};
+        auto d = path{".sw/lambda/data"} += std::format("/{}", obj.id);
         ::write_file(d / p.filename(), data);
         obj.rsync_to(d / p.filename(), p);
     }
     void append_file(this auto &&obj, const path &p, const std::string &data) {
-        auto d = path{".sw/lambda/data"};
+        auto d = path{".sw/lambda/data"} += std::format("/{}", obj.id);
         auto fn = d / p.filename();
         if (obj.exists(p)) {
             obj.rsync_from(p, fn);
@@ -1905,6 +1942,10 @@ struct ssh_base {
     void reboot(this auto &&obj) {
         auto s = obj.sudo();
         obj.reboot([&]{ obj.command("reboot"); });
+    }
+    void reboot_with_other_users_online(this auto &&obj) {
+        auto s = obj.sudo();
+        obj.reboot([&] { obj.command("systemctl", "reboot", "-i"); });
     }
     static auto split_string_map(const std::string &s, const std::string &kv_delim = "="s) {
         std::map<std::string, std::string> m;
