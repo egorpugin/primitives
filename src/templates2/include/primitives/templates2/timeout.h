@@ -56,8 +56,7 @@ auto while_no_exception_with_timeout(auto &&f, auto &&log, auto && ... args) {
     while (1) {
         try {
             return f();
-        }
-        catch (Exception &e) {
+        } catch (Exception &e) {
             //LOG_WARN(logger, e.what());
             //std::cerr << e.what() << "\n"sv;
             log(e.what());

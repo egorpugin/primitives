@@ -86,13 +86,13 @@ struct element {
     }
     template <auto v = HttpRequest::Get>
     auto create_req(auto &&u) {
-        return d().create_req<v>(make_session_url(u));
+        return d().template create_req<v>(make_session_url(u));
     }
     decltype(auto) send_keys(this auto &&self, const std::string &s) {
         if (s.empty()) {
             return std::forward<decltype(self)>(self);
         }
-        auto req = self.create_req<HttpRequest::Post>("value");
+        auto req = self.template create_req<HttpRequest::Post>("value");
         nlohmann::json j;
         j["text"] = s;
         self.d().make_req(req, j);
@@ -124,7 +124,7 @@ struct element {
         s += u'\ue009';
         s += u'\ue00e';
         return self.send_keys(s);*/
-        auto req = self.create_req<HttpRequest::Post>("clear");
+        auto req = self.template create_req<HttpRequest::Post>("clear");
         nlohmann::json j;
         j["element"] = self.ref;
         j[self.ref] = self.element_;
@@ -156,7 +156,7 @@ struct element {
         }
     }*/
     decltype(auto) click(this auto &&self) {
-        auto req = self.create_req<HttpRequest::Post>("click");
+        auto req = self.template create_req<HttpRequest::Post>("click");
         self.d().make_req(req, nlohmann::json::object());
         return std::forward<decltype(self)>(self);
     }
@@ -243,6 +243,12 @@ template <typename Logger = simple_logger>
 struct webdriver {
     static inline constexpr auto selenium_host = "http://localhost:4444";
     static inline constexpr auto chromedriver_host = "http://localhost:9515";
+
+    struct options {
+        std::string url;
+        bool headless{};
+        path download_dir;
+    };
 
     path url_;
     nlohmann::json session;
@@ -338,8 +344,8 @@ struct webdriver {
     }
 
     webdriver() {}
-    webdriver(std::string url, bool headless = false) {
-        init(url, headless);
+    webdriver(const options &opts) {
+        init(opts);
     }
     webdriver(const webdriver&) = delete;
     webdriver &operator=(const webdriver&) = delete;
@@ -348,17 +354,21 @@ struct webdriver {
     ~webdriver() {
         //logger() << "dtor";
         if (*this) {
-            make_req(create_req<HttpRequest::Delete>(make_session_url()));
+            try {
+                make_req(create_req<HttpRequest::Delete>(make_session_url()));
+            } catch (std::exception &e) {
+                log(e.what());
+            }
         }
         //logger() << "dtor end";
     }
     void log(auto &&x) {
         logger << x;
     }
-    void init(std::string url, bool headless) {
-        url_ = url;
+    void init(const options &opts) {
+        url_ = opts.url;
         primitives::http::setupSafeTls();
-        auto req = create_req<HttpRequest::Post>(url + "/session");
+        auto req = create_req<HttpRequest::Post>(opts.url + "/session");
         req.timeout = 120;
         req.connect_timeout = 120;
         nlohmann::json j;
@@ -367,8 +377,11 @@ struct webdriver {
         jfm["browserName"] = "chrome";
         //jfm["browserVersion"] = "103.0.5060.53";
         jfm["browserVersion"] = "102";
-        if (headless) {
+        if (opts.headless) {
             jfm["goog:chromeOptions"]["args"].push_back("--headless");
+        }
+        if (!opts.download_dir.empty()) {
+            jfm["goog:chromeOptions"]["prefs"]["download.default_directory"] = opts.download_dir.string();
         }
         //jfm["goog:chromeOptions"]["w3c"] = false;
         //jfm["chromeOptions"]["w3c"] = false;
@@ -378,8 +391,9 @@ struct webdriver {
         j["requiredCapabilities"] = jc;
         session = make_req(req, j);
         session_id = session["value"]["sessionId"];
-        if (session_id.empty())
+        if (session_id.empty()) {
             throw SW_RUNTIME_ERROR("empty session id");
+        }
     }
     explicit operator bool() const { return !session_id.empty(); }
     void navigate(const std::string &url) {
@@ -481,6 +495,9 @@ struct webdriver {
         auto resp = make_req(req, false);
         return resp.dump();
     }
+    /*auto page_source() {
+        return source();
+    }*/
     void focus_frame(auto &&id) {
         log("focus_frame"sv);
         auto req = create_req<HttpRequest::Post>(make_session_url() / "frame");
@@ -567,6 +584,11 @@ struct webdriver {
             cs.emplace_back(c);
         }
         return cs;
+    }
+    auto cookie(auto &&name) {
+        auto req = create_req<HttpRequest::Get>(make_session_url() / "cookie" / name);
+        auto jr = make_req(req);
+        return jr["value"];
     }
     std::optional<std::string> has_alert() {
         try {
