@@ -30,6 +30,6 @@ struct static_string {
 };
 
 template<static_string s>
-constexpr auto operator "" _s() { return s; }
+constexpr auto operator ""_s() { return s; }
 
 }
