@@ -53,7 +53,7 @@ namespace primitives::deploy {
 
 using version_type = primitives::version::Version;
 
-inline const version_type max_fedora_version = "42"; // get from internet?
+inline const version_type max_fedora_version = "43"; // get from internet?
 inline const version_type max_ubuntu_version = "24.4";
 inline const auto target_gcc_config = "build_gcc"sv;
 
@@ -955,6 +955,7 @@ struct user {
     bool ssh_access{};
     bool can_sudo{};
     bool sudo_nopasswd{};
+    bool force_sudo_with_pass{};
 
 private:
     // scoped settings
@@ -967,7 +968,19 @@ private:
         //auto r = !sudo_nopasswd && (is_root() || main_user && name != main_user->name);
         //return r;
 
-        auto r = is_root() || !sudo_nopasswd || main_user && name != main_user->name;
+        if (force_sudo_with_pass) {
+            return true;
+        }
+
+        if (sudo_nopasswd) {
+            return false;
+        }
+
+        // was
+        //auto r = is_root() || !sudo_nopasswd || main_user && name != main_user->name;
+        //return r;
+
+        auto r = is_root() || main_user && name != main_user->name;
         return r;
     }
 
@@ -998,21 +1011,39 @@ public:
             decltype(custom_options) opts = ssh_options{};
             opts->password_auth_no = true;
             SwapAndRestore sr1{custom_options, opts};
-            auto ret = command_raw("sudo", "test", "0");
-            can_sudo = sudo_nopasswd = !ret.exit_code;
-            //if (!sudo_nopasswd && ret.err.contains("sudo: a password is required")) {}
+            auto ret = command_raw("sudo", "-v");
+            can_sudo = !ret.exit_code;
+            if (!can_sudo && !password.empty()) {
+                {
+                SwapAndRestore sr{sudo_mode, true};
+                SwapAndRestore sr1{force_sudo_with_pass, true};
+                auto ret = command_raw("sudo", "-v");
+                can_sudo = !ret.exit_code;
+                }
+                if (can_sudo) {
+                    force_sudo_with_pass = true;
+                }
+                return;
+            }
+            if (can_sudo) {
+                auto ret = command_raw("sudo", "test", "0");
+                sudo_nopasswd = !ret.exit_code;
+                if (!sudo_nopasswd && ret.err.contains("sudo: a password is required")) {
+                    throw std::runtime_error{std::format("user {} cannot sudo. missing password?", name)};
+                }
+            }
         }
-        if (!can_sudo && !password.empty()) {
+        /*if (!can_sudo && !password.empty()) {
             SwapAndRestore sr1{sudo_mode, true};
             auto ret = command_raw("test", "0");
             can_sudo = !ret.exit_code;
-        }
+        }*/
     }
     bool is_root() const { return name == "root"; }
     bool operator==(std::string_view n) const { return name == n; }
     auto sudo() const {
         if (!can_sudo) {
-            throw std::runtime_error{std::format("user {} cannot sudo. missing password?", name)};
+            throw std::runtime_error{std::format("user {} cannot sudo", name)};
         }
         auto u = *this;
         u.sudo_mode = true;
@@ -1020,7 +1051,7 @@ public:
     }
     auto login_with_sudo(const std::string &name) const {
         if (!can_sudo) {
-            throw std::runtime_error{std::format("user {} cannot sudo. missing password?", this->name)};
+            throw std::runtime_error{std::format("user {} cannot sudo", this->name)};
         }
         auto u = *this;
         u.name = name;
