@@ -121,7 +121,7 @@ struct thread_manager {
 
 thread_local std::string thread_name;
 thread_local std::string log_name;
-const path &log_dir(const path &in = {}) {
+const path &log_dir1(const path &in = {}) {
     static auto dir = [] {
         path dir = ".sw/log";
 
@@ -141,12 +141,17 @@ const path &log_dir(const path &in = {}) {
 
         dir /= p.stem();
         fs::create_directories(normalize_path(dir));
-        return dir;
+        return fs::absolute(dir);
     }();
     if (!in.empty()) {
         dir = in;
     }
     return dir;
+}
+const path &log_dir(const path &in = {}) {
+    const auto &d = log_dir1(fs::absolute(in));
+    LOG_INFO(logger, "changing log dir to " << d);
+    return d;
 }
 
 struct threaded_logger {
@@ -163,12 +168,12 @@ struct threaded_logger {
         };
         if (thread_manager_.is_main_thread()) {
             LOG_INFO(logger, s);
-            static std::ofstream ofile{log_dir() / "main.log"};
+            static std::ofstream ofile{log_dir1() / "main.log"};
             ofile << make_string() << "\n";
             ofile.flush(); // ?
         } else {
             LOG_INFO(logger, std::format("[{}] {}", thread_name, s));
-            thread_local std::ofstream ofile{log_dir() / log_name};
+            thread_local std::ofstream ofile{log_dir1() / log_name};
             ofile << make_string() << "\n";
             ofile.flush(); // ?
         }
@@ -344,6 +349,7 @@ auto cygwin(auto &&...args) {
 
 struct rsync_options {
     std::vector<std::string> arguments;
+    std::vector<std::string> exclude;
     //fs::path from;
     //fs::path to;
 };
@@ -362,6 +368,9 @@ auto rsync_raw(const rsync_options &opts) {
     vargs.push_back("rsync");
     for (auto &&a : opts.arguments) {
         vargs.push_back(a);
+    }
+    for (auto &&a : opts.exclude) {
+        vargs.push_back(std::format("--exclude={}", a));
     }
     return cygwin_raw(vargs);
 }
@@ -960,7 +969,7 @@ struct user {
 private:
     // scoped settings
     bool sudo_mode{};
-    const user *main_user{};
+    /*const */user *main_user{};
     std::optional<ssh_options> custom_options;
     path cwd;
 
@@ -1049,7 +1058,7 @@ public:
         u.sudo_mode = true;
         return u;
     }
-    auto login_with_sudo(const std::string &name) const {
+    auto login_with_sudo(const std::string &name) {
         if (!can_sudo) {
             throw std::runtime_error{std::format("user {} cannot sudo", this->name)};
         }
@@ -1237,16 +1246,32 @@ private:
                 u.clear();
             }
             if (sudo_mode_with_password()) {
-                auto dir = home_dir() / ".sw" / "rsync";
-                auto fn = dir / "asker.sh"s;
+                auto &user_ = main_user ? *main_user : *this;
+                auto dir = user_.home_dir() / ".sw" / "rsync";
+                auto asker = "asker.sh"s;
+                auto fn = normalize_path(dir / asker);
                 auto su = s.sudo();
                 su.create_directories(dir);
-                su.write_file(fn, std::format("#!/bin/sh\necho ${}\n", pwdenv));
+                auto contents = std::format("#!/bin/sh\necho ${}\n", pwdenv);
+                //if (main_user) {
+                    auto tmp = normalize_path(user_.home_dir() / ".sw" / "tmp");
+                    user_.serv.create_directories(tmp);
+                    user_.serv.write_file(normalize_path(tmp / asker), contents);
+                    su.chmod(755, normalize_path(tmp / asker));
+                    su.command("cp", normalize_path(tmp / asker), fn);
+                    //} else {
+                    //    throw std::runtime_error{ "empty pass" };
+                    //    // we can loop here
+                    //    su.write_file(fn, contents);
+                    //}
                 su.chmod(755, fn);
                 opts.arguments.push_back("--rsync-path=SUDO_ASKPASS=" + normalize_path(fn).string() + " sudo -A" + u + " rsync");
                 //s.environment["SUDO_ASKPASS"] = normalize_path(fn).string(); // also as env file
                 // if the following does not work, sshd config does not use env file
                 s.environment[pwdenv] = main_user ? main_user->password : password;
+                if (s.environment[pwdenv].empty()) {
+                    throw std::runtime_error{"empty pass"};
+                }
                 s.set_environment();
                 pwset = true;
             } else {
@@ -1334,6 +1359,7 @@ struct deploy_single_target_args {
     std::set<path> sync_files_from;
     // 'to' files copied from the other location to replace server files
     std::vector<from_to_path> sync_files_to;
+    std::vector<std::string> sync_files_to_exclude;
     std::vector<from_to_path> deploy_files_once;
     //std::set<path> backup_files;
     std::set<std::string> fedora_packages;
@@ -2308,6 +2334,7 @@ struct ssh_base : ssh_base1 {
             rsync_options opts;
             opts.arguments.clear();
             opts.arguments.push_back("-crvP");
+            opts.exclude = args.sync_files_to_exclude;
             u.rsync_to(from, dst, opts);
             //root.chmod(755, dst); // for dirs
             //root.chmod(644, dst); // for files
