@@ -50,7 +50,7 @@ struct HttpRequest : public HttpSettings
     };
 
     String url;
-    String agent;
+    String agent{"curl/8.17.0"};
     String username;
     String password;
     int type = Get;
