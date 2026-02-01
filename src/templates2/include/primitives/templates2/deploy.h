@@ -279,6 +279,7 @@ auto command(auto &&...args) {
 }
 
 inline path cygwin_path(path p) {
+#ifdef _WIN32
     p = normalize_path(p);
     if (p.empty())
         return {};
@@ -294,6 +295,9 @@ inline path cygwin_path(path p) {
     }
     s = "/cygdrive/"s + s;
     return s;
+#else
+    return p;
+#endif
 }
 
 auto escape(std::string s) {
@@ -1873,6 +1877,12 @@ struct ssh_base : ssh_base1 {
                 return p / name;
             }
             p = "/cygdrive/c/Users";
+            p /= u;
+            p /= ".ssh";
+            if (fs::exists(p / name)) {
+                return p / name;
+            }
+            p = "/Users";
             p /= u;
             p /= ".ssh";
             if (fs::exists(p / name)) {
