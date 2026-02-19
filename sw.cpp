@@ -537,6 +537,13 @@ void build(Solution &s)
         create_git_rev += command, sw_main;
     }
 
+    auto &response_file_handler = p.addTarget<StaticLibrary>("tools.response_file_handler");
+    {
+        response_file_handler += cpp23;
+        response_file_handler += "src/tools/response_file_handler.cpp";
+    }
+
+    //
     auto &test = p.addDirectory("test");
     test.Scope = TargetScope::Test;
 
