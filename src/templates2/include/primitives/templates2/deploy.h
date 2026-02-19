@@ -935,7 +935,7 @@ return f2(0);
         auto outfn = std::format("{}_{}.cpp", path{be.begin.file_name()}.stem().string(), be.begin.line());
         write_file_if_different(p / outfn, pre);
         auto conf = "static_r";
-        auto c = create_command("sw", target_gcc_config, outfn, "-static", "-config-name", conf, "-sfc");
+        auto c = create_command("sw", target_gcc_config, outfn, "-static", "-sfc", "-config-name", conf, "-sfc");
         c.working_directory = p;
         run_command(c);
 
@@ -2202,9 +2202,9 @@ struct ssh_base : ssh_base1 {
         if (args.custom_build) {
             args.custom_build();
         } else if (args.build_file.empty()) {
-            build_cmd("-static", "-config", args.cfgname, "-config-name", args.cfgname_dir(), "--target", args.prognamever);
+            build_cmd("-static", "-sfc", "-config", args.cfgname, "-config-name", args.cfgname_dir(), "--target", args.prognamever);
         } else {
-            build_cmd("-static", "-config", args.cfgname, "-config-name", args.cfgname_dir(), args.build_file, "--target", args.prognamever);
+            build_cmd("-static", "-sfc", "-config", args.cfgname, "-config-name", args.cfgname_dir(), args.build_file, "--target", args.prognamever);
         }
 
         auto username = args.service_name;
