@@ -537,11 +537,8 @@ void build(Solution &s)
         create_git_rev += command, sw_main;
     }
 
-    auto &response_file_handler = p.addTarget<StaticLibrary>("tools.response_file_handler");
-    {
-        response_file_handler += cpp23;
-        response_file_handler += "src/tools/response_file_handler.cpp";
-    }
+    auto &response_file_handler = p.addTarget<StaticLibraryTarget>("response_file_handler");
+    setup_primitives(response_file_handler);
 
     //
     auto &test = p.addDirectory("test");
@@ -587,6 +584,7 @@ void build(Solution &s)
 
     auto &test_csv = add_test("csv");
     test_csv += csv;
+
 
     /*auto &test_cl = add_test("cl");
     test_cl += cl;*/
