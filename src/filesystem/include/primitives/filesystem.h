@@ -442,15 +442,16 @@ inline void write_file(const path &p, const std::span<uint8_t> &s) {
     fwrite(s.data(), s.size(), 1, f.getHandle());
 }
 
-inline void write_file_if_different(const path &p, const String &s)
+inline bool write_file_if_different(const path &p, const String &s)
 {
     if (fs::exists(p))
     {
         auto s2 = read_file(p);
         if (s == s2)
-            return;
+            return false;
     }
     write_file(p, s);
+    return true;
 }
 
 inline void write_file_if_not_exists(const path &p, const String &s)
