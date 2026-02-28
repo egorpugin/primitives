@@ -30,6 +30,7 @@ struct stale_element_reference_exception : ::std::runtime_error { using ::std::r
 struct unexpected_alert_open_exception : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
 struct no_such_alert_exception : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
 struct timeout_exception : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
+struct invalid_argument : ::std::runtime_error { using ::std::runtime_error::runtime_error; };
 struct session_not_created_exception : ::std::runtime_error {
     using ::std::runtime_error::runtime_error;
     std::string actual_chrome_version;
@@ -317,6 +318,9 @@ struct webdriver {
                 }
                 if (jr["value"]["error"].get<std::string_view>() == "timeout"sv) {
                     throw timeout_exception(err);
+                }
+                if (jr["value"]["error"].get<std::string_view>() == "invalid argument"sv) {
+                    throw invalid_argument(err);
                 }
                 if (jr["value"]["error"].get<std::string_view>() == "session not created"sv) {
                     session_not_created_exception s{err};
