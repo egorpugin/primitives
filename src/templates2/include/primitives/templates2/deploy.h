@@ -2291,8 +2291,9 @@ struct ssh_base : ssh_base1 {
         }
         auto u = root.login(username);
         auto home = u.current_user().home_dir();
-        u.rsync_to(fn, home);
         auto prog = normalize_path(home / fn.filename());
+        u.command("mv", prog, path{prog} += ".bak"s); // backup
+        u.rsync_to(fn, home); // main file
         root.chmod(755, prog);
         root.chown(prog, username);
         // selinux
