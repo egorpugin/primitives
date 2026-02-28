@@ -406,6 +406,34 @@ struct webdriver {
         j["url"] = url;
         make_req(req, j);
     }
+    // https://www.w3.org/TR/webdriver/#timeouts
+    // "script", "pageLoad", "implicit"
+    auto timeouts() {
+        auto req = create_req(make_session_url() / "timeouts");
+        return make_req(req)["value"];
+    }
+    void set_timeouts(auto &&j) {
+        auto req = create_req<HttpRequest::Post>(make_session_url() / "timeouts");
+        make_req(req, j);
+    }
+    std::chrono::milliseconds page_timeout() {
+        return std::chrono::milliseconds{timeouts()["pageLoad"].get<int64_t>()};
+    }
+    void set_page_timeout(std::chrono::milliseconds ms) {
+        nlohmann::json j;
+        j["pageLoad"] = ms.count();
+        set_timeouts(j);
+    }
+    void set_script_timeout(std::chrono::milliseconds ms) {
+        nlohmann::json j;
+        j["script"] = ms.count();
+        set_timeouts(j);
+    }
+    void set_imlpicit_timeout(std::chrono::milliseconds ms) {
+        nlohmann::json j;
+        j["imlpicit"] = ms.count();
+        set_timeouts(j);
+    }
     template <bool multi = false>
     auto find_element_base(auto&& v, auto&& req) {
         log(std::format(multi ? "find_elements: {}" : "find_element: {}", v.value));
@@ -520,6 +548,18 @@ struct webdriver {
         log("waiting for load"sv);
         while (execute("return document.readyState") != "complete" && execute("return jQuery.active") != 0);
     }
+    /*
+    bool wait_full_load(std::chrono::seconds timeout = {}) {
+        log("waiting for load"sv);
+        auto start = std::chrono::system_clock::now();
+        while (execute("return document.readyState") != "complete" && execute("return jQuery.active") != 0) {
+            if (timeout != std::chrono::seconds{} && std::chrono::system_clock::now() - start > timeout) {
+                return false;
+            }
+        }
+        return true;
+    }
+    */
     template <template <typename ...> typename T = std::vector>
     auto windows() {
         auto req = create_req(make_session_url() / "window" / "handles");
