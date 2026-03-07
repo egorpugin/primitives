@@ -160,7 +160,7 @@ struct Emitter
     }
     void removeLines(int n)
     {
-        n = std::max(0, (int)lines.size() - n);
+        n = std::max<int>(0, (int)lines.size() - n);
         lines.resize(n);
     }
 
