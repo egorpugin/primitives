@@ -8,8 +8,6 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <codecvt>
-#include <locale>
 #include <map>
 #include <set>
 #include <string>
@@ -112,16 +110,6 @@ inline std::u8string to_u8string(const std::string &s) {
     return {s.begin(), s.end()};
 }
 
-static auto &get_string_converter() {
-    static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return converter;
-}
-
-inline std::wstring to_wstring(const std::string &s) {
-    auto &converter = get_string_converter();
-    return converter.from_bytes(s.c_str());
-}
-
 inline std::string to_string(const std::string &s) {
     return s;
 }
@@ -130,10 +118,41 @@ inline std::string to_string(const std::u8string &s) {
     return {s.begin(), s.end()};
 }
 
+#if __cplusplus > 202302L
+#include <cwchar>
+inline std::wstring to_wstring(const std::string &s) {
+    std::mbstate_t state{};
+    std::wstring w(s.size(), 0);
+    w.resize(std::mbstowcs(&w[0], s.c_str(), s.size())); // Shrink to fit.
+    return w;
+}
+inline std::string to_string(const std::wstring &w) {
+    if (w.empty())
+        return {};
+    std::mbstate_t state{};
+    auto start = &w[0];
+    auto len = std::wcsrtombs(nullptr, &start, 0, &state);
+    std::string s(len, 0);
+    auto sz = std::wcsrtombs(&s[0], &start, s.size(), &state);
+    s.resize(len);
+    return s;
+}
+#else
+#include <codecvt>
+//#include <locale> // remove?
+static auto &get_string_converter() {
+    static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return converter;
+}
+inline std::wstring to_wstring(const std::string &s) {
+    auto &converter = get_string_converter();
+    return converter.from_bytes(s.c_str());
+}
 inline std::string to_string(const std::wstring &s) {
     auto &converter = get_string_converter();
     return converter.to_bytes(s.c_str());
 }
+#endif
 
 inline std::string errno2string(int e) {
     throw std::runtime_error("not implemented");
