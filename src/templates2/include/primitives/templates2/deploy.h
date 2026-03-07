@@ -935,7 +935,7 @@ return f2(0);
         auto outfn = std::format("{}_{}.cpp", path{be.begin.file_name()}.stem().string(), be.begin.line());
         write_file_if_different(p / outfn, pre);
         auto conf = "static_r";
-        auto c = create_command("sw", target_gcc_config, outfn, "-static", "-sfc", "-config-name", conf, "-sfc");
+        auto c = create_command("sw", target_gcc_config, outfn, "-static", "-sfc", "-config-name", conf);
         c.working_directory = p;
         run_command(c);
 
