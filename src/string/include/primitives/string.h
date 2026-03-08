@@ -118,7 +118,7 @@ inline std::string to_string(const std::u8string &s) {
     return {s.begin(), s.end()};
 }
 
-#if __cplusplus > 202302L
+#if __cplusplus >= 201703L
 #include <cwchar>
 inline std::wstring to_wstring(const std::string &s) {
     std::mbstate_t state{};
