@@ -186,6 +186,28 @@ void build(Solution &s)
             // disable all warnings!!
             t.Public.CompileOptions.push_back("-w");
         }
+        if (t.getCompilerType() == CompilerType::GNU)
+        {
+            // clang-cl has too many windows headers warnings, so disable them all for now
+            // maybe because of -Wall above?
+            // disable all warnings!!
+            t.Public.CompileOptions.push_back("-Wall");
+            t.Public.CompileOptions.push_back("-Wextra");
+            t.Public.CompileOptions.push_back("-Wno-unused-variable");
+            t.Public.CompileOptions.push_back("-Wno-unused-parameter");
+            t.Public.CompileOptions.push_back("-Wno-unused-function");
+            t.Public.CompileOptions.push_back("-Wno-unknown-pragmas"); // move to sw?
+            t.Public.CompileOptions.push_back("-Wno-switch");
+            t.Public.CompileOptions.push_back("-Wno-missing-field-initializers");
+            t.Public.CompileOptions.push_back("-Wno-sign-compare");
+            t.Public.CompileOptions.push_back("-Wno-unused-but-set-variable");
+            t.Public.CompileOptions.push_back("-Wno-parentheses");
+            //t.Public.CompileOptions.push_back("-Wno-deprecated-copy");
+            t.Public.CompileOptions.push_back("-Wno-unused-value");
+            //t.Public.CompileOptions.push_back("-Wno-comment");
+        }
+
+
         return p;
     };
 
