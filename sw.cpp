@@ -162,8 +162,6 @@ void build(Solution &s)
         t.ApiName = "PRIMITIVES_" + boost::to_upper_copy(n2.toString("_")) + "_API";
         t += cpp23;
         t.PackageDefinitions = true;
-        // not all code works with this yet (e.g. hh.date)
-        //t.Public.CompileOptions.push_back("-Zc:__cplusplus");
         if (t.getCompilerType() != CompilerType::MSVC)
         {
             //t.CompileOptions.push_back("-Werror");
@@ -178,6 +176,7 @@ void build(Solution &s)
             //t.Protected.CompileOptions.push_back("/Zc:__cplusplus");
             // use newer and conforming preprocessor everywhere
             t.Public.CompileOptions.push_back("/Zc:preprocessor");
+            t.Public.CompileOptions.push_back("/Zc:__cplusplus");
         }
         if (t.getCompilerType() == CompilerType::ClangCl)
         {
@@ -191,8 +190,8 @@ void build(Solution &s)
             // clang-cl has too many windows headers warnings, so disable them all for now
             // maybe because of -Wall above?
             // disable all warnings!!
-            t.Public.CompileOptions.push_back("-Wall");
-            t.Public.CompileOptions.push_back("-Wextra");
+            //t.Public.CompileOptions.push_back("-Wall");
+            //t.Public.CompileOptions.push_back("-Wextra");
             t.Public.CompileOptions.push_back("-Wno-unused-variable");
             t.Public.CompileOptions.push_back("-Wno-unused-parameter");
             t.Public.CompileOptions.push_back("-Wno-unused-function");
