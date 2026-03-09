@@ -122,8 +122,9 @@ inline std::string to_string(const std::u8string &s) {
 #include <cwchar>
 inline std::wstring to_wstring(const std::string &s) {
     std::mbstate_t state{};
+    auto start = &s[0];
     std::wstring w(s.size(), 0);
-    w.resize(std::mbstowcs(&w[0], s.c_str(), s.size())); // Shrink to fit.
+    w.resize(std::mbsrtowcs(&w[0], &start, s.size(), &state)); // Shrink to fit.
     return w;
 }
 inline std::string to_string(const std::wstring &w) {
@@ -139,7 +140,6 @@ inline std::string to_string(const std::wstring &w) {
 }
 #else
 #include <codecvt>
-//#include <locale> // remove?
 static auto &get_string_converter() {
     static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     return converter;
