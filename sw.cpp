@@ -185,7 +185,7 @@ void build(Solution &s)
             // disable all warnings!!
             t.Public.CompileOptions.push_back("-w");
         }
-        if (t.getCompilerType() == CompilerType::GNU)
+        if (t.getCompilerType() != CompilerType::MSVC)
         {
             // clang-cl has too many windows headers warnings, so disable them all for now
             // maybe because of -Wall above?
