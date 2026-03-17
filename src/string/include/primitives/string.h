@@ -119,6 +119,14 @@ inline std::string to_string(const std::u8string &s) {
 }
 
 #if __cplusplus >= 201703L
+#include <filesystem>
+inline std::wstring to_wstring(const std::string &s) {
+    return std::filesystem::path(s).wstring();
+}
+inline std::string to_string(const std::wstring &w) {
+    return std::filesystem::path(w).string();
+}
+#if 0 // does not work on linux
 #include <cwchar>
 inline std::wstring to_wstring(const std::string &s) {
     std::mbstate_t state{};
@@ -133,11 +141,15 @@ inline std::string to_string(const std::wstring &w) {
     std::mbstate_t state{};
     auto start = &w[0];
     auto len = std::wcsrtombs(nullptr, &start, 0, &state);
+    if (len == -1) {
+        throw std::runtime_error{"cannot convert"};
+    }
     std::string s(len, 0);
     auto sz = std::wcsrtombs(&s[0], &start, s.size(), &state);
     s.resize(len);
     return s;
 }
+#endif
 #else
 #include <codecvt>
 static auto &get_string_converter() {
