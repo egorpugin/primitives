@@ -626,9 +626,13 @@ struct cache {
 
         auto v = find<T>(k);
         if (!v) {
-            create_value([&](auto &&v) {
-                set<T>(k, v);
-            });
+            if constexpr (requires {create_value([&](auto &&) {});}) {
+                create_value([&](auto &&v) {
+                    set<T>(k, v);
+                    });
+            } else {
+                set<T>(k, create_value());
+            }
             while (!(v = find<T>(k))) {
                 // error if was not set? add bool option
                 std::this_thread::sleep_for(100ms);
