@@ -239,6 +239,19 @@ struct PRIMITIVES_COMMAND_API Arguments
             push_front(a->clone());
     }
 
+    size_t erase(auto &&v) {
+        size_t n{};
+        for (auto it = args.begin(); it != args.end(); it) {
+            if ((*it)->toString() == v) {
+                it = args.erase(it);
+                ++n;
+            } else {
+                ++it;
+            }
+        }
+        return n;
+    }
+
     bool empty() const {
         return args.empty();
     }

@@ -120,6 +120,10 @@ public:
         return arguments.push_back(FWD(arg));
     }
 
+    auto erase(auto &&arg) {
+        return arguments.erase(arg);
+    }
+
     //void setInteractive(bool i);
 
     // hide? no, but add control over chaining
