@@ -287,6 +287,14 @@ inline path cygwin_path(path p) {
         return p;
     }
     auto s = p.string();
+    // don't touch internet procotols
+    if (false
+        || s.starts_with("rsync://"sv)
+        || s.starts_with("http://"sv)
+        || s.starts_with("https://"sv)
+        ) {
+        return p;
+    }
     s[0] = tolower(s[0]);
     if (s.size() > 2) {
         s = s.substr(0, 1) + s.substr(2);
@@ -935,7 +943,7 @@ return f2(0);
         auto outfn = std::format("{}_{}.cpp", path{be.begin.file_name()}.stem().string(), be.begin.line());
         write_file_if_different(p / outfn, pre);
         auto conf = "static_r";
-        auto c = create_command("sw", target_gcc_config, outfn, "-static", "-sfc", "-config-name", conf);
+        auto c = create_command("sw", target_gcc_config, outfn, "-static", "-sd", "-sfc", "-config-name", conf);
         c.working_directory = p;
         run_command(c);
 
@@ -2202,9 +2210,9 @@ struct ssh_base : ssh_base1 {
         if (args.custom_build) {
             args.custom_build();
         } else if (args.build_file.empty()) {
-            build_cmd("-static", "-sfc", "-config", args.cfgname, "-config-name", args.cfgname_dir(), "--target", args.prognamever);
+            build_cmd("-static", "-sd", "-sfc", "-config", args.cfgname, "-config-name", args.cfgname_dir(), "--target", args.prognamever);
         } else {
-            build_cmd("-static", "-sfc", "-config", args.cfgname, "-config-name", args.cfgname_dir(), args.build_file, "--target", args.prognamever);
+            build_cmd("-static", "-sd", "-sfc", "-config", args.cfgname, "-config-name", args.cfgname_dir(), args.build_file, "--target", args.prognamever);
         }
 
         auto username = args.service_name;
@@ -2292,7 +2300,9 @@ struct ssh_base : ssh_base1 {
         auto u = root.login(username);
         auto home = u.current_user().home_dir();
         auto prog = normalize_path(home / fn.filename());
-        u.command("mv", prog, path{prog} += ".bak"s); // backup
+        if (root.exists(prog)) {
+            u.command("mv", prog, path{prog} += ".bak"s); // backup
+        }
         u.rsync_to(fn, home); // main file
         root.chmod(755, prog);
         root.chown(prog, username);
@@ -2315,7 +2325,7 @@ struct ssh_base : ssh_base1 {
             root.chown(settings, username);
         }
         // backup first
-        if (!first_time) {
+        if (!first_time && !args.restore_from_last_backup) {
             args.backup_service_data(root, obj.backup_dir(args.service_name));
         }
         if (args.restore_from_last_backup) {
@@ -2449,6 +2459,8 @@ struct ssh_base : ssh_base1 {
         ctl.delete_simple_service(service_name);
 
         args.backup_service_data(root, obj.backup_dir(args.service_name));
+        // isn't dropping db too much?
+        // for simple discard, set stop_and_disable_service_only
         if (args.postgres_db) {
             root.command("psql", "-U", "postgres", "-c", "'drop database " + args.service_name + ";'");
             root.command("psql", "-U", "postgres", "-c", "'drop user " + args.service_name + ";'");
@@ -2459,6 +2471,12 @@ struct ssh_base : ssh_base1 {
         if constexpr (requires { args.cleanup(root); }) {
             args.cleanup(root);
         }
+    }
+    void move_to(this auto &&obj, auto &&to_serv, auto &&service) {
+        service.stop_and_disable_service_only = true;
+        obj.discard_single_target(service); // it makes a backup too!
+        service.restore_from_last_backup = true;
+        to_serv.deploy_single_target(service);
     }
 };
 
