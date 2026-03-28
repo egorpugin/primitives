@@ -119,6 +119,10 @@ public:
     auto &push_back(T &&arg) {
         return arguments.push_back(FWD(arg));
     }
+    template <NotVector T>
+    auto &operator+=(T &&arg) {
+        return arguments.push_back(FWD(arg));
+    }
 
     auto erase(auto &&arg) {
         return arguments.erase(arg);
