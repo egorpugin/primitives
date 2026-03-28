@@ -10,6 +10,7 @@
 
 #ifdef _WIN32
 #include <Windows.h>
+#include <shellapi.h>
 #endif
 
 namespace cl
