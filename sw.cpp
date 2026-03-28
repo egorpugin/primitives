@@ -243,9 +243,11 @@ void build(Solution &s)
     ADD_LIBRARY_HEADER_ONLY(string);
     string.Public += "org.sw.demo.boost.algorithm"_dep;
 
+    ADD_LIBRARY(debug);
+
     auto &templates = p.addTarget<StaticLibraryTarget>("templates");
     setup_primitives_header_only(templates);
-    templates.Public += string, "org.sw.demo.boost.stacktrace"_dep;
+    templates.Public += string, debug, "org.sw.demo.boost.stacktrace"_dep;
     if (templates.getBuildSettings().TargetOS.Type != OSType::Windows && templates.getBuildSettings().TargetOS.Type != OSType::Mingw)
         templates += "dl"_slib;
 

@@ -6,9 +6,10 @@
 
 #pragma once
 
-#include "debug.h"
-
 #include <boost/stacktrace.hpp>
+#include <boost/version.hpp>
+#include <primitives/templates.h> // for debug
+#include <primitives/debug.h>
 
 #include <chrono>
 #include <iostream>
