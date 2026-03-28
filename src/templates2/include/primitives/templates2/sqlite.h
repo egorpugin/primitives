@@ -559,11 +559,22 @@ struct kv {
     using table_type = kv;
     using key_type = K;
     using value_type = V;
+    template <typename ... Types> using map_type = std::map<Types...>;
 
     K key;
     V value;
 
     db::contraint_unique<&kv::key> u;
+};
+template <typename K, typename V>
+struct kv_multi {
+    using table_type = kv_multi;
+    using key_type = K;
+    using value_type = V;
+    template <typename ... Types> using map_type = std::multimap<Types...>;
+
+    K key;
+    V value;
 };
 template <typename V>
 struct v {
@@ -658,7 +669,7 @@ struct cache {
     auto get_all() {
         static_assert(has_table<T>());
 
-        std::map<typename T::key_type, typename T::value_type> m;
+        typename T::template map_type<typename T::key_type, typename T::value_type> m;
         for (auto &&[k,v,_] : mgr.select_with_name<T, typename T::table_type>()) {
             m.emplace(k,v);
         }
