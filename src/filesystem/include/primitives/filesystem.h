@@ -280,6 +280,7 @@ public:
         close();
     }
 
+    operator FILE *() const { return f; }
     FILE *getHandle() const { return f; }
 
     size_t read(void *buf, size_t sz)
