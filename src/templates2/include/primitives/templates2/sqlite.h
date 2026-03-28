@@ -613,6 +613,14 @@ struct cache {
         return (*q.begin()).value;
     }
     template <typename T>
+    bool contains(const typename T::value_type &v) {
+        static_assert(has_table<T>());
+        static_assert(!requires{typename T::key_type;});
+
+        auto q = mgr.select_with_name<T, typename T::table_type, &T::value>(v);
+        return !q.empty();
+    }
+    template <typename T>
     typename T::value_type find(const typename T::key_type &k, auto &&create_value) {
         static_assert(has_table<T>());
 
