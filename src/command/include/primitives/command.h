@@ -157,7 +157,9 @@ public:
 private:
     mutable void *internal_command = nullptr;
     bool program_set = false;
+protected:
     Strings errors;
+private:
 
     void preExecute(std::error_code *ec);
     void execute1(std::error_code *ec = nullptr);
