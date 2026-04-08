@@ -83,6 +83,14 @@ struct sqlitemgr {
         sqlite_check(sqlite3_close(db));
     }
 
+    void enable_wal() {
+        query("PRAGMA journal_mode = WAL;");
+        query("PRAGMA synchronous = EXTRA;");
+    }
+    void set_busy_timeout(std::chrono::milliseconds ms) {
+        sqlite3_busy_timeout(db, ms.count());
+    }
+
     void create_tables(auto db) {
         boost::pfr::for_each_field(db.tables, [&]<auto I>(auto &&field, std::integral_constant<size_t, I>) {
             create_table<std::decay_t<decltype(field)>>();
@@ -323,10 +331,14 @@ struct sqlitemgr {
                 return t;
             }
             void operator++() {
+                again:
                 rc = sqlite3_step(stmt);
                 if (rc == SQLITE_ROW) {
                     sqlite_result(t, db, stmt);
                 } else if (rc == SQLITE_DONE) {
+                } else if (rc == SQLITE_BUSY) {
+                    std::this_thread::sleep_for(100ms);
+                    goto again;
                 } else {
                     sqlite_check(rc);
                 }
@@ -591,6 +603,12 @@ struct cache {
     cache(const std::filesystem::path &fn) : mgr{fn} {
         register_table<Table>();
         (register_table<Tables>(),...);
+    }
+    void enable_wal() {
+        mgr.enable_wal();
+    }
+    void set_busy_timeout(std::chrono::milliseconds ms) {
+        mgr.set_busy_timeout(ms);
     }
     template <typename T>
     std::optional<typename T::value_type> find() {
