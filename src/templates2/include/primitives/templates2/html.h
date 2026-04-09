@@ -18,7 +18,7 @@ struct token {
     std::string_view d;
 };
 
-using html_tokens = std::vector<token>;
+using tokens_type = std::vector<token>;
 
 bool is_void_element(auto sv) {
     sv.remove_prefix(1);
@@ -47,7 +47,7 @@ bool preserve_space(auto sv) {
 }
 
 auto make_tokens(std::string_view d) {
-    html_tokens tokens;
+    tokens_type tokens;
     tokens.reserve(100000);
     size_t p{};
     while (1) {
@@ -92,17 +92,38 @@ auto make_tokens(std::string_view d) {
     return tokens;
 }
 
-struct html_node {
+struct node {
     using string_type = std::string_view;
 
-    string_type d;
-    std::map<string_type, string_type> attributes;
-    std::vector<html_node> children;
+    enum class traverse_action { stop, continue_, skip_children };
 
-    html_node() = default;
-    html_node(std::string_view text) : d{text} {
+    struct iterator {
+        std::vector<const node *> nodes;
+        std::vector<node>::iterator i;
+
+        iterator() = default;
+        iterator(const node &n) {
+            nodes.push_back(&n);
+        }
+        const node &operator*() const {
+            return *nodes.back();
+        }
+        auto &operator++() {
+
+            return *this;
+        }
+        bool operator==(const iterator &) const = default;
+    };
+
+    string_type d;
+    token_type type;
+    std::map<string_type, string_type> attributes;
+    std::vector<node> children;
+
+    node() = default;
+    node(std::string_view text, token_type type) : d{text}, type{type} {
     }
-    html_node(std::string_view text, auto) {
+    node(std::string_view text, token_type type, auto) : type{type} {
         constexpr auto end = " />"sv;
         constexpr auto attrval = " =/>"sv;
         constexpr auto quotes = "'\""sv; // some quotes can be '
@@ -128,10 +149,47 @@ struct html_node {
         }
     }
     bool empty() const {return d.empty();}
+    explicit operator bool() const {return !empty();}
+    auto text() const {
+        std::string t;
+        traverse([&](auto &n) {
+            if (n.type == token_type::text) {
+                t += n.d;
+            }
+            return traverse_action::continue_;
+        });
+        return t;
+    }
+    traverse_action traverse(auto &&f) const {
+        auto r = f(*this);
+        if (r == traverse_action::stop) {
+            return r;
+        }
+        if (r != traverse_action::skip_children)
+        for (auto &&c : children) {
+            if (auto r = c.traverse(f); r == traverse_action::stop) {
+                return r;
+            }
+        }
+        return traverse_action::continue_;
+    }
+    auto find(auto &&attrname, auto &&idname) {
+        const node *r{};
+        traverse([&](auto &n) {
+            if (auto i = n.attributes.find(attrname); i != n.attributes.end() && i->second == idname) {
+                r = &n;
+                return traverse_action::stop;
+            }
+            return traverse_action::continue_;
+        });
+        return r;
+    }
+    auto begin() const {return iterator{*this};}
+    auto end() const {return iterator{};}
 };
 
-std::vector<html_node> make_tree(auto &it, auto &&end, bool keep_whitespace = false) {
-    std::vector<html_node> tags;
+std::vector<node> make_tree(auto &it, auto &&end, bool keep_whitespace = false) {
+    std::vector<node> tags;
     while (it != end) {
         auto &[tt,t] = *it++;
         if (t.starts_with("<!DOCTYPE"sv) || tt == token_type::comment) {
@@ -143,13 +201,13 @@ std::vector<html_node> make_tree(auto &it, auto &&end, bool keep_whitespace = fa
         switch (tt) {
         case token_type::text:
         case token_type::cdata:
-            tags.emplace_back(t);
+            tags.emplace_back(t, tt);
             break;
         case token_type::complete_tag:
-            tags.emplace_back(t, token_type::complete_tag);
+            tags.emplace_back(t, tt, 0);
             break;
         case token_type::begin_tag:
-            tags.emplace_back(t, token_type::begin_tag).children = make_tree(it, end, keep_whitespace || preserve_space(t));
+            tags.emplace_back(t, tt, 0).children = make_tree(it, end, keep_whitespace || preserve_space(t));
             continue;
         case token_type::end_tag:
             return tags;
@@ -157,11 +215,12 @@ std::vector<html_node> make_tree(auto &it, auto &&end, bool keep_whitespace = fa
     }
     return tags;
 }
-html_node make_tree(const html_tokens &tokens) {
+node make_tree(std::string_view page) {
+    auto tokens = primitives::html::make_tokens(page);
     auto it = tokens.begin();
     auto tree = make_tree(it, tokens.end());
     for (auto &&t : tree) {
-        if (t.d.starts_with("<html"sv)) {
+        if (t.d == "html"sv) {
             return std::move(t);
         }
     }
