@@ -254,6 +254,11 @@ auto run_command_raw(primitives::Command &c) {
     };
     return result{*c.exit_code, std::move(out), std::move(err)};
 }
+auto run_command_raw(auto &&...args) {
+    primitives::Command c;
+    (c.push_back(args),...);
+    return run_command_raw(c);
+}
 auto run_command(primitives::Command &c) {
     auto res = run_command_raw(c);
     if (res.exit_code) {
