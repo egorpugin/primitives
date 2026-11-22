@@ -466,7 +466,7 @@ struct pgmgr {
     }
 
     template <typename T>
-    static auto row_to_type(const pqxx::row &r) {
+    static auto row_to_type(pqxx::row_ref r) {
         T v;
         boost::pfr::for_each_field(v, [&]<auto I>(auto &&field, std::integral_constant<size_t, I>) {
             if constexpr (false) {
@@ -494,7 +494,7 @@ struct pgmgr {
         return v;
     }*/
     template <typename T>
-    static auto field_to_type(const pqxx::field &r) {
+    static auto field_to_type(pqxx::field_ref r) {
         T v;
         if constexpr (requires { v.value.value; }) {
             r.to(v.value.value);
@@ -506,8 +506,11 @@ struct pgmgr {
         } else if constexpr (requires { v.value; }) {
             r.to(v.value);
         } else if constexpr (std::same_as<T, blob>) {
-            pqxx::binarystring x(r);
-            v = x.str();
+            //pqxx::blob x{r};
+            //v = x.str();
+            std::string x;
+            r.to(x);
+            v = x;
         //} else if constexpr (std::same_as<T, blob_string>) {
             //pqxx::binarystring x(r);
             //v = x.str();
@@ -574,7 +577,8 @@ struct pgmgr {
         query.resize(query.size() - 1);
         query += ") returning *";
         auto r = tx.exec1(query);
-        return row_to_type<T>(r);
+        auto rr = r.as_row_ref();
+        return row_to_type<T>(rr);
     }
     template <typename T>
     auto insert(const T &v) {
@@ -609,7 +613,8 @@ struct pgmgr {
         query.resize(query.size() - 1);
         query += ") returning *";
         auto r = tx.exec_params1(query, values...);
-        return row_to_type<decltype(db::get_table_type(Field))>(r);
+        auto rr = r.as_row_ref();
+        return row_to_type<decltype(db::get_table_type(Field))>(rr);
     }
     template <auto Field, auto... Fields, typename... Types>
     auto insert(Types &&...values) {
@@ -759,7 +764,8 @@ struct pgmgr {
         // we cant use query_value here, because row_to_type() does extra work
         //return tx.query_value<decltype(db::get_table_type(Field))>(query, pqxx::params{vals...});
         auto r = tx.exec_params1(query, vals...);
-        return row_to_type<decltype(db::get_table_type(Field))>(r);
+        auto rr = r.as_row_ref();
+        return row_to_type<decltype(db::get_table_type(Field))>(rr);
     }
     template <auto Field, auto... Fields, typename... FieldTypes>
     auto select1(FieldTypes &&...vals) {
