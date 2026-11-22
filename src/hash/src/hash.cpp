@@ -252,7 +252,7 @@ String strong_file_hash_file_blake2b_sha3(const path &fn)
     std::string sha3(32, 0);
 
     auto blake2b_ctx = EVP_MD_CTX_create();
-    if (!blake2b)
+    if (!blake2b_ctx)
         throw SW_RUNTIME_ERROR("Cannot create blake2b context");
     EVP_DigestInit(blake2b_ctx, EVP_blake2b512());
 
