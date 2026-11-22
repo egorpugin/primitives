@@ -65,7 +65,7 @@ struct mmap_file {
             return;
         }
 #ifdef _WIN32
-        f = handle{CreateFileW(fn.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0),
+        f = handle{CreateFileW(fn.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0),
             [&]{ throw std::runtime_error{"cannot open file: " + fn.string()}; }
         };
         m = CreateFileMappingW(f, 0, PAGE_READONLY, 0, sz, 0);
