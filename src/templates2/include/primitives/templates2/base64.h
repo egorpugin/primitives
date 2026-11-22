@@ -35,8 +35,12 @@ struct base_raw {
     static inline constexpr auto can_have_tail = lcm == encoded_block_size;
     static inline constexpr auto max_tail = encoded_block_size - divceil(byte_bits, n_bits);
 
+    // our algorithm does not work for base58, base62
+    // simple test: roundtrip "\xff\xff\xff" bytes
+    static_assert(Alphabet.size() == 1 << n_bits);
+
     static consteval auto make_decoder() {
-        std::array<uint8_t, 128> alph{};
+        std::array<uint8_t, 256> alph{};
         for (int i = 0; auto &&c : Alphabet) {
             alph[c] = i++;
         }
@@ -103,9 +107,13 @@ struct base_raw {
         // 76543210 76543210 76543210 ...
         // to         1          2
         // 01234567 89012345 67890123 ...
-        u8 get_bits(auto &&start) const {
+        static auto get_bit_pos(auto &&start) {
             auto b1 = start / byte_bits;
             auto b2 = (start + n_bits - 1) / byte_bits;
+            return std::tuple{b1,b2};
+        }
+        u8 get_bits(auto &&start) const {
+            auto [b1,b2] = get_bit_pos(start);
             if (b1 == b2) {
                 auto offset = byte_bits - start % byte_bits;
                 return (data[b1] >> (offset - n_bits)) & ((1 << n_bits) - 1);
@@ -118,8 +126,7 @@ struct base_raw {
             }
         }
         static void set_bits(u8 value, auto &&start, auto &p) {
-            auto b1 = start / byte_bits;
-            auto b2 = (start + n_bits) / byte_bits;
+            auto [b1,b2] = get_bit_pos(start);
             if (b1 == b2) {
                 auto bits1 = byte_bits - start % byte_bits - n_bits;
                 p[b1] |= value << bits1;
