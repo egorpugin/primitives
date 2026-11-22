@@ -42,6 +42,7 @@ struct HttpRequest : public HttpSettings
         Delete,
         // append only
         Put,
+        Options,
     };
     struct mime_data {
         String data;

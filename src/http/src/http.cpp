@@ -243,6 +243,9 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
     case HttpRequest::Delete:
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
         break;
+    case HttpRequest::Options:
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "OPTIONS");
+        break;
     }
 
     return wp;
