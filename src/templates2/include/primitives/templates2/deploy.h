@@ -9,6 +9,7 @@
 #include <primitives/templates2/overload.h>
 #include <primitives/sw/settings_program_name.h>
 
+#include <chrono>
 #include <fstream>
 #include <source_location>
 #include <variant>
@@ -53,8 +54,31 @@ namespace primitives::deploy {
 
 using version_type = primitives::version::Version;
 
-inline const version_type max_fedora_version = "43"; // get from internet?
-inline const version_type max_ubuntu_version = "24.4";
+inline const version_type max_fedora_version = []() {
+    auto tp = std::chrono::system_clock::now();
+    std::chrono::year_month_day ymd{std::chrono::floor<std::chrono::days>(tp)};
+    int y = (int)ymd.year(); // 2026 = f44 (May) and f45 (Nov)
+    int base_ver = (y - 2026) * 2 + 44;
+    if (ymd.month() < std::chrono::May) {
+        --base_ver;
+    } else if (ymd.month() >= std::chrono::November) {
+        ++base_ver;
+    }
+    return version_type{base_ver};
+}();
+// stable only, each two years in April
+inline const version_type max_ubuntu_version = []() {
+    auto tp = std::chrono::system_clock::now();
+    std::chrono::year_month_day ymd{ std::chrono::floor<std::chrono::days>(tp) };
+    int y = (int)ymd.year();
+    int base_ver = y - 2000;
+    base_ver /= 2;
+    base_ver *= 2;
+    if (ymd.month() < std::chrono::May) {
+        base_ver -= 2;
+    }
+    return version_type{base_ver, 4}; // April
+}();
 inline const auto target_gcc_config = "build_gcc"sv;
 
 inline std::mutex m_ssh_keygen;
@@ -522,6 +546,7 @@ struct systemctl {
         std::string user;
         std::string wdir;
         std::map<std::string, std::string> environment;
+        std::chrono::hours runtime_max{};
 
         auto start() {
             return ctl("start", name);
@@ -576,6 +601,7 @@ ExecStart={}
 WorkingDirectory={}
 Restart=always
 RestartSec=3
+{}
 
 [Install]
 WantedBy=multi-user.target
@@ -590,14 +616,17 @@ WantedBy=multi-user.target
             }
             s.resize(s.size() - 1);
 
-            std::string pre;
+            std::string pre, post;
             for (auto &&[k,v] : environment) {
                 pre += std::format("Environment={}={}\n", k, v);
             }
             if (!service_pre_script.empty()) {
                 pre = "ExecStartPre=/usr/bin/bash -c " + wdir + "/" + "pre.sh";
             }
-            auto service = std::format(service_template, desc, user, pre, s, wdir);
+            if (runtime_max.count()) {
+                post += std::format("RuntimeMaxSec={}h\n", runtime_max.count());
+            }
+            auto service = std::format(service_template, desc, user, pre, s, wdir, post);
             ctl.serv.sudo().write_file(service_name(), service);
         }
     };
@@ -811,6 +840,7 @@ struct fedora : system_base {
         //package_manager().install("setools-console");
         package_manager().install("openssh-askpass");
         package_manager().install("policycoreutils-python-utils");
+        package_manager().install("firewalld"); // TODO: must start & enable it
     }
     void update_packages() {
         auto pm = package_manager();
@@ -1032,6 +1062,11 @@ public:
         if (!ssh_access) {
             return;
         }
+        {
+            auto ret = command_raw("sudo", "-n", "test", "0");
+            can_sudo = sudo_nopasswd = ret.exit_code == 0;
+        }
+        if (!can_sudo)
         {
             // we set up our options properly, so sudo will give an error if it requires a password
             decltype(custom_options) opts = ssh_options{};
@@ -1391,6 +1426,7 @@ struct deploy_single_target_args {
     std::map<std::string, std::string> nginx_configs;
     bool restore_from_last_backup{};
     bool stop_and_disable_service_only{};
+    std::chrono::hours runtime_max{};
 
     auto cfgname_dir() {
         return "deploy_" + cfgname;
@@ -1499,6 +1535,7 @@ struct ssh_base : ssh_base1 {
     //path cwd;
     std::string ip_;
     std::map<std::string, std::string> environment;
+    int connection_attempts{10};
 
     auto &current_user() {
         if (users.empty() && constructing_user) {
@@ -1537,7 +1574,7 @@ struct ssh_base : ssh_base1 {
         args.push_back("-o");
         args.push_back("StrictHostKeyChecking=accept-new");
         args.push_back("-o");
-        args.push_back("ConnectionAttempts=10");
+        args.push_back(std::format("ConnectionAttempts={}", obj.connection_attempts));
         args.push_back("-o");
         args.push_back("ServerAliveInterval=60");
         args.push_back("-o");
@@ -1572,6 +1609,7 @@ struct ssh_base : ssh_base1 {
         } else {
             if (obj.ip_.empty()) {
                 if constexpr (requires { obj.check_ips; }) {
+                    SwapAndRestore sr{obj.connection_attempts, 1};
                     auto args = obj.connection_args();
                     for (auto &&i : obj.check_ips) {
                         threaded_logger_.log("checking ip: "s + i);
@@ -2418,6 +2456,7 @@ struct ssh_base : ssh_base1 {
             svc.args = args.service_args;
             svc.service_pre_script = args.service_pre_script;
             svc.environment = args.environment;
+            svc.runtime_max = args.runtime_max;
             ctl.new_simple_service_auto(svc);
         }
     }
