@@ -577,6 +577,8 @@ struct kv {
     V value;
 
     db::contraint_unique<&kv::key> u;
+
+    auto tuple() const {return std::tuple{key,value};}
 };
 template <typename K, typename V>
 struct kv_multi {
@@ -587,6 +589,8 @@ struct kv_multi {
 
     K key;
     V value;
+
+    auto tuple() const {return std::tuple{key,value};}
 };
 template <typename V>
 struct v {
@@ -637,6 +641,15 @@ struct cache {
 
         auto q = mgr.select_with_name<T, typename T::table_type, &T::value>(v);
         return !q.empty();
+    }
+    template <typename T>
+    bool run_once(const typename T::key_type &k, const typename T::value_type &v, auto &&f) {
+        if (!find<T>(k)) {
+            f();
+            set<T>(k, v);
+            return true;
+        }
+        return false;
     }
     template <typename T>
     typename T::value_type find(const typename T::key_type &k, auto &&create_value) {
@@ -700,7 +713,8 @@ struct cache {
         static_assert(has_table<T>());
 
         typename T::template map_type<typename T::key_type, typename T::value_type> m;
-        for (auto &&[k,v,_] : mgr.select_with_name<T, typename T::table_type>()) {
+        for (auto &&x : mgr.select_with_name<T, typename T::table_type>()) {
+            auto &&[k,v] = x.tuple();
             m.emplace(k,v);
         }
         return m;
