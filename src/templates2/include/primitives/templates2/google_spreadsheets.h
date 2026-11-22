@@ -49,6 +49,7 @@ bool is_number(auto &&j) {
 struct google_sheets {
     std::string api_key;
     std::string bearer;
+    bool caching{};
 
     google_sheets(){}
     auto base_url() {
@@ -93,6 +94,10 @@ struct google_sheets {
             set_params(req, "key", api_key);
         }
 
+        if (!caching) {
+            cache_key.clear();
+        }
+
         auto h = std::hash<std::decay_t<decltype(req.url)>>()(req.url);
         boost::hash_combine(h, std::hash<std::decay_t<decltype(cache_key)>>()(cache_key));
         auto add_get_param3 = [&](this auto &&f, const std::string &k, const std::string &v, auto &&...params) {
@@ -113,7 +118,7 @@ struct google_sheets {
 
         struct cached_url_request : primitives::sqlite::kv<size_t, std::string> {};
         static primitives::sqlite::cache<cached_url_request> c{"cache.db"};
-        auto r = c.find<cached_url_request>(h, [&](auto &&set) {
+        auto r = c.template find<cached_url_request>(h, [&](auto &&set) {
             nlohmann::json j;
             while (1) {
                 try {
@@ -151,7 +156,7 @@ struct google_sheets {
                 throw rate_limit{""};
             }
             if (resp.http_code == 400 && j["error"]["status"] == "INVALID_ARGUMENT"s) {
-                throw sheet_does_not_exist{""};
+                throw sheet_does_not_exist{j["error"]["message"]};
             }
             throw std::runtime_error{"cant make request: "s + req.url + ": "s +
                                      j["error"]["message"].template get<std::string>()};
@@ -195,6 +200,9 @@ struct sheet : google_sheets {
             }
             this->row = std::stoi(std::string{row}) - 1;
         }
+        point(const point &) = default;
+        point &operator=(const point &) = default;
+
         std::string col2string() const {
             if (col >= 26) {
                 SW_UNIMPLEMENTED;
@@ -208,19 +216,11 @@ struct sheet : google_sheets {
     // stored as [from,to)
     // printed as [from,to(-1,-1)]
     struct range {
+        std::variant<std::string, int> page;
         point from{};
         point to{};
-        //std::string page;
 
-        range() = default;
-        range(const point &from, const point &to) : from{from}, to{to} {}
-        template <auto N>
-        range(const char (&s)[N]) : range{std::string{s}} {
-        }
-        range(const std::string &s) {
-            if (s.empty()) {
-                throw std::runtime_error{"bad range"};
-            }
+        auto parse_non_paged_range(const std::string &s) {
             auto range = split_string(s, ":");
             if (range.size() == 1) {
                 from = to = point{range[0]};
@@ -232,6 +232,33 @@ struct sheet : google_sheets {
             ++to.row;
             ++to.col;
         }
+
+        range() = default;
+        range(const point &from, const point &to) : from{from}, to{to} {}
+        range(auto &&page, const point &from, const point &to) : page{page}, from{from}, to{to} {}
+        template <auto N>
+        range(const char (&s)[N]) : range{std::string{s}} {
+        }
+        range(const std::string &s) {
+            if (s.empty()) {
+                throw std::runtime_error{"bad range"};
+            }
+            auto name_range = split_string(s, "!");
+            auto range_s = s;
+            if (name_range.size() > 1) {
+                page = name_range[0];
+                range_s = name_range[1];
+            }
+            parse_non_paged_range(range_s);
+        }
+        range(const std::string &page, const std::string &s) : page{page} {
+            if (s.empty()) {
+                throw std::runtime_error{"bad range"};
+            }
+            parse_non_paged_range(s);
+        }
+        range(const range &) = default;
+        range &operator=(const range &) = default;
         auto width() const {
             return to.col - from.col;
         }
@@ -244,10 +271,26 @@ struct sheet : google_sheets {
             --to2.col;
             std::string f = from;
             std::string t = to2;
+            auto &p = std::get<std::string>(page);
             if (f == t) {
-                return f;
+                if (p.empty()) {
+                    return f;
+                }
+                return std::format("'{}'!{}", p, f);
             }
-            return std::format("{}:{}", f, t);
+            if (p.empty()) {
+                return std::format("{}:{}", f, t);
+            }
+            return std::format("'{}'!{}:{}", p, f, t);
+        }
+        auto to_json() const {
+            nlohmann::json j;
+            j["sheetId"] = std::get<int>(page);
+            j["startRowIndex"] = from.row;
+            j["endRowIndex"] = to.row;
+            j["startColumnIndex"] = from.col;
+            j["endColumnIndex"] = to.col;
+            return j;
         }
         auto operator++(int) {
             auto r = *this;
@@ -278,16 +321,6 @@ struct sheet : google_sheets {
         auto begin() {return j.begin();}
         auto end() {return j.end();}
 
-        decltype(auto) operator[](int row) {
-            return j[row];
-        }
-        decltype(auto) operator[](const std::string &cell) {
-            range r2{cell};
-            return j[r2.from.row - r.from.row][r2.from.col - r.from.col];
-        }
-        decltype(auto) operator[](const char *cell) {
-            return operator[](std::string{cell});
-        }
         // subrange with corner in cell
         value operator()(const char *cell) const {
             range r2{cell};
@@ -300,9 +333,47 @@ struct sheet : google_sheets {
             }
             return v2;
         }
+        auto &operator[](auto &&page, int row, int col) {
+            r = range{page, point{row, col}, point{row, col}};
+            // make it past the end
+            ++r.to.row;
+            ++r.to.col;
+            return *this;
+        }
+        auto &operator[](auto &&...args) {
+            r = range{args...};
+            // make it past the end
+            ++r.to.row;
+            ++r.to.col;
+            return *this;
+        }
+        decltype(auto) operator[](int row) {
+            return j[row];
+        }
+        decltype(auto) operator[](const std::string &cell) {
+            range r2{cell};
+            return j[r2.from.row - r.from.row][r2.from.col - r.from.col];
+        }
+        decltype(auto) operator[](const char *cell) {
+            return operator[](std::string{cell});
+        }
+
+        auto &operator=(const std::string &s) {
+            if (j.empty()) {
+                j.emplace_back().emplace_back();
+            }
+            j[0][0] = s;
+            return *this;
+        }
+
         auto json(std::string_view page = {}) const {
             nlohmann::json j;
-            j["range"] = page.empty() ? (std::string)r : std::format("'{}'!{}", page, (std::string)r);
+            std::string rs = r;
+            if (rs.contains('!')) {
+                j["range"] = r;
+            } else {
+                j["range"] = page.empty() ? (std::string)r : std::format("'{}'!{}", page, (std::string)r);
+            }
             for (int r{}; auto &&jrow : this->j) {
                 for (int c{}; auto &&jv : jrow) {
                     j["values"][r][c++] = jv;
@@ -345,8 +416,12 @@ struct sheet : google_sheets {
     }
     struct set_many_type {
         std::vector<value> values;
-        std::string value_input_option{"RAW"};
+        std::string value_input_option{"RAW"s};
 
+        // for formulas
+        void set_user_entered_values() {
+            value_input_option = "USER_ENTERED"s;
+        }
         auto json(const std::string &page) const {
             nlohmann::json j;
             j["valueInputOption"] = value_input_option;
@@ -354,6 +429,9 @@ struct sheet : google_sheets {
                 j["data"].push_back(v.json(page));
             }
             return j;
+        }
+        auto &operator[](auto &&...args) {
+            return values.emplace_back()[args...];
         }
     };
     auto set_many(const set_many_type &v) {
@@ -367,18 +445,53 @@ struct sheet : google_sheets {
         return j;
     }
 
-    auto create_sheet(const std::string &name, int idx) {
+    struct batch {
+        sheet &s;
+        nlohmann::json b;
+
+        void add(auto &&j) {
+            b["requests"].push_back(j);
+        }
+        auto &add_request(auto &&name) {
+            auto &jd = b["requests"].emplace_back();
+            return jd[name];
+        }
+        auto dump() const {return b.dump();}
+    };
+
+    auto make_batch() {
+        return batch{*this};
+    }
+    auto add_to_batch(auto &b, auto &&j) {
+        b.add(j);
+    }
+    auto batch_update(auto &b) {
         auto req = make_request();
         req.url = make_url(std::format("/{}:batchUpdate", spreadsheet_id));
         req.type = HttpRequest::Post;
-        nlohmann::json jd;
-        auto &js = jd["requests"]["addSheet"]["properties"];
-        js["sheetId"] = idx;
-        js["title"] = name;
-        req.data = jd.dump();
+        req.data = b.dump();
         req.headers.push_back("Content-Type: application/json");
         auto resp = url_request(req);
         process_response(req, resp);
+    }
+
+    auto delete_sheet(auto &b, int idx) {
+        nlohmann::json jd;
+        auto &js = jd["deleteSheet"];
+        js["sheetId"] = idx;
+        add_to_batch(b, jd);
+    }
+    auto create_sheet(auto &b, const std::string &name, int idx) {
+        nlohmann::json jd;
+        auto &js = jd["addSheet"]["properties"];
+        js["sheetId"] = idx;
+        js["title"] = name;
+        add_to_batch(b, jd);
+    }
+    auto create_sheet(const std::string &name, int idx) {
+        auto b = make_batch();
+        create_sheet(b, name, idx);
+        batch_update(b);
 
         auto s = *this;
         s.page = name;
@@ -399,17 +512,15 @@ struct sheet : google_sheets {
         return create_sheet(name, idx);
     }
     void set_rows(int rows) {
-        auto req = make_request();
-        req.url = make_url(std::format("/{}:batchUpdate", spreadsheet_id));
-        req.type = HttpRequest::Post;
+        auto b = make_batch();
+
         nlohmann::json jd;
         jd["requests"]["updateSheetProperties"]["fields"] = "gridProperties";
         jd["requests"]["updateSheetProperties"]["properties"]["gridProperties"]["rowCount"] = rows;
         jd["requests"]["updateSheetProperties"]["properties"]["gridProperties"]["columnCount"] = 26;
-        req.data = jd.dump();
-        req.headers.push_back("Content-Type: application/json");
-        auto resp = url_request(req);
-        process_response(req, resp);
+        add_to_batch(b, jd);
+
+        batch_update(b);
     }
 };
 
@@ -422,4 +533,23 @@ sheet google_sheets::get_default_sheet(auto &&spreadsheet_id) {
     ms.spreadsheet_id = spreadsheet_id;
     ms.page = j["sheets"][0]["properties"]["title"];
     return ms;
+}
+
+sheet::range operator""_r(const char *s, size_t len) {
+    return sheet::range{s};
+}
+
+auto color_to_json(auto in) {
+    auto color = (int)in;
+    auto get_byte = [&](int b) {
+        auto c = color;
+        c >>= b * 8;
+        return c & 0xff;
+    };
+
+    nlohmann::json j;
+    j["blue"] = get_byte(0) / 255.;
+    j["green"] = get_byte(1) / 255.;
+    j["red"] = get_byte(2) / 255.;
+    return j;
 }
