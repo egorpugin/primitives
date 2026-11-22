@@ -138,8 +138,10 @@ struct bytes : std::vector<std::byte> {
             throw SW_RUNTIME_ERROR("bad bytes string");
         for (int i = 0; i < sz; i += 2) {
             auto get_num = [](auto v) {
-                if (v > '9')
+                if (v >= 'a')
                     return v - 'a' + 10;
+                if (v >= 'A')
+                    return v - 'A' + 10;
                 return v - '0';
             };
             auto hi = get_num(v[i+0]) << 4;
