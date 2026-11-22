@@ -51,7 +51,8 @@ struct HttpRequest : public HttpSettings
     };
 
     String url;
-    String agent{"curl/8.17.0"};
+    //String agent{"curl/8.17.0"};
+    String agent{"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36"};
     String username;
     String password;
     int type = Get;
