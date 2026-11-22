@@ -22,9 +22,15 @@ auto get_seed()
     return std::random_device()();
 }
 
+static auto &get_rng()
+{
+    static std::mt19937_64 g(get_seed());
+    return g;
+}
+
 String generate_random_alnum_sequence(uint32_t len)
 {
-    std::mt19937 g(get_seed());
+    auto &g = get_rng();
     std::uniform_int_distribution<> d(1, sizeof(alnum) - 1);
     String seq(len, 0);
     while (len)
@@ -34,7 +40,7 @@ String generate_random_alnum_sequence(uint32_t len)
 
 String generate_random_bytes(uint32_t len)
 {
-    std::mt19937 g(get_seed());
+    auto &g = get_rng();
     std::uniform_int_distribution<> d(0, 255);
     String seq(len, 0);
     while (len)
