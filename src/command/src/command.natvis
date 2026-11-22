@@ -10,6 +10,15 @@
         </Expand>
     </Type>
 
+    <Type Name="primitives::command::detail::UvCommand">
+        <DisplayString>
+            {args}
+        </DisplayString>
+        <Expand>
+            <ExpandedItem>args</ExpandedItem>
+        </Expand>
+    </Type>
+
     <Type Name="primitives::command::Arguments">
         <DisplayString>{args}</DisplayString>
         <Expand>
