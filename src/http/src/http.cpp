@@ -238,6 +238,7 @@ static std::unique_ptr<CurlWrapper> setup_curl_request(const HttpRequest &reques
             curl_easy_setopt(curl, CURLOPT_MIMEPOST, wp->form);
         } else {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.data.c_str());
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)request.data.size());
         }
         break;
     case HttpRequest::Delete:
