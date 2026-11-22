@@ -186,8 +186,9 @@ struct base16    : base_raw<16, "0123456789ABCDEF"_s> {};
 struct base32    : base_raw<32, "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"_s> {};
 struct base32extended_hex
                  : base_raw<32, "0123456789ABCDEFGHIJKLMNOPQRSTUV"_s> {};
-struct base62    : base_raw<62, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"_s> {};
+// these has different encoding based on division
 //struct base58    : base_raw<58, "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"_s> {};
+//struct base62    : base_raw<62, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"_s> {};
 struct base64    : base_raw<64, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"_s> {};
 template <bool Pad = false>
 struct base64url : base_raw<64, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"_s, '=', Pad> {};
