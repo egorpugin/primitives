@@ -148,10 +148,15 @@ String md5_file(const path &fn)
 std::tuple<HashType, HashType> load_strong_hash_prefix(const String &hash)
 {
     auto p = hash.find('$');
-    if (p == -1)
+    if (p == -1) {
         return { HashType::sha3_256, HashType::sha2_256 };
-    auto fht_s = hash.substr(0, hash.find('_'));
-    auto sht_s = hash.substr(hash.find('_') + 1, p);
+    }
+    auto pos_ = hash.find('_');
+    if (p == -1 || pos_ > p) {
+        throw std::runtime_error{"bad hash"};
+    }
+    auto fht_s = hash.substr(0, pos_++);
+    auto sht_s = hash.substr(pos_, p);
     auto fht = (HashType)std::stoi(fht_s);
     auto sht = (HashType)std::stoi(sht_s);
     return { fht,sht };
