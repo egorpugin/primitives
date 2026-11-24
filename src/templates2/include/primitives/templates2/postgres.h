@@ -400,8 +400,9 @@ struct pgmgr {
         std::string query;
         query += std::format("select \"{}\" from \"{}\"", db::get_field_name(Field), db::get_table_name(Field));
         //return selecter1<Field>{tx, query};
-        auto r = tx.exec(query).one_field_ref();
-        return field_to_type<decltype(db::get_field_type(Field))>(r);
+        auto r = tx.exec(query);
+        auto rr = r.one_field_ref();
+        return field_to_type<decltype(db::get_field_type(Field))>(rr);
     }
     template <auto Field>
     decltype(db::get_field_type(Field)) select1() {
@@ -576,8 +577,9 @@ struct pgmgr {
         });
         query.resize(query.size() - 1);
         query += ") returning *";
-        auto r = tx.exec(query).one_row_ref();
-        return row_to_type<T>(r);
+        auto r = tx.exec(query);
+        auto rr = r.one_row_ref();
+        return row_to_type<T>(rr);
     }
     template <typename T>
     auto insert(const T &v) {
@@ -611,8 +613,9 @@ struct pgmgr {
         }(values), ...);
         query.resize(query.size() - 1);
         query += ") returning *";
-        auto r = tx.exec(query, pqxx::params{tx, values...}).one_row_ref();
-        return row_to_type<decltype(db::get_table_type(Field))>(r);
+        auto r = tx.exec(query, pqxx::params{tx, values...});
+        auto rr = r.one_row_ref();
+        return row_to_type<decltype(db::get_table_type(Field))>(rr);
     }
     template <auto Field, auto... Fields, typename... Types>
     auto insert(Types &&...values) {
@@ -761,8 +764,9 @@ struct pgmgr {
         query.resize(query.size() - 5);
         // we cant use query_value here, because row_to_type() does extra work
         //return tx.query_value<decltype(db::get_table_type(Field))>(query, pqxx::params{vals...});
-        auto r = tx.exec(query, pqxx::params{tx, vals...}).one_row_ref();
-        return row_to_type<decltype(db::get_table_type(Field))>(r);
+        auto r = tx.exec(query, pqxx::params{tx, vals...});
+        auto rr = r.one_row_ref();
+        return row_to_type<decltype(db::get_table_type(Field))>(rr);
     }
     template <auto Field, auto... Fields, typename... FieldTypes>
     auto select1(FieldTypes &&...vals) {
@@ -777,8 +781,9 @@ struct pgmgr {
         /*[&](auto &&ptr, auto &&val) {
             query += std::format("\"{}\" = ?", db::get_field_name(ptr));
         }(Fields);*/
-        auto r = tx.exec(query, pqxx::params{tx, vals...}).one_field_ref();
-        return r.template as<int>();
+        auto r = tx.exec(query, pqxx::params{tx, vals...});
+        auto rr = r.one_field_ref();
+        return rr.template as<int>();
     }
     template <auto Field, auto... Fields, typename... FieldTypes>
     auto count(FieldTypes &&...vals) {
